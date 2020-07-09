@@ -6,12 +6,10 @@ Please read the following documents.
 
   COPYING           - license
   CONTRIBUTING.md   - how to contribute
-  doc/index.xhtml   - index of document
 
 Contents of the directory tree are below.
 
-  ./              - sources of Kyoto Cabinet
-  ./doc/          - manuals and specifications
+  ./              - source code
   ./example/      - sample code for tutorial
 
 To build the library, GCC 7.3 or later version is required.
