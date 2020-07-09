@@ -1,0 +1,690 @@
+/*************************************************************************************************
+ * String utilities
+ *
+ * Copyright 2020 Google LLC
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License.  You may obtain a copy of the License at
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific language governing permissions
+ * and limitations under the License.
+ *************************************************************************************************/
+
+#ifndef _TKRZW_STR_UTIL_H
+#define _TKRZW_STR_UTIL_H
+
+#include <map>
+#include <string>
+#include <vector>
+
+#include <cinttypes>
+
+#include "tkrzw_lib_common.h"
+
+namespace tkrzw {
+
+/**
+ * Converts a decimal string to an integer.
+ * @param str The decimal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted integer.
+ */
+int64_t StrToInt(std::string_view str, int64_t defval = 0);
+
+/**
+ * Converts a decimal string with a metric prefix to an integer.
+ * @param str The decimal string, which can be trailed by a binary metric prefix.  "K", "M", "G",
+ * "T", "P", and "E" are supported.  They are case-insensitive.
+ * @param defval The default value to be returned on failure.
+ * @return The converted integer.  If the integer overflows the domain, tkrzw::INT64MAX or
+ * tkrzw::INT64_MIN is returned according to the sign.
+ */
+int64_t StrToIntMetric(std::string_view str, int64_t defval = 0);
+
+/**
+ * Converts a octal string to an integer.
+ * @param str The octal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted integer.
+ */
+uint64_t StrToIntOct(std::string_view str, uint64_t defval = 0);
+
+/**
+ * Converts a hexadecimal string to an integer.
+ * @param str The hexadecimal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted integer.
+ */
+uint64_t StrToIntHex(std::string_view str, uint64_t defval = 0);
+
+/**
+ * Converts a big-endian binary string to an integer.
+ * @param str The big endian binary string.
+ * @return The converted integer.
+ */
+uint64_t StrToIntBigEndian(std::string_view str);
+
+/**
+ * Converts a decimal string to a real number.
+ * @param str The decimal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted real number.
+ */
+double StrToDouble(std::string_view str, double defval = 0.0);
+
+/**
+ * Converts a boolean string to a real number.
+ * @param str The decimal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted boolean value.
+ */
+bool StrToBool(std::string_view str, bool defval = false);
+
+/**
+ * Appends a formatted string at the end of a string.
+ * @param dest The destination string.
+ * @param format The printf-like format string.  The conversion character `%' can be used with
+ * such flag characters as `s', `d', `o', `u', `x', `X', `c', `e', `E', `f', `g', `G', and `%'.
+ * @param ap Arguments used according to the format string.
+ */
+void VSPrintF(std::string* dest, const char* format, va_list ap);
+
+/**
+ * Appends a formatted string at the end of a string.
+ * @param dest The destination string.
+ * @param format The printf-like format string.  The conversion character `%' can be used with
+ * such flag characters as `s', `d', `o', `u', `x', `X', `c', `e', `E', `f', `g', `G', and `%'.
+ * @param ... Arguments used according to the format string.
+ */
+void SPrintF(std::string* dest, const char* format, ...);
+
+/**
+ * Generates a formatted string.
+ * @param format The printf-like format string.  The conversion character `%' can be used with
+ * such flag characters as `s', `d', `o', `u', `x', `X', `c', `e', `E', `f', `g', `G', and `%'.
+ * @param ... Arguments used according to the format string.
+ * @return The result string.
+ */
+std::string SPrintF(const char* format, ...);
+
+/**
+ * Converts an integer to a decimal string.
+ * @param data The integer to convert.
+ * @return The converted string.
+ */
+template <typename T>
+inline std::string ToString(T data) {
+  return std::to_string(data);
+}
+
+/**
+ * Converts a real number to a decimal string.
+ * @param data The real number to convert.
+ * @return The converted string.
+ */
+inline std::string ToString(double data) {
+  char buf[NUM_BUFFER_SIZE];
+  int32_t size = std::sprintf(buf, "%.6f", data);
+  while (size > 0 && buf[size - 1] == '0') {
+    buf[size--] = '\0';
+  }
+  if (size > 0 && buf[size - 1] == '.') {
+    buf[size--] = '\0';
+  }
+  return std::string(buf, size);
+}
+
+/**
+ * Converts a real number to a decimal string.
+ * @param data The real number to convert.
+ * @return The converted string.
+ */
+inline std::string ToString(float data) {
+  return ToString(static_cast<double>(data));
+}
+
+/**
+ * Converts a real number to a decimal string.
+ * @param data The real number to convert.
+ * @return The converted string.
+ */
+inline std::string ToString(long double data) {
+  return ToString(static_cast<double>(data));
+}
+
+/**
+ * Converts a boolean value to a decimal string.
+ * @param data The integer to convert.
+ * @return The converted string.
+ */
+inline std::string ToString(bool data) {
+  return std::string(data ? "true" : "false");
+}
+
+/**
+ * Converts a character into a string.
+ * @param data The character.
+ * @return The converted string.
+ */
+inline std::string ToString(char data) {
+  return std::string(1, data);
+}
+
+/**
+ * Converts a C-style string into a string.
+ * @param data The C-style string to convert.
+ * @return The converted string.
+ */
+inline std::string ToString(const char* data) {
+  return data;
+}
+
+/**
+ * Converts a string view into a string.
+ * @param data The string view.
+ * @return The converted string.
+ */
+inline std::string ToString(std::string_view data) {
+  return std::string(data);
+}
+
+/**
+ * Copies a string.
+ * @param data The string.
+ * @return The copied string.
+ */
+inline std::string ToString(const std::string& data) {
+  return data;
+}
+
+/**
+ * Converts an integer into a big-endian binary string.
+ * @param data The integer to convert.
+ * @param size The size of the converted string.
+ * @return The converted string.
+ */
+std::string IntToStrBigEndian(uint64_t data, size_t size = sizeof(uint64_t));
+
+/**
+ * Converts each record of a container into strings and join them.
+ * @param elems An iterable container.
+ * @param delim A string to delimit elements.
+ * @return The joined string.
+ */
+template <typename T>
+std::string StrJoin(const T& elems, const std::string_view& delim) {
+  std::string str;
+  for (const auto& elem : elems) {
+    if (!str.empty()) {
+      str += delim;
+    }
+    str += ToString(elem);
+  }
+  return str;
+}
+
+/**
+ * Returns an empty string.
+ * @return The empty string.
+ */
+inline std::string StrCat() {
+  return "";
+}
+
+/**
+ * Concatenates data of arbitrary parameters into a string.
+ * @param first The first parameter.
+ * @param rest The rest parameters.
+ * @return The concatenated string.
+ */
+template <typename FIRST, typename... REST>
+std::string StrCat(const FIRST& first, const REST&... rest) {
+  return ToString(first) + StrCat(rest...);
+}
+
+/**
+ * Splits a string with a delimiter character.
+ * @param str The string.
+ * @param delim The delimiter character.
+ * @param skip_empty If true, fields with empty values are skipped.
+ * @return A vector object into which the result segments are pushed.
+ */
+std::vector<std::string> StrSplit(std::string_view str, char delim,
+                                  bool skip_empty = false);
+
+/**
+ * Splits a string with a delimiter string.
+ * @param str The string.
+ * @param delim The delimiter string.  If it is empty, each character is separated.
+ * @param skip_empty If true, fields with empty values are skipped.
+ * @return A vector object into which the result segments are pushed.
+ */
+std::vector<std::string> StrSplit(std::string_view str, std::string_view delim,
+                                  bool skip_empty = false);
+
+/**
+ * Splits a string with delimiter characters.
+ * @param str The string to split.
+ * @param delims A string containing a set of the delimiters.
+ * @param skip_empty If true, fields with empty values are skipped.
+ * @return A vector object into which the result segments are pushed.
+ */
+std::vector<std::string> StrSplitAny(std::string_view str, std::string_view delims,
+                                     bool skip_empty = false);
+
+/**
+ * Splits a string into a key-value map.
+ * @param str The string to split.
+ * @param delim_records The delimiter string between records.
+ * @param delim_kv The delimiter string between the key and the value.
+ * @return A map object containing key-value pairs.
+ */
+std::map<std::string, std::string> StrSplitIntoMap(
+    std::string_view str, std::string_view delim_records, std::string_view delim_kv);
+
+/**
+ * Converts letters of a string into upper case.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrUpperCase(std::string_view str);
+
+/**
+ * Converts letters of a string into lower case.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrLowerCase(std::string_view str);
+
+/**
+ * Checks whether a text contains a pattern.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return True if the text contains the pattern.
+ */
+bool StrContains(std::string_view text, std::string_view pattern);
+
+/**
+ * Checks whether a text begins with a pattern.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return True if the text begins with the pattern.
+ */
+bool StrBeginsWith(std::string_view text, std::string_view pattern);
+
+/**
+ * Checks whether a text ends with a pattern.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return True if the text ends with the pattern.
+ */
+bool StrEndsWith(std::string_view text, std::string_view pattern);
+
+/**
+ * Compares two strings ignoring case.
+ * @param a A string.
+ * @param b The other string.
+ * @return Negative if the former is less, 0 if both are equivalent, positive if latter is less.
+ */
+int32_t StrCaseCompare(std::string_view a, std::string_view b);
+
+/**
+ * Searches a text for a pattern, with string::find.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearch(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, by naive double loop.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchDoubleLoop(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, with memchr.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchMemchr(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, with memmem.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchMemmem(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, by Knuth–Morris–Pratt algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchKMP(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, by Boyer-Moore algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchBM(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, by Rabin-Karp algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchRK(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern, by Z algorithm.'
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrSearchZ(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a pattern and get indices of all occurrences, with string::find.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @param max_results The maximum number of results to store.  0 means unlimited.
+ * @return A vector of indeces of all ocurrences of the pattern.
+ */
+std::vector<int32_t> StrSearchWhole(
+    std::string_view text, std::string_view pattern, size_t max_results = 0);
+
+/**
+ * Searches a text for a pattern and get indices of all occurrences, by KMP algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @param max_results The maximum number of results to store.  0 means unlimited.
+ * @return A vector of indeces of all ocurrences of the pattern.
+ */
+std::vector<int32_t> StrSearchWholeKMP(
+    std::string_view text, std::string_view pattern, size_t max_results = 0);
+
+/**
+ * Searches a text for a pattern and get indices of all occurrences, by BM algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @param max_results The maximum number of results to store.  0 means unlimited.
+ * @return A vector of indeces of all ocurrences of the pattern.
+ */
+std::vector<int32_t> StrSearchWholeBM(
+    std::string_view text, std::string_view pattern, size_t max_results = 0);
+
+/**
+ * Searches a text for a pattern and get indices of all occurrences, by RK algorithm.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @param max_results The maximum number of results to store.  0 means unlimited.
+ * @return A vector of indeces of all ocurrences of the pattern.
+ */
+std::vector<int32_t> StrSearchWholeRK(
+    std::string_view text, std::string_view pattern, size_t max_results = 0);
+
+/**
+ * Searches a text for patterns and get indices of all occurrences, by string::find.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @param max_results The maximum number of results to store for each pattern.  0 means unlimited.
+ * @return A vector of the result for each pattern.  Each element is a vector of indices of all
+ * occurrences of the pattern.
+ */
+std::vector<std::vector<int32_t>> StrSearchBatch(
+    std::string_view text, const std::vector<std::string>& patterns, size_t max_results = 0);
+
+/**
+ * Searches a text for patterns and get indices of all occurrences, by KMP algorithm.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @param max_results The maximum number of results to store for each pattern.  0 means unlimited.
+ * @return A vector of the result for each pattern.  Each element is a vector of indices of all
+ * occurrences of the pattern.
+ */
+std::vector<std::vector<int32_t>> StrSearchBatchKMP(
+    std::string_view text, const std::vector<std::string>& patterns, size_t max_results = 0);
+
+/**
+ * Searches a text for patterns and get indices of all occurrences, by BM algorithm.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @param max_results The maximum number of results to store for each pattern.  0 means unlimited.
+ * @return A vector of the result for each pattern.  Each element is a vector of indices of all
+ * occurrences of the pattern.
+ */
+std::vector<std::vector<int32_t>> StrSearchBatchBM(
+    std::string_view text, const std::vector<std::string>& patterns, size_t max_results = 0);
+
+/**
+ * Searches a text for patterns and get indices of all occurrences, by RK algorithm.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @param max_results The maximum number of results to store for each pattern.  0 means unlimited.
+ * @return A vector of the result for each pattern.  Each element is a vector of indices of all
+ * occurrences of the pattern.
+ */
+std::vector<std::vector<int32_t>> StrSearchBatchRK(
+    std::string_view text, const std::vector<std::string>& patterns, size_t max_results = 0);
+
+/**
+ * Removes space characters at the head or the tail of a string.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrStripSpace(std::string_view str);
+
+/**
+ * Removes linefeed characters from the end of a string.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrStripLine(std::string_view str);
+
+/**
+ * Squeezes space characters in a string and removes spaces at both ends.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrSqueezeAndStripSpace(std::string_view str);
+
+/**
+ * Trims a string for TSV by normalizing space and control characters.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrTrimForTSV(std::string_view str);
+
+/**
+ * Escapes C-style meta characters in a string.
+ * @param str The string to convert.
+ * @param esc_nonasc If true, non-ASCII characters are excaped.
+ * @return The converted string.
+ */
+std::string StrEscapeC(std::string_view str, bool esc_nonasc = false);
+
+/**
+ * Unescapes C-style escape sequences in a string.
+ * @param str The string to convert.
+ * @return The converted string.
+ */
+std::string StrUnescapeC(std::string_view str);
+
+/**
+ * Encodes a string into a Base64 string.
+ * @param str The string to encode.
+ * @return The encoded string.
+ */
+std::string StrEncodeBase64(std::string_view str);
+
+/**
+ * Decodes a Base64 string into a string.
+ * @param str The Base64 string to decode.
+ * @return The decoded string.
+ */
+std::string StrDecodeBase64(std::string_view str);
+
+/**
+ * Encodes a string into a URL part string.
+ * @param str The string to encode.
+ * @return The encoded string.
+ */
+std::string StrEncodeURL(std::string_view str);
+
+/**
+ * Decodes a URL part string into a string.
+ * @param str The URL part string to decode.
+ * @return The decoded string.
+ */
+std::string StrDecodeURL(std::string_view str);
+
+/**
+ * Converts a UTF-8 string into a UCS-4 vector.
+ * @param utf The UTF-8 string.
+ * @return The UCS-4 vector.
+ */
+std::vector<uint32_t> ConvertUTF8ToUCS4(std::string_view utf);
+
+/**
+ * Converts a UCS-4 vector into a UTF-8 string.
+ * @param ucs The UCS-4 vector.
+ * @return The UTF-8 string.
+ */
+std::string ConvertUCS4ToUTF8(const std::vector<uint32_t>& ucs);
+
+/**
+ * Converts a UTF-8 string into a wide string.
+ * @param utf The UTF-8 string.
+ * @return The wide string.
+ */
+std::wstring ConvertUTF8ToWide(std::string_view utf);
+
+/**
+ * Converts a wide string into a UTF-8 string.
+ * @param wstr The wide string.
+ * @return The UTF-8 string.
+ */
+std::string ConvertWideToUTF8(const std::wstring& wstr);
+
+/**
+ * Gets the Levenshtein edit distance of two sequences.
+ * @param a A sequence.
+ * @param b The other sequence.
+ * @return The Levenshtein edit distance of the two sequences.
+ */
+template<typename T = std::string_view>
+static int32_t EditDistanceLev(const T& a, const T&b) {
+  const int32_t a_size = std::end(a) - std::begin(a);
+  const int32_t b_size = std::end(b) - std::begin(b);
+  const int32_t column_size = b_size + 1;
+  const int32_t table_size = (a_size + 1) * column_size;
+  constexpr int32_t stack_size = 2048;
+  int32_t table_stack[stack_size];
+  int32_t* table = table_size > stack_size ? new int32_t[table_size] : table_stack;
+  table[0] = 0;
+  for (int32_t i = 1; i <= a_size; i++) {
+    table[i * column_size] = i;
+  }
+  for (int32_t i = 1; i <= b_size; i++) {
+    table[i] = i;
+  }
+  for (int32_t i = 1; i <= a_size; i++) {
+    for (int32_t j = 1; j <= b_size; j++) {
+      const int32_t ac = table[(i - 1) * column_size + j] + 1;
+      const int32_t bc = table[i * column_size + j - 1] + 1;
+      const int32_t cc = table[(i - 1) * column_size + j - 1] + (a[i - 1] != b[j - 1]);
+      table[i * column_size + j] = std::min(std::min(ac, bc), cc);
+    }
+  }
+  const int32_t dist = table[a_size * column_size + b_size];
+  if (table != table_stack) {
+    delete[] table;
+  }
+  return dist;
+}
+
+/**
+ * Makes a text composed of characters selected at random.
+ * @param length Length of the result text.
+ * @param seed A seed value given to the random generator.
+ * @param first_char The first character of the character range.
+ * @param last_char The last character of the character range.
+ * @return The result text.
+ */
+std::string MakeRandomCharacterText(
+    int32_t length, int32_t seed, uint8_t first_char, uint8_t last_char);
+
+/**
+ * Serializes a pair of strings into a string.
+ * @param first The first string.
+ * @param second The second string.
+ * @return The serialized string.
+ * @details The size of the first value and the size of the second value come in the byte delta
+ * encoding.  The first data and the second data follow them.
+ */
+std::string SerializeStrPair(std::string_view first, std::string_view second);
+
+/**
+ * Deserializes a serialized string into a pair of strings.
+ * @param serialized The serialized string.
+ * @param first The pointer to a string view object to refer to the first string.
+ * @param second The pointer to a string view object to refer to the second string.
+ */
+void DeserializeStrPair(
+    std::string_view serialized, std::string_view* first, std::string_view* second);
+
+/**
+ * Get the first part from a serialized string pair.
+ * @param serialized The serialized string.
+ * @return The first part string.
+ */
+std::string_view GetFirstFromSerializedStrPair(std::string_view serialized);
+
+/**
+ * Serializes a vector of strings into a string.
+ * @param values The string vector.
+ * @return The serialized string.
+ * @details The size of a value comes in the byte delta encoding and the data follows.  The pairs
+ * for all values come consequitively.
+ */
+std::string SerializeStrVector(const std::vector<std::string>& values);
+
+/**
+ * Deserializes a serialized string into a string vector.
+ * @param serialized The serialized string.
+ * @return The result string vector.
+ */
+std::vector<std::string> DeserializeStrVector(std::string_view serialized);
+
+/**
+ * Serializes a map of strings into a string.
+ * @param records The string map.
+ * @return The serialized string.
+ * @details The size of a kay comes in the byte delta encoding and the data follows.  The size of
+ * its value comes in the byte delta encoding and the data follows.  The tuples for all records
+ * come consequitively.
+ */
+std::string SerializeStrMap(const std::map<std::string, std::string>& records);
+
+/**
+ * Deserializes a serialized string into a string map.
+ * @param serialized The serialized string.
+ * @return The result string map.
+ */
+std::map<std::string, std::string> DeserializeStrMap(std::string_view serialized);
+
+}  // namespace tkrzw
+
+#endif  // _TKRZW_STR_UTIL_H
+
+// END OF FILE
