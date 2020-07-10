@@ -23,7 +23,7 @@ Tkrzw is a C++ library implementing DBM with various algorithms.  It features hi
 @li tkrzw::MemIndex -- On-memory secondary index implementation with BabyDBM.
 @li tkrzw::StdIndex -- On-memory secondary index implementation with std::map.
 
-All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, you can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record in the database.  See the <a href="http://fallabs.com/tkrzw/">homepage</a> for details.
+All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, you can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record in the database.  See the <a href="http://dbmx.net/tkrzw/">homepage</a> for details.
 
 @code
 #include "tkrzw_dbm_hash.h"
