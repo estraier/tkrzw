@@ -5,7 +5,7 @@
 #================================================================
 
 # Package name
-AC_INIT(tkrzw, 0.9.0)
+AC_INIT(tkrzw, 0.9.1)
 
 # Package information
 MYLIBVER=0
