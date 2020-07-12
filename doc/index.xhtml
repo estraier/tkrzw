@@ -2904,7 +2904,7 @@ tuning_params.max_level = 8;     // Can skip 4^8 = 65536 records
 dbm.OpenAdvanced("casket.tks", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>To make a very large database, you'll set offset_width=5, step_unit=4, max_level=16, and sort_mem_size=2GB.  Increasing the sort_mem_size parameter is a good idea because the default value is 256MB.</p>
+<p>To make a very large database, you'll set offset_width=5, step_unit=8, max_level=12, and sort_mem_size=2GB.  Increasing the step_unit parameter reduces frequency of random access.  Increasing the sort_mem_size parameter is a good idea because the default value is 256MB.</p>
 
 <p>If you want to optimize the time/space efficiency by all means, rebuilding the database might help because optimal parameters are set implicitly.</p>
 
