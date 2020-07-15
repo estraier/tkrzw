@@ -862,6 +862,7 @@ Status SkipDBMImpl::MergeSkipDatabase(const std::string& src_path) {
   record_sorter_->AddSkipRecord(new SkipRecord(
       src_file.get(), src_offset_width, src_step_unit, src_max_level), METADATA_SIZE);
   record_sorter_->TakeFileOwnership(std::move(src_file));
+  updated_ = true;
   return Status(Status::SUCCESS);
 }
 
@@ -969,7 +970,8 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   const std::string swap_path = path_ + SWAP_FILE_SUFFIX;
   Status status(Status::SUCCESS);
   if (reducer == nullptr && sorted_file_ != nullptr &&
-      file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE)) {
+      file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
+      !record_sorter_->IsUpdated()) {
     status = RenameFile(sorted_path, path_);
     if (status != Status::SUCCESS) {
       return status;

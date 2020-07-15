@@ -160,7 +160,8 @@ void EPutChar(char c);
  * Parses command line arguments.
  * @param argc The number of input arguments.
  * @param argv The input arguments.
- * @param configs A map of option names and numbers of the required arguments.
+ * @param configs A map of option names and numbers of the required arguments.  If an empty
+ * string represents positional arguments.
  * @param result The pointer to a map object to contain option names and their arguments.
  * @param error_message The pointer to a string object to contain the error message.
  * @return True on success or false on failure.

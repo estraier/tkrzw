@@ -247,6 +247,7 @@ check-hashdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm hash casket-new.tkh casket.tkh
 
 check-treedbm-perf :
 	rm -Rf casket*
@@ -309,6 +310,7 @@ check-treedbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm tree casket-new.tkt casket.tkt
 
 check-skipdbm-perf :
 	rm -Rf casket*
@@ -349,6 +351,7 @@ check-skipdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-new.tks one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip casket-new.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm skip --reducer last casket-new.tks casket.tks
 
 check-tinydbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm tiny \

@@ -645,9 +645,11 @@ void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
   tuning_params.sort_mem_size = 1000;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  EXPECT_FALSE(dbm->IsUpdated());
   for (const auto& src_path : src_paths) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->MergeSkipDatabase(src_path));
   }
+  EXPECT_TRUE(dbm->IsUpdated());
   for (int32_t i = 1; i <= num_records; i++) {
     const std::string key = tkrzw::ToString(i * i);
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, "LAST"));
@@ -660,8 +662,17 @@ void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
     const std::string key = tkrzw::ToString(i * i);
     EXPECT_EQ(tkrzw::ToString(i), dbm->GetSimple(key));
   }
-
-
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SynchronizeAdvanced(
+      false, nullptr, tkrzw::SkipDBM::ReduceToLast));
+  EXPECT_EQ(num_files * num_records, dbm->CountSimple());
+  for (int32_t i = 1; i <= max_count; i++) {
+    const std::string key = tkrzw::ToString(i * i);
+    if (i <= num_records) {
+      EXPECT_EQ("LAST", dbm->GetSimple(key));
+    } else {
+      EXPECT_EQ(tkrzw::ToString(i), dbm->GetSimple(key));
+    }
+  }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 

@@ -202,11 +202,13 @@ TEST(DBMSkipImplTest, RecordSorter) {
   const std::string skip_path = tmp_dir.MakeUniquePath();
   constexpr int32_t num_records = 100;
   tkrzw::RecordSorter sorter(base_path, 100);
+  EXPECT_FALSE(sorter.IsUpdated());
   std::map<std::string, std::string> map;
   for (int32_t i = 1; i <= num_records; ++i) {
     const std::string& key = tkrzw::ToString(i);
     const std::string& value = tkrzw::ToString(i * i);
     EXPECT_EQ(tkrzw::Status::SUCCESS, sorter.Add(key, value));
+    EXPECT_TRUE(sorter.IsUpdated());
     map.emplace(key, value);
   }
   tkrzw::MemoryMapParallelFile skip_file;

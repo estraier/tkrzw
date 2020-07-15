@@ -563,6 +563,10 @@ void RecordSorter::TakeFileOwnership(std::unique_ptr<File>&& file) {
   owned_files_.emplace_back(std::move(file));
 }
 
+bool RecordSorter::IsUpdated() const {
+  return !current_records_.empty() || !tmp_files_.empty() || !skip_records_.empty();
+}
+
 Status RecordSorter::Finish() {
   if (finished_) {
     return Status(Status::INFEASIBLE_ERROR, "already finished");

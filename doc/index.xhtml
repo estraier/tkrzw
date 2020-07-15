@@ -2532,6 +2532,8 @@ int main(int argc, char** argv) {
 <dd>Rebuilds a database file.</dd>
 <dt><code>tkrzw_dbm_util restore [<var>common_options</var>] <var>old_file</var> <var>new_file</var></code></dt>
 <dd>Rebuilds a database file.</dd>
+<dt><code>tkrzw_dbm_util merge [<var>common_options</var>] <var>dest_file</var> <var>src_files</var>...</code></dt>
+<dd>Merges database files.</dd>
 <dt><code>tkrzw_dbm_util export [<var>common_options</var>] [<var>options</var>] <var>dbm_file</var> <var>rec_file</var></code></dt>
 <dd>Exports records to a flat record file.</dd>
 <dt><code>tkrzw_dbm_util import [<var>common_options</var>] [<var>options</var>] <var>dbm_file</var> <var>rec_file</var></code></dt>
@@ -2554,6 +2556,8 @@ int main(int argc, char** argv) {
 <dd><code>--items <var>num</var></code> : The number of items to print.</dd>
 <dt>Options for the rebuild subcommand:</dt>
 <dd><code>--restore</code> : Skips broken records to restore a broken database.</dd>
+<dt>Options for the merge subcommand:</dt>
+<dd><code>--reducer <var>func</var></code> : Sets the reducer for the skip database: none, first, second, last, concat, concatnull, concattab, concatline, total. (default: none)</dd>
 <dt>Options for the restore subcommand:</dt>
 <dd><code>--end_offset</code> : The exclusive end offset of records to read. (default: -1)</dd>
 <dt>Options for the export and import subcommands:</dt>
@@ -2973,6 +2977,14 @@ dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToLast);
 ]]></code></pre>
 
 <p>Note that synchronizing the database requires rebuilding the entire database even if only one record is modified.  Therefore, updating records should be done in a batch processing style, where you do every operation and then synchronize the database.  Note again that you cannot access new records until you call the Synchronize method.</p>
+
+<p>You can merge multiple skip database files after building them separately.  You can apply a reducer there.  If you have to aggregate a large amount of data, building partial results as separate database files and merge them afterward is a practical way.  You can do the same thing in C++ by calling the MergeSkipDatabase method.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util merge --reducer last \
+  merged.tks source1.tks source2.tks source3.tks
+]]></code></pre>
+
+<p>The "merge" subcommand of tkrzw_dbm_util is useful to apply a reducer even if you specify no source databases to merge.</p>
 
 <h3 id="tips_skipdbm_mapreduce">SkipDBM as a MapReduce</h3>
 

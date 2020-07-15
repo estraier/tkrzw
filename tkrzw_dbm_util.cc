@@ -38,6 +38,8 @@ static void PrintUsageAndDie() {
   P("    : Rebuilds a database file.\n");
   P("  %s restore [common_options] old_file new_file\n", progname);
   P("    : Rebuilds a database file.\n");
+  P("  %s merge [common_options] dest_file src_files...\n", progname);
+  P("    : Merges database files.\n");
   P("  %s export [common_options] [options] dbm_file rec_file\n", progname);
   P("    : Exports records to a flat record file.\n");
   P("  %s import [common_options] [options] dbm_file rec_file\n", progname);
@@ -70,6 +72,11 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Options for the restore subcommand:\n");
   P("  --end_offset : The exclusive end offset of records to read. (default: -1)\n");
+  P("\n");
+  P("Options for the merge subcommand:\n");
+  P("  --reducer func : Sets the reducer for the skip database:"
+    " none, first, second, last, concat, concatnull, concattab, concatline, total."
+    " (default: none)\n");
   P("\n");
   P("Options for the export and import subcommands:\n");
   P("  --tsv : The record file is in TSV format instead of flat record.\n");
@@ -842,10 +849,96 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
   return has_error ? 1 : 0;
 }
 
+// Processes the merge subcommand.
+static int32_t ProcessMerge(int32_t argc, const char** args) {
+  const std::map<std::string, int32_t>& cmd_configs = {
+    {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--reducer", 1},
+    {"--params", 1},
+  };
+  std::map<std::string, std::vector<std::string>> cmd_args;
+  std::string cmd_error;
+  if (!ParseCommandArguments(argc, args, cmd_configs, &cmd_args, &cmd_error)) {
+    EPrint("Invalid command: ", cmd_error, "\n\n");
+    PrintUsageAndDie();
+  }
+  const std::string dest_path = GetStringArgument(cmd_args, "", 0, "");
+  const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
+  const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
+  const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
+  const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  if (dest_path.empty()) {
+    Die("The destination DBM path must be specified");
+  }
+  std::vector<std::string> src_paths;
+  for (int32_t i = 1; true; i++) {
+    const std::string src_path = GetStringArgument(cmd_args, "", i, "");
+    if (src_path.empty()) {
+      break;
+    }
+    src_paths.emplace_back(src_path);
+  }
+  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, dest_path);
+  if (!OpenDBM(dbm.get(), dest_path, true, true, false, with_no_wait, with_no_lock,
+               false, false, -1, -1, -1,
+               -1, -1, "",
+               -1, -1, -1, false,
+               poly_params)) {
+    return 1;
+  }
+  bool has_error = false;
+  if (typeid(*dbm) == typeid(SkipDBM)) {
+    SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
+    Status status(Status::SUCCESS);
+    for (const auto& src_path : src_paths) {
+      status |= skip_dbm->MergeSkipDatabase(src_path);
+    }
+    if (status != Status::SUCCESS) {
+      EPrintL("MergeSkipDatabase failed: ", status);
+      has_error = true;
+    }
+    status = skip_dbm->SynchronizeAdvanced(
+        false, nullptr, GetReducerOrDier(reducer_name));
+    if (status != Status::SUCCESS) {
+      EPrintL("SynchronizeAdvanced failed: ", status);
+      has_error = true;
+    }
+  } else {
+    Status status(Status::SUCCESS);
+    for (const auto& src_path : src_paths) {
+      auto src_dbm = dbm->MakeDBM();
+      status = src_dbm->Open(src_path, false);
+      if (status != Status::SUCCESS) {
+        EPrintL("Open failed: ", status);
+        has_error = true;
+        break;
+      }
+      status = src_dbm->Export(dbm.get());
+      if (status != Status::SUCCESS) {
+        EPrintL("Export failed: ", status);
+        has_error = true;
+        break;
+      }
+      status = src_dbm->Close();
+      if (status != Status::SUCCESS) {
+        EPrintL("Close failed: ", status);
+        has_error = true;
+        break;
+      }
+    }
+  }
+  if (!CloseDBM(dbm.get())) {
+    return 1;
+  }
+  return has_error ? 1 : 0;
+}
+
 // Processes the export subcommand.
 static int32_t ProcessExport(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 2}, {"--dbm", 1}, {"--file", 1},
+    {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--tsv", 0}, {"--escape", 0}, {"--keys", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -934,7 +1027,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
 // Processes the import subcommand.
 static int32_t ProcessImport(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 2}, {"--dbm", 1}, {"--file", 1},
+    {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--params", 1},
     {"--tsv", 0}, {"--escape", 0},
@@ -1029,6 +1122,8 @@ int main(int argc, char** argv) {
     rv = tkrzw::ProcessRebuild(argc - 1, args + 1);
   } else if (std::strcmp(args[1], "restore") == 0) {
     rv = tkrzw::ProcessRestore(argc - 1, args + 1);
+  } else if (std::strcmp(args[1], "merge") == 0) {
+    rv = tkrzw::ProcessMerge(argc - 1, args + 1);
   } else if (std::strcmp(args[1], "export") == 0) {
     rv = tkrzw::ProcessExport(argc - 1, args + 1);
   } else if (std::strcmp(args[1], "import") == 0) {

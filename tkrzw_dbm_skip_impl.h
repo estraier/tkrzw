@@ -320,6 +320,12 @@ class RecordSorter final {
   void TakeFileOwnership(std::unique_ptr<File>&& file);
 
   /**
+   * Checks whether the sorter is updated.
+   * @return True if the sorter is updated or false if not.
+   */
+  bool IsUpdated() const;
+
+  /**
    * Finishes adding records and allows getting them.
    * @return The result status.
    */
