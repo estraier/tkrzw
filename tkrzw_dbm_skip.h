@@ -556,11 +556,22 @@ class SkipDBM final : public DBM {
   Status Revert();
 
   /**
-   * Check whether the database has been updated after being opened.
+   * Checks whether the database has been updated after being opened.
    * @return True if the database has been updated after being opened.
    * @details Precondition: The database is opened.
    */
   bool IsUpdated();
+
+  /**
+   * Merges the contents of another skip database file.
+   * @param src_path A path to the source database file.
+   * @return The result status.
+   * @details Precondition: The database is opened as writable.
+   * @details Merged records are shown after the database is synchronized.  Among records of the
+   * same key, synchronized existing records come first, added records come second, and
+   * unsynchronized existing records come last.
+   */
+  Status MergeSkipDatabase(const std::string& src_path);
 
   /**
    * Reduces the values of records of the same key by removing REMOVING_VALUE and past values.

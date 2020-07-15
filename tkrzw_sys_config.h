@@ -14,6 +14,10 @@
 #ifndef _TKRZW_SYS_CONFIG_H
 #define _TKRZW_SYS_CONFIG_H
 
+#if __cplusplus < 201412L
+#error expecting C++17 standard
+#endif
+
 #if defined(__linux__)
 
 #define _SYS_LINUX_

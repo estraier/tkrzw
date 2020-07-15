@@ -46,6 +46,7 @@ class SkipDBMTest : public CommonDBMTest {
   void SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm);
   void SkipDBMProcessTest(tkrzw::SkipDBM* dbm);
   void SkipDBMRestoreTest(tkrzw::SkipDBM* dbm);
+  void SkipDBMMergeTest(tkrzw::SkipDBM* dbm);
 };
 
 void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
@@ -620,6 +621,50 @@ void SkipDBMTest::SkipDBMRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.Close());
 }
 
+void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
+  constexpr int32_t num_files = 3;
+  constexpr int32_t num_records = 100;
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::vector<std::string> src_paths;
+  int32_t count = 0;
+  for (int32_t i = 0; i < num_files; i++) {
+    const std::string src_path = tmp_dir.MakeUniquePath();
+    auto src_dbm = dbm->MakeDBM();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm->Open(src_path, true));
+    for (int32_t j = 0; j < num_records; j++) {
+      count++;
+      const std::string key = tkrzw::ToString(count * count);
+      const std::string value = tkrzw::ToString(count);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm->Set(key, value));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm->Close());
+    src_paths.emplace_back(src_path);
+  }
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::SkipDBM::TuningParameters tuning_params;
+  tuning_params.sort_mem_size = 1000;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  for (const auto& src_path : src_paths) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->MergeSkipDatabase(src_path));
+  }
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string key = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, "LAST"));
+  }
+  EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ((num_files + 1) * num_records, dbm->CountSimple());
+  const int32_t max_count = num_files * num_records;
+  for (int32_t i = 1; i <= max_count; i++) {
+    const std::string key = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::ToString(i), dbm->GetSimple(key));
+  }
+
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(SkipDBMTest, EmptyDatabase) {
   tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   SkipDBMEmptyDatabaseTest(&dbm);
@@ -663,6 +708,11 @@ TEST_F(SkipDBMTest, Process) {
 TEST_F(SkipDBMTest, Restore) {
   tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   SkipDBMRestoreTest(&dbm);
+}
+
+TEST_F(SkipDBMTest, Merge) {
+  tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  SkipDBMMergeTest(&dbm);
 }
 
 // END OF FILE

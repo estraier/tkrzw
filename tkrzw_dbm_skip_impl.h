@@ -308,10 +308,16 @@ class RecordSorter final {
 
   /**
    * Adds a file of SkipRecord.
-   * @param rec The pointer to a skip record whose ownership is taken.
+   * @param rec The pointer to a skip record, whose ownership is taken.
    * @param record_base The record base offset.
    */
   void AddSkipRecord(SkipRecord* rec, int64_t record_base);
+
+  /**
+   * Takes ownership of a file object.
+   * @param file The unique pointer of the file object.
+   */
+  void TakeFileOwnership(std::unique_ptr<File>&& file);
 
   /**
    * Finishes adding records and allows getting them.
@@ -409,6 +415,8 @@ class RecordSorter final {
   std::vector<SortSlot*> heap_;
   /** Slots for merge sort. */
   std::vector<SortSlot> slots_;
+  /** Owned file objects. */
+  std::vector<std::shared_ptr<File>> owned_files_;
 };
 
 }  // namespace tkrzw

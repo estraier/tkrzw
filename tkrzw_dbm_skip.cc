@@ -94,6 +94,7 @@ class SkipDBMImpl final {
   Status SetOpaqueMetadata(const std::string& opaque);
   Status Revert();
   bool IsUpdated();
+  Status MergeSkipDatabase(const std::string& src_path);
 
  private:
   void CancelIterators();
@@ -155,7 +156,6 @@ class SkipDBMIteratorImpl final {
 
  private:
   void ClearPosition();
-
 
   SkipDBMImpl* dbm_;
   int64_t record_offset_;
@@ -825,6 +825,46 @@ bool SkipDBMImpl::IsUpdated() {
   return open_ && updated_;
 }
 
+Status SkipDBMImpl::MergeSkipDatabase(const std::string& src_path) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable database");
+  }
+  if (!healthy_) {
+    return Status(Status::PRECONDITION_ERROR, "not healthy database");
+  }
+  uint32_t src_offset_width = 0;
+  uint32_t src_step_unit = 0;
+  uint32_t src_max_level = 0;
+  {
+    SkipDBMImpl src_impl(file_->MakeFile());
+    Status status =
+        src_impl.Open(src_path, false, File::OPEN_DEFAULT, SkipDBM::TuningParameters());
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    src_offset_width = src_impl.offset_width_;
+    src_step_unit = src_impl.step_unit_;
+    src_max_level = src_impl.max_level_;
+    status = src_impl.Close();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  auto src_file = file_->MakeFile();
+  Status status = src_file->Open(src_path, false, File::OPEN_NO_LOCK);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  record_sorter_->AddSkipRecord(new SkipRecord(
+      src_file.get(), src_offset_width, src_step_unit, src_max_level), METADATA_SIZE);
+  record_sorter_->TakeFileOwnership(std::move(src_file));
+  return Status(Status::SUCCESS);
+}
+
 void SkipDBMImpl::CancelIterators() {
   for (auto* iterator : iterators_) {
     iterator->ClearPosition();
@@ -1382,10 +1422,6 @@ void SkipDBMIteratorImpl::ClearPosition() {
   record_size_ = 0;
 }
 
-// hoge
-
-
-
 const std::string SkipDBM::REMOVING_VALUE("\x00\xDE\xAD\x02\x11", 5);
 
 SkipDBM::SkipDBM() {
@@ -1527,6 +1563,10 @@ Status SkipDBM::Revert() {
 
 bool SkipDBM::IsUpdated() {
   return impl_->IsUpdated();
+}
+
+Status SkipDBM::MergeSkipDatabase(const std::string& src_path) {
+  return impl_->MergeSkipDatabase(src_path);
 }
 
 SkipDBM::Iterator::Iterator(SkipDBMImpl* dbm_impl) {

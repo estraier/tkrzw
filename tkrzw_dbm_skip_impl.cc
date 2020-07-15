@@ -559,6 +559,10 @@ void RecordSorter::AddSkipRecord(SkipRecord* rec, int64_t record_base) {
   skip_records_.emplace_back(rec, record_base);
 }
 
+void RecordSorter::TakeFileOwnership(std::unique_ptr<File>&& file) {
+  owned_files_.emplace_back(std::move(file));
+}
+
 Status RecordSorter::Finish() {
   if (finished_) {
     return Status(Status::INFEASIBLE_ERROR, "already finished");

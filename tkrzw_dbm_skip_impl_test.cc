@@ -222,6 +222,7 @@ TEST(DBMSkipImplTest, RecordSorter) {
     map.emplace(key, value);
   }
   sorter.AddSkipRecord(skip_rec, skip_record_base);
+  sorter.TakeFileOwnership(skip_file.MakeFile());
   EXPECT_EQ(tkrzw::Status::SUCCESS, sorter.Finish());
   int32_t count = 0;
   std::string last_key;
