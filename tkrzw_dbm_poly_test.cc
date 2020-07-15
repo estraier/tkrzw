@@ -172,6 +172,15 @@ TEST_F(PolyDBMTest, BasicTest) {
         EXPECT_TRUE(dbm.IsHealthy());
         EXPECT_EQ(40, dbm.CountSimple());
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+        if (config.class_name == "SkipDBM") {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+              restore_path, true, tkrzw::File::OPEN_DEFAULT, config.open_params));
+          const std::map<std::string, std::string> sync_params =
+              {{"merge", tkrzw::StrCat(dest_path, ":", dest_path)}};
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.SynchronizeAdvanced(false, nullptr, sync_params));
+          EXPECT_EQ(120, dbm.CountSimple());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+        }
       }
     }
   }

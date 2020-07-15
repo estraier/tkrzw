@@ -433,7 +433,10 @@ class PolyDBM final : public ParamDBM {
    * the content of the file is synchronized.  If it is nullptr, it is ignored.
    * @param params Optional parameters.
    * @return The result status.
-   * @details Synchronization options can be given by the optional parameters.
+   * @details Only SkipDBM uses the optional parameters.  The "merge" parameter specifies paths
+   * of databases to merge, separated by colon.  The "reducer" parameter specifies the reducer
+   * to apply to records of the same key.  "ReduceToFirst", "ReduceToSecond", "ReduceToLast",
+   * etc are supported.
    */
   Status SynchronizeAdvanced(bool hard, FileProcessor* proc = nullptr,
                              const std::map<std::string, std::string>& params = {});

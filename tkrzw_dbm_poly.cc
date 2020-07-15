@@ -481,6 +481,13 @@ Status PolyDBM::SynchronizeAdvanced(
   std::map<std::string, std::string> mod_params = params;
   if (typeid(*dbm_) == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
+    const auto& merge_paths = StrSplit(SearchMap(mod_params, "merge", ""), ":", true);
+    for (const auto& merge_path : merge_paths) {
+      const Status status = skip_dbm->MergeSkipDatabase(merge_path);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
     const std::string reducer_name = SearchMap(mod_params, "reducer", "");
     SkipDBM::ReducerType reducer = nullptr;
     if (!reducer_name.empty()) {
@@ -490,6 +497,7 @@ Status PolyDBM::SynchronizeAdvanced(
                       StrCat("unsupported reducer: ", reducer_name));
       }
     }
+    mod_params.erase("merge");
     mod_params.erase("reducer");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
