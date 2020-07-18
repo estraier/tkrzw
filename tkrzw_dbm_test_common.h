@@ -541,12 +541,16 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   int64_t current = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", -1, &current, -9));
   EXPECT_EQ(-10, current);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", tkrzw::INT64MIN, &current, 100));
+  EXPECT_EQ(-10, current);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", 110));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", 1, &current));
   EXPECT_EQ(101, current);
   EXPECT_EQ(102, dbm->IncrementSimple("b"));
   EXPECT_EQ(0x7FFF000088880066, dbm->IncrementSimple("b", 0x7FFF000088880000));
   EXPECT_EQ(std::string("\x7F\xFF\x00\x00\x88\x88\x00\x66", 8), dbm->GetSimple("b"));
+  EXPECT_EQ(100, dbm->IncrementSimple("ccc", tkrzw::INT64MIN, 100));
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("ccc"));
 }
 
 inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {

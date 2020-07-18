@@ -265,6 +265,12 @@ class DBM {
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (increment_ == INT64MIN) {
+        if (current_ != nullptr) {
+          *current_ = StrToIntBigEndian(value);
+        }
+        return NOOP;
+      } 
       const int64_t num = StrToIntBigEndian(value) + increment_;
       if (current_ != nullptr) {
         *current_ = num;
@@ -277,6 +283,12 @@ class DBM {
      * Processes an empty record space.
      */
     std::string_view ProcessEmpty(std::string_view key) override {
+      if (increment_ == INT64MIN) {
+        if (current_ != nullptr) {
+          *current_ = initial_;
+        }
+        return NOOP;
+      } 
       const int64_t num = initial_ + increment_;
       if (current_ != nullptr) {
         *current_ = num;
@@ -802,7 +814,8 @@ class DBM {
   /**
    * Increments the numeric value of a record.
    * @param key The key of the record.
-   * @param increment The incremental value.
+   * @param increment The incremental value.  If it is INT64MIN, the current value is not changed
+   * and a new record is not created.
    * @param current The pointer to an integer to contain the current value.  If it is nullptr,
    * it is ignored.
    * @param initial The initial value.
@@ -813,7 +826,7 @@ class DBM {
   virtual Status Increment(std::string_view key, int64_t increment = 1,
                            int64_t* current = nullptr, int64_t initial = 0) {
     RecordProcessorIncrement proc(increment, current, initial);
-    return Process(key, &proc, true);
+    return Process(key, &proc, increment != INT64MIN);
   }
 
   /**
