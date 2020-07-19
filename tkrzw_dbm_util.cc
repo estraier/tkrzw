@@ -34,7 +34,7 @@ static void PrintUsageAndDie() {
   P("    : Removes a record.\n");
   P("  %s list [common_options] file\n", progname);
   P("    : Lists up records and prints them.\n");
-  P("  %s rebuld [common_options] [tuning_options] file\n", progname);
+  P("  %s rebuild [common_options] [tuning_options] file\n", progname);
   P("    : Rebuilds a database file.\n");
   P("  %s restore [common_options] old_file new_file\n", progname);
   P("    : Rebuilds a database file.\n");
