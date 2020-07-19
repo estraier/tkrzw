@@ -697,6 +697,7 @@ enable_option_checking
 enable_debug
 enable_opt
 enable_profile
+enable_optarch
 enable_static
 enable_shared
 '
@@ -1335,6 +1336,7 @@ Optional Features:
   --enable-debug          build for debugging
   --disable-opt           build without optimization
   --enable-profile        build for profiling
+  --enable-optarch        build with optimization for the native architecture
   --enable-static         build by static linking
   --disable-shared        avoid to build shared libraries
 
@@ -2153,7 +2155,7 @@ fi
 if test "$enable_debug" = "yes"
 then
   MYCFLAGS="-Wall -ansi -pedantic -fPIC -fsigned-char -g -O0"
-  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O0"
+  MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -fPIC -fsigned-char -g -O0"
   MYCPPFLAGS="$MYCPPFLAGS -UNDEBUG -D_TKRWX_DEBUG"
   enables="$enables (debug)"
 fi
@@ -2181,6 +2183,19 @@ if test "$enable_profile" = "yes"
 then
   MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
   enables="$enables (profile)"
+fi
+
+# Optimize for the native architecture
+# Check whether --enable-optarch was given.
+if test "${enable_optarch+set}" = set; then :
+  enableval=$enable_optarch;
+fi
+
+if test "$enable_optarch" = "yes"
+then
+  MYCFLAGS="$MYCFLAGS -O3 -march=native"
+  MYCXXFLAGS="$MYCXXFLAGS -O3 -march=native"
+  enables="$enables (optarch)"
 fi
 
 # Static mode

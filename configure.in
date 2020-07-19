@@ -56,7 +56,7 @@ AC_ARG_ENABLE(debug,
 if test "$enable_debug" = "yes"
 then
   MYCFLAGS="-Wall -ansi -pedantic -fPIC -fsigned-char -g -O0"
-  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O0"
+  MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -fPIC -fsigned-char -g -O0"
   MYCPPFLAGS="$MYCPPFLAGS -UNDEBUG -D_TKRWX_DEBUG"
   enables="$enables (debug)"
 fi
@@ -78,6 +78,16 @@ if test "$enable_profile" = "yes"
 then
   MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
   enables="$enables (profile)"
+fi
+
+# Optimize for the native architecture
+AC_ARG_ENABLE(optarch,
+  AC_HELP_STRING([--enable-optarch], [build with optimization for the native architecture]))
+if test "$enable_optarch" = "yes"
+then
+  MYCFLAGS="$MYCFLAGS -O3 -march=native"
+  MYCXXFLAGS="$MYCXXFLAGS -O3 -march=native"
+  enables="$enables (optarch)"
 fi
 
 # Static mode

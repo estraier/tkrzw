@@ -670,6 +670,8 @@ $ tkrzw_dbm_perf sequence --dbm stdhash --iter 10000000 --random_key --threads 1
 $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 10
 ]]></code></pre>
 
+<p>If you pursue the best performance, run "./configure --enable-optarch" for configuration.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".</p>
+
 <h2 id="hashdbm_overview">HashDBM: The File Hash Database</h2>
 
 <p>The file hash database stores key-value structure in a single file.  It uses a hash table and linked lists of records from buckets.  Therefore, given the number of records N and the number of buckets M, the average time complexity of data retrieval is O(N/M).  If M is large enough, the time complexity can be said O(1).</p>
