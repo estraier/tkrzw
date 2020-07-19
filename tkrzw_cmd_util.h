@@ -59,7 +59,7 @@ namespace tkrzw {
 /**
  * Prints an empty string to the stdout and flush the buffer.
  */
-void Print() {
+inline void Print() {
   std::cout.flush();
 }
 
@@ -69,7 +69,7 @@ void Print() {
  * @param rest The rest strings.
  */
 template <typename FIRST, typename... REST>
-void Print(const FIRST& first, const REST&... rest) {
+inline void Print(const FIRST& first, const REST&... rest) {
   std::cout << ToString(first);
   Print(rest...);
 }
@@ -77,7 +77,7 @@ void Print(const FIRST& first, const REST&... rest) {
 /**
  * Prints an empty string and a line feed to the stdout and flush the buffer.
  */
-void PrintL() {
+inline void PrintL() {
   std::cout << std::endl;
   std::cout.flush();
 }
@@ -88,7 +88,7 @@ void PrintL() {
  * @param rest The rest strings.
  */
 template <typename FIRST, typename... REST>
-void PrintL(const FIRST& first, const REST&... rest) {
+inline void PrintL(const FIRST& first, const REST&... rest) {
   std::cout << ToString(first);
   PrintL(rest...);
 }
@@ -109,7 +109,7 @@ void PutChar(char c);
 /**
  * Prints an empty string to the stderr and flush the buffer.
  */
-void EPrint() {
+inline void EPrint() {
   std::cerr.flush();
 }
 
@@ -119,7 +119,7 @@ void EPrint() {
  * @param rest The rest strings.
  */
 template <typename FIRST, typename... REST>
-void EPrint(const FIRST& first, const REST&... rest) {
+inline void EPrint(const FIRST& first, const REST&... rest) {
   std::cerr << ToString(first);
   EPrint(rest...);
 }
@@ -127,7 +127,7 @@ void EPrint(const FIRST& first, const REST&... rest) {
 /**
  * Prints an empty string and a line feed to the stderr and flush the buffer.
  */
-void EPrintL() {
+inline void EPrintL() {
   std::cerr << std::endl;
   std::cerr.flush();
 }
@@ -138,7 +138,7 @@ void EPrintL() {
  * @param rest The rest strings.
  */
 template <typename FIRST, typename... REST>
-void EPrintL(const FIRST& first, const REST&... rest) {
+inline void EPrintL(const FIRST& first, const REST&... rest) {
   std::cerr << ToString(first);
   EPrintL(rest...);
 }
@@ -218,7 +218,7 @@ std::map<std::string, std::string> GetSystemInfo();
  * Throws an exception of StatusException to terminates the process with a message.
  * @param message The message to print.
  */
-void Die(const std::string& message) {
+inline void Die(const std::string& message) {
   throw StatusException(Status(Status::APPLICATION_ERROR, message));
 }
 
@@ -228,7 +228,7 @@ void Die(const std::string& message) {
  * @param rest The rest parameters.
  */
 template <typename FIRST, typename... REST>
-void Die(const FIRST& first, const REST&... rest) {
+inline void Die(const FIRST& first, const REST&... rest) {
   Die(StrCat(first, rest...));
 }
 

@@ -270,7 +270,7 @@ class DBM {
           *current_ = StrToIntBigEndian(value);
         }
         return NOOP;
-      } 
+      }
       const int64_t num = StrToIntBigEndian(value) + increment_;
       if (current_ != nullptr) {
         *current_ = num;
@@ -288,7 +288,7 @@ class DBM {
           *current_ = initial_;
         }
         return NOOP;
-      } 
+      }
       const int64_t num = initial_ + increment_;
       if (current_ != nullptr) {
         *current_ = num;

@@ -686,7 +686,7 @@ inline std::unique_ptr<FileIndex::Iterator> FileIndex::MakeIterator() {
   return iter;
 }
 
-FileIndex::Iterator::Iterator(std::unique_ptr<DBM::Iterator> it) : it_(std::move(it)) {}
+inline FileIndex::Iterator::Iterator(std::unique_ptr<DBM::Iterator> it) : it_(std::move(it)) {}
 
 inline FileIndex::Iterator::~Iterator() {}
 
@@ -776,7 +776,7 @@ inline std::unique_ptr<MemIndex::Iterator> MemIndex::MakeIterator() {
   return iter;
 }
 
-MemIndex::Iterator::Iterator(std::unique_ptr<DBM::Iterator> it) : it_(std::move(it)) {}
+inline MemIndex::Iterator::Iterator(std::unique_ptr<DBM::Iterator> it) : it_(std::move(it)) {}
 
 inline MemIndex::Iterator::~Iterator() {}
 
