@@ -53,14 +53,13 @@ uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed) {
     size -= sizeof(uint64_t);
   }
   switch (size) {
-    case 7: hash ^= (uint64_t)rp[6] << 48;
-    case 6: hash ^= (uint64_t)rp[5] << 40;
-    case 5: hash ^= (uint64_t)rp[4] << 32;
-    case 4: hash ^= (uint64_t)rp[3] << 24;
-    case 3: hash ^= (uint64_t)rp[2] << 16;
-    case 2: hash ^= (uint64_t)rp[1] << 8;
-    case 1: hash ^= (uint64_t)rp[0];
-      hash *= mul;
+    case 7: hash ^= (uint64_t)rp[6] << 48;  // fall through
+    case 6: hash ^= (uint64_t)rp[5] << 40;  // fall through
+    case 5: hash ^= (uint64_t)rp[4] << 32;  // fall through
+    case 4: hash ^= (uint64_t)rp[3] << 24;  // fall through
+    case 3: hash ^= (uint64_t)rp[2] << 16;  // fall through
+    case 2: hash ^= (uint64_t)rp[1] << 8;   // fall through
+    case 1: hash ^= (uint64_t)rp[0]; hash *= mul;  // fall through
   };
   hash ^= hash >> rtt;
   hash *= mul;

@@ -92,7 +92,7 @@ class LinkedHashMap final {
      * Accesses a member of the current record.
      * @return The pointer to the current record.
      */
-    const Record* const operator->() const {
+    const Record* operator->() const {
       return rec_;
     }
 
@@ -235,7 +235,7 @@ class LinkedHashMap final {
      * Accesses a member of the current record.
      * @return The pointer to the current record.
      */
-    Record* const operator->() const {
+    Record* operator->() const {
       return rec_;
     }
 

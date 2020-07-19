@@ -453,7 +453,7 @@ Status MemoryMapParallelFile::Read(int64_t off, void* buf, size_t size) {
 }
 
 std::string MemoryMapParallelFile::ReadSimple(int64_t off, size_t size) {
-  assert(off >= 0 && size >= 0);
+  assert(off >= 0);
   std::unique_ptr<Zone> zone;
   Status status = MakeZone(false, off, size, &zone);
   if (status != Status::SUCCESS || zone->Size() != size) {
@@ -958,7 +958,7 @@ Status MemoryMapAtomicFile::Read(int64_t off, void* buf, size_t size) {
 }
 
 std::string MemoryMapAtomicFile::ReadSimple(int64_t off, size_t size) {
-  assert(off >= 0 && size >= 0);
+  assert(off >= 0);
   std::unique_ptr<Zone> zone;
   Status status = MakeZone(false, off, size, &zone);
   if (status != Status::SUCCESS || zone->Size() != size) {
