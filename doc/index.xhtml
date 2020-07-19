@@ -591,9 +591,9 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.</p>
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -I/usr/local/include \
+<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
   -O2 -Wall helloworld.cc \
   -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
 ]]></code></pre>
@@ -2505,7 +2505,7 @@ int main(int argc, char** argv) {
 
 <p>The following is a way to build your own application without setting complicated flags.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 \
+<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread \
   $(tkrzw_build_util config -i) \
   -O2 -Wall helloworld.cc \
   $(tkrzw_build_util config -l)
