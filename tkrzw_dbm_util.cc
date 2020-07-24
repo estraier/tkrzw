@@ -35,9 +35,9 @@ static void PrintUsageAndDie() {
   P("  %s list [common_options] file\n", progname);
   P("    : Lists up records and prints them.\n");
   P("  %s rebuild [common_options] [tuning_options] file\n", progname);
-  P("    : Rebuilds a database file.\n");
+  P("    : Rebuilds a database file for optimization.\n");
   P("  %s restore [common_options] old_file new_file\n", progname);
-  P("    : Rebuilds a database file.\n");
+  P("    : Restores a broken database file.\n");
   P("  %s merge [common_options] dest_file src_files...\n", progname);
   P("    : Merges database files.\n");
   P("  %s export [common_options] [options] dbm_file rec_file\n", progname);
