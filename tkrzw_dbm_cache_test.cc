@@ -57,6 +57,11 @@ TEST_F(CacheDBMTest, Sequence) {
   SequenceTest(&dbm);
 }
 
+TEST_F(CacheDBMTest, Append) {
+  tkrzw::CacheDBM dbm;
+  AppendTest(&dbm);
+}
+
 TEST_F(CacheDBMTest, Process) {
   tkrzw::CacheDBM dbm;
   ProcessTest(&dbm);

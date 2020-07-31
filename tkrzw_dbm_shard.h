@@ -298,6 +298,17 @@ class ShardDBM final : public ParamDBM {
   Status Remove(std::string_view key) override;
 
   /**
+   * Appends data at the end of a record of a key.
+   * @param key The key of the record.
+   * @param value The value to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  Status Append(
+      std::string_view key, std::string_view value, std::string_view delim = "") override;
+
+  /**
    * Processes each and every record in the database with a processor.
    * @param proc The pointer to the processor object.
    * @param writable True if the processor can edit the record.

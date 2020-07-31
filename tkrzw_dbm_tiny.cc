@@ -36,6 +36,8 @@ struct TinyRecord final {
   const char* value_ptr;
   char* Serialize() const;
   char* Reserialize(char* ptr, int32_t old_value_size) const;
+  char* ReserializeAppend(
+      char* ptr, const std::string_view cat_value, const std::string_view cat_delim) const;
   void Deserialize(const char* ptr);
 };
 
@@ -48,6 +50,7 @@ class TinyDBMImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status Append(std::string_view key, std::string_view value, std::string_view delim);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -69,6 +72,8 @@ class TinyDBMImpl final {
   Status ExportRecords();
   void ProcessImpl(
       std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc, bool writable);
+  void AppendImpl(
+      std::string_view key, int64_t bucket_index, std::string_view value, std::string_view delim);
   Status ReadNextBucketRecords(TinyDBMIteratorImpl* iter);
 
   IteratorList iterators_;
@@ -132,6 +137,42 @@ char* TinyRecord::Reserialize(char* ptr, int32_t old_value_size) const {
   char* wp = ptr + sizeof(child) + SizeVarNum(key_size) + key_size;
   wp += WriteVarNum(wp, value_size);
   std::memcpy(wp, value_ptr, value_size);
+  return ptr;
+}
+
+char* TinyRecord::ReserializeAppend(
+    char* ptr, const std::string_view cat_value, const std::string_view cat_delim) const {
+  const int32_t new_value_size = value_size + cat_delim.size() + cat_value.size();
+  const int32_t old_value_header_size = SizeVarNum(value_size);
+  const int32_t new_value_header_size = SizeVarNum(new_value_size);
+  if (new_value_header_size > old_value_header_size) {
+    const int32_t size = sizeof(child) + SizeVarNum(key_size) + key_size +
+        SizeVarNum(new_value_size) + new_value_size;
+    char* new_ptr = static_cast<char*>(xreallocappend(nullptr, size));
+    char* wp = new_ptr;
+    std::memcpy(wp, &child, sizeof(child));
+    wp += sizeof(child);
+    wp += WriteVarNum(wp, key_size);
+    std::memcpy(wp, key_ptr, key_size);
+    wp += key_size;
+    wp += WriteVarNum(wp, new_value_size);
+    std::memcpy(wp, value_ptr, value_size);
+    wp += value_size;
+    std::memcpy(wp, cat_delim.data(), cat_delim.size());
+    wp += cat_delim.size();
+    std::memcpy(wp, cat_value.data(), cat_value.size());
+    xfree(ptr);
+    return new_ptr;
+  }
+  const int32_t size = sizeof(child) + SizeVarNum(key_size) + key_size +
+      SizeVarNum(new_value_size) + new_value_size;
+  ptr = static_cast<char*>(xreallocappend(ptr, size));
+  char* wp = ptr + sizeof(child) + SizeVarNum(key_size) + key_size;
+  wp += WriteVarNum(wp, new_value_size);
+  wp += value_size;
+  std::memcpy(wp, cat_delim.data(), cat_delim.size());
+  wp += cat_delim.size();
+  std::memcpy(wp, cat_value.data(), cat_value.size());
   return ptr;
 }
 
@@ -220,6 +261,14 @@ Status TinyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
   ScopedHashLock record_lock(record_mutex_, key, writable);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   ProcessImpl(key, bucket_index, proc, writable);
+  return Status(Status::SUCCESS);
+}
+
+Status TinyDBMImpl::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  ScopedHashLock record_lock(record_mutex_, key, true);
+  const int64_t bucket_index = record_lock.GetBucketIndex();
+  AppendImpl(key, bucket_index, value, delim);
   return Status(Status::SUCCESS);
 }
 
@@ -499,6 +548,39 @@ void TinyDBMImpl::ProcessImpl(
   }
 }
 
+void TinyDBMImpl::AppendImpl(
+    std::string_view key, int64_t bucket_index, std::string_view value, std::string_view delim) {
+  TinyRecord rec;
+  char* top = buckets_[bucket_index];
+  char* parent = nullptr;
+  char* ptr = top;
+  while (ptr != nullptr) {
+    rec.Deserialize(ptr);
+    const std::string_view rec_key(rec.key_ptr, rec.key_size);
+    const std::string_view rec_value(rec.value_ptr, rec.value_size);
+    if (key == rec_key) {
+      char* new_ptr = rec.ReserializeAppend(ptr, value, delim);
+      if (new_ptr != ptr) {
+        if (parent == nullptr) {
+          buckets_[bucket_index] = new_ptr;
+        } else {
+          std::memcpy(parent, &new_ptr, sizeof(new_ptr));
+        }
+      }
+      return;
+    }
+    parent = ptr;
+    ptr = rec.child;
+  }
+  rec.child = top;
+  rec.key_ptr = key.data();
+  rec.key_size = key.size();
+  rec.value_ptr = value.data();
+  rec.value_size = value.size();
+  buckets_[bucket_index] = rec.Serialize();
+  num_records_.fetch_add(1);
+}
+
 Status TinyDBMImpl::ReadNextBucketRecords(TinyDBMIteratorImpl* iter) {
   while (true) {
     int64_t bucket_index = iter->bucket_index_.load();
@@ -656,6 +738,10 @@ Status TinyDBM::Close() {
 Status TinyDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->Process(key, proc, writable);
+}
+
+Status TinyDBM::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  return impl_->Append(key, value, delim);
 }
 
 Status TinyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

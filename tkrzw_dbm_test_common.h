@@ -30,6 +30,7 @@ class CommonDBMTest : public Test {
   void LargeRecordTest(tkrzw::DBM* dbm);
   void BasicTest(tkrzw::DBM* dbm);
   void SequenceTest(tkrzw::DBM* dbm);
+  void AppendTest(tkrzw::DBM* dbm);
   void ProcessTest(tkrzw::DBM* dbm);
   void ProcessEachTest(tkrzw::DBM* dbm);
   void RandomTest(tkrzw::DBM* dbm, int32_t seed);
@@ -350,6 +351,36 @@ inline void CommonDBMTest::SequenceTest(tkrzw::DBM* dbm) {
     }
   }
   EXPECT_EQ(0, dbm->CountSimple());
+}
+
+inline void CommonDBMTest::AppendTest(tkrzw::DBM* dbm) {
+  constexpr int64_t num_iterations = 300;
+  constexpr int64_t num_records = 100;
+  std::string even_value, odd_value;
+  for (int32_t i = 1; i <= num_iterations; i++) {
+    const std::string value = tkrzw::ToString(i * i);
+    for (int32_t key_num = 1; key_num <= num_records; key_num++) {
+      const std::string key = tkrzw::ToString(key_num * key_num);
+      if (key_num % 2 == 0) {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append(key, value, ","));
+      } else {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append(key, value));
+      }
+    }
+    if (!even_value.empty()) {
+      even_value.append(",");
+    }
+    even_value.append(value);
+    odd_value.append(value);
+  }
+  for (int32_t key_num = 1; key_num <= num_records; key_num++) {
+    const std::string key = tkrzw::ToString(key_num * key_num);
+    if (key_num % 2 == 0) {
+      EXPECT_EQ(even_value, dbm->GetSimple(key));
+    } else {
+      EXPECT_EQ(odd_value, dbm->GetSimple(key));
+    }
+  }
 }
 
 inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {

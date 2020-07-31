@@ -440,6 +440,20 @@ inline void* xrealloc(void* ptr, size_t size) {
 }
 
 /**
+ * Re-allocates a region on memory for appending operations.
+ * @param ptr The pointer to the region.
+ * @param size The size of the region.
+ * @return The pointer to the re-allocated region.
+ */
+inline void* xreallocappend(void* ptr, size_t size) {
+  size_t aligned_size = 8;
+  while (aligned_size < size) {
+    aligned_size += aligned_size >> 1;
+  }
+  return xrealloc(ptr, aligned_size);
+}
+
+/**
  * Frees a region on memory.
  * @param ptr The pointer to the region.
  */

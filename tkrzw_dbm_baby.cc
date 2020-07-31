@@ -41,6 +41,8 @@ struct BabyRecord final {
 
 BabyRecord* CreateBabyRecord(std::string_view key, std::string_view value);
 BabyRecord* ModifyBabyRecord(BabyRecord* record, std::string_view new_value);
+BabyRecord* AppendBabyRecord(
+    BabyRecord* record, std::string_view cat_value, std::string_view cat_delim);
 void FreeBabyRecord(BabyRecord* record);
 void FreeBabyRecords(std::vector<BabyRecord*>* records);
 
@@ -119,6 +121,7 @@ class BabyDBMImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status Append(std::string_view key, std::string_view value, std::string_view delim);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -150,6 +153,8 @@ class BabyDBMImpl final {
   Status ExportRecords();
   void ProcessImpl(
       BabyLeafNode* node, std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  void AppendImpl(
+      BabyLeafNode* node, std::string_view key, std::string_view value, std::string_view delim);
 
   IteratorList iterators_;
   std::unique_ptr<File> file_;
@@ -225,9 +230,23 @@ BabyRecord* ModifyBabyRecord(BabyRecord* record, std::string_view new_value) {
     record = static_cast<BabyRecord*>(xrealloc(
         record, sizeof(BabyRecord) + record->key_size + new_value.size()));
   }
-  record->value_size = new_value.size();
   char* wp = reinterpret_cast<char*>(record) + sizeof(*record) + record->key_size;
   std::memcpy(wp, new_value.data(), new_value.size());
+  record->value_size = new_value.size();
+  return record;
+}
+
+BabyRecord* AppendBabyRecord(
+    BabyRecord* record, std::string_view cat_value, std::string_view cat_delim) {
+  int32_t new_value_size = record->value_size + cat_delim.size() + cat_value.size();
+  record = static_cast<BabyRecord*>(xreallocappend(
+      record, sizeof(BabyRecord) + record->key_size + new_value_size));
+  char* wp = reinterpret_cast<char*>(record) + sizeof(*record) +
+      record->key_size + record->value_size;
+  std::memcpy(wp, cat_delim.data(), cat_delim.size());
+  wp += cat_delim.size();
+  std::memcpy(wp, cat_value.data(), cat_value.size());
+  record->value_size = new_value_size;
   return record;
 }
 
@@ -382,14 +401,25 @@ Status BabyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
   }
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   BabyLeafNode* leaf_node = SearchTree(key);
-  assert(leaf_node != nullptr);
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key, proc, true);
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key, proc, false);
   }
+  return Status(Status::SUCCESS);
+}
+
+Status BabyDBMImpl::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  if (!reorg_nodes_.IsEmpty()) {
+    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    ReorganizeTree();
+  }
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  BabyLeafNode* leaf_node = SearchTree(key);
+  std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+  AppendImpl(leaf_node, key, value, delim);
   return Status(Status::SUCCESS);
 }
 
@@ -399,7 +429,7 @@ Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   BabyLeafNode* leaf_node = first_node_;
   while (leaf_node != nullptr) {
     if (writable) {
-      std::lock_guard<std::shared_timed_mutex> lock(leaf_node->mutex);
+      std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
       std::vector<std::string> keys;
       keys.reserve(leaf_node->records.size());
       for (const auto* rec : leaf_node->records) {
@@ -409,7 +439,7 @@ Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         ProcessImpl(leaf_node, key, proc, true);
       }
     } else {
-      std::shared_lock<std::shared_timed_mutex> lock(leaf_node->mutex);
+      std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
       for (const auto* rec : leaf_node->records) {
         proc->ProcessFull(rec->GetKey(), rec->GetValue());
       }
@@ -862,7 +892,7 @@ Status BabyDBMImpl::ImportRecords() {
     }
     DBM::RecordProcessorSet setter(&status, value, true);
     BabyLeafNode* leaf_node = SearchTree(key_store);
-    std::lock_guard<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key_store, &setter, true);
   }
   return Status(Status::SUCCESS);
@@ -876,7 +906,7 @@ Status BabyDBMImpl::ExportRecords() {
   FlatRecord flat_rec(file_.get());
   BabyLeafNode* leaf_node = first_node_;
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     for (const auto* rec : leaf_node->records) {
       status = flat_rec.Write(rec->GetKey());
       if (status != Status::SUCCESS) {
@@ -924,6 +954,25 @@ void BabyDBMImpl::ProcessImpl(
       if (CheckLeafNodeToDivide(node)) {
         reorg_nodes_.Insert(std::make_pair(node, std::string(records.front()->GetKey())));
       }
+    }
+  }
+}
+
+void BabyDBMImpl::AppendImpl(
+    BabyLeafNode* node, std::string_view key, std::string_view value, std::string_view delim) {
+  BabyRecordOnStack search_stack(key);
+  const BabyRecord* search_rec = search_stack.record;
+  auto& records = node->records;
+  auto it = std::lower_bound(records.begin(), records.end(), search_rec, record_comp_);
+  if (it != records.end() && !record_comp_(search_rec, *it)) {
+    BabyRecord* rec = *it;
+    *it = AppendBabyRecord(rec, value, delim);
+  } else {
+    BabyRecord* new_rec = CreateBabyRecord(key, value);
+    node->records.insert(it, new_rec);
+    num_records_.fetch_add(1);
+    if (CheckLeafNodeToDivide(node)) {
+      reorg_nodes_.Insert(std::make_pair(node, std::string(records.front()->GetKey())));
     }
   }
 }
@@ -1064,7 +1113,7 @@ void BabyDBMIteratorImpl::ClearPosition() {
 
 bool BabyDBMIteratorImpl::SetPositionFirst(BabyLeafNode* leaf_node) {
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     auto& records = leaf_node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_node, records.front()->GetKey());
@@ -1078,7 +1127,7 @@ bool BabyDBMIteratorImpl::SetPositionFirst(BabyLeafNode* leaf_node) {
 
 bool BabyDBMIteratorImpl::SetPositionLast(BabyLeafNode* leaf_node) {
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node->mutex);
+    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     auto& records = leaf_node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_node, records.back()->GetKey());
@@ -1276,6 +1325,10 @@ Status BabyDBM::Close() {
 Status BabyDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->Process(key, proc, writable);
+}
+
+Status BabyDBM::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  return impl_->Append(key, value, delim);
 }
 
 Status BabyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

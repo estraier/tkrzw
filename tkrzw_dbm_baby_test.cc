@@ -57,6 +57,11 @@ TEST_F(BabyDBMTest, Sequence) {
   SequenceTest(&dbm);
 }
 
+TEST_F(BabyDBMTest, Append) {
+  tkrzw::BabyDBM dbm;
+  AppendTest(&dbm);
+}
+
 TEST_F(BabyDBMTest, Process) {
   tkrzw::BabyDBM dbm;
   ProcessTest(&dbm);

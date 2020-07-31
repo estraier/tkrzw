@@ -41,14 +41,15 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMLargeRecordTest(tkrzw::HashDBM* dbm);
   void HashDBMBasicTest(tkrzw::HashDBM* dbm);
   void HashDBMSequenceTest(tkrzw::HashDBM* dbm);
+  void HashDBMAppendTest(tkrzw::HashDBM* dbm);
   void HashDBMProcessTest(tkrzw::HashDBM* dbm);
   void HashDBMProcessEachTest(tkrzw::HashDBM* dbm);
   void HashDBMRandomTestOne(tkrzw::HashDBM* dbm);
   void HashDBMRandomTestThread(tkrzw::HashDBM* dbm);
   void HashDBMRecordMigrationTest(tkrzw::HashDBM* dbm, tkrzw::File* file);
   void HashDBMOpenCloseTest(tkrzw::HashDBM* dbm);
-  void HashDBMInPlaceTest(tkrzw::HashDBM* dbm);
-  void HashDBMAppendTest(tkrzw::HashDBM* dbm);
+  void HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm);
+  void HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm);
   void HashDBMRebuildStaticTestOne(
       tkrzw::HashDBM* dbm, const tkrzw::HashDBM::TuningParameters& tuning_params);
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
@@ -176,6 +177,34 @@ void HashDBMTest::HashDBMSequenceTest(tkrzw::HashDBM* dbm) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           SequenceTest(dbm);
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        }
+      }
+    }
+  }
+}
+
+void HashDBMTest::HashDBMAppendTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
+  const std::vector<int32_t> offset_widths = {4};
+  const std::vector<int32_t> align_pows = {0};
+  const std::vector<int32_t> nums_buckets = {100};
+  for (const auto& update_mode : update_modes) {
+    for (const auto& offset_width : offset_widths) {
+      for (const auto& align_pow : align_pows) {
+        for (const auto& num_buckets : nums_buckets) {
+          tkrzw::HashDBM::TuningParameters tuning_params;
+          tuning_params.update_mode = update_mode;
+          tuning_params.offset_width = offset_width;
+          tuning_params.align_pow = align_pow;
+          tuning_params.num_buckets = num_buckets;
+          tuning_params.lock_mem_buckets = true;
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          AppendTest(dbm);
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
         }
       }
@@ -377,7 +406,7 @@ void HashDBMTest::HashDBMOpenCloseTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
-void HashDBMTest::HashDBMInPlaceTest(tkrzw::HashDBM* dbm) {
+void HashDBMTest::HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::HashDBM::TuningParameters tuning_params;
@@ -492,7 +521,7 @@ void HashDBMTest::HashDBMInPlaceTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
-void HashDBMTest::HashDBMAppendTest(tkrzw::HashDBM* dbm) {
+void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   const std::string offset_file_path = tmp_dir.MakeUniquePath();
@@ -970,6 +999,11 @@ TEST_F(HashDBMTest, Sequence) {
   HashDBMSequenceTest(&dbm);
 }
 
+TEST_F(HashDBMTest, Append) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMAppendTest(&dbm);
+}
+
 TEST_F(HashDBMTest, Process) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMProcessTest(&dbm);
@@ -1001,14 +1035,14 @@ TEST_F(HashDBMTest, OpenClose) {
   HashDBMOpenCloseTest(&dbm);
 }
 
-TEST_F(HashDBMTest, InPlace) {
+TEST_F(HashDBMTest, UpdateInPlace) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
-  HashDBMInPlaceTest(&dbm);
+  HashDBMUpdateInPlaceTest(&dbm);
 }
 
-TEST_F(HashDBMTest, Append) {
+TEST_F(HashDBMTest, UpdateAppending) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
-  HashDBMAppendTest(&dbm);
+  HashDBMUpdateAppendingTest(&dbm);
 }
 
 TEST_F(HashDBMTest, RebuildStatic) {

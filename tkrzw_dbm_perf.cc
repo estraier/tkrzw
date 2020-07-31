@@ -1091,6 +1091,13 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
             }
           }
         }
+      } else if (op_dist(misc_mt) % 8 == 0) {
+        const Status status = dbm->Append(key, value, ",");
+        if (status != Status::SUCCESS) {
+          EPrintL("Append failed: ", status);
+          has_error = true;
+          break;
+        }
       } else if (op_dist(misc_mt) % 5 == 0) {
         const Status status = dbm->Remove(key);
         if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {

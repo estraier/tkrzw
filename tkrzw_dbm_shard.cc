@@ -141,6 +141,15 @@ Status ShardDBM::Remove(std::string_view key) {
   return dbm->Remove(key);
 }
 
+Status ShardDBM::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  const int32_t shard_index = SecondaryHash(key, dbms_.size());
+  auto dbm = dbms_[shard_index];
+  return dbm->Append(key, value, delim);
+}
+
 Status ShardDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

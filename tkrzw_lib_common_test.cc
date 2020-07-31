@@ -144,18 +144,29 @@ TEST(LibCommonTest, XMalloc) {
   for (size_t size = 1; size <= 8192; size *= 2) {
     const std::string str(size, 'z');
     void* ptr = tkrzw::xmalloc(size);
+    EXPECT_NE(nullptr, ptr);
     std::memset(ptr, 'z', size);
-    ptr = std::realloc(ptr, size + 1);
+    ptr = tkrzw::xrealloc(ptr, size + 1);
+    EXPECT_NE(nullptr, ptr);
     EXPECT_EQ(0, std::memcmp(ptr, str.data(), size));
     tkrzw::xfree(ptr);
   }
   for (size_t size = 1; size <= 8192; size *= 2) {
     const std::string str(size, 0);
     void* ptr = tkrzw::xcalloc(1, size);
-    ptr = std::realloc(ptr, size + 1);
+    EXPECT_NE(nullptr, ptr);
+    ptr = tkrzw::xrealloc(ptr, size + 1);
+    EXPECT_NE(nullptr, ptr);
     EXPECT_EQ(0, std::memcmp(ptr, str.data(), size));
     tkrzw::xfree(ptr);
   }
+  void* ptr = tkrzw::xreallocappend(nullptr, 1);
+  EXPECT_NE(nullptr, ptr);
+  for (size_t size = 1; size <= 8192; size *= 2) {
+    ptr = tkrzw::xreallocappend(ptr, size);
+    EXPECT_NE(nullptr, ptr);
+  }
+  tkrzw::xfree(ptr);
 }
 
 TEST(LibCommonTest, CheckSet) {

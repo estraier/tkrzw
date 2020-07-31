@@ -57,6 +57,11 @@ TEST_F(StdHashDBMTest, Sequence) {
   SequenceTest(&dbm);
 }
 
+TEST_F(StdHashDBMTest, Append) {
+  tkrzw::StdHashDBM dbm(100);
+  AppendTest(&dbm);
+}
+
 TEST_F(StdHashDBMTest, Process) {
   tkrzw::StdHashDBM dbm(1000);
   ProcessTest(&dbm);
@@ -114,6 +119,11 @@ TEST_F(StdTreeDBMTest, Basic) {
 TEST_F(StdTreeDBMTest, Sequence) {
   tkrzw::StdTreeDBM dbm;
   SequenceTest(&dbm);
+}
+
+TEST_F(StdTreeDBMTest, Append) {
+  tkrzw::StdTreeDBM dbm;
+  AppendTest(&dbm);
 }
 
 TEST_F(StdTreeDBMTest, Process) {

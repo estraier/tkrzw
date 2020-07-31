@@ -365,6 +365,13 @@ Status PolyDBM::Remove(std::string_view key) {
   return dbm_->Remove(key);
 }
 
+Status PolyDBM::Append(std::string_view key, std::string_view value, std::string_view delim) {
+  if (dbm_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return dbm_->Append(key, value, delim);
+}
+
 Status PolyDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   if (dbm_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

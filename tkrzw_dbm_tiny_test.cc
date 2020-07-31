@@ -57,6 +57,11 @@ TEST_F(TinyDBMTest, Sequence) {
   SequenceTest(&dbm);
 }
 
+TEST_F(TinyDBMTest, Append) {
+  tkrzw::TinyDBM dbm(100);
+  AppendTest(&dbm);
+}
+
 TEST_F(TinyDBMTest, Process) {
   tkrzw::TinyDBM dbm(1000);
   ProcessTest(&dbm);

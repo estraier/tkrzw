@@ -40,6 +40,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMFileTest(tkrzw::TreeDBM* dbm);
   void TreeDBMLargeRecordTest(tkrzw::TreeDBM* dbm);
   void TreeDBMBasicTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMAppendTest(tkrzw::TreeDBM* dbm);
   void TreeDBMProcessTest(tkrzw::TreeDBM* dbm);
   void TreeDBMProcessEachTest(tkrzw::TreeDBM* dbm);
   void TreeDBMRandomTestOne(tkrzw::TreeDBM* dbm);
@@ -149,6 +150,33 @@ void TreeDBMTest::TreeDBMBasicTest(tkrzw::TreeDBM* dbm) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           BasicTest(dbm);
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        }
+      }
+    }
+  }
+}
+
+void TreeDBMTest::TreeDBMAppendTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
+  const std::vector<int32_t> max_page_size = {200};
+  const std::vector<int32_t> max_branches = {16};
+  const std::vector<int32_t> max_cached_pages = {64};
+  for (const auto& update_mode : update_modes) {
+    for (const auto& max_page_size : max_page_size) {
+      for (const auto& max_branches : max_branches) {
+        for (const auto& max_cached_pages : max_cached_pages) {
+          tkrzw::TreeDBM::TuningParameters tuning_params;
+          tuning_params.update_mode = update_mode;
+          tuning_params.max_page_size = max_page_size;
+          tuning_params.max_branches = max_branches;
+          tuning_params.max_cached_pages = max_cached_pages;
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          AppendTest(dbm);
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
         }
       }
@@ -726,6 +754,11 @@ TEST_F(TreeDBMTest, LargeRecord) {
 TEST_F(TreeDBMTest, Basic) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMBasicTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, Append) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  TreeDBMAppendTest(&dbm);
 }
 
 TEST_F(TreeDBMTest, Process) {
