@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ja" xml:lang="ja">
 <head>
 <meta charset="UTF-8"/>
-<title>Tkrzw: an implementation of DBM</title>
+<title>Tkrzw: a set of implementations of DBM</title>
 <link href="prism.css" rel="stylesheet"/>
 <link href="tk-icon.png" rel="icon" type="image/png" sizes="144x144"/>
 <style>/*<![CDATA[*/
@@ -3034,6 +3034,8 @@ if (dbm.Get(key, &value).IsOK()) {
   std::cout << StrToIntBigEndian(got_value) << std::endl;
 }
 ]]></code></pre>
+
+<p>The DBM interface provides the Append method which appends the given value at the end of the value of the existing record.  Most DBM implementations use a wrapper which calls the Get method and the Set method atomically.  However, if you call the Append method N times, the time complexity is O(N^2).  To overcome the problem, TinyDBM and BabyDBM override it with specialized implementations, which write the given value directly at the end of the existing value if possible.  The amortized time complexity of the specialized implemenations is O(N).  Therefore, TinyDBM and BabyDBM are useful as buffers to build inverted indices for full-text search systems.</p>
 
 <h3 id="tips_index_performance">Performance of ShardDBM</h3>
 
