@@ -442,15 +442,14 @@ TEST_P(StrSearchRandomTest, StrSearchRandom) {
   constexpr int32_t num_iterations = 3;
   const std::vector<int> text_sizes = {1, 4, 16, 64, 256, 1024};
   const std::vector<int> pattern_sizes = {1, 2, 3, 4, 5, 6};
-  int32_t count = 0;
   for (const auto& charset : charsets) {
     for (int32_t i = 0; i < num_iterations; i++) {
       for (const int32_t text_size : text_sizes) {
         const std::string& text = tkrzw::MakeRandomCharacterText(
-            text_size, count++, charset.first, charset.second);
+            text_size, charset.first, charset.second);
         for (const int32_t pattern_size : pattern_sizes) {
           const std::string& pattern = tkrzw::MakeRandomCharacterText(
-              pattern_size, count++, charset.first, charset.second);
+              pattern_size, charset.first, charset.second);
           const int32_t base_result = tkrzw::StrSearch(text, pattern);
           const int32_t test_result = search(text, pattern);
           EXPECT_EQ(base_result, test_result);
@@ -502,15 +501,14 @@ TEST_P(StrSearchWholeRandomTest, StrSearchWholeRandom) {
   constexpr int32_t num_iterations = 3;
   const std::vector<int> text_sizes = {1, 4, 16, 64, 256, 1024};
   const std::vector<int> pattern_sizes = {1, 2, 3, 4, 5, 6};
-  int32_t count = 0;
   for (const auto& charset : charsets) {
     for (int32_t i = 0; i < num_iterations; i++) {
       for (const int32_t text_size : text_sizes) {
         const std::string& text = tkrzw::MakeRandomCharacterText(
-            text_size, count++, charset.first, charset.second);
+            text_size, charset.first, charset.second);
         for (const int32_t pattern_size : pattern_sizes) {
           const std::string& pattern = tkrzw::MakeRandomCharacterText(
-              pattern_size, count++, charset.first, charset.second);
+              pattern_size, charset.first, charset.second);
           const auto base_result = tkrzw::StrSearchWhole(text, pattern);
           const auto test_result = search(text, pattern, 0);
           EXPECT_EQ(base_result.size(), test_result.size());
@@ -588,17 +586,16 @@ TEST_P(StrSearchBatchRandomTest, StrSearchBatchRandom) {
   const std::vector<int> text_sizes = {1, 4, 16, 64, 256, 1024};
   const std::vector<int> pattern_sizes = {1, 2, 3, 4, 5, 6};
   constexpr int32_t batch_size_factor = 2;
-  int32_t count = 0;
   for (const auto& charset : charsets) {
     for (int32_t i = 0; i < num_iterations; i++) {
       for (const int32_t text_size : text_sizes) {
         const std::string& text = tkrzw::MakeRandomCharacterText(
-            text_size, count++, charset.first, charset.second);
+            text_size, charset.first, charset.second);
         std::vector<std::string> patterns;
         for (const int32_t pattern_size : pattern_sizes) {
           for (int32_t j = 0; j < batch_size_factor; ++j) {
             patterns.emplace_back(tkrzw::MakeRandomCharacterText(
-                pattern_size, count++, charset.first, charset.second));
+                pattern_size, charset.first, charset.second));
           }
         }
         const auto base_result = tkrzw::StrSearchBatch(text, patterns);
@@ -758,8 +755,14 @@ TEST(StrUtilTest, StrDecodeURL) {
 }
 
 TEST(StrUtilTest, MakeRandomCharacterText) {
-  EXPECT_EQ("aaa", tkrzw::MakeRandomCharacterText(3, 1, 'a', 'a'));
-  EXPECT_EQ(8, tkrzw::MakeRandomCharacterText(8, 1, 'a', 'z').size());
+  EXPECT_EQ("aaa", tkrzw::MakeRandomCharacterText(3, 'a', 'a'));
+  EXPECT_EQ(8, tkrzw::MakeRandomCharacterText(8, 'a', 'z').size());
+  constexpr int32_t num_iterations = 100;
+  std::set<std::string> words;
+  for (int32_t i = 0; i < num_iterations; i++) {
+    words.emplace(tkrzw::MakeRandomCharacterText(10, 'a', 'z'));
+  }
+  EXPECT_GE(words.size(), num_iterations - 1);
 }
 
 TEST(StrUtilTest, SerializeStrPair) {

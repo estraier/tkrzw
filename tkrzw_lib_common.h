@@ -561,6 +561,18 @@ inline uint32_t HashCRC32(const std::string& str) {
 }
 
 /**
+ * Makes a random integer from a hidden seed.
+ * @return the random integer in a range [0, UINT64MAX] with the inclusive end.
+ */
+uint64_t MakeRandomInt();
+
+/**
+ * Makes a random real number from a hidden seed.
+ * @return the random real number in a range [0.0, 1.0) with the exclusive end.
+ */
+double MakeRandomDouble();
+
+/**
  * Gets a status according to a system error number of a system call.
  * @param call_name The name of the system call.
  * @param sys_err_num The value of "errno".

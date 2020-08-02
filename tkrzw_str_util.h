@@ -616,13 +616,11 @@ static int32_t EditDistanceLev(const T& a, const T&b) {
 /**
  * Makes a text composed of characters selected at random.
  * @param length Length of the result text.
- * @param seed A seed value given to the random generator.
  * @param first_char The first character of the character range.
  * @param last_char The last character of the character range.
  * @return The result text.
  */
-std::string MakeRandomCharacterText(
-    int32_t length, int32_t seed, uint8_t first_char, uint8_t last_char);
+std::string MakeRandomCharacterText(int32_t length, uint8_t first_char, uint8_t last_char);
 
 /**
  * Serializes a pair of strings into a string.

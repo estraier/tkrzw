@@ -83,12 +83,11 @@ static int32_t ProcessSearch(int32_t argc, const char** args) {
   const int32_t last_char = first_char + num_chars - 1;
   std::vector<std::string> texts;
   for (int32_t i = 0; i < 1009; ++i) {
-    texts.emplace_back(MakeRandomCharacterText(text_size, i, first_char, last_char));
+    texts.emplace_back(MakeRandomCharacterText(text_size, first_char, last_char));
   }
   std::vector<std::string> patterns;
   for (int32_t i = 0; i < 1013; ++i) {
-    patterns.emplace_back(MakeRandomCharacterText(
-        pattern_size, texts.size() + i, first_char, last_char));
+    patterns.emplace_back(MakeRandomCharacterText(pattern_size, first_char, last_char));
   }
   std::string sample_pattern;
   if (first_char >= ' ') {
