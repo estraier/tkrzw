@@ -639,7 +639,9 @@ TEST(StrUtilTest, StrTrimForTSV) {
   EXPECT_EQ(" ", tkrzw::StrTrimForTSV(std::string("\x00", 1)));
   EXPECT_EQ("  ABC  ", tkrzw::StrTrimForTSV("\n\rABC\t\x7F"));
   EXPECT_EQ("A  B C", tkrzw::StrTrimForTSV("A\n\tB C"));
+  EXPECT_EQ("A \tB C", tkrzw::StrTrimForTSV("A\n\tB C", true));
   EXPECT_EQ("あ  い  う", tkrzw::StrTrimForTSV("あ\t\tい\r\nう"));
+  EXPECT_EQ("あ\t\tい  う", tkrzw::StrTrimForTSV("あ\t\tい\r\nう", true));
 }
 
 TEST(StrUtilTest, StrEscapeC) {

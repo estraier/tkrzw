@@ -501,9 +501,10 @@ std::string StrSqueezeAndStripSpace(std::string_view str);
 /**
  * Trims a string for TSV by normalizing space and control characters.
  * @param str The string to convert.
+ * @param keep_tab If true, tab is kept and not escaped.
  * @return The converted string.
  */
-std::string StrTrimForTSV(std::string_view str);
+std::string StrTrimForTSV(std::string_view str, bool keep_tab = false);
 
 /**
  * Escapes C-style meta characters in a string.

@@ -1058,13 +1058,15 @@ std::string StrSqueezeAndStripSpace(std::string_view str) {
   return converted;
 }
 
-std::string StrTrimForTSV(std::string_view str) {
+std::string StrTrimForTSV(std::string_view str, bool keep_tab) {
   std::string converted;
   converted.reserve(str.size());
   for (size_t i = 0; i < str.size(); i++) {
     int32_t c = static_cast<unsigned char>(str[i]);
     if (c <= ' ' || c == 0x7f) {
-      c = ' ';
+      if (c != '\t' || !keep_tab) {
+        c = ' ';
+      }
     }
     converted.push_back(c);
   }

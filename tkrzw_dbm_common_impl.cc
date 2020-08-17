@@ -352,7 +352,7 @@ Status ExportDBMRecordsToTSV(DBM* dbm, File* file, bool escape) {
         : impl_status_(impl_status), file_(file), escape_(escape) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       const std::string& esc_key = escape_ ? StrEscapeC(key) : StrTrimForTSV(key);
-      const std::string& esc_value = escape_ ? StrEscapeC(value) : StrTrimForTSV(value);
+      const std::string& esc_value = escape_ ? StrEscapeC(value) : StrTrimForTSV(value, true);
       const std::string& line = StrCat(esc_key, "\t", esc_value, "\n");
       *impl_status_ |= file_->Append(line.data(), line.size());
       return NOOP;
