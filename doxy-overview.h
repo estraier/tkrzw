@@ -8,7 +8,7 @@ DBM (Database Manager) is a concept of libraries to store an associative array o
 
 Tkrzw is a C++ library implementing DBM with various algorithms.  It features high degrees of performance, concurrency, scalability and durability.  The following classes are the most important.
 
-@li tkrzw::DBM -- Datatabase manager interface.
+@li tkrzw::DBM -- Database manager interface.
 @li tkrzw::HashDBM -- File database manager implementation based on hash table.
 @li tkrzw::TreeDBM -- File database manager implementation based on B+ tree.
 @li tkrzw::SkipDBM -- File database manager implementation based on skip list.
@@ -17,8 +17,8 @@ Tkrzw is a C++ library implementing DBM with various algorithms.  It features hi
 @li tkrzw::CacheDBM -- On-memory database manager implementations with LRU deletion.
 @li tkrzw::StdHashDBM -- On-memory hash database manager implementation using std::unordered_map.
 @li tkrzw::StdTreeDBM -- On-memory tree database manager implementation using std::map.
-@li tkrzw::PolyDBM -- Polymorphic datatabase manager adapter for all DBM classes.
-@li tkrzw::ShardDBM -- Sharding datatabase manager adapter based on PolyDBM.
+@li tkrzw::PolyDBM -- Polymorphic database manager adapter for all DBM classes.
+@li tkrzw::ShardDBM -- Sharding database manager adapter based on PolyDBM.
 @li tkrzw::FileIndex -- File secondary index implementation with TreeDBM.
 @li tkrzw::MemIndex -- On-memory secondary index implementation with BabyDBM.
 @li tkrzw::StdIndex -- On-memory secondary index implementation with std::map.
@@ -96,8 +96,8 @@ namespace tkrzw {}
  * @file tkrzw_dbm_baby.h On-memory database manager implementations based on B+ tree.
  * @file tkrzw_dbm_cache.h On-memory database manager implementations with LRU deletion.
  * @file tkrzw_dbm_std.h On-memory database manager implementations with the C++ standard containers.
- * @file tkrzw_dbm_poly.h Polymorphic datatabase manager adapter.
- * @file tkrzw_dbm_shard.h Sharding datatabase manager adapter.
+ * @file tkrzw_dbm_poly.h Polymorphic database manager adapter.
+ * @file tkrzw_dbm_shard.h Sharding database manager adapter.
  * @file tkrzw_index.h Secondary index implementations.
  */
 

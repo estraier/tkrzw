@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   }
 
   // Closes the database.
-  // In the reader mode, the file is not updated and no error occurrs.
+  // In the reader mode, the file is not updated and no error occurs.
   dbm.Close();
 
   return 0;

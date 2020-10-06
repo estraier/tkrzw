@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="ja" xml:lang="ja">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <meta charset="UTF-8"/>
 <title>Tkrzw: a set of implementations of DBM</title>
@@ -92,12 +92,12 @@ window.onload = function(){
 <p>Tkrzw is a C++ library implementing DBM with various algorithms.  It features high degrees of performance, concurrency, scalability and durability.  The following classes are provided.</p>
 
 <ul>
-<li><b><a href="#hashdbm_overview">HashDBM</a></b> : File datatabase manager implementation based on hash table.</li>
-<li><b><a href="#treedbm_overview">TreeDBM</a></b> : File datatabase manager implementation based on B+ tree.</li>
-<li><b><a href="#skipdbm_overview">SkipDBM</a></b> : File datatabase manager implementation based on skip list.</li>
-<li><b><a href="#tinydbm_overview">TinyDBM</a></b> : On-memory datatabase manager implementation based on hash table.</li>
-<li><b><a href="#babydbm_overview">BabyDBM</a></b> : On-memory datatabase manager implementation based on B+ tree.</li>
-<li><b><a href="#cachedbm_overview">CacheDBM</a></b> : On-memory datatabase manager implementation with LRU deletion.</li>
+<li><b><a href="#hashdbm_overview">HashDBM</a></b> : File database manager implementation based on hash table.</li>
+<li><b><a href="#treedbm_overview">TreeDBM</a></b> : File database manager implementation based on B+ tree.</li>
+<li><b><a href="#skipdbm_overview">SkipDBM</a></b> : File database manager implementation based on skip list.</li>
+<li><b><a href="#tinydbm_overview">TinyDBM</a></b> : On-memory database manager implementation based on hash table.</li>
+<li><b><a href="#babydbm_overview">BabyDBM</a></b> : On-memory database manager implementation based on B+ tree.</li>
+<li><b><a href="#cachedbm_overview">CacheDBM</a></b> : On-memory database manager implementation with LRU deletion.</li>
 <li><b><a href="#stddbm_overview">Std(Hash|Tree)DBM</a></b> : On-memory DBM implementations using std::unordered_map and std::map.</li>
 <li><b><a href="#polydbm_overview">(Poly|Shard)DBM</a></b> : Polymorphic and sharding datataba manager adapters.</li>
 <li><b><a href="#index_overview">(File|Mem)Index</a></b> : Secondary index implementations.</li>
@@ -512,7 +512,7 @@ window.onload = function(){
 
 <p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
 
-<p>You can use some bridging interfaces to use Tkrzw in other programming langauges than C++.  Currently, Java, Python, and Ruby interfaces are provided.</p>
+<p>You can use some bridging interfaces to use Tkrzw in other programming languages than C++.  Currently, Java, Python, and Ruby interfaces are provided.</p>
 
 <p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
 
@@ -577,7 +577,7 @@ $ tkrzw_dbm_util get casket.tkh Anne
 Nancy
 ]]></code></pre>
 
-<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the follwing C++ code and save it as "helloworld.cc".</p>
+<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
 
 <pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
 
@@ -680,7 +680,7 @@ $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 1
 
 <p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, you can restore the database to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be restored.  In appending mode, any record can never be lost unless the file system itself breaks.</p>
 
-<p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the apppending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
+<p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
 
 <div class="dbstructure"><img src="hashdbm.svg"/></div>
 
@@ -1274,11 +1274,11 @@ int main(int argc, char** argv) {
 
 <p>The magic data is used for identifying the kind of the database.  The number of records indicates the current number of living key-value pairs in the database.  The effective data size indicates the total amount of bytes used for the key and the value data of the living records.  In other words, it doesn't include data for removed data, overwritten data, or other footprints.  This figure is used to calculate storage efficiency.</p>
 
-<p>There are two kinds of nodes of B+ tree: leaf nodes and inner nodes.  Leaf nodes contain records of key-value pairs.  Inner nodes contain keys and links to other nodes.  The root ID indicates the ID of the root node of B+ tree.  The root node is used as the entry point of search.  The first ID indicates the ID of the first leaf node of B+ tree.  Leaf nodes are linked in a double linked list and the first leaf node is the entry point of sequential access.  The level of the tree indicates how many layers exists in the tree.  If there's no inner tree, the level is 1.</p>
+<p>There are two kinds of nodes of B+ tree: leaf nodes and inner nodes.  Leaf nodes contain records of key-value pairs.  Inner nodes contain keys and links to other nodes.  The root ID indicates the ID of the root node of B+ tree.  The root node is used as the entry point of search.  The first ID indicates the ID of the first leaf node of B+ tree.  Leaf nodes are linked in a double linked list and the first leaf node is the entry point of sequential access.  The level of the tree indicates how many layers exist in the tree.  If there's no inner tree, the level is 1.</p>
 
 <p>The key comparator type indicates a function used to compare keys of records.  The default LexicalKeyComparator is 1.  LexicalCaseKeyComparator which ignores case is 2.  DecimalKeyComparator which compares keys as numeric decimal integer expressions is 3.  HexadecimalKeyComparator which compares keys as numeric hexadecimal integer expressions is 4.  RealNumberKeyComparator which compares keys as decimal real number expressions is 5.  Their counterparts for pair strings are 101, 102, 103, and 104.  255 means that another custom comparator is set.  In that case, the comparator must be specified every time when the database is opened.</p>
 
-<p>A Leaf nodes has a key which is a 6-byte big-endian integer of its ID.  The ID is a unique number not less than 1.  Its value is serialized in the following format.  Records are sorted in ascending order of the key.</p>
+<p>A leaf nodes has a key which is a 6-byte big-endian integer of its ID.  The ID is a unique number not less than 1.  Its value is serialized in the following format.  Records are sorted in ascending order of the key.</p>
 
 <dl>
 <dt>The previous leaf node ID</dt>
@@ -1616,9 +1616,9 @@ int main(int argc, char** argv) {
 
 <p>The on-memory hash database stores key-value structure on-memory.  It uses a hash table and linked lists of records from buckets.  Therefore, given the number of records N and the number of buckets M, the average time complexity of data retrieval is O(N/M).  If M is large enough, the time complexity can be said O(1).</p>
 
-<p>Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each hash bucket.  Therefore, even writer threads which can set or remove records performs in parallel.  Blocking is done only when multiple writers try to update the same record simultaneously.  Reader threads which retrieve records don't block each other even for the same record.</p>
+<p>Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each hash bucket.  Therefore, even writer threads which can set or remove records perform in parallel.  Blocking is done only when multiple writers try to update the same record simultaneously.  Reader threads which retrieve records don't block each other even for the same record.</p>
 
-<p>Whereas thread safety and thread performance is the most important features of the on-memory hash database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 55% of std::map&lt;std::string, std::string&gt;.</p>
+<p>Whereas thread safety and thread performance are the most important features of the on-memory hash database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 55% of std::map&lt;std::string, std::string&gt;.</p>
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
@@ -1717,7 +1717,7 @@ int main(int argc, char** argv) {
   }
 
   // Closes the database.
-  // In the reader mode, the file is not updated and no error occurrs.
+  // In the reader mode, the file is not updated and no error occurs.
   dbm.Close();
 
   return 0;
@@ -1730,7 +1730,7 @@ int main(int argc, char** argv) {
 
 <p>A B+ tree is composed of nodes which are composed of records and links.  Each node is serialized as a "page", which are kept on-memory.  Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each page. Therefore, if threads randomly access records, they don't block each other. If multiple threads access the same page, a writer blocks the others but readers don't block other readers.</p>
 
-<p>Whereas thread safety and thread performance is the most important features of the on-memory tree database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 50% of std::map&lt;std::string, std::string&gt;.</p>
+<p>Whereas thread safety and thread performance are the most important features of the on-memory tree database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 50% of std::map&lt;std::string, std::string&gt;.</p>
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
@@ -1827,7 +1827,7 @@ int main(int argc, char** argv) {
   }
 
   // Closes the database.
-  // In the reader mode, the file is not updated and no error occurrs.
+  // In the reader mode, the file is not updated and no error occurs.
   dbm.Close();
 
   return 0;
@@ -1838,7 +1838,7 @@ int main(int argc, char** argv) {
 
 <p>The on-memory cache database stores key-value structure on-memory.  It uses a hash table and triple linked lists: from the buckets to each record, from the first record to the last record, and from the last record to the first record.  When a record is accessed, it is placed at the end of the list.  Therefore, the least recent used record is placed at the first position.  The cache database has a capacity to keep the memory usage stable.  When the number of records exceeds the capacity, least recent used records are removed implicitly.  The average time complexity is O(1).</p>
 
-<p>The cache database is sharded internally so that mutex is done for each shard, in order to improve concurrent performance.  The actuall concurrent performance of the cache database is almost the same as the normal on-memory hash database.  Whereas space efficiency of the cache database is worse than those of the on-memory hash database and the on-memory tree dagtabase, it is suitable as a cache system, thanks to the LRU deletion feature.</p>
+<p>The cache database is sharded internally so that mutex is done for each shard, in order to improve concurrent performance.  The actual concurrent performance of the cache database is almost the same as the normal on-memory hash database.  Whereas space efficiency of the cache database is worse than those of the on-memory hash database and the on-memory tree database, it is suitable as a cache system, thanks to the LRU deletion feature.</p>
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
@@ -1881,7 +1881,7 @@ int main(int argc, char** argv) {
 
 <p>The standard on-memory hash database StdHashDBM stores key-value structure on memory with std::unordered_map.  The standard on-memory tree database stores key-value structure on memory with std::map.  As the hash database uses a hash table, the average time complexity of data retrieval is O(1).  As the tree database uses a binary tree, the average time complexity of data retrieval is O(log N).</p>
 
-<p>Thread safety is assured in these implementation.  Reader-writer locking is applied to the whole database.  Therefore, multiple reader threads can access the same database without blocking whereas a writer thread blocks other threads.  Thread safety is the only benefit of these implementation over using bare std::unordered_map or std::map.</p>
+<p>Thread safety is assured in these implementations.  Reader-writer locking is applied to the whole database.  Therefore, multiple reader threads can access the same database without blocking whereas a writer thread blocks other threads.  Thread safety is the only benefit of these implementations over using bare std::unordered_map or std::map.</p>
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map and std::map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
@@ -1981,7 +1981,7 @@ int main(int argc, char** argv) {
   dbm.ProcessEach(&printer, false);
 
   // Closes the database.
-  // In the reader mode, the file is not updated and no error occurrs.
+  // In the reader mode, the file is not updated and no error occurs.
   dbm.Close();
 
   return 0;
@@ -1991,7 +1991,7 @@ int main(int argc, char** argv) {
 
 <h3 id="polydbm_overview">(Poly|Shard)DBM: Polymorphic and Sharding DBM Adapters</h3>
 
-<p>Although all database classes share the same interface defined by the DBM class, constructors and tuning parameters are different.  The polymorphic database manager adapter PolyDBM is provided in order to absorb such difference so that you can always use the same class PolyDBM.  The concrete class is determined by the extension of the path.  You can open a hash database by the following code.</p>
+<p>Although all database classes share the same interface defined by the DBM class, constructors and tuning parameters are different.  The polymorphic database manager adapter PolyDBM is provided in order to absorb such differences so that you can always use the same class PolyDBM.  The concrete class is determined by the extension of the path.  You can open a hash database by the following code.</p>
 
 <pre><code class="language-cpp"><![CDATA[PolyDBM dbm;
 dbm.Open("casket.tkh", true);
@@ -2028,7 +2028,7 @@ dbm.OpenAdvanced("", true, File::OPEN_DEFAULT, params);
 
 <p>The polymorphic database manager adapter is also useful when you develop interfaces for other programming languages, like Java, Python, Ruby, Go, Lua etc.  Whereas writing code for each database class is tedious, just writing code for PolyDBM allows you to use all database classes.</p>
 
-<p>The sharding datbase manager adapter ShardDBM is a wrapper of multiple PolyDBM instances for sharding a database.  Whereas an instance of ShardDBM behaves like a usual DBM, records are stored in multiple database files, which are called shards.  A hash function is used to determine which shard each record belongs to.</p>
+<p>The sharding database manager adapter ShardDBM is a wrapper of multiple PolyDBM instances for sharding a database.  Whereas an instance of ShardDBM behaves like a usual DBM, records are stored in multiple database files, which are called shards.  A hash function is used to determine which shard each record belongs to.</p>
 
 <p>By separating one database file into several files, concurrent performance improves.  Possibility that a thread is blocked by mutexes is divided by the number of shards.  Moreover, efficiency of rebuilding database improves.  Usually, rebuilding a database file requires making a temporary file whose size is proportional to the original database file.  With sharding, rebuilding database is done for each shard one by one.  Thus, the size of each temporary file is also divided.</p>
 
@@ -2146,7 +2146,7 @@ int main(int argc, char** argv) {
 
 <p>For the division ID index, the first element can be int32_t for the division ID and the second element can be int32_t for the employee ID.  Therefore, using StdIndex&lt;int32_t, int32_t&gt; is a good idea.  By having the primary key of the main database as the second element, each record becomes unique and you don't have to worry about duplication.  You can also set an arbitrary comparator to adjust the order of records.</p>
 
-<p>Secondary indices are not important data to be perpetuated on the storage because they can be reproduced as long as the main entity data exist.  Therefore, using some of memory indices is a practial solution to realize extreme throughput.  To use on-memory indices, you have to load all index entries from the main database every time when the process starts.</p>
+<p>Secondary indices are not important data to be perpetuated on the storage because they can be reproduced as long as the main entity data exist.  Therefore, using some of memory indices is a practical solution to realize extreme throughput.  To use on-memory indices, you have to load all index entries from the main database every time when the process starts.</p>
 
 <h3 id="index_example">Example Code</h3>
 
@@ -2484,9 +2484,9 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<h2 id="commands">Command Line Utilitie</h2>
+<h2 id="commands">Command Line Utilities</h2>
 
-<h3 id="commands_tkrzw_build_util">tkrzw_build_util: Build Utilitie</h3>
+<h3 id="commands_tkrzw_build_util">tkrzw_build_util: Build Utilities</h3>
 
 <p>tkrzw_build_util is a command for build utilities.  Thereby, you can obtain flags to build your own program using the library of Tkrzw.  The usage is the following.  A subcommand name comes as the first argument.  Some options and other arguments can follow.</p>
 
@@ -2592,7 +2592,7 @@ int main(int argc, char** argv) {
 <dd><code>--params <var>str</var></code> : Sets the parameters in "key=value,key=value" format.</dd>
 </dl>
 
-<p>The following is a sample usage to make a hash database file to associate country names to their capital citys' names.  If the extension of the file is "tkh", the type of the database is regarded as HashDBM.</p>
+<p>The following is a sample usage to make a hash database file to associate country names to their capital cities' names.  If the extension of the file is "tkh", the type of the database is regarded as HashDBM.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --buckets 10 casket.tkh
 $ tkrzw_dbm_util set casket.tkh Japan Tokyo
@@ -2744,7 +2744,7 @@ dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util rebuild casket.tkh
 ]]></code></pre>
 
-<p>The same thing can be done in C++.  The RebuildAdvanced method can take tuning parameters so that you can specifiy them explicitly.</p>
+<p>The same thing can be done in C++.  The RebuildAdvanced method can take tuning parameters so that you can specify them explicitly.</p>
 
 <pre><code class="language-cpp"><![CDATA[dbm.Rebuild();
 ]]></code></pre>
@@ -2770,9 +2770,9 @@ std::cout << to_be_rebult << std::endl;
 std::cout << dbm.GetEffectiveDataSize() << std::endl; 
 ]]></code></pre>
 
-<p>Alignment is effective to mitigate fragmentation when the size of the value of records are changed frequently.  By default, the alignemnt is set 2^3 = 8 bytes so that every records begins at an offset which is a multiple of 8.  If the record size is not a multiple of 8, padding bytes are put at the end.  If the size of a record increases but the padding can contain the increment, the record don't have to be moved to another place.  If the record is moved, the original position region becomes a free block.  In the in-place update mode, the free block can be reused but it is not assured.  Having 8-byte alignment means that the expected size of padding is 4 bytes.  If the typical record size is 30 bytes or something, 4 bytes padding seems acceptable and effective.</p>
+<p>Alignment is effective to mitigate fragmentation when the size of the value of records are changed frequently.  By default, the alignment is set 2^3 = 8 bytes so that every records begins at an offset which is a multiple of 8.  If the record size is not a multiple of 8, padding bytes are put at the end.  If the size of a record increases but the padding can contain the increment, the record don't have to be moved to another place.  If the record is moved, the original position region becomes a free block.  In the in-place update mode, the free block can be reused but it is not assured.  Having 8-byte alignment means that the expected size of padding is 4 bytes.  If the typical record size is 30 bytes or something, 4 bytes padding seems acceptable and effective.</p>
 
-<p>The position of each record is represented by a 4-byte integer by default.  It means that the maximum value is 4^32 = 4GiB.  Actually, the position is calculated as the value multiplied by the alignment.  So, the muximum size is 4GiB * 8 = 32GiB by default.  If the database size is about to exceed the limit, you should rebuild the database with an increased offset width.  Usually, 5-byte integer will do because it can represent up to 1TiB.  Usually, alignment is not used for the appending mode.  And, databases in the appending mode tend to be very large.  Therefore, you'll create a database in the appending mode like this.</p>
+<p>The position of each record is represented by a 4-byte integer by default.  It means that the maximum value is 4^32 = 4GiB.  Actually, the position is calculated as the value multiplied by the alignment.  So, the maximum size is 4GiB * 8 = 32GiB by default.  If the database size is about to exceed the limit, you should rebuild the database with an increased offset width.  Usually, 5-byte integer will do because it can represent up to 1TiB.  Usually, alignment is not used for the appending mode.  And, databases in the appending mode tend to be very large.  Therefore, you'll create a database in the appending mode like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --offset_width 5 --align_pow 0 --buckets 10m --append casket.tkh
 ]]></code></pre>
@@ -2813,7 +2813,7 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>All updating operations are linked from the end to the beginning.  And the hash table refers to the last operations.  Therefore, the latest state is always read.  Thanks to this structure, the existing information never breaks.  However, the size of the database file increases rapidly with any kind of updating operations.  So, you should rebuild the database frequently.</p>
 
-<p>You might think that the in-place mode is faster and that the appending mode is slower.  However, it is not the case necessarily.  In the in-place mode, updated "dirty" pages of the I/O buffer scatter across the database file so that effectiveness of synchronizing the dirty pages with the device is low.  Meanwhile, in the appending mode, dirty pages occurs only at end of the file so that effectiveness of synchronizing the dirty pages with the device is high.  In other words, a database in the appending mode causes inefficient reading with random access but it causes efficient writing with sequential access.  Therefore, if rebuilding the database is done at a reasonable freqeuncy, the appending mode can be faster than the in-place mode.  SSD devices are good at random reading but not good at random writing.  Especially if you build a huge database on an SSD storage, the appending mode is worth to consider.</p>
+<p>You might think that the in-place mode is faster and that the appending mode is slower.  However, it is not the case necessarily.  In the in-place mode, updated "dirty" pages of the I/O buffer scatter across the database file so that effectiveness of synchronizing the dirty pages with the device is low.  Meanwhile, in the appending mode, dirty pages occurs only at end of the file so that effectiveness of synchronizing the dirty pages with the device is high.  In other words, a database in the appending mode causes inefficient reading with random access but it causes efficient writing with sequential access.  Therefore, if rebuilding the database is done at a reasonable frequency, the appending mode can be faster than the in-place mode.  SSD devices are good at random reading but not good at random writing.  Especially if you build a huge database on an SSD storage, the appending mode is worth to consider.</p>
 
 <p>Let's build a hash database and store 100 million records (10 million for each of 10 threads).  And then retrieve and remove all of them.  First, we check performance of the in-place mode.</p>
 
@@ -2869,7 +2869,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <pre>[XXX:*********************************][XXX:A:aaa:B:bbb:C:ccc:D:ddd:E:eee:F:fff:G:ggg:H:hhh:I:iii...]
 </pre>
 
-<p>However, if the maximum page size setting is less than the alignment size, the page is divided and it avoids reallocation.  Half of records are moved to a new page.  Therefore, having a large alignment and setting the maximim page size a bit less than the alignemnt pay in the long run.</p>
+<p>However, if the maximum page size setting is less than the alignment size, the page is divided and it avoids reallocation.  Half of records are moved to a new page.  Therefore, having a large alignment and setting the maximum page size a bit less than the alignment pay in the long run.</p>
 
 <pre>[XXX:A:aaa:B:bbb:C:ccc:D:ddd:E:eee:...][XXX:F:fff:G:ggg:H:hhh:I:iii..........]
 </pre>
@@ -2878,7 +2878,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <h3 id="tips_treedbm_comparators">Comparators of TreeDBM</h3>
 
-<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing anumber as a big-endian binary is a good idea because the default comparator sorts it properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
+<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing a number as a big-endian binary is a good idea because the default comparator sorts it properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
 
 <ul>
 <li><code>LexicalKeyComparator</code> : Compares keys as strings in lexicographical order.</li>
@@ -2890,7 +2890,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <p>You can implement your own comparator.  In that case, you must specify it every time when you open the database.</p>
 
-<p>By the way, databases other than the file skip database don't support duplicated keys.  That's because duplicated keys deteriorates time and space efficiency.  If you have to handle duplicated keys, build a skip database first and merge duplicated records.  Then, you can convert it to another type of database.</p>
+<p>By the way, databases other than the file skip database don't support duplicated keys.  That's because duplicated keys deteriorate time and space efficiency.  If you have to handle duplicated keys, build a skip database first and merge duplicated records.  Then, you can convert it to another type of database.</p>
 
 <h3 id="tips_skipdbm_tune">Tuning SkipDBM</h3>
 
@@ -2936,7 +2936,7 @@ dbm.OpenAdvanced("casket.tks", false, File::OPEN_DEFAULT, tuning_params);
 
 <h3 id="tips_skipdbm_building">Building SkipDBM</h3>
 
-<p>The skip database is composed of records sorted by the key.  Although you can insert records randomly, they are not visible until you call the Synchornize method, which sorts records implicitly and merge them with existing records of the database.  In other words, updating the skip database is done in an offline (batch) manner, not in an online manner.  If you already have records which are sorted in ascending order of the key, you can use the insert_in_order mode, which is very quick and scalable.  You can input multiple records of the same key and the order of insertion within records of the same key is preserved in the database.  Note that the order of records of different keys must strictly be consistent to std::less&lt;std::string&gt; if you use the insert_in_order mode.  In contrast, if your records are not sorted, you use the default mode, which sorts the records implicitly with merge sort on temporary files.  The reason of using temporary files is to build a huge database exceeding the memory capacity.  You can input multiple records with the same key here too.  The order within records of the same key is preserved during merge sort because it is a stable sort.</p>
+<p>The skip database is composed of records sorted by the key.  Although you can insert records randomly, they are not visible until you call the Synchornize method, which sorts records implicitly and merge them with existing records of the database.  In other words, updating the skip database is done in an offline (batch) manner, not in an online manner.  If you already have records which are sorted in ascending order of the key, you can use the insert_in_order mode, which is very quick and scalable.  You can input multiple records of the same key and the order of insertion within records of the same key is preserved in the database.  Note that the order of records of different keys must strictly be consistent to std::less&lt;std::string&gt; if you use the insert_in_order mode.  In contrast, if your records are not sorted, you use the default mode, which sorts the records implicitly with merge sort on temporary files.  The reason for using temporary files is to build a huge database exceeding the memory capacity.  You can input multiple records with the same key here too.  The order within records of the same key is preserved during merge sort because it is a stable sort.</p>
 
 <p>You can specify an arbitrary reducer to handle records of the same key.  By default, no reducer is applied and all records are passed through.  Whereas the following built-in reducers are bundled, you can implement your own reducers too.</p>
 
@@ -2960,7 +2960,7 @@ dbm.Set("bar", "primero");
 dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToFirst);
 ]]></code></pre>
 
-<p>In principle, the file skip database should be considered as a "static" database which are not updated after building it.  However, you can modify it with usual methods of DBM.  You can insert arbitrary records, which are put after existing records of the same keys.  Then, you can reduce them when calling the Synchronize method.  If you want to keep the latest value to overwrite the old value, you'll synchronize the database with ReduceToLast.  Assuming we use the above finished database, the following code keeps records of {"foo":"fifth"} and {"bar":"segundo"} only.</p>
+<p>In principle, the file skip database should be considered as a "static" database which is not updated after building it.  However, you can modify it with usual methods of DBM.  You can insert arbitrary records, which are put after existing records of the same keys.  Then, you can reduce them when calling the Synchronize method.  If you want to keep the latest value to overwrite the old value, you'll synchronize the database with ReduceToLast.  Assuming we use the above finished database, the following code keeps records of {"foo":"fifth"} and {"bar":"segundo"} only.</p>
 
 <pre><code class="language-cpp"><![CDATA[dbm.Unfinish();
 dbm.Set("foo", "fourth");
@@ -3016,7 +3016,7 @@ text_dbm.Close();
 
 <h3 id="tips_memdbm_tune">Tuning TinyDBM, BabyDBM, and CacheDBM</h3>
 
-<p>On-memory databases are convenient to manage large amount of objects while saving memory as much as possible.  Objects to be stored must be serialized as strings.  Thus, choosing an efficient serialization format is important.  Of all on-memory databaess, TinyDBM is the best in time efficiency.  BabyDBM is the best in space efficiency.  It also supports ordered access of records.  CacheDBM is suitable for handling cache data where old records are discarded implicitly.</p>
+<p>On-memory databases are convenient to manage large amount of objects while saving memory as much as possible.  Objects to be stored must be serialized as strings.  Thus, choosing an efficient serialization format is important.  Of all on-memory databases, TinyDBM is the best in time efficiency.  BabyDBM is the best in space efficiency.  It also supports ordered access of records.  CacheDBM is suitable for handling cache data where old records are discarded implicitly.</p>
 
 <p>TinyDBM has a tuning parameter for the number of buckets.  The number of buckets should be the same as or more than the number of stored records.  It is set with the constructor.</p>
 
@@ -3036,7 +3036,7 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>The DBM interface provides the Append method which appends the given value at the end of the value of the existing record.  Most DBM implementations use a wrapper which calls the Get method and the Set method atomically.  However, if you call the Append method N times, the time complexity is O(N^2).  To overcome the problem, TinyDBM and BabyDBM override it with specialized implementations, which write the given value directly at the end of the existing value if possible.  The amortized time complexity of the specialized implemenations is O(N).  Therefore, TinyDBM and BabyDBM are useful as buffers to build inverted indices for full-text search systems.</p>
+<p>The DBM interface provides the Append method which appends the given value at the end of the value of the existing record.  Most DBM implementations use a wrapper which calls the Get method and the Set method atomically.  However, if you call the Append method N times, the time complexity is O(N^2).  To overcome the problem, TinyDBM and BabyDBM override it with specialized implementations, which write the given value directly at the end of the existing value if possible.  The amortized time complexity of the specialized implementations is O(N).  Therefore, TinyDBM and BabyDBM are useful as buffers to build inverted indices for full-text search systems.</p>
 
 <h3 id="tips_index_performance">Performance of ShardDBM</h3>
 
@@ -3114,7 +3114,7 @@ if (dbm.Get(key, &value).IsOK()) {
 </tr>
 </table>
 
-<p>As seen above, sharding is effective to improve throughput with multi-threading.  Especially, if updating operations are the bottleneck of the service, sharding is beneficial.  Alghouth there's a drawback that the iterator can be slower, the extent is usually acceptable.  The following commands reproduce the performance tests on your environment.</p>
+<p>As seen above, sharding is effective to improve throughput with multi-threading.  Especially, if updating operations are the bottleneck of the service, sharding is beneficial.  Although there's a drawback that the iterator can be slower, the extent is usually acceptable.  The following commands reproduce the performance tests on your environment.</p>
 
 <pre><code class="language-shell-session"><![CDATA[# Random tests by ten threads and one shard.
 $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard --path casket.tkh \
@@ -3259,7 +3259,7 @@ $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard -
 </tr>
 </table>
 
-<p>In this settings, using FileIndex slows down significantly.  If you need more throughput than 61K QPS, you should use on-memory indices.  If parallelism of updating operations is important, using MemIndex is the best.  Otherwise, using StdIndex is recommended.  Using integer type as much as possible is a good idea.</p>
+<p>In these settings, using FileIndex slows down significantly.  If you need more throughput than 61K QPS, you should use on-memory indices.  If parallelism of updating operations is important, using MemIndex is the best.  Otherwise, using StdIndex is recommended.  Using integer type as much as possible is a good idea.</p>
 
 <h3 id="tips_hashdbm_restore">Restoring Broken Databases</h3>
 
@@ -3383,19 +3383,19 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 <p>Utility functions are provided to complement functionality of the DBM interface.  They are defined in "tkrzw_dbm_common_impl.h".  Especially, these are useful.</p>
 
 <ul>
-<li><code>SearchDBM</code> : Searches a database and get keys which match a pattern.</li>
-<li><code>SearchDBMForwardMatch</code> : Searches a database and get keys which begin with a pattern.</li>
-<li><code>SearchDBMRegex</code> : Searches a database and get keys which match a regular expression.</li>
-<li><code>SearchDBMEditDistance</code> : Searches a database and get keys whose edit distance with a pattern is the least.</li>
+<li><code>SearchDBM</code> : Searches a database and gets keys which match a pattern.</li>
+<li><code>SearchDBMForwardMatch</code> : Searches a database and gets keys which begin with a pattern.</li>
+<li><code>SearchDBMRegex</code> : Searches a database and gets keys which match a regular expression.</li>
+<li><code>SearchDBMEditDistance</code> : Searches a database and gets keys whose edit distance with a pattern is the least.</li>
 </ul>
 
 <p>Scanning the whole database is sometimes costly.  If the database is not updated frequently, exporting keys into a text file and scanning it is more efficient.  The ExportDBMKeysAsLines function is provided for the purpose.  And, the functions SearchTextFile, SearchTextFileRegex, and SearchTextFileEditDistance are available for such text files.</p>
 
 <h3 id="tips_multitasking">Multitasking</h3>
 
-<p>Databases of Tkrzw are designed to be shared among multiple threads.  However, they are not designed to be shared among multiple processes.  When one process opens a database file as a writer, an exclusive lock is applied to the file so that other processes trying to open the same database file are blocked until the database is closed.  When one process opens a database file as a reader, a shared lock is applied to the file so that other reader process can open the same database but other writer process are blocked until the database is closed.  Thereby, consistency of the state of the database and atomicity of updating operations are assured in the multiprocessing environment.</p>
+<p>Databases of Tkrzw are designed to be shared among multiple threads.  However, they are not designed to be shared among multiple processes.  When one process opens a database file as a writer, an exclusive lock is applied to the file so that other processes trying to open the same database file are blocked until the database is closed.  When one process opens a database file as a reader, a shared lock is applied to the file so that other reader processes can open the same database but other writer processes are blocked until the database is closed.  Thereby, consistency of the state of the database and atomicity of updating operations are assured in the multi-processing environment.</p>
 
-<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.  If the throughput requirement or the latency requirement is more than a threshold, you should write a multithread application program to serve the database.</p>
+<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.  If the throughput requirement or the latency requirement is more than a threshold, you should write a multi-thread application program to serve the database.</p>
 
 <h3 id="tips_file_classes">File Classes</h3>
 
@@ -3452,7 +3452,7 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 </tr>
 </table>
 
-<p>Do the same things with 10 threads.  Each thread write 1 million records and read them.</p>
+<p>Do the same things with 10 threads.  Each thread writes 1 million records and reads them.</p>
 
 <table>
 <tr>
@@ -3522,9 +3522,9 @@ dbm.Open("casket.tkh", true);
 
 <h2 id="license">License</h2>
 
-<p>Tkrzw is written maiinly by Mikio Hirabayashi, copyrighted by Google LLC, and distributed under the Apache license 2.0.  See the COPYING file in the package for detail.</p>
+<p>Tkrzw is written mainly by Mikio Hirabayashi, copyrighted by Google LLC, and distributed under the Apache license 2.0.  See the COPYING file in the package for detail.</p>
 
-<p>Tkrzw is NOT an official Google product but developed by an indivisual as a personal hobby product.  It is copyrighted by the company due to his employment contract.  To contact the author, send an e-mail to &lt;hirarin@gmail.com&gt;.</p>
+<p>Tkrzw is NOT an official Google product but developed by an individual as a personal hobby product.  It is copyrighted by the company due to his employment contract.  To contact the author, send an e-mail to &lt;hirarin@gmail.com&gt;.</p>
 
 </article>
 </body>
