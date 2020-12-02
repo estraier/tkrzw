@@ -3036,7 +3036,89 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
+<h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
+
 <p>The DBM interface provides the Append method which appends the given value at the end of the value of the existing record.  Most DBM implementations use a wrapper which calls the Get method and the Set method atomically.  However, if you call the Append method N times, the time complexity is O(N^2).  To overcome the problem, TinyDBM and BabyDBM override it with specialized implementations, which write the given value directly at the end of the existing value if possible.  The amortized time complexity of the specialized implementations is O(N).  Therefore, TinyDBM and BabyDBM are useful as buffers to build inverted indices for full-text search systems.</p>
+
+<p>Typically, a full-text search system uses a buffer for posting lists of document IDs for each words.  The contents of the buffer are dumped into separate DBM files periodically according to the memory capacity.  If necessary, you can merge the saparate DBM files into one file.</p>
+
+<pre><code class="language-cpp"><![CDATA[int main(int argc, char** argv) {
+  const std::vector<std::string> documents = {
+    "this is a pen", "this boy loves a girl", "the girl has the pen", "tokyo go",
+    "she loves tokyo", "tokyo is a big city", "boy meets girl", "girl meets boy"};
+  constexpr int32_t BUFFER_CAPACITY = 10;
+
+  // Register all documents into separate index files.
+  BabyDBM buffer;
+  int32_t num_files = 0;
+  int32_t num_words_in_buffer = 0;
+  int64_t doc_id = 0;
+  for (const auto& doc : documents) {
+    const std::string value = IntToStrBigEndian(doc_id);
+    const std::vector<std::string> words = StrSplit(doc, " ");
+    for (const std::string& word : words) {
+      buffer.Append(word, value);
+      num_words_in_buffer++;
+    }
+    if (num_words_in_buffer > BUFFER_CAPACITY) {
+      DumpBuffer(&buffer, num_files);
+      buffer.Clear();
+      num_files++;
+      num_words_in_buffer = 0;
+    }
+    doc_id++;
+  }
+  if (num_words_in_buffer > 0) {
+    DumpBuffer(&buffer, num_files);
+    buffer.Clear();
+    num_files++;
+  }
+
+  // Merge separate index files into one.
+  SkipDBM merged_dbm;
+  merged_dbm.Open("index-merged.tks", true, File::OPEN_TRUNCATE).OrDie();
+  for (int file_id = 0; file_id < num_files; file_id++) {
+    const std::string file_name = SPrintF("index-%05d.tks", file_id);
+    merged_dbm.MergeSkipDatabase(file_name).OrDie();
+  }
+  merged_dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceConcat).OrDie();
+  merged_dbm.Close().OrDie();
+
+  // Search the merged index file.
+  merged_dbm.Open("index-merged.tks", false).OrDie();
+  const std::vector<std::string> queries = {"pen", "boy", "girl", "tokyo"};
+  for (const auto& query : queries) {
+    std::cout << query << ":";
+    std::string value;
+    if (merged_dbm.Get(query, &value).IsOK()) {
+      size_t pos = 0;
+      while (pos < value.size()) {
+        doc_id = StrToIntBigEndian(std::string_view(value.data() + pos, sizeof(int64_t)));
+        std::cout << " " << doc_id;
+        pos += sizeof(int64_t);
+      }
+    }
+    std::cout << std::endl;
+  }
+  merged_dbm.Close().OrDie();
+}
+
+void DumpBuffer(BabyDBM* buffer, int32_t file_id) {
+  const std::string file_name = SPrintF("index-%05d.tks", file_id);
+  SkipDBM::TuningParameters tuning_params;
+  tuning_params.insert_in_order = true;
+  SkipDBM dbm;
+  dbm.OpenAdvanced(file_name, true, File::OPEN_TRUNCATE, tuning_params).OrDie();
+  auto iter = buffer->MakeIterator();
+  iter->First();
+  std::string key, value;
+  while (iter->Get(&key, &value).IsOK()) {
+    dbm.Set(key, value).OrDie();
+    iter->Next();
+  }
+  dbm.Close().OrDie();
+}
+]]></code></pre>
 
 <h3 id="tips_index_performance">Performance of ShardDBM</h3>
 

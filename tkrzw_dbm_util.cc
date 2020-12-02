@@ -209,7 +209,7 @@ KeyComparator GetKeyComparatorOrDie(const std::string& cmp_name) {
 }
 
 // Gets a reducer or die.
-SkipDBM::ReducerType GetReducerOrDier(const std::string& reducer_name) {
+SkipDBM::ReducerType GetReducerOrDie(const std::string& reducer_name) {
   SkipDBM::ReducerType reducer = nullptr;
   if (reducer_name == "none") {
     reducer = nullptr;
@@ -592,7 +592,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   if (typeid(*dbm) == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
     const Status status = skip_dbm->SynchronizeAdvanced(
-        false, nullptr, GetReducerOrDier(reducer_name));
+        false, nullptr, GetReducerOrDie(reducer_name));
     if (status != Status::SUCCESS) {
       EPrintL("SynchronizeAdvanced failed: ", status);
       ok = false;
@@ -909,7 +909,7 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
       has_error = true;
     }
     status = skip_dbm->SynchronizeAdvanced(
-        false, nullptr, GetReducerOrDier(reducer_name));
+        false, nullptr, GetReducerOrDie(reducer_name));
     if (status != Status::SUCCESS) {
       EPrintL("SynchronizeAdvanced failed: ", status);
       has_error = true;
