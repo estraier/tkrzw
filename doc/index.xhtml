@@ -2859,7 +2859,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <pre>[XXX:A:aaa............................]
 </pre>
 
-<p>Some records are inserted into the leaf page.  If the total page size doesn't exceeds the allocated size, the page doesn't have to reallocated.</p>
+<p>Some records are inserted into the leaf page.  If the total page size doesn't exceed the allocated size, the page doesn't have to reallocated.</p>
 
 <pre>[XXX:A:aaa:B:bbb:C:ccc:D:ddd..........]
 </pre>
@@ -3022,7 +3022,7 @@ text_dbm.Close();
 
 <p>BabyDBM has a tuning parameter for the comparison function of keys.  The default comparison function is a lexical comparator, which is also usable for integers serialized as big-endian binary strings.  It is set with the constructor.</p>
 
-<p>CacheDBM has two tuning parameters for the capaicty: the maximum number of records and the maximum memory usage.  The maximum number of records is necessary because it is used to determine the number of buckets.  Therefore, setting too large value is not good for space efficiency.  The maximum memory usage is used as an insurance to ensure that memory usage doesn't exceeds the specified value.</p>
+<p>CacheDBM has two tuning parameters for the capaicty: the maximum number of records and the maximum memory usage.  The maximum number of records is necessary because it is used to determine the number of buckets.  Therefore, setting too large value is not good for space efficiency.  The maximum memory usage is used as an insurance to ensure that memory usage doesn't exceed the specified value.</p>
 
 <p>If you use integers as keys and/or values, using functions IntToStrBigEndian and StrToIntBigEndian as a serializer and a deserializer is a good idea for space efficiency.  This technique is usable for file databases too.</p>
 
