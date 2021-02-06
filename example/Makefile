@@ -51,7 +51,7 @@ RUNENV = LD_LIBRARY_PATH=/lib:/usr/lib:$(HOME)/lib:/usr/local/lib:.:..
 all : $(MYBINS)
 
 clean :
-	rm -rf $(MYBINS) *.exe *.o a.out check.out gmon.out leak.log casket* *~
+	rm -rf $(MYBINS) *.exe *.o a.out check.out gmon.out leak.log casket* *.tkh *.tkt *.tks *~
 
 static :
 	make LDFLAGS="$(LDFLAGS) -static"

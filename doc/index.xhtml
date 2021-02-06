@@ -548,6 +548,8 @@ $ make check
 $ sudo make install
 ]]></code></pre>
 
+<p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you see errors like "SYSTEM_ERROR: mlock: no enough memory", your "ulimit" setting is too strict for some tests.  In that case, run "ulimit -S -l 1024" before "make check".</p>
+
 <p>By default, the library and related files are installed under "/usr/local".</p>
 
 <pre><code class="language-shell-session"><![CDATA[/usr/local/lib/libtkrzw.a
@@ -670,7 +672,7 @@ $ tkrzw_dbm_perf sequence --dbm stdhash --iter 10000000 --random_key --threads 1
 $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 10
 ]]></code></pre>
 
-<p>If you pursue the best performance, run "./configure --enable-optarch" for configuration.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".</p>
+<p>If you pursue the best performance, run "./configure --enable-optarch" for configuration.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
 
 <h2 id="hashdbm_overview">HashDBM: The File Hash Database</h2>
 

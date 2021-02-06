@@ -21,8 +21,8 @@ MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkr
 MYPCFILES="tkrzw.pc"
 
 # Building flags
-MYCFLAGS="-pthread -Wall -ansi -pedantic -fPIC -fsigned-char -g0 -O2"
-MYCXXFLAGS="-std=c++17 -pthread -Wall -fPIC -fsigned-char -g0 -O2"
+MYCFLAGS="-pthread -fPIC -fsigned-char "
+MYCXXFLAGS="-std=c++17 -pthread -fPIC -fsigned-char"
 MYCPPFLAGS="-I. -I\$(INCLUDEDIR) -I/usr/local/include"
 MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_ISOC99_SOURCE=1 -D_POSIX_C_SOURCE=200809L"
 MYCPPFLAGS="$MYCPPFLAGS -D_FILE_OFFSET_BITS=64 -D_REENTRANT -D__EXTENSIONS__"
@@ -49,6 +49,16 @@ export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
 # Internal variables
 enables=""
 is_static=""
+
+# Development mode
+AC_ARG_ENABLE(devel,
+  AC_HELP_STRING([--enable-development], [build for development]))
+if test "$enable_devel" = "yes"
+then
+  MYCFLAGS="-pthread -Wall -ansi -pedantic -fPIC -fsigned-char -g0 -O2"
+  MYCXXFLAGS="-std=c++17 -pthread -Wall -fPIC -fsigned-char -g0 -O2"
+  enables="$enables (devel)"
+fi
 
 # Debug mode
 AC_ARG_ENABLE(debug,
