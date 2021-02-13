@@ -542,7 +542,7 @@ window.onload = function(){
 
 <p>Tkrzw is implemented based on the C++17 standard and POSIX.  To install the library, a Unix-like system (Linux, Mac OS X) and GCC (version 7 or later) are required.  Usually, you will run the following commands.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ ./configure
+<pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-optarch
 $ make
 $ make check
 $ sudo make install
@@ -672,7 +672,7 @@ $ tkrzw_dbm_perf sequence --dbm stdhash --iter 10000000 --random_key --threads 1
 $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 10
 ]]></code></pre>
 
-<p>If you pursue the best performance, run "./configure --enable-optarch" for configuration.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
+<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
 
 <h2 id="hashdbm_overview">HashDBM: The File Hash Database</h2>
 
