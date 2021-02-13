@@ -23,11 +23,11 @@ MYPCFILES="tkrzw.pc"
 # Building flags
 MYCFLAGS="-pthread -fPIC -fsigned-char "
 MYCXXFLAGS="-std=c++17 -pthread -fPIC -fsigned-char"
-MYCPPFLAGS="-I. -I\$(INCLUDEDIR) -I/usr/local/include"
+MYCPPFLAGS="-I. -I\$(INCLUDEDIR)"
 MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_ISOC99_SOURCE=1 -D_POSIX_C_SOURCE=200809L"
 MYCPPFLAGS="$MYCPPFLAGS -D_FILE_OFFSET_BITS=64 -D_REENTRANT -D__EXTENSIONS__"
-MYLDFLAGS="-L. -L\$(LIBDIR) -L/usr/local/lib"
-MYCMDLDFLAGS="-L. -L\$(LIBDIR) -L/usr/local/lib"
+MYLDFLAGS="-L. -L\$(LIBDIR)"
+MYCMDLDFLAGS="-L. -L\$(LIBDIR)"
 MYCMDLIBS="-ltkrzw"
 MYTESTLIBS="-lgtest -lgmock -lpthread"
 MYLDLIBPATH=""
@@ -57,6 +57,9 @@ if test "$enable_devel" = "yes"
 then
   MYCFLAGS="-pthread -Wall -ansi -pedantic -fPIC -fsigned-char -g0 -O2"
   MYCXXFLAGS="-std=c++17 -pthread -Wall -fPIC -fsigned-char -g0 -O2"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
   enables="$enables (devel)"
 fi
 
@@ -68,7 +71,22 @@ then
   MYCFLAGS="-Wall -ansi -pedantic -fPIC -fsigned-char -g -O0"
   MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -fPIC -fsigned-char -g -O0"
   MYCPPFLAGS="$MYCPPFLAGS -UNDEBUG -D_TKRWX_DEBUG"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
   enables="$enables (debug)"
+fi
+
+# Profiling mode
+AC_ARG_ENABLE(profile,
+  AC_HELP_STRING([--enable-profile], [build for profiling]))
+if test "$enable_profile" = "yes"
+then
+  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
+  enables="$enables (profile)"
 fi
 
 # Disable optimization
@@ -79,15 +97,6 @@ then
   MYCFLAGS="$MYCFLAGS -O0"
   MYCXXFLAGS="$MYCXXFLAGS -O0"
   enables="$enables (no-opt)"
-fi
-
-# Profiling mode
-AC_ARG_ENABLE(profile,
-  AC_HELP_STRING([--enable-profile], [build for profiling]))
-if test "$enable_profile" = "yes"
-then
-  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
-  enables="$enables (profile)"
 fi
 
 # Optimize for the native architecture
