@@ -1106,14 +1106,17 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
           break;
         }
       } else if (op_dist(misc_mt) % 3 == 0) {
-        const Status status = dbm->Set(key, value);
-        if (status != Status::SUCCESS) {
+        const bool overwrite = op_dist(misc_mt) % 3 != 0;
+        std::string old_value;
+        const Status status = dbm->Set(key, value, overwrite, &old_value);
+        if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
           EPrintL("Set failed: ", status);
           has_error = true;
           break;
         }
       } else {
-        const Status status = dbm->Set(key, value);
+        std::string rec_value;
+        const Status status = dbm->Get(key, &rec_value);
         if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
           EPrintL("Get failed: ", status);
           has_error = true;

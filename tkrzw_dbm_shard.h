@@ -286,9 +286,12 @@ class ShardDBM final : public ParamDBM {
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
    * is given up and an error status is returned.
+   * @param old_value The pointer to a string object to contain the old value.  Assignment is done
+   * even on the duplication error.  If it is nullptr, it is ignored.
    * @return The result status.
    */
-  Status Set(std::string_view key, std::string_view value, bool overwrite = true) override;
+  Status Set(std::string_view key, std::string_view value, bool overwrite = true,
+             std::string* old_value = nullptr) override;
 
   /**
    * Removes a record of a key.

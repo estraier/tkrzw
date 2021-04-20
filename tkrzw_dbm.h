@@ -119,15 +119,20 @@ class DBM {
      * Constructor.
      * @param status The pointer to a status object to contain the result status.
      * @param value A string of the value to set.
-     * @param overwrite Whether to overwrite the existing value
+     * @param overwrite Whether to overwrite the existing value.
+     * @param old_value The pointer to a string object to contain the existing value.
      */
-    RecordProcessorSet(Status* status, std::string_view value, bool overwrite)
-        : status_(status), value_(value), overwrite_(overwrite) {}
+    RecordProcessorSet(Status* status, std::string_view value, bool overwrite,
+                       std::string* old_value)
+        : status_(status), value_(value), overwrite_(overwrite), old_value_(old_value) {}
 
     /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (old_value_ != nullptr) {
+        *old_value_ = value;
+      }
       if (overwrite_) {
         return value_;
       }
@@ -149,6 +154,39 @@ class DBM {
     std::string_view value_;
     /** True to overwrite the existing value. */
     bool overwrite_;
+    /** String to store the old value. */
+    std::string* old_value_;
+  };
+
+  /**
+   * Record processor to implement DBM::Remove.
+   */
+  class RecordProcessorRemove final : public RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param status The pointer to a status object to contain the result status.
+     */
+    explicit RecordProcessorRemove(Status* status) : status_(status) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      return REMOVE;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      status_->Set(Status::NOT_FOUND_ERROR);
+      return NOOP;
+    }
+
+   private:
+    /** Status to report. */
+    Status* status_;
   };
 
   /**
@@ -306,37 +344,6 @@ class DBM {
     int64_t initial_;
     /** The new string value. */
     std::string value_;
-  };
-
-  /**
-   * Record processor to implement DBM::Remove.
-   */
-  class RecordProcessorRemove final : public RecordProcessor {
-   public:
-    /**
-     * Constructor.
-     * @param status The pointer to a status object to contain the result status.
-     */
-    explicit RecordProcessorRemove(Status* status) : status_(status) {}
-
-    /**
-     * Processes an existing record.
-     */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      return REMOVE;
-    }
-
-    /**
-     * Processes an empty record space.
-     */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      status_->Set(Status::NOT_FOUND_ERROR);
-      return NOOP;
-    }
-
-   private:
-    /** Status to report. */
-    Status* status_;
   };
 
   /**
@@ -708,11 +715,14 @@ class DBM {
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
    * is given up and an error status is returned.
+   * @param old_value The pointer to a string object to contain the old value.  Assignment is done
+   * even on the duplication error.  If it is nullptr, it is ignored.
    * @return The result status.
    */
-  virtual Status Set(std::string_view key, std::string_view value, bool overwrite = true) {
+  virtual Status Set(std::string_view key, std::string_view value, bool overwrite = true,
+                     std::string* old_value = nullptr) {
     Status impl_status(Status::SUCCESS);
-    RecordProcessorSet proc(&impl_status, value, overwrite);
+    RecordProcessorSet proc(&impl_status, value, overwrite, old_value);
     const Status status = Process(key, &proc, true);
     if (status != Status::SUCCESS) {
       return status;

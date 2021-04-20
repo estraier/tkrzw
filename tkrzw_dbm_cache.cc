@@ -774,7 +774,7 @@ Status CacheDBMImpl::ImportRecords() {
     uint64_t hash = PrimaryHash(key_store, UINT64MAX);
     const int32_t slot_index = (hash & 0xff) % NUM_CACHE_SLOTS;
     hash >>= 8;
-    DBM::RecordProcessorSet setter(&status, value, true);
+    DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     slots_[slot_index].Process(key_store, hash, &setter, true);
   }
   return Status(Status::SUCCESS);

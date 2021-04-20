@@ -555,6 +555,16 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, iter->Get());
   const tkrzw::Status status = second_iter->Get();
   EXPECT_TRUE(status == tkrzw::Status::SUCCESS || status == tkrzw::Status::NOT_FOUND_ERROR);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "apple", true));
+  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->Set("98765", "orange", false));
+  std::string old_value;
+  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->Set("98765", "orange", false, &old_value));
+  EXPECT_EQ("apple", old_value);
+  old_value = "";
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "orange", true, &old_value));
+  EXPECT_EQ("apple", old_value);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "banana juice", true, &old_value));
+  EXPECT_EQ("orange", old_value);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("1234", "foo", ","));
   EXPECT_EQ("foo", dbm->GetSimple("1234"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("1234", "bar", ","));

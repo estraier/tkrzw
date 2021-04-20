@@ -807,7 +807,7 @@ Status HashDBMImpl::ImportFromFileForward(
     Importer(HashDBMImpl* impl, Status* status) : impl_(impl), status_(status) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       Status set_status(Status::SUCCESS);
-      DBM::RecordProcessorSet setter(&set_status, value, true);
+      DBM::RecordProcessorSet setter(&set_status, value, true, nullptr);
       *status_ = impl_->Process(key, &setter, true);
       *status_ |= set_status;
       return NOOP;
@@ -943,7 +943,7 @@ Status HashDBMImpl::ImportFromFileBackward(
         }
         if (!removed) {
           Status set_status(Status::SUCCESS);
-          DBM::RecordProcessorSet setter(&set_status, value, false);
+          DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
           status = Process(key, &setter, true);
           if (status != Status::SUCCESS) {
             CleanUp();

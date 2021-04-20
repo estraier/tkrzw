@@ -463,7 +463,7 @@ Status TinyDBMImpl::ImportRecords() {
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
     }
-    DBM::RecordProcessorSet setter(&status, value, true);
+    DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     ScopedHashLock record_lock(record_mutex_, key_store, true);
     const int64_t bucket_index = record_lock.GetBucketIndex();
     ProcessImpl(key_store, bucket_index, &setter, true);

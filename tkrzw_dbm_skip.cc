@@ -1452,11 +1452,12 @@ Status SkipDBM::Process(std::string_view key, RecordProcessor* proc, bool writab
   return impl_->Process(key, proc, writable);
 }
 
-Status SkipDBM::Set(std::string_view key, std::string_view value, bool overwrite) {
-  if (overwrite) {
+Status SkipDBM::Set(std::string_view key, std::string_view value, bool overwrite,
+                    std::string* old_value) {
+  if (overwrite && old_value == nullptr) {
     return impl_->Insert(key, value);
   }
-  return DBM::Set(key, value, false);
+  return DBM::Set(key, value, false, old_value);
 }
 
 Status SkipDBM::Remove(std::string_view key) {

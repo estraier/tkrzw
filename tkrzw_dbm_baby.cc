@@ -890,7 +890,7 @@ Status BabyDBMImpl::ImportRecords() {
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
     }
-    DBM::RecordProcessorSet setter(&status, value, true);
+    DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     BabyLeafNode* leaf_node = SearchTree(key_store);
     std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key_store, &setter, true);

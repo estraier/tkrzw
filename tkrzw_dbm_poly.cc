@@ -351,11 +351,12 @@ Status PolyDBM::Get(std::string_view key, std::string* value) {
   return dbm_->Get(key, value);
 }
 
-Status PolyDBM::Set(std::string_view key, std::string_view value, bool overwrite) {
+Status PolyDBM::Set(std::string_view key, std::string_view value, bool overwrite,
+                    std::string* old_value) {
   if (dbm_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
-  return dbm_->Set(key, value, overwrite);
+  return dbm_->Set(key, value, overwrite, old_value);
 }
 
 Status PolyDBM::Remove(std::string_view key) {
