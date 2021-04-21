@@ -21,6 +21,25 @@
 
 namespace tkrzw {
 
+#if defined(_SYS_LINUX_)
+
+void* tkrzw_mremap(
+    void *old_address, size_t old_size, size_t new_size, int fd) {
+  return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
+}
+
+#else
+
+void* tkrzw_mremap(
+    void *old_address, size_t old_size, size_t new_size, int fd) {
+  if (munmap(old_address, old_size) != 0) {
+    return MAP_FAILED;
+  }
+  return mmap(0, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+}
+
+#endif
+
 class MemoryMapParallelFileImpl final {
   friend class MemoryMapParallelFileZoneImpl;
  public:
@@ -235,7 +254,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  void* new_map = mremap(map_, map_size_.load(), new_map_size, MREMAP_MAYMOVE);
+  void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
     return GetErrnoStatus("mremap", errno);
   }
@@ -325,7 +344,7 @@ Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
   if (ftruncate(fd_, new_map_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
   }
-  void* new_map = mremap(map_, map_size_.load(), new_map_size, MREMAP_MAYMOVE);
+  void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
     return GetErrnoStatus("mremap", errno);
   }
@@ -762,7 +781,7 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  void* new_map = mremap(map_, map_size_, new_map_size, MREMAP_MAYMOVE);
+  void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
   if (new_map == MAP_FAILED) {
     return GetErrnoStatus("mremap", errno);
   }
@@ -871,7 +890,7 @@ MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
         *status = GetErrnoStatus("ftruncate", errno);
         return;
       }
-      void* new_map = mremap(file_->map_, file_->map_size_, new_map_size, MREMAP_MAYMOVE);
+      void* new_map = tkrzw_mremap(file_->map_, file_->map_size_, new_map_size, file_->fd_);
       if (new_map == MAP_FAILED) {
         *status = GetErrnoStatus("mremap", errno);
         return;
