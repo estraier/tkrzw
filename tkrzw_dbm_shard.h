@@ -251,7 +251,7 @@ class ShardDBM final : public ParamDBM {
    */
   Status OpenAdvanced(const std::string& path, bool writable,
                       int32_t options = File::OPEN_DEFAULT,
-                      const std::map<std::string, std::string>& params = {});
+                      const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Closes the database file.
@@ -363,7 +363,7 @@ class ShardDBM final : public ParamDBM {
    * @return The result status.
    * @details The parameters work in the same way as with PolyDBM::RebuildAdvanced.
    */
-  Status RebuildAdvanced(const std::map<std::string, std::string>& params = {});
+  Status RebuildAdvanced(const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Checks whether the database should be rebuilt.
@@ -395,7 +395,7 @@ class ShardDBM final : public ParamDBM {
    * @details The parameters work in the same way as with PolyDBM::OpenAdvanced.
    */
   Status SynchronizeAdvanced(bool hard, FileProcessor* proc = nullptr,
-                             const std::map<std::string, std::string>& params = {});
+                             const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Copies the content of the database files to other files.

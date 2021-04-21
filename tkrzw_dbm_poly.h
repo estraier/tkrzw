@@ -306,7 +306,7 @@ class PolyDBM final : public ParamDBM {
    */
   Status OpenAdvanced(const std::string& path, bool writable,
                       int32_t options = File::OPEN_DEFAULT,
-                      const std::map<std::string, std::string>& params = {});
+                      const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Closes the database file.
@@ -418,7 +418,7 @@ class PolyDBM final : public ParamDBM {
    * @return The result status.
    * @details Tuning options can be given by the optional parameters, as with the Open method.
    */
-  Status RebuildAdvanced(const std::map<std::string, std::string>& params = {});
+  Status RebuildAdvanced(const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Checks whether the database should be rebuilt.
@@ -453,7 +453,7 @@ class PolyDBM final : public ParamDBM {
    * etc are supported.
    */
   Status SynchronizeAdvanced(bool hard, FileProcessor* proc = nullptr,
-                             const std::map<std::string, std::string>& params = {});
+                             const std::map<std::string, std::string>& params = {}) override;
 
   /**
    * Inspects the database.

@@ -107,7 +107,7 @@ class SkipDBM final : public DBM {
      * @details Precondition: The database is opened.
      * @details Even if there's no matching record, the operation doesn't fail.
      */
-    Status JumpLower(std::string_view key, bool inclusive = false);
+    Status JumpLower(std::string_view key, bool inclusive = false) override;
 
     /**
      * Initializes the iterator to indicate the first record whose key is upper than a given key.
@@ -118,7 +118,7 @@ class SkipDBM final : public DBM {
      * @details Even if there's no matching record, the operation doesn't fail.  If the inclusive
      * parameter is true, this method is the same as Jump(key).
      */
-    Status JumpUpper(std::string_view key, bool inclusive = false);
+    Status JumpUpper(std::string_view key, bool inclusive = false) override;
 
     /**
      * Moves the iterator to the next record.
