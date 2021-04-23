@@ -14,6 +14,7 @@
 #ifndef _TKRZW_DBM_H
 #define _TKRZW_DBM_H
 
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -63,14 +64,52 @@ class DBM {
 
     /**
      * Processes an empty record space.
-     * @param key The key of the existing record.
-     * @return A string reference to NOOP, REMOVE, or a strint of new value.
+     * @param key The key specified by the caller.
+     * @return A string reference to NOOP, REMOVE, or the new value.
      * @details The memory referred to by the return value must be alive until the end of
      * the life-span of this object or until this function is called next time.
      */
     virtual std::string_view ProcessEmpty(std::string_view key) {
       return NOOP;
     }
+  };
+
+  /**
+   * Lambda function type to process a record.
+   * @details The first parameter is the key of the record.  The second parameter is the value
+   * of the existing record, or NOOP if it the record doesn't exist.  The return value is a
+   * string reference to NOOP, REMOVE, or the new record value.
+   */
+  typedef std::function<std::string_view(std::string_view, std::string_view)> RecordLambdaType;
+
+  /**
+   * Record processor to implement DBM::Process with a lambda function.
+   */
+  class RecordProcessorLambda final : public RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param proc_lambda A lambda function to process a record.
+     */
+    explicit RecordProcessorLambda(RecordLambdaType proc_lambda) : proc_lambda_(proc_lambda) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      return proc_lambda_(key, value);
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      return proc_lambda_(key, NOOP);
+    }
+
+   private:
+    // Lambda function to process a record.
+    RecordLambdaType proc_lambda_;
   };
 
   /**
@@ -522,6 +561,19 @@ class DBM {
     virtual Status Process(RecordProcessor* proc, bool writable) = 0;
 
     /**
+     * Processes the current record with a lambda function.
+     * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+     * of the record.  The second parameter is the value of the existing record.  The return
+     * value is a string reference to NOOP, REMOVE, or the new record value.
+     * @param writable True if the processor can edit the record.
+     * @return The result status.
+     */
+    virtual Status Process(RecordLambdaType rec_lambda, bool writable) {
+      RecordProcessorLambda proc(rec_lambda);
+      return Process(&proc, writable);
+    }
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -646,6 +698,21 @@ class DBM {
    * Otherwise, the ProcessEmpty of the processor is called.
    */
   virtual Status Process(std::string_view key, RecordProcessor* proc, bool writable) = 0;
+
+  /**
+   * Processes a record with a lambda function.
+   * @param key The key of the record.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
+   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
+   * record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   */
+  virtual Status Process(std::string_view key, RecordLambdaType rec_lambda, bool writable) {
+    RecordProcessorLambda proc(rec_lambda);
+    return Process(key, &proc, writable);
+  }
 
   /**
    * Gets the value of a record of a key.
@@ -862,6 +929,22 @@ class DBM {
    * iteration.
    */
   virtual Status ProcessEach(RecordProcessor* proc, bool writable) = 0;
+
+  /**
+   * Processes each and every record in the database with a lambda function.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
+   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
+   * record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   * @details The lambda function is called repeatedly for each record.  It is also called once
+   * before the iteration and once after the iteration with both the key and the value being NOOP.
+   */
+  virtual Status ProcessEach(RecordLambdaType rec_lambda, bool writable) {
+    RecordProcessorLambda proc(rec_lambda);
+    return ProcessEach(&proc, writable);
+  }
 
   /**
    * Gets the number of records.

@@ -3038,6 +3038,52 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
+<h3 id="tips_lambda_processor">Record Processor with Lambda Function</h3>
+
+<p>Processing a record atomically in an arbitrary manner is one of the nicest features of Tkrzw.  You can use the feture easily by writing a lambda funciton.  You call the Process method with a record key and a lambda function.  If the record exists, the lambda function is called with the key and the value of the existing record.  If the record doesn't exist, the lambda function is called with the specified key and the dummy value NOOP.  The lambda function returns the dummy value NOOP to keep the existing value as-is.  It can return the dummy value REMOVE to remove the record.  It can return an arbitrary string to set the new value.  The record is processed atomically by being locked during the operation.</p>
+
+<p>The following function works as an access counter.  It takes an arbitrary ID string, increments the record value for it, saves the value as a decimal numeric string, and then returns the current access count.  Note that the string object "new_value" must be put outside of the lambda function so that its life duration lasts until the Process method finishes.</p>
+
+<pre><code class="language-cpp"><![CDATA[int64_t CountUp(DBM* dbm, std::string id) {
+  int64_t count = 0;
+  std::string new_value;
+  dbm->Process(id,
+    [&](std::string_view key, std::string_view value) -> std::string_view {
+      if (value == DBM::RecordProcessor::NOOP) {
+        count = 1;
+        return "1";
+      }
+      count = StrToInt(value) + 1;
+      new_value = ToString(count);
+      return new_value;
+    }, true).OrDie();
+  return count;
+}
+]]></code></pre>
+
+<p>The ProcessEach method to process every record at once can also take a lambda function.  First, the whole database is locked.  For preprocessing, the lambca function is called with the key and the value being NOOP.  Then, the lambdaa function is called for each record.  For postprocessing, the lambda function is called with the key and the vlue being NOOP.  Finally, the whole database is unlocked.</p>
+
+<p>The following function multiplies the values of all records with a given factor.  If the value of a record is less than 1, the record is removed.</p>
+
+<pre><code class="language-cpp"><![CDATA[void MultiplyEach(DBM* dbm, double factor) {
+  std::string new_value;
+  dbm->ProcessEach(
+    [&](std::string_view key, std::string_view value) -> std::string_view {
+      if (value == DBM::RecordProcessor::NOOP) {
+        return DBM::RecordProcessor::NOOP;
+      }
+      const int64_t count = StrToInt(value) * factor;
+      if (count < 1) {
+        return DBM::RecordProcessor::REMOVE;
+      }
+      new_value = ToString(count);
+      return new_value;
+    }, true).OrDie();
+}
+]]></code></pre>
+
+<p>The Process method of the iterator class can also take a lambda function.  If you want to modify specific a record in an atomic manner by the record, you'll use DBM::Process.  If you want to modify every record in an atomic manner by the whole database, you'll use DBM::ProcessEach.  If you want to modify all or some records in an atomic manner by the record, you'll use DBM::Iterator::Process.</p>
+
 <h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
 
 <p>The DBM interface provides the Append method which appends the given value at the end of the value of the existing record.  Most DBM implementations use a wrapper which calls the Get method and the Set method atomically.  However, if you call the Append method N times, the time complexity is O(N^2).  To overcome the problem, TinyDBM and BabyDBM override it with specialized implementations, which write the given value directly at the end of the existing value if possible.  The amortized time complexity of the specialized implementations is O(N).  Therefore, TinyDBM and BabyDBM are useful as buffers to build inverted indices for full-text search systems.</p>
