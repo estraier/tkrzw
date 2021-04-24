@@ -3042,14 +3042,14 @@ if (dbm.Get(key, &value).IsOK()) {
 
 <p>Processing a record atomically in an arbitrary manner is one of the nicest features of Tkrzw.  You can use the feture easily by writing a lambda funciton.  You call the Process method with a record key and a lambda function.  If the record exists, the lambda function is called with the key and the value of the existing record.  If the record doesn't exist, the lambda function is called with the specified key and the dummy value NOOP.  The lambda function returns the dummy value NOOP to keep the existing value as-is.  It can return the dummy value REMOVE to remove the record.  It can return an arbitrary string to set the new value.  The record is processed atomically by being locked during the operation.</p>
 
-<p>The following function works as an access counter.  It takes an arbitrary ID string, increments the record value for it, saves the value as a decimal numeric string, and then returns the current access count.  Note that the string object "new_value" must be put outside of the lambda function so that its life duration lasts until the Process method finishes.</p>
+<p>The following function works as an access counter.  It takes an arbitrary ID string, increments the record value for it, saves the value as a decimal numeric string, and then returns the current access count.  Note that you shouldnt' write "value == DBM::RecordProcessor::NOOP" to check the given value is equal to NOOP.  Whereas the uniqueness of NOOP comes from the address of the data region, comparison of the string_view objects is done by their character values.  Also note that the string object "new_value" must be put outside of the lambda function so that its life duration lasts until the Process method finishes.</p>
 
 <pre><code class="language-cpp"><![CDATA[int64_t CountUp(DBM* dbm, std::string id) {
   int64_t count = 0;
   std::string new_value;
   dbm->Process(id,
     [&](std::string_view key, std::string_view value) -> std::string_view {
-      if (value == DBM::RecordProcessor::NOOP) {
+      if (value.data() == DBM::RecordProcessor::NOOP.data()) {
         count = 1;
         return "1";
       }
@@ -3069,7 +3069,7 @@ if (dbm.Get(key, &value).IsOK()) {
   std::string new_value;
   dbm->ProcessEach(
     [&](std::string_view key, std::string_view value) -> std::string_view {
-      if (value == DBM::RecordProcessor::NOOP) {
+      if (value.data() == DBM::RecordProcessor::NOOP.data()) {
         return DBM::RecordProcessor::NOOP;
       }
       const int64_t count = StrToInt(value) * factor;

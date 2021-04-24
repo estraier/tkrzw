@@ -21,7 +21,7 @@ int64_t CountUp(DBM* dbm, std::string id) {
   std::string new_value;
   dbm->Process(id,
     [&](std::string_view key, std::string_view value) -> std::string_view {
-      if (value == DBM::RecordProcessor::NOOP) {
+      if (value.data() == DBM::RecordProcessor::NOOP.data()) {
         count = 1;
         return "1";
       }
@@ -36,7 +36,7 @@ void MultiplyEach(DBM* dbm, double factor) {
   std::string new_value;
   dbm->ProcessEach(
     [&](std::string_view key, std::string_view value) -> std::string_view {
-      if (value == DBM::RecordProcessor::NOOP) {
+      if (value.data() == DBM::RecordProcessor::NOOP.data()) {
         return DBM::RecordProcessor::NOOP;
       }
       const int64_t count = StrToInt(value) * factor;
@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
   std::cout << CountUp(&dbm, "apple") << std::endl;
   std::cout << CountUp(&dbm, "banana") << std::endl;
   MultiplyEach(&dbm, 0.35);
+  std::cout << "apple: " << dbm.GetSimple("apple", "*") << std::endl;
+  std::cout << "banana: " << dbm.GetSimple("banana", "*") << std::endl;
   dbm.Close().OrDie();
   return 0;
 }

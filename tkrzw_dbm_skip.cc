@@ -1360,7 +1360,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
     if (status != Status::SUCCESS) {
       return status;
     }
-    if (new_value.data() == DBM::RecordProcessor::REMOVE) {
+    if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
       record_offset_ += record_size_;
       record_index_++;
       record_size_ = 0;

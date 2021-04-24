@@ -645,7 +645,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   std::string new_value;
   status = dbm->ProcessEach([&](std::string_view key,
                                 std::string_view value) -> std::string_view {
-                              if (key == tkrzw::DBM::RecordProcessor::NOOP) {
+                              if (key.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
                                 empty_count++;
                                 return tkrzw::DBM::RecordProcessor::NOOP;
                               }

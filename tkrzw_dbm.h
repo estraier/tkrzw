@@ -40,9 +40,17 @@ class DBM {
    */
   class RecordProcessor {
    public:
-    /** The special string indicating no operation. */
+    /**
+     * The special string indicating no operation.
+     * The uniqueness comes from the address of the data region.  So, checking should be done
+     * like your_value.data() == NOOP.data().
+     */
     static const std::string_view NOOP;
-    /** The special string indicating removing operation. */
+    /**
+     * The special string indicating removing operation.
+     * The uniqueness comes from the address of the data region.  So, checking should be done
+     * like your_value.data() == REMOVE.data().
+     */
     static const std::string_view REMOVE;
 
     /**
