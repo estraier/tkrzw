@@ -814,7 +814,7 @@ Status HashDBMImpl::ImportFromFileForward(
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       Status remove_status(Status::SUCCESS);
-      DBM::RecordProcessorRemove remover(&remove_status);
+      DBM::RecordProcessorRemove remover(&remove_status, nullptr);
       *status_ = impl_->Process(key, &remover, true);
       *status_ |= remove_status;
       return NOOP;

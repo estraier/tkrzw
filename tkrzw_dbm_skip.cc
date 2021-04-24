@@ -1460,8 +1460,11 @@ Status SkipDBM::Set(std::string_view key, std::string_view value, bool overwrite
   return DBM::Set(key, value, false, old_value);
 }
 
-Status SkipDBM::Remove(std::string_view key) {
-  return impl_->Insert(key, RecordProcessor::REMOVE);
+Status SkipDBM::Remove(std::string_view key, std::string* old_value) {
+  if (old_value == nullptr) {
+    return impl_->Insert(key, RecordProcessor::REMOVE);
+  }
+  return DBM::Remove(key, old_value);
 }
 
 Status SkipDBM::GetByIndex(int64_t index, std::string* key, std::string* value) {

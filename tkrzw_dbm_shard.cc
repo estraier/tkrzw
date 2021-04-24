@@ -133,13 +133,13 @@ Status ShardDBM::Set(std::string_view key, std::string_view value, bool overwrit
   return dbm->Set(key, value, overwrite, old_value);
 }
 
-Status ShardDBM::Remove(std::string_view key) {
+Status ShardDBM::Remove(std::string_view key, std::string* old_value) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   const int32_t shard_index = SecondaryHash(key, dbms_.size());
   auto dbm = dbms_[shard_index];
-  return dbm->Remove(key);
+  return dbm->Remove(key, old_value);
 }
 
 Status ShardDBM::Append(std::string_view key, std::string_view value, std::string_view delim) {

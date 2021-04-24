@@ -296,9 +296,11 @@ class ShardDBM final : public ParamDBM {
   /**
    * Removes a record of a key.
    * @param key The key of the record.
+   * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
+   * it is ignored.
    * @return The result status.
    */
-  Status Remove(std::string_view key) override;
+  Status Remove(std::string_view key, std::string* old_value = nullptr) override;
 
   /**
    * Appends data at the end of a record of a key.

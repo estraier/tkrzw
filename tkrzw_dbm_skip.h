@@ -321,10 +321,12 @@ class SkipDBM final : public DBM {
    * Removes a record of a key.
    * @param key The key of the record.
    * @return The result status.
+   * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
+   * it is ignored.
    * @details Even if there's no matching record, this doesn't report failure.
    * @details Precondition: The database is opened as writable.
    */
-  Status Remove(std::string_view key) override;
+  Status Remove(std::string_view key, std::string* old_value = nullptr) override;
 
   /**
    * Gets the key and the value of the record of an index.

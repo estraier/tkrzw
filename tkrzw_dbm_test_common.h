@@ -563,8 +563,11 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   old_value = "";
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "orange", true, &old_value));
   EXPECT_EQ("apple", old_value);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "banana juice", true, &old_value));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("98765", "strawberry", true, &old_value));
   EXPECT_EQ("orange", old_value);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove("98765", &old_value));
+  EXPECT_EQ("strawberry", old_value);
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Remove("98765", &old_value));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("1234", "foo", ","));
   EXPECT_EQ("foo", dbm->GetSimple("1234"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("1234", "bar", ","));

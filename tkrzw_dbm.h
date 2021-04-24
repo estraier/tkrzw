@@ -213,13 +213,18 @@ class DBM {
     /**
      * Constructor.
      * @param status The pointer to a status object to contain the result status.
+     * @param old_value The pointer to a string object to contain the existing value.
      */
-    explicit RecordProcessorRemove(Status* status) : status_(status) {}
+    explicit RecordProcessorRemove(Status* status, std::string* old_value)
+        : status_(status), old_value_(old_value) {}
 
     /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (old_value_ != nullptr) {
+        *old_value_ = value;
+      }
       return REMOVE;
     }
 
@@ -234,6 +239,8 @@ class DBM {
    private:
     /** Status to report. */
     Status* status_;
+    /** String to store the old value. */
+    std::string* old_value_;
   };
 
   /**
@@ -847,11 +854,14 @@ class DBM {
   /**
    * Removes a record of a key.
    * @param key The key of the record.
+   * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
+   * it is ignored.
+   * even on the duplication error.
    * @return The result status.
    */
-  virtual Status Remove(std::string_view key) {
+  virtual Status Remove(std::string_view key, std::string* old_value = nullptr) {
     Status impl_status(Status::SUCCESS);
-    RecordProcessorRemove proc(&impl_status);
+    RecordProcessorRemove proc(&impl_status, old_value);
     const Status status = Process(key, &proc, true);
     if (status != Status::SUCCESS) {
       return status;
