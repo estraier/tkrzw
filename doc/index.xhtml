@@ -548,7 +548,7 @@ $ make check
 $ sudo make install
 ]]></code></pre>
 
-<p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you see errors like "SYSTEM_ERROR: mlock: no enough memory", your "ulimit" setting is too strict for some tests.  In that case, run "ulimit -S -l 1024" before "make check".</p>
+<p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you want to install the files under "/usr", specify "--prefix=/usr" with the configure script.</p>
 
 <p>By default, the library and related files are installed under "/usr/local".</p>
 
