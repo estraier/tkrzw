@@ -5,11 +5,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tkrzw, 0.9.6)
+AC_INIT(tkrzw, 0.9.7)
 
 # Package information
 MYLIBVER=0
-MYLIBREV=6
+MYLIBREV=7
 MYLIBFMT=0
 
 # Targets
@@ -32,6 +32,8 @@ MYCMDLIBS="-ltkrzw"
 MYTESTLIBS="-lgtest -lgmock -lpthread"
 MYLDLIBPATH=""
 MYLDLIBPATHENV="LD_LIBRARY_PATH"
+MYFILEPERFMEMLOCKFLAGS=""
+MYDBMPERFMEMLOCKFLAGS=""
 MYPOSTCMD="true"
 
 # Building paths
@@ -124,6 +126,20 @@ AC_ARG_ENABLE(shared,
 if test "$enable_shared" = "no"
 then
   enables="$enables (no-shared)"
+fi
+
+# Memory locking test flags
+LOCKLIMIT="`ulimit -l 2>/dev/null`"
+if -z "$LOCKLIMIT"
+then
+  LOCKLIMIT=0
+fi
+if test "$LOCKLIMIT" = "unlimited" || test "$LOCKLIMIT" -ge 1024
+then
+  MYFILEPERFMEMLOCKFLAGS="--lock_memory 10"
+  MYDBMPERFMEMLOCKFLAGS="--lock_mem_buckets"
+else
+  enables="$enables (omit-mlock-tests)"
 fi
 
 # Messages
@@ -233,6 +249,8 @@ AC_SUBST(MYCMDLIBS)
 AC_SUBST(MYTESTLIBS)
 AC_SUBST(MYLDLIBPATH)
 AC_SUBST(MYLDLIBPATHENV)
+AC_SUBST(MYFILEPERFMEMLOCKFLAGS)
+AC_SUBST(MYDBMPERFMEMLOCKFLAGS)
 AC_SUBST(MYPOSTCMD)
 
 # Targets
