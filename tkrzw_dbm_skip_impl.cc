@@ -425,17 +425,17 @@ void SkipRecord::Deserialize(int64_t index, const char* serialized) {
   delete[] body_buf_;
   body_buf_ = nullptr;
   const char* rp = serialized;
-  constexpr int32_t dummy_size = 1 << 28;
+  constexpr int32_t max_varnum_size = 6;
   offset_ = ReadFixNum(rp, offset_width_);
   rp += offset_width_;
   uint64_t num = 0;
-  rp += ReadVarNum(rp, dummy_size, &num);
+  rp += ReadVarNum(rp, max_varnum_size, &num);
   level_ = num;
   std::memcpy(skip_offsets_.data(), rp, sizeof(int64_t) * level_);
   rp += sizeof(int64_t) * level_;
-  rp += ReadVarNum(rp, dummy_size, &num);
+  rp += ReadVarNum(rp, max_varnum_size, &num);
   key_size_ = num;
-  rp += ReadVarNum(rp, dummy_size, &num);
+  rp += ReadVarNum(rp, max_varnum_size, &num);
   value_size_ = num;
   const bool has_value = *(rp++);
   if (key_size_ <= READ_BUFFER_SIZE) {

@@ -230,6 +230,14 @@ size_t WriteVarNum(void* buf, uint64_t num);
 size_t ReadVarNum(const void* buf, size_t size, uint64_t* np);
 
 /**
+ * Reads a number in variable length format from a buffer, without size checking.
+ * @param buf The source buffer.
+ * @param np The pointer to the variable into which the read number is assigned.
+ * @return The length of the read region.
+ */
+size_t ReadVarNum(const void* buf, uint64_t* np);
+
+/**
  * Checks the size of variable length format of a number.
  * @return The size of variable length format.
  */
@@ -406,6 +414,20 @@ inline size_t ReadVarNum(const void* buf, size_t size, uint64_t* np) {
       *np = 0;
       return 0;
     }
+    c = *rp;
+    num = (num << 7) + (c & 0x7f);
+    rp++;
+  } while (c >= 0x80);
+  *np = num;
+  return rp - (const unsigned char*)buf;
+}
+
+inline size_t ReadVarNum(const void* buf, uint64_t* np) {
+  assert(buf != nullptr && np != nullptr);
+  const unsigned char* rp = (const unsigned char*)buf;
+  uint64_t num = 0;
+  uint32_t c;
+  do {
     c = *rp;
     num = (num << 7) + (c & 0x7f);
     rp++;

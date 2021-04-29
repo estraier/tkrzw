@@ -177,7 +177,6 @@ char* CacheRecord::Reserialize(char* ptr, int32_t old_value_size) const {
 
 void CacheRecord::Deserialize(const char* ptr) {
   const char* rp = ptr;
-  constexpr int32_t dummy_size = 1 << 28;
   std::memcpy(&child, rp, sizeof(child));
   rp += sizeof(child);
   std::memcpy(&prev, rp, sizeof(prev));
@@ -185,11 +184,11 @@ void CacheRecord::Deserialize(const char* ptr) {
   std::memcpy(&next, rp, sizeof(next));
   rp += sizeof(next);
   uint64_t num = 0;
-  rp += ReadVarNum(rp, dummy_size, &num);
+  rp += ReadVarNum(rp, &num);
   key_size = num;
   key_ptr = rp;
   rp += key_size;
-  rp += ReadVarNum(rp, dummy_size, &num);
+  rp += ReadVarNum(rp, &num);
   value_size = num;
   value_ptr = rp;
 }
