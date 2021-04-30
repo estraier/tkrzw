@@ -215,7 +215,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     num_buckets_ = GetHashBucketSize(std::min(tuning_params.num_buckets, MAX_NUM_BUCKETS));
   }
   if (tuning_params.fbp_capacity >= 0) {
-    fbp_.SetCapacity(tuning_params.fbp_capacity);
+    fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
   }
   lock_mem_buckets_ = tuning_params.lock_mem_buckets;
   Status status = file_->Open(path, writable, options);

@@ -243,7 +243,7 @@ Status PolyDBM::OpenAdvanced(
     auto file = MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
-    }    
+    }
     SkipDBM::TuningParameters tuning_params;
     SetSkipTuningParams(&mod_params, &tuning_params);
     if (!mod_params.empty()) {

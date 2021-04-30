@@ -417,7 +417,7 @@ check-polydbm-perf :
 	  --params "dbm=hash,file=pos-para,num_buckets=100000,offset_width=3,align_pow=1"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=1,lock_mem_buckets=false"
+	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0,lock_mem_buckets=false"
 
 check-polydbm-util :
 	rm -Rf casket*
