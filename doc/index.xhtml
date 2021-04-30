@@ -3641,7 +3641,7 @@ $ tkrzw_dbm_util set --file pos-para casket.tkh Japan Tokyo
 $ tkrzw_dbm_util get --file pos-para casket.tkh Japan
 ]]></code></pre>
 
-<p>In C++, a File object is given to the constructor of the HashDBM class.</p>
+<p>In C++, a File object is given to the constructor of the HashDBM class.  The same thing can be done with all DBM classes.</p>
 
 <pre><code class="language-cpp"><![CDATA[HashDBM dbm(std::make_unique<PositionalParallelFile>());
 dbm.Open("casket.tkh", true);
