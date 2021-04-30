@@ -41,7 +41,8 @@ CC := @CC@
 CXX := @CXX@
 CPPFLAGS := @MYCPPFLAGS@ \
   -D_TKRZW_PREFIX="\"$(prefix)\"" -D_TKRZW_INCLUDEDIR="\"$(INCLUDEDIR)\"" \
-  -D_TKRZW_LIBDIR="\"$(LIBDIR)\"" -D_TKRZW_BINDIR="\"$(BINDIR)\"" -D_TKRZW_LIBEXECDIR="\"$(LIBEXECDIR)\"" \
+  -D_TKRZW_LIBDIR="\"$(LIBDIR)\"" -D_TKRZW_BINDIR="\"$(BINDIR)\"" \
+  -D_TKRZW_LIBEXECDIR="\"$(LIBEXECDIR)\"" \
   -D_TKRZW_APPINC="\"-I$(INCLUDEDIR)\"" -D_TKRZW_APPLIBS="\"-L$(LIBDIR) @MYCMDLIBS@ @LIBS@\"" \
   -D_TKRZW_PKG_VERSION="\"$(VERSION)\"" -D_TKRZW_LIB_VERSION="\"$(LIBVER).$(LIBREV).$(LIBFMT)\""
 CFLAGS := @MYCFLAGS@
@@ -161,9 +162,19 @@ check-str-perf :
 
 check-file-perf :
 	rm -Rf casket*
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file std \
+	  --iter 50000 --threads 5 --size 20 casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file std \
+	  --iter 50000 --threads 5 --size 20 --random casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --append casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20  casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-    $(FILEPERFMEMLOCKFLAGS) casket
+	  $(FILEPERFMEMLOCKFLAGS) casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
@@ -172,7 +183,7 @@ check-file-perf :
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-    $(FILEPERFMEMLOCKFLAGS) casket
+	  $(FILEPERFMEMLOCKFLAGS) casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
@@ -406,6 +417,9 @@ check-stddbm-perf :
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild
 
 check-polydbm-perf :
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm poly --path casket \
+	  --iter 10000 --threads 5 --size 8 \
+	  --params "dbm=hash,file=std,num_buckets=100000,offset_width=3,align_pow=0"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 \
 	  --params "dbm=hash,file=mmap-para,update_mode=in_place,num_buckets=100000"
@@ -643,6 +657,9 @@ tkrzw_key_comparators_test : tkrzw_key_comparators_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_file_util_test : tkrzw_file_util_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_file_std_test : tkrzw_file_std_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_file_mmap_test : tkrzw_file_mmap_test.o $(LIBRARYFILES)

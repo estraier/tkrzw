@@ -242,7 +242,9 @@ std::map<std::string, std::string> GetSystemInfo() {
 std::unique_ptr<File> MakeFileOrDie(
     const std::string& impl_name, int64_t alloc_init_size, double alloc_inc_factor) {
   std::unique_ptr<File> file;
-  if (impl_name == "mmap-para") {
+  if (impl_name == "std") {
+    file = std::make_unique<StdFile>();
+  } else if (impl_name == "mmap-para") {
     file = std::make_unique<MemoryMapParallelFile>();
   } else if (impl_name == "mmap-atom") {
     file = std::make_unique<MemoryMapAtomicFile>();

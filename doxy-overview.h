@@ -82,6 +82,7 @@ namespace tkrzw {}
  * @file tkrzw_key_comparators.h Built-in comparators for record keys.
  * @file tkrzw_file_util.h File system utilities.
  * @file tkrzw_file.h File interface.
+ * @file tkrzw_file_std.h File implementations by the C++ standard file stream.
  * @file tkrzw_file_mmap.h File implementations by memory mapping.
  * @file tkrzw_file_pos.h File implementations by positional access.
  * @file tkrzw_dbm.h Database manager interface.

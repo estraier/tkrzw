@@ -23,6 +23,7 @@
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
+#include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
@@ -119,7 +120,10 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
 std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* params) {
   const std::string file_class = StrLowerCase(SearchMap(*params, "file", ""));
   params->erase("file");
-  if (file_class == "" || file_class == "memorymapparallelfile" || file_class == "mmap-para") {
+  if (file_class == "stdfile" || file_class == "std") {
+    return std::make_unique<StdFile>();
+  } else if (file_class == "" ||
+             file_class == "memorymapparallelfile" || file_class == "mmap-para") {
     return std::make_unique<MemoryMapParallelFile>();
   } else if (file_class == "memorymapatomicfile" || file_class == "mmap-atom") {
     return std::make_unique<MemoryMapAtomicFile>();

@@ -29,7 +29,7 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Common options:\n");
   P("  --file impl : The name of a file implementation:"
-    " mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
+    " std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --size num : The size of each record. (default: 100)\n");
   P("  --threads num : The number of threads. (default: 1)\n");

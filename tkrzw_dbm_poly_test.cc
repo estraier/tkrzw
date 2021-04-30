@@ -17,6 +17,7 @@
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
+#include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_poly.h"

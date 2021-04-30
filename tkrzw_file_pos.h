@@ -142,7 +142,7 @@ class PositionalParallelFile final : public File {
 
   /**
    * Checks whether operations are done by memory mapping.
-   * @return True if operations are done by memory mapping, or false if not.
+   * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
   bool IsMemoryMapping() const override {
     return false;
@@ -285,7 +285,7 @@ class PositionalAtomicFile final : public File {
 
   /**
    * Checks whether operations are done by memory mapping.
-   * @return True if operations are done by memory mapping, or false if not.
+   * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
   bool IsMemoryMapping() const override {
     return false;

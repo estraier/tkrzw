@@ -88,6 +88,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <initializer_list>

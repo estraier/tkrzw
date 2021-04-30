@@ -271,7 +271,7 @@ class PolyDBM final : public ParamDBM {
    * "BabyDBM", "CacheDBM", "StdHashDBM", "StdTreeDBM".
    * @details The optional parameter "file" specifies the internal file implementation class.
    * The default file class is "MemoryMapAtomicFile".  The other supported classes are
-   * "MemoryMapAtomicFile", "PositionalParallelFile", and "PositionalAtomicFile".
+   * "StdFile", "MemoryMapAtomicFile", "PositionalParallelFile", and "PositionalAtomicFile".
    * @details For HashDBM, these optional parameters are supported.
    *   - update_mode (string): How to update the database file: "UPDATE_IN_PLACE" for the
    *     in-palce and "UPDATE_APPENDING" for the appending mode.

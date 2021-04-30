@@ -89,7 +89,7 @@ MemoryMapParallelFileImpl::MemoryMapParallelFileImpl() :
     fd_(-1), file_size_(-0), map_(nullptr), map_size_(0), lock_size_(0),
     writable_(false), open_options_(0),
     alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-    alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR) {}
+    alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 MemoryMapParallelFileImpl::~MemoryMapParallelFileImpl() {
   if (fd_ >= 0) {
@@ -613,7 +613,7 @@ MemoryMapAtomicFileImpl::MemoryMapAtomicFileImpl() :
     fd_(-1), file_size_(0), map_(nullptr), map_size_(0), lock_size_(0),
     writable_(false), open_options_(0),
     alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-    alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR) {}
+    alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 MemoryMapAtomicFileImpl::~MemoryMapAtomicFileImpl() {
   if (fd_ >= 0) {

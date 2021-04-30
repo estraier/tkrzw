@@ -226,7 +226,7 @@ class MemoryMapParallelFile final : public File {
 
   /**
    * Checks whether operations are done by memory mapping.
-   * @return True if operations are done by memory mapping, or false if not.
+   * @return Always true.  This is fast, but the file size cannot exceed the virtual memory.
    */
   bool IsMemoryMapping() const override {
     return true;
@@ -454,7 +454,7 @@ class MemoryMapAtomicFile final : public File {
 
   /**
    * Checks whether operations are done by memory mapping.
-   * @return True if operations are done by memory mapping, or false if not.
+   * @return Always true.  This is fast, but the file size cannot exceed the virtual memory.
    */
   bool IsMemoryMapping() const override {
     return true;

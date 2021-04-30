@@ -92,15 +92,15 @@ window.onload = function(){
 <p>Tkrzw is a C++ library implementing DBM with various algorithms.  It features high degrees of performance, concurrency, scalability and durability.  The following classes are provided.</p>
 
 <ul>
-<li><b><a href="#hashdbm_overview">HashDBM</a></b> : File database manager implementation based on hash table.</li>
-<li><b><a href="#treedbm_overview">TreeDBM</a></b> : File database manager implementation based on B+ tree.</li>
-<li><b><a href="#skipdbm_overview">SkipDBM</a></b> : File database manager implementation based on skip list.</li>
-<li><b><a href="#tinydbm_overview">TinyDBM</a></b> : On-memory database manager implementation based on hash table.</li>
-<li><b><a href="#babydbm_overview">BabyDBM</a></b> : On-memory database manager implementation based on B+ tree.</li>
-<li><b><a href="#cachedbm_overview">CacheDBM</a></b> : On-memory database manager implementation with LRU deletion.</li>
-<li><b><a href="#stddbm_overview">Std(Hash|Tree)DBM</a></b> : On-memory DBM implementations using std::unordered_map and std::map.</li>
-<li><b><a href="#polydbm_overview">(Poly|Shard)DBM</a></b> : Polymorphic and sharding database manager adapters.</li>
-<li><b><a href="#index_overview">(File|Mem)Index</a></b> : Secondary index implementations.</li>
+<li><strong><a href="#hashdbm_overview">HashDBM</a></strong> : File database manager implementation based on hash table.</li>
+<li><strong><a href="#treedbm_overview">TreeDBM</a></strong> : File database manager implementation based on B+ tree.</li>
+<li><strong><a href="#skipdbm_overview">SkipDBM</a></strong> : File database manager implementation based on skip list.</li>
+<li><strong><a href="#tinydbm_overview">TinyDBM</a></strong> : On-memory database manager implementation based on hash table.</li>
+<li><strong><a href="#babydbm_overview">BabyDBM</a></strong> : On-memory database manager implementation based on B+ tree.</li>
+<li><strong><a href="#cachedbm_overview">CacheDBM</a></strong> : On-memory database manager implementation with LRU deletion.</li>
+<li><strong><a href="#stddbm_overview">Std(Hash|Tree)DBM</a></strong> : On-memory DBM implementations using std::unordered_map and std::map.</li>
+<li><strong><a href="#polydbm_overview">(Poly|Shard)DBM</a></strong> : Polymorphic and sharding database manager adapters.</li>
+<li><strong><a href="#index_overview">(File|Mem)Index</a></strong> : Secondary index implementations.</li>
 </ul>
 
 <p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, you can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
@@ -2553,7 +2553,7 @@ int main(int argc, char** argv) {
 <dl>
 <dt>Common options:</dt>
 <dd><code>--dbm <var>impl</var></code> : The name of a DBM implementation: auto, hash, tree, skip, tiny, baby, cache, stdhash, stdtree, poly, shard. (default: auto)</dd>
-<dd><code>--file <var>impl</var></code> : The name of a file implementation: mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)</dd>
+<dd><code>--file <var>impl</var></code> : The name of a file implementation: std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)</dd>
 <dd><code>--no_wait</code> : Fails if the file is locked by another process.</dd>
 <dd><code>--no_lock</code> : Omits file locking.</dd>
 <dt>Options for the create subcommand:</dt>
@@ -2651,7 +2651,7 @@ applet  A small application.
 <dd><code>--threads <var>num</var></code> : The number of threads. (default: 1)</dd>
 <dd><code>--verbose</code> : Prints verbose reports.</dd>
 <dd><code>--path <var>path</var></code> : The path of the file to write or read.</dd>
-<dd><code>--file <var>impl</var></code> : The name of a file implementation: mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)</dd>
+<dd><code>--file <var>impl</var></code> : The name of a file implementation: std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)</dd>
 <dd><code>--no_wait</code> : Fails if the file is locked by another process.</dd>
 <dd><code>--no_lock</code> : Omits file locking.</dd>
 <dd><code>--alloc_init <var>num</var></code> : The initial allocation size. (default: 1048576)</dd>
@@ -3541,13 +3541,14 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 
 <h3 id="tips_file_classes">File Classes</h3>
 
-<p>The file databases are based on abstract file storage interface so that you can build a database on any kind of file systems.  Several concrete implementations on POSIX API are bundled.  MemoryMapParallelFile is used for the file hash database by default.</p>
+<p>The file databases are based on abstract file storage interface so that you can build a database on any kind of file systems.  Several concrete implementations on C++ API and POSIX API are bundled.  MemoryMapParallelFile is used for all databases by default.</p>
 
 <ul>
-<li><b>MemoryMapParallelFile</b> : Based on memory mapping I/O by "mmap".  Access to the data is not guarded by mutex.</li>
-<li><b>MemoryMapAtomicFile</b> : Based on memory mapping I/O by "mmap".  Access to the data is guarded by mutex and update looks atomic.</li>
-<li><b>PositionalParallelFile</b> : Based on positional I/O by "pread" and "pwrite".  Access to the data is not guarded by mutex.</li>
-<li><b>PositionalAtomicFile</b> : Based on positional I/O by "pread" and "pwrite".  Access to the data is guarded by mutex and update looks atomic.</li>
+<li><strong>StdFile</strong> : Based on "fstream" of the standard C++ API.  Access to the data is guarded by mutex and update looks atomic.</li>
+<li><strong>MemoryMapParallelFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is not guarded by mutex.</li>
+<li><strong>MemoryMapAtomicFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is guarded by mutex and update looks atomic.</li>
+<li><strong>PositionalParallelFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is not guarded by mutex.</li>
+<li><strong>PositionalAtomicFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is guarded by mutex and update looks atomic.</li>
 </ul>
 
 <p>Consistency of the data as a database is guaranteed by the database classes.  So, atomicity of update is not required to the file class.  Therefore, there's no need to use MemoryMapAtomicFile and PositionalAtomicFile for purposes other than performance test.</p>
@@ -3563,6 +3564,13 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 <th>Sequential Read</th>
 <th>Random Write</th>
 <th>Random Read</th>
+</tr>
+<tr>
+<td>StdFile</td>
+<td class="num">- QPS</td>
+<td class="num">- QPS</td>
+<td class="num">- QPS</td>
+<td class="num">- QPS</td>
 </tr>
 <tr>
 <td>MemoryMapParallelFile</td>

@@ -51,7 +51,7 @@ class PositionalParallelFileImpl final {
 PositionalParallelFileImpl::PositionalParallelFileImpl()
     : fd_(-1), file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR) {}
+      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 PositionalParallelFileImpl::~PositionalParallelFileImpl() {
   if (fd_ >= 0) {
@@ -428,7 +428,7 @@ class PositionalAtomicFileImpl final {
 PositionalAtomicFileImpl::PositionalAtomicFileImpl()
     : fd_(-1), file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR) {}
+      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 PositionalAtomicFileImpl::~PositionalAtomicFileImpl() {
   if (fd_ >= 0) {

@@ -47,6 +47,7 @@
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
+#include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_index.h"
 #include "tkrzw_key_comparators.h"
