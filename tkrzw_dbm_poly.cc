@@ -116,6 +116,21 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
   return nullptr;
 }
 
+std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* params) {
+  const std::string file_class = StrLowerCase(SearchMap(*params, "file", ""));
+  params->erase("file");
+  if (file_class == "" || file_class == "memorymapparallelfile" || file_class == "mmap-para") {
+    return std::make_unique<MemoryMapParallelFile>();
+  } else if (file_class == "memorymapatomicfile" || file_class == "mmap-atom") {
+    return std::make_unique<MemoryMapAtomicFile>();
+  } else if (file_class == "positionalparallelfile" || file_class == "pos-para") {
+    return std::make_unique<PositionalParallelFile>();
+  } else if (file_class == "positionalatomicfile" || file_class == "pos-atom") {
+    return std::make_unique<PositionalAtomicFile>();
+  }
+  return nullptr;
+}
+
 void SetHashTuningParams(std::map<std::string, std::string>* params,
                          HashDBM::TuningParameters* tuning_params) {
   const std::string update_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
@@ -185,13 +200,17 @@ Status PolyDBM::OpenAdvanced(
   }
   mod_params.erase("dbm");
   if (class_name == "hash" || class_name == "hashdbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     HashDBM::TuningParameters tuning_params;
     SetHashTuningParams(&mod_params, &tuning_params);
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto hash_dbm = std::make_unique<HashDBM>();
+    auto hash_dbm = std::make_unique<HashDBM>(std::move(file));
     const Status status = hash_dbm->OpenAdvanced(path, writable, options, tuning_params);
     if (status != Status::SUCCESS) {
       return status;
@@ -199,6 +218,10 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(hash_dbm);
   } else if (class_name == "tree" || class_name == "treedbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     TreeDBM::TuningParameters tuning_params;
     SetTreeTuningParams(&mod_params, &tuning_params);
     if (!SearchMap(mod_params, "key_comparator", "").empty() &&
@@ -209,7 +232,7 @@ Status PolyDBM::OpenAdvanced(
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto tree_dbm = std::make_unique<TreeDBM>();
+    auto tree_dbm = std::make_unique<TreeDBM>(std::move(file));
     const Status status = tree_dbm->OpenAdvanced(path, writable, options, tuning_params);
     if (status != Status::SUCCESS) {
       return status;
@@ -217,13 +240,17 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(tree_dbm);
   } else if (class_name == "skip" || class_name == "skipdbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }    
     SkipDBM::TuningParameters tuning_params;
     SetSkipTuningParams(&mod_params, &tuning_params);
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto skip_dbm = std::make_unique<SkipDBM>();
+    auto skip_dbm = std::make_unique<SkipDBM>(std::move(file));
     const Status status = skip_dbm->OpenAdvanced(path, writable, options, tuning_params);
     if (status != Status::SUCCESS) {
       return status;
@@ -231,13 +258,17 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(skip_dbm);
   } else if (class_name == "tiny" || class_name == "tinydbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto tiny_dbm = std::make_unique<TinyDBM>(num_buckets);
+    auto tiny_dbm = std::make_unique<TinyDBM>(std::move(file), num_buckets);
     if (!path.empty()) {
       const Status status = tiny_dbm->Open(path, writable, options);
       if (status != Status::SUCCESS) {
@@ -247,6 +278,10 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(tiny_dbm);
   } else if (class_name == "baby" || class_name == "babydbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     KeyComparator key_comparator = LexicalKeyComparator;
     const std::string comp_name = SearchMap(mod_params, "key_comparator", "");
     if (!comp_name.empty()) {
@@ -261,7 +296,7 @@ Status PolyDBM::OpenAdvanced(
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto baby_dbm = std::make_unique<BabyDBM>(key_comparator);
+    auto baby_dbm = std::make_unique<BabyDBM>(std::move(file), key_comparator);
     if (!path.empty()) {
       const Status status = baby_dbm->Open(path, writable, options);
       if (status != Status::SUCCESS) {
@@ -271,6 +306,10 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(baby_dbm);
   } else if (class_name == "cache" || class_name == "cachedbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     const int64_t cap_rec_num = StrToInt(SearchMap(mod_params, "cap_rec_num", "-1"));
     const int64_t cap_mem_size = StrToInt(SearchMap(mod_params, "cap_mem_size", "-1"));
     mod_params.erase("cap_rec_num");
@@ -279,7 +318,7 @@ Status PolyDBM::OpenAdvanced(
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto cache_dbm = std::make_unique<CacheDBM>(cap_rec_num, cap_mem_size);
+    auto cache_dbm = std::make_unique<CacheDBM>(std::move(file), cap_rec_num, cap_mem_size);
     if (!path.empty()) {
       const Status status = cache_dbm->Open(path, writable, options);
       if (status != Status::SUCCESS) {
@@ -289,13 +328,17 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(cache_dbm);
   } else if (class_name == "stdhash" || class_name == "stdhashdbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto stdhash_dbm = std::make_unique<StdHashDBM>(num_buckets);
+    auto stdhash_dbm = std::make_unique<StdHashDBM>(std::move(file), num_buckets);
     if (!path.empty()) {
       const Status status = stdhash_dbm->Open(path, writable, options);
       if (status != Status::SUCCESS) {
@@ -305,11 +348,15 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(stdhash_dbm);
   } else if (class_name == "stdtree" || class_name == "stdtreedbm") {
+    auto file = MakeFileInstance(&mod_params);
+    if (file == nullptr) {
+      return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
+    }
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    auto stdtree_dbm = std::make_unique<StdTreeDBM>();
+    auto stdtree_dbm = std::make_unique<StdTreeDBM>(std::move(file));
     if (!path.empty()) {
       const Status status = stdtree_dbm->Open(path, writable, options);
       if (status != Status::SUCCESS) {
@@ -319,7 +366,7 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(stdtree_dbm);
   } else {
-    return Status(Status::INVALID_ARGUMENT_ERROR, "unknown class");
+    return Status(Status::INVALID_ARGUMENT_ERROR, "unknown DBM class");
   }
   return Status(Status::SUCCESS);
 }

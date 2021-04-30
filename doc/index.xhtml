@@ -686,6 +686,8 @@ $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 1
 
 <div class="dbstructure"><img src="hashdbm.svg"/></div>
 
+<p>See the tips of <a href="#tips_hashdbm_tune">Tuning HashDBM</a> too.  Tuning has a significant influence on performance.</p>
+
 <h3 id="hashdbm_example">Example Code</h3>
 
 <p>This is a code example where basic operations are done without checking errors.</p>
@@ -998,6 +1000,8 @@ int main(int argc, char** argv) {
 <p>If records are accessed sequentially in order of the key, performance of the file tree database can be better than the file hash database because file I/O is done by the page and its frequency is much less.  However, if records are accessed randomly, performance of the file tree database is worse than the file hash database.  Likewise, space efficiency of the file tree database can be better than the file hash database if records are inserted in order.  However, if records are inserted randomly, one thirds of storage space is used for padding.  As with the file hash database, rebuilding the database can reduce the file size and it is done without blocking other threads.</p>
 
 <div class="dbstructure"><img src="treedbm.svg"/></div>
+
+<p>See the tips of <a href="#tips_treedbm_tune">Tuning TreeDBM</a> too.  Tuning has a significant influence on performance.</p>
 
 <h3 id="treedbm_example">Example Code</h3>
 
@@ -1319,6 +1323,8 @@ int main(int argc, char** argv) {
 <p>Records can be inserted concurrently in the at-random mode although synchronizing the database takes the most of the time for building the database.  In the in-order mode, it is no use to insert records concurrently because the order cannot be assured by concurrent insertion.  For retrieval, only reader locking is applied so that multiple threads can access the database in parallel.</p>
 
 <div class="dbstructure"><img src="skipdbm.svg"/></div>
+
+<p>See the tips of <a href="#tips_skipdbm_tune">Tuning SkipDBM</a> too.  Tuning has a significant influence on performance.</p>
 
 <h3 id="skipdbm_example">Example Code</h3>
 
@@ -2779,6 +2785,8 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --offset_width 5 --align_pow 0 --buckets 10m --append casket.tkh
 ]]></code></pre>
 
+<p>By default, I/O of the file hash database file is done via memory mapping.  Thus, if the size of the database file exceeds the capacity of the virtual memory, the process can crash with segmentation fault or be killed by OOM killer.  To avoid it, you can use normal positional by the normal I/O system calls, by creating the database object with the specific file object.  See the tips on <a href="#tips_file_classes">File Classes</a> for details.</p>
+
 <h3 id="tips_hashdbm_update_modes">Update Modes of HashDBM</h3>
 
 <p>The update mode is also set when creating or rebuilding a database.  In the in-place mode, an existing record is updated in-place if possible.  Let's say, there's two records in the database, A (key="A", value="aaa") and B (key="B", value="bbb").  The record section in the database file is like this.  "xxx" means metadata and "..." means padding.</p>
@@ -2878,6 +2886,8 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <p>In case that the cache cannot contain all records, however you tune the tree database, performance of random access cannot be comparable to the file hash database.  Thus, if you don't need ordered record access, using the file hash database is recommended.  If you need ordered record access and updating is done at random, consider using the file skip database, which is more scalable.</p>
 
+<p>By default, I/O of the file tree database file is done via memory mapping.  Thus, if the size of the database file exceeds the capacity of the virtual memory, the process can crash with segmentation fault or be killed by OOM killer.  To avoid it, you can use normal positional by the normal I/O system calls, by creating the database object with the specific file object.  See the tips on <a href="#tips_file_classes">File Classes</a> for details.</p>
+
 <h3 id="tips_treedbm_comparators">Comparators of TreeDBM</h3>
 
 <p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing a number as a big-endian binary is a good idea because the default comparator sorts it properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
@@ -2935,6 +2945,8 @@ dbm.OpenAdvanced("casket.tks", true, File::OPEN_DEFAULT, tuning_params);
 tuning_params.max_cached_records = 200000;
 dbm.OpenAdvanced("casket.tks", false, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
+
+<p>By default, I/O of the file skip database file is done via memory mapping.  Thus, if the size of the database file exceeds the capacity of the virtual memory, the process can crash with segmentation fault or be killed by OOM killer.  To avoid it, you can use normal positional by the normal I/O system calls, by creating the database object with the specific file object.  See the tips on <a href="#tips_file_classes">File Classes</a> for details.</p>
 
 <h3 id="tips_skipdbm_building">Building SkipDBM</h3>
 

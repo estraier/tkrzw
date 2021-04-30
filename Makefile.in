@@ -162,7 +162,8 @@ check-str-perf :
 check-file-perf :
 	rm -Rf casket*
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 $(FILEPERFMEMLOCKFLAGS) casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
+    $(FILEPERFMEMLOCKFLAGS) casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-para \
@@ -170,7 +171,8 @@ check-file-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 $(FILEPERFMEMLOCKFLAGS) casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
+    $(FILEPERFMEMLOCKFLAGS) casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file mmap-atom \
@@ -406,16 +408,16 @@ check-stddbm-perf :
 check-polydbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 \
-	  --params "dbm=hash,lock_mem_buckets=false"
+	  --params "dbm=hash,file=mmap-para,update_mode=in_place,num_buckets=100000"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=hash,lock_mem_buckets=false"
+	  --params "dbm=hash,file=mmap-atom,update_mode=appending,num_buckets=100000"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=hash,lock_mem_buckets=false"
+	  --params "dbm=hash,file=pos-para,num_buckets=100000,offset_width=3,align_pow=1"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=hash,lock_mem_buckets=false"
+	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=1,lock_mem_buckets=false"
 
 check-polydbm-util :
 	rm -Rf casket*

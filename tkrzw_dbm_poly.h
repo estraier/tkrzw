@@ -269,6 +269,9 @@ class PolyDBM final : public ParamDBM {
    * @details The optional parameter "dbm" supercedes the decision of the database type by the
    * extension.  The value is the type name: "HashDBM", "TreeDBM", "SkipDBM", "TinyDBM",
    * "BabyDBM", "CacheDBM", "StdHashDBM", "StdTreeDBM".
+   * @details The optional parameter "file" specifies the internal file implementation class.
+   * The default file class is "MemoryMapAtomicFile".  The other supported classes are
+   * "MemoryMapAtomicFile", "PositionalParallelFile", and "PositionalAtomicFile".
    * @details For HashDBM, these optional parameters are supported.
    *   - update_mode (string): How to update the database file: "UPDATE_IN_PLACE" for the
    *     in-palce and "UPDATE_APPENDING" for the appending mode.
@@ -285,7 +288,7 @@ class PolyDBM final : public ParamDBM {
    *   - key_comparator (string): The comparator of record keys: "LexicalKeyComparator" for the
    *     lexical order, "LexicalCaseKeyComparator" for the lexical order ignoring case,
    *     "DecimalKeyComparator" for the order of the decimal integer numeric expressions,
-   *     "HexadecimalKeyComparato" for the order of the hexadecimal integer numeric expressions,
+   *     "HexadecimalKeyComparator" for the order of the hexadecimal integer numeric expressions,
    *     "RealNumberKeyComparator" for the order of the decimal real number expressions.
    * @details For SkipDBM, these optional parameters are supported.
    *   - offset_width (int): The width to represent the offset of records.
