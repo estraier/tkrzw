@@ -526,9 +526,9 @@ void SkipRecordCache::Add(const SkipRecord& record) {
   }
 }
 
-RecordSorter::RecordSorter(const std::string& base_path, int64_t max_mem_size)
-    : base_path_(base_path), max_mem_size_(max_mem_size), total_data_size_(0),
-      finished_(false), current_mem_size_(0) {}
+RecordSorter::RecordSorter(const std::string& base_path, int64_t max_mem_size, bool use_mmap)
+    : base_path_(base_path), max_mem_size_(max_mem_size), use_mmap_(use_mmap),
+      total_data_size_(0), finished_(false), current_mem_size_(0) {}
 
 RecordSorter::~RecordSorter() {
   for (const auto& tmp_file : tmp_files_) {
@@ -695,7 +695,7 @@ Status RecordSorter::Flush() {
   total_data_size_ += current_mem_size_;
   TmpFileFlat tmp_file;
   tmp_file.path = base_path_ + SPrintF(".%05d", tmp_files_.size());
-  if (total_data_size_ <= MAX_DATA_SIZE_MMAP_USE) {
+  if (use_mmap_ && total_data_size_ <= MAX_DATA_SIZE_MMAP_USE) {
     tmp_file.file = new MemoryMapParallelFile();
   } else {
     tmp_file.file = new PositionalParallelFile();

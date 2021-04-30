@@ -201,7 +201,7 @@ TEST(DBMSkipImplTest, RecordSorter) {
   const std::string base_path = tmp_dir.MakeUniquePath();
   const std::string skip_path = tmp_dir.MakeUniquePath();
   constexpr int32_t num_records = 100;
-  tkrzw::RecordSorter sorter(base_path, 100);
+  tkrzw::RecordSorter sorter(base_path, 100, true);
   EXPECT_FALSE(sorter.IsUpdated());
   std::map<std::string, std::string> map;
   for (int32_t i = 1; i <= num_records; ++i) {

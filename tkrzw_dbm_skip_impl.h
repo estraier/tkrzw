@@ -290,8 +290,9 @@ class RecordSorter final {
    * Constructor.
    * @param base_path The base path of the temporary files.
    * @param max_mem_size The maximum memory size to use.
+   * @param use_mmap If true, memory mapping files are used.
    */
-  RecordSorter(const std::string& base_path, int64_t max_mem_size);
+  RecordSorter(const std::string& base_path, int64_t max_mem_size, bool use_mmap);
 
   /**
    * Destructor.
@@ -405,6 +406,8 @@ class RecordSorter final {
   std::string base_path_;
   /** The maximum memory size to use. */
   int64_t max_mem_size_;
+  /** Whether to use memory mapping. */
+  bool use_mmap_;
   /** The total size of data. */
   int64_t total_data_size_;
   /** True if adding is finished. */

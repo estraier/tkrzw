@@ -944,7 +944,8 @@ Status SkipDBMImpl::LoadMetadata() {
 
 Status SkipDBMImpl::PrepareStorage() {
   const std::string sorter_path = path_ + SORTER_FILE_SUFFIX;
-  record_sorter_ = std::make_unique<RecordSorter>(sorter_path, sort_mem_size_);
+  const bool use_mmap = file_->IsMemoryMapping();
+  record_sorter_ = std::make_unique<RecordSorter>(sorter_path, sort_mem_size_, use_mmap);
   if (insert_in_order_) {
     const std::string sorted_path = path_ + SORTED_FILE_SUFFIX;
     sorted_file_ = file_->MakeFile();
