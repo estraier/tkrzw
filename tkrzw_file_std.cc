@@ -211,7 +211,7 @@ Status StdFileImpl::Expand(size_t inc_size, int64_t* old_size) {
 }
 
 Status StdFileImpl::Truncate(int64_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);  
+  std::lock_guard<std::mutex> lock(mutex_);
   if (file_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
