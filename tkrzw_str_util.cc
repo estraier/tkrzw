@@ -17,6 +17,46 @@
 
 namespace tkrzw {
 
+#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
+
+inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
+                          const void* needle, size_t needlelen) {
+  return memmem(haystack, haystacklen, needle, needlelen);
+}
+
+#else
+
+inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
+                          const void* needle, size_t needlelen) {
+  if (needlelen > haystacklen) {
+    return nullptr;
+  }
+  if (needlelen == 0) {
+    return const_cast<void*>(haystack);
+  }
+  const char* haystack_pivot = static_cast<const char*>(haystack);
+  const char* haystack_end = haystack_pivot + needlelen;
+  const char* needle_end = static_cast<const char*>(needle) + needlelen;
+  while (haystack_pivot < haystack_end) {
+    const char* haystack_cursor = haystack_pivot;
+    const char* needle_cursor = static_cast<const char*>(needle);
+    bool match = true;
+    while (needle_cursor < needle_end) {
+      if (*(haystack_cursor++) != *(needle_cursor++)) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return static_cast<void*>(const_cast<char*>(haystack_pivot));
+    }
+    haystack_pivot++;
+  }
+  return nullptr;
+}
+
+#endif
+
 int64_t StrToInt(std::string_view str, int64_t defval) {
   const unsigned char* rp = reinterpret_cast<const unsigned char*>(str.data());
   const unsigned char* ep = rp + str.size();
@@ -504,7 +544,7 @@ std::string StrLowerCase(std::string_view str) {
 }
 
 bool StrContains(std::string_view text, std::string_view pattern) {
-  return memmem(text.data(), text.size(), pattern.data(), pattern.size()) != nullptr;
+  return tkrzw_memmem(text.data(), text.size(), pattern.data(), pattern.size()) != nullptr;
 }
 
 bool StrBeginsWith(std::string_view text, std::string_view pattern) {

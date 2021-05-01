@@ -703,6 +703,7 @@ enable_opt
 enable_optarch
 enable_static
 enable_shared
+enable_stdonly
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1343,6 +1344,7 @@ Optional Features:
   --enable-optarch        build with optimization for the native architecture
   --enable-static         build by static linking
   --disable-shared        avoid to build shared libraries
+  --enable-stdonly        use the standard library only
 
 Some influential environment variables:
   CC          C compiler command
@@ -2247,6 +2249,18 @@ fi
 if test "$enable_shared" = "no"
 then
   enables="$enables (no-shared)"
+fi
+
+# Use the standard library only
+# Check whether --enable-stdonly was given.
+if test "${enable_stdonly+set}" = set; then :
+  enableval=$enable_stdonly;
+fi
+
+if test "$enable_stdonly" = "yes"
+then
+  enables="$enables (stdonly)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_STDONLY"
 fi
 
 # Memory locking test flags

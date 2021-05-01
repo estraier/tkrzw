@@ -35,6 +35,8 @@ class StdFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
 
  private:
   std::unique_ptr<std::fstream> file_;
@@ -60,17 +62,20 @@ Status StdFileImpl::Open(const std::string& path, bool writable, int32_t options
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
   std::ios_base::openmode mode = std::ios_base::in | std::ios_base::binary;
+  const bool has_existed = PathIsFile(path);
   if (writable) {
     mode |= std::ios_base::out;
-    if (!PathIsFile(path)) {
+    if (!has_existed) {
       if (options & File::OPEN_NO_CREATE) {
-        return Status(Status::NOT_FOUND_ERROR, "no create");
+        return Status(Status::NOT_FOUND_ERROR, "no such file");
       }
       mode |= std::ios_base::trunc;
     }
     if (options & File::OPEN_TRUNCATE) {
       mode |= std::ios_base::trunc;
     }
+  } else if (!has_existed) {
+    return Status(Status::NOT_FOUND_ERROR, "no such file");
   }
   file_ = std::make_unique<std::fstream>();
   file_->rdbuf()->pubsetbuf(nullptr, 0);
@@ -215,7 +220,9 @@ Status StdFileImpl::Truncate(int64_t size) {
   if (file_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  std::cout << "RESIZE:" << path_ << std::endl;
   std::filesystem::resize_file(path_, size);
+  std::cout << "RESIZEDONE:" << path_ << std::endl;
   file_->seekp(0, std::ios_base::end);
   if (!file_->good()) {
     return Status(Status::SYSTEM_ERROR, "seekp failed");
@@ -250,6 +257,27 @@ Status StdFileImpl::GetSize(int64_t* size) {
 
 Status StdFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::GetPath(std::string* path) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::Rename(const std::string& new_path) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
 }
 
 StdFile::StdFile() {
@@ -305,6 +333,15 @@ Status StdFile::GetSize(int64_t* size) {
 Status StdFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   assert(init_size > 0 && inc_factor > 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status StdFile::GetPath(std::string* path) {
+  assert(path != nullptr);
+  return impl_->GetPath(path);
+}
+
+Status StdFile::Rename(const std::string& new_path) {
+  return impl_->Rename(new_path);
 }
 
 }  // namespace tkrzw

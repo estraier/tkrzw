@@ -35,6 +35,7 @@ class CommonFileTest : public Test {
   void RandomThreadTest();
   void FileReaderTest();
   void FlatRecordTest();
+  void RenameTest();
 };
 
 template <class FILE>
@@ -405,6 +406,27 @@ void CommonFileTest<FILE>::FlatRecordTest() {
     }
     EXPECT_THAT(actual_sizes, ElementsAreArray(data_sizes));
   }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+}
+
+template <class FILE>
+void CommonFileTest<FILE>::RenameTest() {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  FILE file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(file_path, file.GetPathSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(5));
+  EXPECT_EQ(5, file.GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Synchronize(false));
+  const std::string rename_file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Rename(rename_file_path));
+  FILE rename_file;
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, rename_file.Open(file_path, false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, rename_file.Open(rename_file_path, false));
+  EXPECT_EQ(rename_file_path, rename_file.GetPathSimple());
+  EXPECT_EQ(5, rename_file.GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, rename_file.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
 }
 

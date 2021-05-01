@@ -77,4 +77,8 @@ TEST_F(StdFileTest, FlatRecord) {
   FlatRecordTest();
 }
 
+TEST_F(StdFileTest, Rename) {
+  RenameTest();
+}
+
 // END OF FILE

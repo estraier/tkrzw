@@ -136,6 +136,20 @@ class StdFile final : public File {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
   /**
+   * Gets the path of the file.
+   * @param path The pointer to a string object to store the path.
+   * @return The result status.
+   */
+  Status GetPath(std::string* path) override;
+
+  /**
+   * Renames the file.
+   * @param new_path A new path of the file.
+   * @return The result status.
+   */
+  Status Rename(const std::string& new_path) override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
@@ -166,6 +180,6 @@ class StdFile final : public File {
 
 }  // namespace tkrzw
 
-#endif  // _TKRZW_FILE_MMAP_H
+#endif  // _TKRZW_FILE_STD_H
 
 // END OF FILE

@@ -80,6 +80,10 @@ TEST_F(PositionalParallelFileTest, FlatRecord) {
   FlatRecordTest();
 }
 
+TEST_F(PositionalParallelFileTest, Rename) {
+  RenameTest();
+}
+
 class PositionalAtomicFileTest : public PositionalFileTest<tkrzw::PositionalAtomicFile> {};
 
 TEST_F(PositionalAtomicFileTest, Attributes) {
@@ -126,6 +130,10 @@ TEST_F(PositionalAtomicFileTest, FileReader) {
 
 TEST_F(PositionalAtomicFileTest, FlatRecord) {
   FlatRecordTest();
+}
+
+TEST_F(PositionalAtomicFileTest, Rename) {
+  RenameTest();
 }
 
 // END OF FILE

@@ -21,61 +21,73 @@
 #if defined(__linux__)
 
 #define _SYS_LINUX_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "Linux"
 
 #elif defined(__FreeBSD__)
 
 #define _SYS_FREEBSD_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "FreeBSD"
 
 #elif defined(__NetBSD__)
 
 #define _SYS_NETBSD_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "NetBSD"
 
 #elif defined(__OpenBSD__)
 
 #define _SYS_OPENBSD_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "OpenBSD"
 
 #elif defined(__sun__) || defined(__sun)
 
 #define _SYS_SUNOS_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "SunOS"
 
 #elif defined(__hpux)
 
 #define _SYS_HPUX_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "HP-UX"
 
 #elif defined(__osf)
 
 #define _SYS_TRU64_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "Tru64"
 
 #elif defined(_AIX)
 
 #define _SYS_AIX_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "AIX"
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
 #define _SYS_MACOSX_
+#define _SYS_POSIX_
 #define _TKRZW_OSNAME     "Mac OS X"
 
 #elif defined(_MSC_VER)
 
 #define _SYS_MSVC_
+#define _SYS_WINDOWS_
 #define _TKRZW_OSNAME     "Windows (VC++)"
 
 #elif defined(_WIN32)
 
 #define _SYS_MINGW_
+#define _SYS_WINDOWS_
 #define _TKRZW_OSNAME     "Windows (MinGW)"
 
 #elif defined(__CYGWIN__)
 
 #define _SYS_CYGWIN_
+#define _SYS_WINDOWS_
 #define _TKRZW_OSNAME     "Windows (Cygwin)"
 
 #else

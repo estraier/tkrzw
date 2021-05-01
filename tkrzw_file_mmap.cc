@@ -19,18 +19,20 @@
 #include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
+#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
+
 namespace tkrzw {
 
 #if defined(_SYS_LINUX_)
 
-void* tkrzw_mremap(
+inline void* tkrzw_mremap(
     void *old_address, size_t old_size, size_t new_size, int fd) {
   return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
 }
 
 #else
 
-void* tkrzw_mremap(
+inline void* tkrzw_mremap(
     void *old_address, size_t old_size, size_t new_size, int fd) {
   if (munmap(old_address, old_size) != 0) {
     return MAP_FAILED;
@@ -52,11 +54,14 @@ class MemoryMapParallelFileImpl final {
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status LockMemory(size_t size);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
 
  private:
   Status AdjustMapSize(int64_t min_size);
 
   int32_t fd_;
+  std::string path_;
   std::atomic_int64_t file_size_;
   char* map_;
   std::atomic_int64_t map_size_;
@@ -180,6 +185,7 @@ Status MemoryMapParallelFileImpl::Open(
 
   // Updates the internal data.
   fd_ = fd;
+  path_ = path;
   file_size_.store(file_size);
   map_ = static_cast<char*>(map);
   map_size_.store(map_size);
@@ -227,6 +233,7 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Updates the internal data.
   fd_ = -1;
+  path_.clear();
   file_size_ .store(0);
   map_ = nullptr;
   map_size_.store(0);
@@ -321,6 +328,25 @@ Status MemoryMapParallelFileImpl::LockMemory(size_t size) {
   }
   lock_size_.store(size);
   return Status(Status::SUCCESS);
+}
+
+Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
 }
 
 Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
@@ -544,6 +570,15 @@ Status MemoryMapParallelFile::LockMemory(size_t size) {
   return impl_->LockMemory(size);
 }
 
+Status MemoryMapParallelFile::GetPath(std::string* path) {
+  assert(path != nullptr);
+  return impl_->GetPath(path);
+}
+
+Status MemoryMapParallelFile::Rename(const std::string& new_path) {
+  return impl_->Rename(new_path);
+}
+
 MemoryMapParallelFile::Zone::Zone(
     MemoryMapParallelFileImpl* file_impl, bool writable, int64_t off, size_t size,
     Status* status) {
@@ -578,9 +613,12 @@ class MemoryMapAtomicFileImpl final {
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status LockMemory(size_t size);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
 
  private:
   int32_t fd_;
+  std::string path_;
   int64_t file_size_;
   char* map_;
   int64_t map_size_;
@@ -705,6 +743,7 @@ Status MemoryMapAtomicFileImpl::Open(
 
   // Updates the internal data.
   fd_ = fd;
+  path_ = path;
   file_size_ = file_size;
   map_ = static_cast<char*>(map);
   map_size_ = map_size;
@@ -753,6 +792,7 @@ Status MemoryMapAtomicFileImpl::Close() {
 
   // Updates the internal data.
   fd_ = -1;
+  path_.clear();
   file_size_ = 0;
   map_ = nullptr;
   map_size_ = 0;
@@ -835,6 +875,27 @@ Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double 
   alloc_init_size_ = init_size;
   alloc_inc_factor_ = inc_factor;
   return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
 }
 
 Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
@@ -1049,6 +1110,15 @@ Status MemoryMapAtomicFile::LockMemory(size_t size) {
   return impl_->LockMemory(size);
 }
 
+Status MemoryMapAtomicFile::GetPath(std::string* path) {
+  assert(path != nullptr);
+  return impl_->GetPath(path);
+}
+
+Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
+  return impl_->Rename(new_path);
+}
+
 MemoryMapAtomicFile::Zone::Zone(
     MemoryMapAtomicFileImpl* file_impl, bool writable, int64_t off, size_t size, Status* status) {
   impl_ = new MemoryMapAtomicFileZoneImpl(file_impl, writable, off, size, status);
@@ -1071,5 +1141,11 @@ size_t MemoryMapAtomicFile::Zone::Size() const {
 }
 
 }  // namespace tkrzw
+
+#else
+
+#include "tkrzw_file_mmap_std.h"
+
+#endif
 
 // END OF FILE

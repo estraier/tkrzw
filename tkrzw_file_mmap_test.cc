@@ -154,6 +154,10 @@ TEST_F(MemoryMapParallelFileTest, FlatRecord) {
   FlatRecordTest();
 }
 
+TEST_F(MemoryMapParallelFileTest, Rename) {
+  RenameTest();
+}
+
 TEST_F(MemoryMapParallelFileTest, Zone) {
   ZoneTest();
 }
@@ -208,6 +212,10 @@ TEST_F(MemoryMapAtomicFileTest, FileReader) {
 
 TEST_F(MemoryMapAtomicFileTest, FlatRecord) {
   FlatRecordTest();
+}
+
+TEST_F(MemoryMapAtomicFileTest, Rename) {
+  RenameTest();
 }
 
 TEST_F(MemoryMapAtomicFileTest, Zone) {

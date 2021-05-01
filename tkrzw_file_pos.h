@@ -141,6 +141,20 @@ class PositionalParallelFile final : public File {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
   /**
+   * Gets the path of the file.
+   * @param path The pointer to a string object to store the path.
+   * @return The result status.
+   */
+  Status GetPath(std::string* path) override;
+
+  /**
+   * Renames the file.
+   * @param new_path A new path of the file.
+   * @return The result status.
+   */
+  Status Rename(const std::string& new_path) override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
@@ -282,6 +296,20 @@ class PositionalAtomicFile final : public File {
    * must be called before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
+
+  /**
+   * Gets the path of the file.
+   * @param path The pointer to a string object to store the path.
+   * @return The result status.
+   */
+  Status GetPath(std::string* path) override;
+
+  /**
+   * Renames the file.
+   * @param new_path A new path of the file.
+   * @return The result status.
+   */
+  Status Rename(const std::string& new_path) override;
 
   /**
    * Checks whether operations are done by memory mapping.

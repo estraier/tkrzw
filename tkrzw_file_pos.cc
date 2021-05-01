@@ -34,11 +34,14 @@ class PositionalParallelFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
 
  private:
   Status AdjustTruncSize(int64_t min_size);
 
   int32_t fd_;
+  std::string path_;
   std::atomic_int64_t file_size_;
   std::atomic_int64_t trunc_size_;
   bool writable_;
@@ -131,6 +134,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
 
   // Updates the internal data.
   fd_ = fd;
+  path_ = path;
   file_size_.store(file_size);
   trunc_size_.store(trunc_size);
   writable_ = writable;
@@ -171,6 +175,7 @@ Status PositionalParallelFileImpl::Close() {
 
   // Updates the internal data.
   fd_ = -1;
+  path_.clear();
   file_size_.store(0);
   trunc_size_.store(0);
   writable_ = false;
@@ -324,6 +329,25 @@ Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, doub
   return Status(Status::SUCCESS);
 }
 
+Status PositionalParallelFileImpl::GetPath(std::string* path) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
+}
+
 Status PositionalParallelFileImpl::AdjustTruncSize(int64_t min_size) {
   if (min_size <= trunc_size_.load()) {
     return Status(Status::SUCCESS);
@@ -400,6 +424,15 @@ Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double i
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status PositionalParallelFile::GetPath(std::string* path) {
+  assert(path != nullptr);
+  return impl_->GetPath(path);
+}
+
+Status PositionalParallelFile::Rename(const std::string& new_path) {
+  return impl_->Rename(new_path);
+}
+
 class PositionalAtomicFileImpl final {
  public:
   PositionalAtomicFileImpl();
@@ -413,9 +446,12 @@ class PositionalAtomicFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
 
  private:
   int32_t fd_;
+  std::string path_;
   int64_t file_size_;
   int64_t trunc_size_;
   bool writable_;
@@ -509,6 +545,7 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
 
   // Updates the internal data.
   fd_ = fd;
+  path_ = path;
   file_size_ = file_size;
   trunc_size_ = trunc_size;
   writable_ = writable;
@@ -550,6 +587,7 @@ Status PositionalAtomicFileImpl::Close() {
 
   // Updates the internal data.
   fd_ = -1;
+  path_.clear();
   file_size_ = 0;
   trunc_size_ = 0;
   writable_ = false;
@@ -715,6 +753,27 @@ Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double
   return Status(Status::SUCCESS);
 }
 
+Status PositionalAtomicFileImpl::GetPath(std::string* path) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
+}
+
 PositionalAtomicFile::PositionalAtomicFile() {
   impl_ = new PositionalAtomicFileImpl();
 }
@@ -768,6 +827,15 @@ Status PositionalAtomicFile::GetSize(int64_t* size) {
 Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   assert(init_size > 0 && inc_factor > 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status PositionalAtomicFile::GetPath(std::string* path) {
+  assert(path != nullptr);
+  return impl_->GetPath(path);
+}
+
+Status PositionalAtomicFile::Rename(const std::string& new_path) {
+  return impl_->Rename(new_path);
 }
 
 }  // namespace tkrzw

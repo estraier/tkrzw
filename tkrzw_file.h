@@ -198,6 +198,29 @@ class File {
   virtual Status SetAllocationStrategy(int64_t init_size, double inc_factor) = 0;
 
   /**
+   * Gets the path of the file.
+   * @param path The pointer to a string object to store the path.
+   * @return The result status.
+   */
+  virtual Status GetPath(std::string* path) = 0;
+
+  /**
+   * Gets the path of the file, in a simple way.
+   * @return The path of the file on success, or an empty string on failure.
+   */
+  virtual std::string GetPathSimple() {
+    std::string path;
+    return GetPath(&path) == Status::SUCCESS ? path : "";
+  }
+
+  /**
+   * Renames the file.
+   * @param new_path A new path of the file.
+   * @return The result status.
+   */
+  virtual Status Rename(const std::string& new_path) = 0;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return True if operations are done by memory mapping, or false if not.
    */
