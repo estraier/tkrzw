@@ -31,11 +31,8 @@ inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
   if (needlelen > haystacklen) {
     return nullptr;
   }
-  if (needlelen == 0) {
-    return const_cast<void*>(haystack);
-  }
   const char* haystack_pivot = static_cast<const char*>(haystack);
-  const char* haystack_end = haystack_pivot + needlelen;
+  const char* haystack_end = haystack_pivot + haystacklen - needlelen + 1;
   const char* needle_end = static_cast<const char*>(needle) + needlelen;
   while (haystack_pivot < haystack_end) {
     const char* haystack_cursor = haystack_pivot;

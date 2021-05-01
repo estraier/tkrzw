@@ -299,6 +299,8 @@ TEST(StrUtilTest, StrContains) {
   EXPECT_TRUE(tkrzw::StrContains("abc", "ab"));
   EXPECT_TRUE(tkrzw::StrContains("abc", "abc"));
   EXPECT_TRUE(tkrzw::StrContains("abcd", "bc"));
+  EXPECT_TRUE(tkrzw::StrContains("abcd", "cd"));
+  EXPECT_TRUE(tkrzw::StrContains("abcd", "d"));
   EXPECT_FALSE(tkrzw::StrContains("abc", "abcd"));
   EXPECT_FALSE(tkrzw::StrContains("abc", "xa"));
   EXPECT_FALSE(tkrzw::StrContains("abc", "ac"));

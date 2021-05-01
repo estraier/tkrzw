@@ -51,6 +51,7 @@ namespace tkrzw {
 #undef PACKAGE_VERSION
 #undef LIBRARY_VERSION
 #undef OS_NAME
+#undef IS_POSIX
 #undef IS_BIG_ENDIAN
 
 /** The minimum value of int8_t. */
@@ -127,6 +128,9 @@ extern const char* const LIBRARY_VERSION;
 
 /** The recognized OS name. */
 extern const char* const OS_NAME;
+
+/** True if the OS is conforming to POSIX. */
+extern const bool IS_POSIX;
 
 /** True if the byte order is big endian. */
 extern const bool IS_BIG_ENDIAN;

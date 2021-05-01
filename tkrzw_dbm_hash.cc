@@ -525,7 +525,7 @@ Status HashDBMImpl::Rebuild(
       return status;
     }
     fbp_.Clear();
-    status |= RenameFile(tmp_path, path_);
+    status |= tmp_file->Rename(path_);
     status |= file_->Close();
     file_ = std::move(tmp_file);
     if (tuning_params.fbp_capacity >= 0) {

@@ -49,7 +49,7 @@ class StdFileImpl final {
   Status WriteImpl(int64_t off, const void* buf, size_t size);
   Status AppendImpl(const void* buf, size_t size, int64_t* off);
   Status ExpandImpl(size_t inc_size, int64_t* old_size);
-  
+
   std::unique_ptr<std::fstream> file_;
   std::string path_;
   bool writable_;
@@ -141,9 +141,7 @@ Status StdFileImpl::Truncate(int64_t size) {
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::cout << "RESIZE:" << old_path << std::endl;
   std::filesystem::resize_file(old_path, size);
-  std::cout << "RESIZEDONE:" << path_ << std::endl;
   return OpenImpl(old_path, true, options);
 }
 
@@ -203,7 +201,7 @@ int64_t StdFileImpl::Lock() {
   mutex_.lock();
   return file_ == nullptr ? -1 : file_size_;
 }
-    
+
 int64_t StdFileImpl::Unlock() {
   const int64_t file_size = file_ == nullptr ? -1 : file_size_;
   mutex_.unlock();
@@ -315,6 +313,15 @@ Status StdFileImpl::ReadImpl(int64_t off, void* buf, size_t size) {
 }
 
 Status StdFileImpl::WriteImpl(int64_t off, const void* buf, size_t size) {
+  if (size == 0) {
+    if (off > file_size_) {
+      off--;
+      buf = static_cast<const void*>("");
+      size = 1;
+    } else {
+      return Status(Status::SUCCESS);
+    }
+  }
   file_->clear();
   file_->seekp(off);
   if (!file_->good()) {
@@ -329,6 +336,12 @@ Status StdFileImpl::WriteImpl(int64_t off, const void* buf, size_t size) {
 }
 
 Status StdFileImpl::AppendImpl(const void* buf, size_t size, int64_t* off) {
+  if (size == 0) {
+    if (off != nullptr) {
+      *off = file_size_;
+    }
+    return Status(Status::SUCCESS);
+  }
   file_->clear();
   file_->seekp(file_size_);
   if (!file_->good()) {

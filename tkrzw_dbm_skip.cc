@@ -637,7 +637,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
     CleanUp();
     return status;
   }
-  status |= RenameFile(rebuild_path, path_);
+  status |= rebuild_file->Rename(path_);
   status |= file_->Close();
   file_ = std::move(rebuild_file);
   const uint32_t db_type = db_type_;
@@ -974,7 +974,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   if (reducer == nullptr && sorted_file_ != nullptr &&
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
       !record_sorter_->IsUpdated()) {
-    status = RenameFile(sorted_path, path_);
+    status = sorted_file_->Rename(path_);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -982,7 +982,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   } else {
     std::unique_ptr<File> swap_file(nullptr);
     if (file_->GetSizeSimple() > static_cast<int64_t>(METADATA_SIZE)) {
-      status = RenameFile(path_, swap_path);
+      status = file_->Rename(swap_path);
       if (status != Status::SUCCESS) {
         return status;
       }
@@ -990,7 +990,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
       file_ = swap_file->MakeFile();
       status = file_->Open(path_, true, File::OPEN_TRUNCATE);
       if (status != Status::SUCCESS) {
-        RenameFile(swap_path, path_);
+        swap_file->Rename(path_);
         return status;
       }
       file_->Truncate(METADATA_SIZE);

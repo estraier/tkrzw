@@ -256,6 +256,12 @@ size_t ReadVarNum(const void* buf, uint64_t* np);
  */
 size_t SizeVarNum(uint64_t num);
 
+#if defined(_SYS_POSIX_)
+constexpr bool _IS_POSIX = true;
+#else
+constexpr bool _IS_POSIX = false;
+#endif
+
 #if defined(_TKRWX_BIGEND)
 constexpr bool _IS_BIG_ENDIAN = true;
 #else

@@ -85,8 +85,10 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
 
 // Prints the version information.
 void PrintVersion() {
-  PrintF("Tkrzw %s (library %s) on %s (%s endian)\n",
-         PACKAGE_VERSION, LIBRARY_VERSION, OS_NAME, IS_BIG_ENDIAN ? "big" : "little");
+  PrintF("Tkrzw %s (library %s) on %s (%s) (%s endian)\n",
+         PACKAGE_VERSION, LIBRARY_VERSION, OS_NAME,
+         IS_POSIX ? "POSIX" : "non-POSIX",
+         IS_BIG_ENDIAN ? "big" : "little");
 }
 
 }  // namespace tkrzw

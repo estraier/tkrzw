@@ -24,6 +24,8 @@ const char* const LIBRARY_VERSION = _TKRZW_LIB_VERSION;;
 
 const char* const OS_NAME = _TKRZW_OSNAME;
 
+const bool IS_POSIX = _IS_POSIX;
+
 const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
 
 const Status& Status::OrDie() const {
