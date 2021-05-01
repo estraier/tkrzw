@@ -26,6 +26,24 @@
 
 namespace tkrzw {
 
+/** Directory separator character. */
+extern const char DIR_SEP_CHR;
+
+/** Directory separator string. */
+extern const char* const DIR_SEP_STR;
+
+/** Extension separator character. */
+extern const char EXT_SEP_CHR;
+
+/** Extension separator string. */
+extern const char* const EXT_SEP_STR;
+
+/** Current directory name. */
+extern const char* const CURRENT_DIR_NAME;
+
+/** Parent directory name. */
+extern const char* const PARENT_DIR_NAME;
+
 /**
  * Makes a unique name for a temporary file.
  * @return The unique name.

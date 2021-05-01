@@ -20,6 +20,32 @@
 
 namespace tkrzw {
 
+#if defined(_SYS_WINDOWS_)
+
+const char DIR_SEP_CHR = '\\';
+const char* const DIR_SEP_STR = "\\";
+const char EXT_SEP_CHR = '.';
+const char* const EXT_SEP_STR = ".";
+const char* const CURRENT_DIR_NAME = ".";
+const char* const PARENT_DIR_NAME = "..";
+const char* const TMP_DIR_CANDIDATES[] = {
+  "\\tmp", "\\temp", "\\var\\tmp", "\\",
+};
+
+#else
+
+const char DIR_SEP_CHR = '/';
+const char* const DIR_SEP_STR = "/";
+const char EXT_SEP_CHR = '.';
+const char* const EXT_SEP_STR = ".";
+const char* const CURRENT_DIR_NAME = ".";
+const char* const PARENT_DIR_NAME = "..";
+const char* const TMP_DIR_CANDIDATES[] = {
+  "/tmp", "/temp", "/var/tmp", "/",
+};
+
+#endif
+
 std::string MakeTemporaryName() {
   static std::atomic_uint32_t count(0);
   const uint32_t current_count = count++;
@@ -36,15 +62,15 @@ std::string JoinPath(const std::string& base_path, const std::string& child_name
   if (child_name.empty()) {
     return base_path;
   }
-  if (child_name.front() == '/') {
+  if (child_name.front() == DIR_SEP_CHR) {
     return child_name;
   }
   std::string joined_path = base_path;
   if (joined_path.empty()) {
-    joined_path = "/";
+    joined_path = DIR_SEP_STR;
   }
-  if (joined_path.back() != '/') {
-    joined_path += "/";
+  if (joined_path.back() != DIR_SEP_CHR) {
+    joined_path += DIR_SEP_STR;
   }
   joined_path += child_name;
   return joined_path;
@@ -54,14 +80,14 @@ std::string NormalizePath(const std::string& path) {
   if (path.empty()) {
     return "";
   }
-  const bool is_absolute = path.front() == '/';
-  const auto& input_elems = StrSplit(path, '/', true);
+  const bool is_absolute = path.front() == DIR_SEP_CHR;
+  const auto& input_elems = StrSplit(path, DIR_SEP_CHR, true);
   std::vector<std::string> output_elems;
   for (const auto& elem : input_elems) {
-    if (elem == ".") {
+    if (elem == CURRENT_DIR_NAME) {
       continue;
     }
-    if (elem == "..") {
+    if (elem == PARENT_DIR_NAME) {
       if (!output_elems.empty()) {
         output_elems.pop_back();
       }
@@ -71,12 +97,12 @@ std::string NormalizePath(const std::string& path) {
   }
   std::string norm_path;
   if (is_absolute) {
-    norm_path += "/";
+    norm_path += DIR_SEP_STR;
   }
   for (int32_t i = 0; i < static_cast<int32_t>(output_elems.size()); i++) {
     norm_path += output_elems[i];
     if (i != static_cast<int32_t>(output_elems.size()) - 1) {
-      norm_path += "/";
+      norm_path += DIR_SEP_STR;
     }
   }
   return norm_path;
@@ -84,14 +110,14 @@ std::string NormalizePath(const std::string& path) {
 
 std::string PathToBaseName(const std::string& path) {
   size_t size = path.size();
-  while (size > 1 && path[size - 1] == '/') {
+  while (size > 1 && path[size - 1] == DIR_SEP_CHR) {
     size--;
   }
   const std::string tmp_path = path.substr(0, size);
-  if (tmp_path == "/") {
+  if (tmp_path == DIR_SEP_STR) {
     return tmp_path;
   }
-  const size_t pos = tmp_path.rfind('/');
+  const size_t pos = tmp_path.rfind(DIR_SEP_CHR);
   if (pos == std::string::npos) {
     return tmp_path;
   }
@@ -100,23 +126,23 @@ std::string PathToBaseName(const std::string& path) {
 
 std::string PathToDirectoryName(const std::string& path) {
   size_t size = path.size();
-  while (size > 1 && path[size - 1] == '/') {
+  while (size > 1 && path[size - 1] == DIR_SEP_CHR) {
     size--;
   }
   const std::string tmp_path = path.substr(0, size);
-  if (tmp_path == "/") {
+  if (tmp_path == DIR_SEP_STR) {
     return tmp_path;
   }
-  const size_t pos = tmp_path.rfind('/');
+  const size_t pos = tmp_path.rfind(DIR_SEP_CHR);
   if (pos == std::string::npos) {
-    return ".";
+    return CURRENT_DIR_NAME;
   }
   return tmp_path.substr(0, pos);
 }
 
 std::string PathToExtension(const std::string& path) {
   const std::string& base_name = PathToBaseName(path);
-  const size_t pos = base_name.rfind('.');
+  const size_t pos = base_name.rfind(EXT_SEP_CHR);
   if (pos == std::string::npos) {
     return "";
   }
@@ -164,13 +190,10 @@ int64_t GetFileSize(const std::string& path) {
 }
 
 std::string GetPathToTemporaryDirectory() {
-  static const char* tmp_candidates[] = {
-    "/tmp", "/temp", "/var/tmp", "/",
-  };
   static std::string tmp_path;
   static std::once_flag tmp_path_once_flag;
   std::call_once(tmp_path_once_flag, [&]() {
-      for (const auto& tmp_candidate : tmp_candidates) {
+      for (const auto& tmp_candidate : TMP_DIR_CANDIDATES) {
         if (PathIsDirectory(tmp_candidate)) {
           tmp_path = tmp_candidate;
           break;
