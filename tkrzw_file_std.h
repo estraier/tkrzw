@@ -150,6 +150,40 @@ class StdFile final : public File {
   Status Rename(const std::string& new_path) override;
 
   /**
+   * Lock this object.
+   * @return The file size for a open file or -1 for an unopen file.
+   * @detail Unlock must be done by the caller.
+   */
+  int64_t Lock();
+
+  /**
+   * Unlock this object.
+   * @return The file size for a open file or -1 for an unopen file.
+   * @detail This is allowed only by the lock holder.
+   */
+  int64_t Unlock();
+
+  /**
+   * Reads data in the critical section by the lock.
+   * @param off The offset of a source region.
+   * @param buf The pointer to the destination buffer.
+   * @param size The size of the data to be read.
+   * @return The result status.
+   * @detail This is allowed only by the lock holder.
+   */
+  Status ReadInCriticalSection(int64_t off, void* buf, size_t size);
+
+  /**
+   * Writes data in the critical section by the lock.
+   * @param off The offset of the destination region.
+   * @param buf The pointer to the source buffer.
+   * @param size The size of the data to be written.
+   * @return The result status.
+   * @detail This is allowed only by the lock holder.
+   */
+  Status WriteInCriticalSection(int64_t off, const void* buf, size_t size);
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */

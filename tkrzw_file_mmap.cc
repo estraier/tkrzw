@@ -11,6 +11,12 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#if defined(_TKRZW_STDONLY)
+
+#include "tkrzw_file_mmap_std.h"
+
+#else
+
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_util.h"
@@ -18,8 +24,6 @@
 #include "tkrzw_str_util.h"
 #include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
-
-#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
 
 namespace tkrzw {
 
@@ -1141,10 +1145,6 @@ size_t MemoryMapAtomicFile::Zone::Size() const {
 }
 
 }  // namespace tkrzw
-
-#else
-
-#include "tkrzw_file_mmap_std.h"
 
 #endif
 

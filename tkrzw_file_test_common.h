@@ -414,7 +414,7 @@ void CommonFileTest<FILE>::RenameTest() {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   FILE file;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(file_path, file.GetPathSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(5));
   EXPECT_EQ(5, file.GetSizeSimple());
@@ -427,6 +427,9 @@ void CommonFileTest<FILE>::RenameTest() {
   EXPECT_EQ(rename_file_path, rename_file.GetPathSimple());
   EXPECT_EQ(5, rename_file.GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, rename_file.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append("abc", 3));
+  EXPECT_EQ(8, file.GetSizeSimple());
+  EXPECT_EQ("abc", file.ReadSimple(5, 3));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
 }
 

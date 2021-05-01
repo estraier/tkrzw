@@ -81,4 +81,22 @@ TEST_F(StdFileTest, Rename) {
   RenameTest();
 }
 
+TEST_F(StdFileTest, CriticalSection) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::StdFile file;
+  EXPECT_EQ(-1, file.Lock());
+  EXPECT_EQ(-1, file.Unlock());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(0, "abc", 3));
+  EXPECT_EQ(3, file.Lock());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.WriteInCriticalSection(2, "xyz", 3));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.WriteInCriticalSection(5, "123", 3));
+  char buf[8];
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.ReadInCriticalSection(0, buf, 8));
+  EXPECT_EQ("abxyz123", std::string(buf, 8));
+  EXPECT_EQ(8, file.Unlock());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+}
+
 // END OF FILE

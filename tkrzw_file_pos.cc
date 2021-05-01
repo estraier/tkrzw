@@ -11,6 +11,12 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#if defined(_TKRZW_STDONLY)
+
+#include "tkrzw_file_pos_std.h"
+
+#else
+
 #include "tkrzw_file.h"
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_util.h"
@@ -839,5 +845,7 @@ Status PositionalAtomicFile::Rename(const std::string& new_path) {
 }
 
 }  // namespace tkrzw
+
+#endif
 
 // END OF FILE

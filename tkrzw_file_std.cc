@@ -37,8 +37,19 @@ class StdFileImpl final {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  int64_t Lock();
+  int64_t Unlock();
+  Status ReadInCriticalSection(int64_t off, void* buf, size_t size);
+  Status WriteInCriticalSection(int64_t off, const void* buf, size_t size);
 
  private:
+  Status OpenImpl(const std::string& path, bool writable, int32_t options);
+  Status CloseImpl();
+  Status ReadImpl(int64_t off, void* buf, size_t size);
+  Status WriteImpl(int64_t off, const void* buf, size_t size);
+  Status AppendImpl(const void* buf, size_t size, int64_t* off);
+  Status ExpandImpl(size_t inc_size, int64_t* old_size);
+  
   std::unique_ptr<std::fstream> file_;
   std::string path_;
   bool writable_;
@@ -61,6 +72,162 @@ Status StdFileImpl::Open(const std::string& path, bool writable, int32_t options
   if (file_ != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
+  return OpenImpl(path, writable, options);
+}
+
+Status StdFileImpl::Close() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  return CloseImpl();
+}
+
+Status StdFileImpl::Read(int64_t off, void* buf, size_t size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  return ReadImpl(off, buf, size);
+}
+
+Status StdFileImpl::Write(int64_t off, const void* buf, size_t size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  return WriteImpl(off, buf, size);
+}
+
+Status StdFileImpl::Append(const void* buf, size_t size, int64_t* off) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  return AppendImpl(buf, size, off);
+}
+
+Status StdFileImpl::Expand(size_t inc_size, int64_t* old_size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  return ExpandImpl(inc_size, old_size);
+}
+
+Status StdFileImpl::Truncate(int64_t size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  if (!PathIsFile(path_)) {
+    return Status(Status::INFEASIBLE_ERROR, "missing file");
+  }
+  const std::string old_path = path_;
+  const int32_t options = open_options_;
+  Status status = CloseImpl();
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::cout << "RESIZE:" << old_path << std::endl;
+  std::filesystem::resize_file(old_path, size);
+  std::cout << "RESIZEDONE:" << path_ << std::endl;
+  return OpenImpl(old_path, true, options);
+}
+
+Status StdFileImpl::Synchronize(bool hard) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::GetSize(int64_t* size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *size = file_size_;
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::GetPath(std::string* path) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::Rename(const std::string& new_path) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  const std::string old_path = path_;
+  const bool writable = writable_;
+  const int32_t options = open_options_;
+  Status status = CloseImpl();
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  status = RenameFile(old_path, new_path);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  return OpenImpl(new_path, writable, options);
+}
+
+int64_t StdFileImpl::Lock() {
+  mutex_.lock();
+  return file_ == nullptr ? -1 : file_size_;
+}
+    
+int64_t StdFileImpl::Unlock() {
+  const int64_t file_size = file_ == nullptr ? -1 : file_size_;
+  mutex_.unlock();
+  return file_size;
+}
+
+Status StdFileImpl::ReadInCriticalSection(int64_t off, void* buf, size_t size) {
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  return ReadImpl(off, buf, size);
+}
+
+Status StdFileImpl::WriteInCriticalSection(int64_t off, const void* buf, size_t size) {
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  return WriteImpl(off, buf, size);
+}
+
+Status StdFileImpl::OpenImpl(const std::string& path, bool writable, int32_t options) {
   std::ios_base::openmode mode = std::ios_base::in | std::ios_base::binary;
   const bool has_existed = PathIsFile(path);
   if (writable) {
@@ -111,30 +278,27 @@ Status StdFileImpl::Open(const std::string& path, bool writable, int32_t options
     }
   }
   path_ = path;
+  writable_ = writable;
+  open_options_ = options & ~File::OPEN_TRUNCATE;
   file_size_ = size;
   return Status(Status::SUCCESS);
 }
 
-Status StdFileImpl::Close() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
+Status StdFileImpl::CloseImpl() {
+  Status status(Status::SUCCESS);
   file_->clear();
   file_->close();
-  Status status(Status::SUCCESS);
   if (!file_->good()) {
     status.Set(Status::SYSTEM_ERROR, "close failed");
   }
   file_.reset(nullptr);
+  path_.clear();
+  writable_ = false;
+  open_options_ = 0;
   return status;
 }
 
-Status StdFileImpl::Read(int64_t off, void* buf, size_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
+Status StdFileImpl::ReadImpl(int64_t off, void* buf, size_t size) {
   if (static_cast<int64_t>(off + size) > file_size_) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
@@ -150,11 +314,7 @@ Status StdFileImpl::Read(int64_t off, void* buf, size_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status StdFileImpl::Write(int64_t off, const void* buf, size_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
+Status StdFileImpl::WriteImpl(int64_t off, const void* buf, size_t size) {
   file_->clear();
   file_->seekp(off);
   if (!file_->good()) {
@@ -168,11 +328,7 @@ Status StdFileImpl::Write(int64_t off, const void* buf, size_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status StdFileImpl::Append(const void* buf, size_t size, int64_t* off) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
+Status StdFileImpl::AppendImpl(const void* buf, size_t size, int64_t* off) {
   file_->clear();
   file_->seekp(file_size_);
   if (!file_->good()) {
@@ -189,11 +345,7 @@ Status StdFileImpl::Append(const void* buf, size_t size, int64_t* off) {
   return Status(Status::SUCCESS);
 }
 
-Status StdFileImpl::Expand(size_t inc_size, int64_t* old_size) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
+Status StdFileImpl::ExpandImpl(size_t inc_size, int64_t* old_size) {
   if (inc_size == 0) {
     return Status(Status::SUCCESS);
   }
@@ -213,71 +365,6 @@ Status StdFileImpl::Expand(size_t inc_size, int64_t* old_size) {
   }
   file_size_ += inc_size;
   return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::Truncate(int64_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  std::cout << "RESIZE:" << path_ << std::endl;
-  std::filesystem::resize_file(path_, size);
-  std::cout << "RESIZEDONE:" << path_ << std::endl;
-  file_->seekp(0, std::ios_base::end);
-  if (!file_->good()) {
-    return Status(Status::SYSTEM_ERROR, "seekp failed");
-  }
-  const int64_t new_size = file_->tellp();
-  if (!file_->good()) {
-    return Status(Status::SYSTEM_ERROR, "tellp failed");
-  }
-  if (new_size != size) {
-    return Status(Status::SYSTEM_ERROR, "resize_file failed");
-  }
-  file_size_ = size;
-  return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::Synchronize(bool hard) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::GetSize(int64_t* size) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  *size = file_size_;
-  return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::GetPath(std::string* path) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  *path = path_;
-  return Status(Status::SUCCESS);
-}
-
-Status StdFileImpl::Rename(const std::string& new_path) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (file_ == nullptr) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  Status status = RenameFile(path_, new_path);
-  if (status == Status::SUCCESS) {
-    path_ = new_path;
-  }
-  return status;
 }
 
 StdFile::StdFile() {
@@ -342,6 +429,24 @@ Status StdFile::GetPath(std::string* path) {
 
 Status StdFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+int64_t StdFile::Lock() {
+  return impl_->Lock();
+}
+
+int64_t StdFile::Unlock() {
+  return impl_->Unlock();
+}
+
+Status StdFile::ReadInCriticalSection(int64_t off, void* buf, size_t size) {
+  assert(off >= 0 && buf != nullptr);
+  return impl_->ReadInCriticalSection(off, buf, size);
+}
+
+Status StdFile::WriteInCriticalSection(int64_t off, const void* buf, size_t size) {
+  assert(off >= 0 && buf != nullptr && size <= MAX_MEMORY_SIZE);
+  return impl_->WriteInCriticalSection(off, buf, size);
 }
 
 }  // namespace tkrzw
