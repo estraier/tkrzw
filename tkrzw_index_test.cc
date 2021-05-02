@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -21,7 +23,6 @@
 #include "tkrzw_index.h"
 #include "tkrzw_thread_util.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 
 using namespace testing;
 

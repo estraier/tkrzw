@@ -11,8 +11,9 @@
  * and limitations under the License.
  *************************************************************************************************/
 
-#include "tkrzw_lib_common.h"
 #include "tkrzw_sys_config.h"
+
+#include "tkrzw_lib_common.h"
 
 namespace tkrzw {
 

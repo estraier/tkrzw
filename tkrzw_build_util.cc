@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_cmd_util.h"
 
 namespace tkrzw {
@@ -72,13 +74,27 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
              info["mem_total"].c_str(), info["mem_free"].c_str(),
              info["mem_cached"].c_str());
     }
-    PrintF("prefix: %s\n", _TKRZW_PREFIX);
-    PrintF("includedir: %s\n", _TKRZW_INCLUDEDIR);
-    PrintF("libdir: %s\n", _TKRZW_LIBDIR);
-    PrintF("bindir: %s\n", _TKRZW_BINDIR);
-    PrintF("libexecdir: %s\n", _TKRZW_LIBEXECDIR);
-    PrintF("appinc: %s\n", _TKRZW_APPINC);
-    PrintF("applibs: %s\n", _TKRZW_APPLIBS);
+    if (*_TKRZW_PREFIX != '\0') {
+      PrintF("prefix: %s\n", _TKRZW_PREFIX);
+    }
+    if (*_TKRZW_INCLUDEDIR != '\0') {
+      PrintF("includedir: %s\n", _TKRZW_INCLUDEDIR);
+    }
+    if (*_TKRZW_LIBDIR != '\0') {
+      PrintF("libdir: %s\n", _TKRZW_LIBDIR);
+    }
+    if (*_TKRZW_BINDIR != '\0') {
+      PrintF("bindir: %s\n", _TKRZW_BINDIR);
+    }
+    if (*_TKRZW_BINDIR != '\0') {
+      PrintF("libexecdir: %s\n", _TKRZW_LIBEXECDIR);
+    }
+    if (*_TKRZW_APPINC) {
+      PrintF("appinc: %s\n", _TKRZW_APPINC);
+    }
+    if (*_TKRZW_APPLIBS) {
+      PrintF("applibs: %s\n", _TKRZW_APPLIBS);
+    }
   }
   return 0;
 }

@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_containers.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_baby.h"
@@ -23,7 +25,6 @@
 #include "tkrzw_lib_common.h"
 #include "tkrzw_key_comparators.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {

@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include <cassert>
 #include <cstdarg>
 #include <cstdint>
@@ -21,7 +23,6 @@
 #include <vector>
 
 #include "tkrzw_cmd_util.h"
-#include "tkrzw_sys_config.h"
 
 namespace tkrzw {
 

@@ -11,12 +11,13 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
-#include "tkrzw_sys_config.h"
 
 using namespace testing;
 
@@ -159,14 +160,14 @@ TEST(FileUtilTest, FileOperations) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(new_file_path));
 }
 
-TEST(FileUtilTest, CopyFile) {
+TEST(FileUtilTest, CopyFileData) {
   const std::string& base_dir = tkrzw::GetPathToTemporaryDirectory();
   const std::string& src_path =
       tkrzw::JoinPath(base_dir, "tkrzw-test-" + tkrzw::MakeTemporaryName());
   const std::string& dest_path =
       tkrzw::JoinPath(base_dir, "tkrzw-test-" + tkrzw::MakeTemporaryName());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(src_path, "abcd0123"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFile(src_path, dest_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFileData(src_path, dest_path));
   std::string content;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(dest_path, &content));
   EXPECT_EQ("abcd0123", content);
@@ -175,7 +176,7 @@ TEST(FileUtilTest, CopyFile) {
     src_content.append("0123456789");
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(src_path, src_content));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFile(src_path, dest_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFileData(src_path, dest_path));
   std::string dest_content;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(dest_path, &dest_content));
   EXPECT_EQ(src_content, dest_content);

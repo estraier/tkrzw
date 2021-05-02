@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -20,7 +22,6 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 
 using namespace testing;
 
@@ -69,7 +70,7 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   EXPECT_EQ("CCCC", dbm->GetSimple("ccc"));
   EXPECT_EQ("DDDDD", dbm->GetSimple("dddd"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("eeeee", "EEEEEE"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CopyFile(copy_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CopyFileData(copy_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   EXPECT_EQ(tkrzw::GetFileSize(path), tkrzw::GetFileSize(copy_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(copy_path, true, tkrzw::File::OPEN_NO_CREATE));

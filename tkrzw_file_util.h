@@ -175,12 +175,12 @@ Status RemoveFile(const std::string& path);
 Status RenameFile(const std::string& src_path, const std::string& dest_path);
 
 /**
- * Copies a file.
+ * Copies the data of a file.
  * @param src_path The source path of the file.
  * @param dest_path The destination path of the file.
  * @return The result status.
  */
-Status CopyFile(const std::string& src_path, const std::string& dest_path);
+Status CopyFileData(const std::string& src_path, const std::string& dest_path);
 
 /**
  * Reads a directory.

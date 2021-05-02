@@ -11,10 +11,11 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_hash_impl.h"
 #include "tkrzw_file.h"
-#include "tkrzw_sys_config.h"
 
 namespace tkrzw {
 

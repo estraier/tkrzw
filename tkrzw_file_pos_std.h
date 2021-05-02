@@ -14,6 +14,8 @@
 #ifndef _TKRZW_FILE_POS_STD_H
 #define _TKRZW_FILE_POS_STD_H
 
+#include "tkrzw_sys_config.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,7 +28,6 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {

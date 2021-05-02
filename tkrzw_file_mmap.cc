@@ -11,7 +11,13 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #if defined(_TKRZW_STDONLY)
+
+#include "tkrzw_file_mmap_std.h"
+
+#elif defined(_SYS_WINDOWS_)
 
 #include "tkrzw_file_mmap_std.h"
 
@@ -22,7 +28,6 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {

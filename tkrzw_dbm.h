@@ -660,16 +660,16 @@ class DBM {
   };
 
   /**
-   * File processor to implement DBM::CopyFile.
+   * File processor to implement DBM::CopyFileData.
    */
-  class FileProcessorCopyFile : public FileProcessor {
+  class FileProcessorCopyFileData : public FileProcessor {
    public:
     /**
      * Constructor.
      * @param status The pointer to a status object to contain the result status.
      * @param dest_path The destination path for copying.
      */
-    FileProcessorCopyFile(Status* status, const std::string dest_path);
+    FileProcessorCopyFileData(Status* status, const std::string dest_path);
 
     /**
      * Process a file.
@@ -1057,9 +1057,9 @@ class DBM {
    * @details Copying is done while the content is synchronized and stable.  So, this method is
    * suitable for making a backup file while running a database service.
    */
-  virtual Status CopyFile(const std::string& dest_path) {
+  virtual Status CopyFileData(const std::string& dest_path) {
     Status impl_status(Status::SUCCESS);
-    FileProcessorCopyFile proc(&impl_status, dest_path);
+    FileProcessorCopyFileData proc(&impl_status, dest_path);
     if (IsWritable()) {
       const Status status = Synchronize(false, &proc);
       if (status != Status::SUCCESS) {

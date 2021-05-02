@@ -3458,14 +3458,14 @@ one    first
 
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 
-<p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFile and Export.</p>
+<p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFileData and Export.</p>
 
-<p>The CopyFile method synchronizes the updated content to the database file and copy the whole data to another file.  As copying is done while the content of the database is synchronized and frozen, the copied file is considered as a snapshot of the database at a certain moment.  And, the copying operation is done by the fastest way on the system, like the sendfile system call.</p>
+<p>The CopyFileData method synchronizes the updated content to the database file and copy the whole data to another file.  As copying is done while the content of the database is synchronized and frozen, the copied file is considered as a snapshot of the database at a certain moment.  And, the copying operation is done by the fastest way on the system, like the sendfile system call.</p>
 
-<pre><code class="language-cpp"><![CDATA[dbm.CopyFile("casket-backup-20200515.tkh");
+<pre><code class="language-cpp"><![CDATA[dbm.CopyFileData("casket-backup-20200515.tkh");
 ]]></code></pre>
 
-<p>The downside of the CopyFile method is that other threads trying to update the database are blocked during the copying operation, which can take several seconds or minutes depending on the file size.  If it is not acceptable, use the Export method, which accesses each and every records and adds them to another database.  As other threads updating the database are not blocked during the iteration, atomicity as the database is not assured.  Atomicity of each record is assured.</p>
+<p>The downside of the CopyFileData method is that other threads trying to update the database are blocked during the copying operation, which can take several seconds or minutes depending on the file size.  If it is not acceptable, use the Export method, which accesses each and every records and adds them to another database.  As other threads updating the database are not blocked during the iteration, atomicity as the database is not assured.  Atomicity of each record is assured.</p>
 
 <pre><code class="language-cpp"><![CDATA[HashDBM backup_dbm;
 backup_dbm.Open("casket-backup-20200515.tkh", true);

@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -25,7 +27,6 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 
 using namespace testing;
 
@@ -153,7 +154,7 @@ TEST_F(ShardDBMTest, BasicTest) {
       }
       const std::string dest_path =
           tkrzw::JoinPath(tmp_dir.Path(), tkrzw::StrCat("copy-", config.path));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.CopyFile(dest_path));
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.CopyFileData(dest_path));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
           dest_path, false, tkrzw::File::OPEN_DEFAULT, config.open_params));

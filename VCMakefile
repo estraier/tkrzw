@@ -10,7 +10,7 @@ UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h
 LIBRARYFILES = tkrzw.lib
 LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj
-COMMANDFILES = tkrzw_build_util.exe
+COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_perf.exe tkrzw_dbm_util.exe
 
 CL = cl
 LIB = lib
@@ -19,7 +19,8 @@ CLFLAGS = /nologo \
 	/std:c++17 /Zc:__cplusplus \
   /I "$(VCINCPATH)" \
   /DNDEBUG /D_CRT_SECURE_NO_WARNINGS \
-  /O2 /EHsc /W3 /wd4244 /wd4267 /wd4351 /wd4800 /MT
+  /D_TKRZW_PKG_VERSION="\"0.9.10\"" /D_TKRZW_LIB_VERSION="\"1.0.0\"" \
+  /O2 /EHsc /W3 /wd4244 /wd4267 /wd4334 /wd4351 /wd4800 /MT
 LIBFLAGS = /nologo \
   /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)"
 LINKFLAGS = /nologo \
@@ -41,11 +42,24 @@ clean :
 	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
 	-del casket* /F /Q > NUL: 2>&1
 
+$(LIBOBJFILES) : $(HEADERFILES)
+
 tkrzw.lib : $(LIBOBJFILES)
 	$(LIB) $(LIBFLAGS) /OUT:$@ $(LIBOBJFILES)
 
 tkrzw_build_util.exe : tkrzw_build_util.obj tkrzw.lib
 	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_build_util.obj tkrzw.lib
 
-$(LIBOBJFILES) $(COMMANDFILES) : $(HEADERFILES)
+tkrzw_str_perf.exe : tkrzw_str_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_str_perf.obj tkrzw.lib
 
+tkrzw_file_perf.exe : tkrzw_file_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_file_perf.obj tkrzw.lib
+
+tkrzw_dbm_perf.exe : tkrzw_dbm_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_perf.obj tkrzw.lib
+
+tkrzw_dbm_util.exe : tkrzw_dbm_util.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_util.obj tkrzw.lib
+
+$(COMMANDFILES) : $(HEADERFILES) tkrzw.lib

@@ -11,11 +11,12 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_file.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {
@@ -321,7 +322,7 @@ Status RenameFile(const std::string& src_path, const std::string& dest_path) {
   return Status(Status::SUCCESS);
 }
 
-Status CopyFile(const std::string& src_path, const std::string& dest_path) {
+Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
   // TODO: use sendfile on Linux.
   const int32_t src_fd = open(src_path.c_str(), O_RDONLY);
   if (src_fd < 0) {

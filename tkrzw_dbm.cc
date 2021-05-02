@@ -11,11 +11,12 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_dbm.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 
 namespace tkrzw {
 
@@ -23,11 +24,12 @@ const std::string_view DBM::RecordProcessor::NOOP("\x00\xBE\xEF\x02\x11", 5);
 
 const std::string_view DBM::RecordProcessor::REMOVE("\x00\xDE\xAD\x02\x11", 5);
 
-DBM::FileProcessorCopyFile::FileProcessorCopyFile(Status* status, const std::string dest_path)
+DBM::FileProcessorCopyFileData::FileProcessorCopyFileData(
+    Status* status, const std::string dest_path)
     : status_(status), dest_path_(dest_path) {}
 
-void DBM::FileProcessorCopyFile::Process(const std::string& path) {
-  *status_ = tkrzw::CopyFile(path, dest_path_);
+void DBM::FileProcessorCopyFileData::Process(const std::string& path) {
+  *status_ = tkrzw::CopyFileData(path, dest_path_);
 }
 
 }  // namespace tkrzw

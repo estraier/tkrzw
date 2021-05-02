@@ -407,7 +407,7 @@ class ShardDBM final : public ParamDBM {
    * suitable for making a backup file while running a database service.  Each shard file is
    * copied and the destination file also has the same suffix.
    */
-  Status CopyFile(const std::string& dest_path) override;
+  Status CopyFileData(const std::string& dest_path) override;
 
   /**
    * Inspects the database.

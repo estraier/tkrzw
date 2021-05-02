@@ -11,6 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include "tkrzw_sys_config.h"
+
 #include "tkrzw_containers.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_common_impl.h"
@@ -24,7 +26,6 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_config.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {
@@ -99,8 +100,8 @@ struct InnerSlot final {
 };
 
 class TreeDBMImpl final {
-  friend class TreeLeafNode;
-  friend class TreeInnerNode;
+  friend struct TreeLeafNode;
+  friend struct TreeInnerNode;
   friend class TreeDBMIteratorImpl;
   typedef std::list<TreeDBMIteratorImpl*> IteratorList;
  public:
