@@ -152,14 +152,14 @@ class StdFile final : public File {
   /**
    * Lock this object.
    * @return The file size for a open file or -1 for an unopen file.
-   * @detail Unlock must be done by the caller.
+   * @details Unlock must be done by the caller.
    */
   int64_t Lock();
 
   /**
    * Unlock this object.
    * @return The file size for a open file or -1 for an unopen file.
-   * @detail This is allowed only by the lock holder.
+   * @details This is allowed only by the lock holder.
    */
   int64_t Unlock();
 
@@ -169,7 +169,7 @@ class StdFile final : public File {
    * @param buf The pointer to the destination buffer.
    * @param size The size of the data to be read.
    * @return The result status.
-   * @detail This is allowed only by the lock holder.
+   * @details This is allowed only by the lock holder.
    */
   Status ReadInCriticalSection(int64_t off, void* buf, size_t size);
 
@@ -179,7 +179,7 @@ class StdFile final : public File {
    * @param buf The pointer to the source buffer.
    * @param size The size of the data to be written.
    * @return The result status.
-   * @detail This is allowed only by the lock holder.
+   * @details This is allowed only by the lock holder.
    */
   Status WriteInCriticalSection(int64_t off, const void* buf, size_t size);
 
