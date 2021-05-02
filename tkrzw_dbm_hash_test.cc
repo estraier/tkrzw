@@ -367,6 +367,9 @@ void HashDBMTest::HashDBMOpenCloseTest(tkrzw::HashDBM* dbm) {
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   EXPECT_TRUE(dbm->IsOpen());
   EXPECT_TRUE(dbm->IsWritable());
+  std::string got_path;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->GetFilePath(&got_path));
+  EXPECT_EQ(file_path, got_path);
   for (int32_t i = 0; i < num_iterations; i++) {
     const int32_t level = i / (num_iterations / num_levels);
     if (op_dist(mt) % 100 == 0) {

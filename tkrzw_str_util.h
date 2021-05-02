@@ -298,6 +298,15 @@ std::string StrUpperCase(std::string_view str);
 std::string StrLowerCase(std::string_view str);
 
 /**
+ * Converts a string by replacing substrings to diffent substrings.
+ * @param str The string to convert.
+ * @param before The substring before replacement.
+ * @param after The substring after replacement.
+ * @return The converted string.
+ */
+std::string StrReplace(std::string_view str, std::string_view before, std::string_view after);
+
+/**
  * Checks whether a text contains a pattern.
  * @param text The text to search.
  * @param pattern The pattern to search for.

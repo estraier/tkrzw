@@ -90,6 +90,12 @@ std::string NormalizePath(const std::string& path) {
   if (path.empty()) {
     return "";
   }
+  std::string norm_path;
+  if (!IS_POSIX && DIR_SEP_CHR == '\\') {
+    norm_path = StrReplace(path, "/", DIR_SEP_STR);
+  } else {
+    norm_path = path;
+  }
   const bool is_absolute = path.front() == DIR_SEP_CHR;
   const auto& input_elems = StrSplit(path, DIR_SEP_CHR, true);
   std::vector<std::string> output_elems;
@@ -105,7 +111,7 @@ std::string NormalizePath(const std::string& path) {
     }
     output_elems.emplace_back(elem);
   }
-  std::string norm_path;
+  norm_path.clear();
   if (is_absolute) {
     norm_path += DIR_SEP_STR;
   }
@@ -327,7 +333,7 @@ Status RenameFile(const std::string& src_path, const std::string& dest_path) {
     if (status != Status::SUCCESS) {
       return status;
     }
-    FileStatus dest_stats;    
+    FileStatus dest_stats;
     status = ReadFileStatus(dest_path, &dest_stats);
     if (status == Status::SUCCESS) {
       if (src_stats.is_file && dest_stats.is_file) {

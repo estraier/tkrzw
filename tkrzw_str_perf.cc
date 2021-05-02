@@ -22,13 +22,13 @@ static void PrintUsageAndDie() {
   P("%s: Performance checker of string utilities of Tkrzw\n", progname);
   P("\n");
   P("Usage:\n");
-  P("  %s search [-i num] [-t num] [-p num] [-b]\n", progname);
+  P("  %s search [options]\n", progname);
   P("    : Checks search performance.\n");
   P("\n");
   P("Options of the search subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
-  P("  --threads num : The size of each text to search. (default: 10000)\n");
-  P("  --patterns num : The size of each pattern to search for. (default: 5)\n");
+  P("  --text num : The size of each text to search. (default: 10000)\n");
+  P("  --pattern num : The size of each pattern to search for. (default: 5)\n");
   P("  --chars num : The number of character variations in the text and the pattern."
     " (default: 26)\n");
   P("  --whole num : The maximum number of results to get. 0 means the first only."
@@ -41,7 +41,7 @@ static void PrintUsageAndDie() {
 // Processes the search subcommand.
 static int32_t ProcessSearch(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"--iter", 1}, {"--threads", 1}, {"--pattern", 1}, {"--chars", 1},
+    {"--iter", 1}, {"--text", 1}, {"--pattern", 1}, {"--chars", 1},
     {"--whole", 1}, {"--batch", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -51,8 +51,8 @@ static int32_t ProcessSearch(int32_t argc, const char** args) {
     PrintUsageAndDie();
   }
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
-  const int32_t text_size = GetIntegerArgument(cmd_args, "--threads", 0, 10000);
-  const int32_t pattern_size = GetIntegerArgument(cmd_args, "--patterns", 0, 5);
+  const int32_t text_size = GetIntegerArgument(cmd_args, "--text", 0, 10000);
+  const int32_t pattern_size = GetIntegerArgument(cmd_args, "--pattern", 0, 5);
   const int32_t num_chars = GetIntegerArgument(cmd_args, "--chars", 0, 26);
   const int32_t whole_size = GetIntegerArgument(cmd_args, "--whole", 0, 0);
   const int32_t batch_size = GetIntegerArgument(cmd_args, "--batch", 0, 0);

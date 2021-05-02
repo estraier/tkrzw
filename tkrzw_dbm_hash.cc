@@ -200,6 +200,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
+  const std::string norm_path = NormalizePath(path);
   if (tuning_params.update_mode == HashDBM::UPDATE_DEFAULT ||
       tuning_params.update_mode == HashDBM::UPDATE_IN_PLACE) {
     static_flags_ |= STATIC_FLAG_UPDATE_IN_PLACE;
@@ -220,11 +221,11 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
   }
   lock_mem_buckets_ = tuning_params.lock_mem_buckets;
-  Status status = file_->Open(path, writable, options);
+  Status status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
   }
-  path_ = path;
+  path_ = norm_path;
   status = OpenImpl(writable);
   if (status != Status::SUCCESS) {
     file_->Close();

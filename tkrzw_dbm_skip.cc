@@ -195,6 +195,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
+  const std::string norm_path = NormalizePath(path);
   if (tuning_params.offset_width >= 0) {
     offset_width_ = std::min(std::max(static_cast<uint32_t>(
         tuning_params.offset_width), MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
@@ -216,7 +217,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     max_cached_records_ = std::min(std::max(
         tuning_params.max_cached_records, MIN_MAX_CACHED_RECORDS), MAX_MAX_CACHED_RECORDS);
   }
-  Status status = file_->Open(path, writable, options);
+  Status status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -241,7 +242,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   if (file_size_ != file_->GetSizeSimple()) {
     healthy = false;
   }
-  path_ = path;
+  path_ = norm_path;
   if (writable) {
     status = PrepareStorage();
     if (status != Status::SUCCESS) {
@@ -638,8 +639,13 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
     CleanUp();
     return status;
   }
-  status |= rebuild_file->Rename(path_);
-  status |= file_->Close();
+  if (IS_POSIX) {
+    status |= rebuild_file->Rename(path_);
+    status |= file_->Close();
+  } else {
+    status |= file_->Close();
+    status |= rebuild_file->Rename(path_);
+  }
   file_ = std::move(rebuild_file);
   const uint32_t db_type = db_type_;
   const std::string opaque = opaque_;
@@ -975,6 +981,9 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   if (reducer == nullptr && sorted_file_ != nullptr &&
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
       !record_sorter_->IsUpdated()) {
+    if (!IS_POSIX) {
+      file_->Close();
+    }
     status = sorted_file_->Rename(path_);
     if (status != Status::SUCCESS) {
       return status;
@@ -983,6 +992,9 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   } else {
     std::unique_ptr<File> swap_file(nullptr);
     if (file_->GetSizeSimple() > static_cast<int64_t>(METADATA_SIZE)) {
+      if (!IS_POSIX) {
+        swap_file->Close();
+      }
       status = file_->Rename(swap_path);
       if (status != Status::SUCCESS) {
         return status;

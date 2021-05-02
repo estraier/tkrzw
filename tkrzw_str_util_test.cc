@@ -293,6 +293,19 @@ TEST(StrUtilTest, StrLowerCase) {
   EXPECT_EQ("aあいうえおz", tkrzw::StrLowerCase("AあいうえおZ"));
 }
 
+TEST(StrUtilTest, StrReplace) {
+  EXPECT_EQ("bcbc", tkrzw::StrReplace("abcabc", "a", ""));
+  EXPECT_EQ("xbcxbc", tkrzw::StrReplace("abcabc", "a", "x"));
+  EXPECT_EQ("xybcxybc", tkrzw::StrReplace("abcabc", "a", "xy"));
+  EXPECT_EQ("xcxc", tkrzw::StrReplace("abcabc", "ab", "x"));
+  EXPECT_EQ("abxabx", tkrzw::StrReplace("abcabc", "c", "x"));
+  EXPECT_EQ("axax", tkrzw::StrReplace("abcabc", "bc", "x"));
+  EXPECT_EQ("xx", tkrzw::StrReplace("abcabc", "abc", "x"));
+  EXPECT_EQ("abcabc", tkrzw::StrReplace("abcabc", "abcdefg", "x"));
+  EXPECT_EQ("abcabc", tkrzw::StrReplace("abcabc", "", "x"));
+  EXPECT_EQ("あいxえお", tkrzw::StrReplace("あいうえお", "う", "x"));
+}
+
 TEST(StrUtilTest, StrContains) {
   EXPECT_TRUE(tkrzw::StrContains("", ""));
   EXPECT_TRUE(tkrzw::StrContains("abc", ""));

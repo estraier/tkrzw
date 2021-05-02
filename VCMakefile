@@ -42,6 +42,78 @@ clean :
 	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
 	-del casket* /F /Q > NUL: 2>&1
 
+check : check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf
+	-del casket* /F /Q > NUL: 2>&1
+	@echo #
+	@echo #================================================================
+	@echo # Checking completed.
+	@echo #================================================================
+
+check-build-util :
+	-del casket* /F /Q > NUL: 2>&1
+	tkrzw_build_util.exe version
+	tkrzw_build_util.exe config
+	tkrzw_build_util.exe config -v
+	tkrzw_build_util.exe config -i
+	tkrzw_build_util.exe config -l
+	tkrzw_build_util.exe config -p
+
+check-str-perf :
+	tkrzw_str_perf.exe search \
+	  --iter 1000 --text 2000 --pattern 5 --chars 10
+	tkrzw_str_perf.exe search \
+	  --iter 1000 --text 2000 --pattern 5 --chars 10 --whole 3
+	tkrzw_str_perf.exe search \
+	  --iter 1000 --text 2000 --pattern 5 --chars 10 --batch 3
+
+check-file-perf :
+	-del casket* /F /Q > NUL: 2>&1
+	tkrzw_file_perf.exe sequence --file std \
+	  --iter 50000 --threads 5 --size 20 casket
+	tkrzw_file_perf.exe sequence --file std \
+	  --iter 50000 --threads 5 --size 20 --random casket
+	tkrzw_file_perf.exe sequence --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --append casket
+	tkrzw_file_perf.exe wicked --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 casket
+	tkrzw_file_perf.exe sequence --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20  casket
+	tkrzw_file_perf.exe sequence --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
+	  --lock_memory 10 casket
+	tkrzw_file_perf.exe sequence --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
+	tkrzw_file_perf.exe sequence --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
+	tkrzw_file_perf.exe wicked --file mmap-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
+	  --lock_memory 10 casket
+	tkrzw_file_perf.exe sequence --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
+	tkrzw_file_perf.exe sequence --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
+	tkrzw_file_perf.exe wicked --file mmap-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
+	tkrzw_file_perf.exe wicked --file pos-para \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
+	tkrzw_file_perf.exe wicked --file pos-atom \
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+
+
 $(LIBOBJFILES) : $(HEADERFILES)
 
 tkrzw.lib : $(LIBOBJFILES)

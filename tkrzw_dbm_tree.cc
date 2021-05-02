@@ -376,6 +376,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
+  const std::string norm_path = NormalizePath(path);
   HashDBM::TuningParameters hash_params = tuning_params;
   hash_params.offset_width = tuning_params.offset_width >= 0 ?
       tuning_params.offset_width : TreeDBM::DEFAULT_OFFSET_WIDTH;
@@ -397,7 +398,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   if (tuning_params.key_comparator != nullptr) {
     key_comparator_ = tuning_params.key_comparator;
   }
-  Status status = hash_dbm_->OpenAdvanced(path, writable, options, hash_params);
+  Status status = hash_dbm_->OpenAdvanced(norm_path, writable, options, hash_params);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -442,7 +443,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   open_ = true;
   writable_ = writable;
   healthy_ = hash_dbm_->IsHealthy();
-  path_ = path;
+  path_ = norm_path;
   return Status(Status::SUCCESS);
 }
 

@@ -158,7 +158,7 @@ TEST_F(PolyDBMTest, BasicTest) {
       }
       const std::string dest_path =
           tkrzw::JoinPath(tmp_dir.Path(), tkrzw::StrCat("copy-", config.path));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.CopyFile(dest_path));
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.CopyFileData(dest_path));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
           dest_path, false, tkrzw::File::OPEN_DEFAULT, config.open_params));

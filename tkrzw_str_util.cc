@@ -541,6 +541,36 @@ std::string StrLowerCase(std::string_view str) {
   return converted;
 }
 
+std::string StrReplace(std::string_view str, std::string_view before, std::string_view after) {
+  if (before.size() > str.size() || before.empty()) {
+    return std::string(str);
+  }
+  std::string result;
+  result.reserve(str.size());
+  const size_t end = str.size() - before.size() + 1;
+  size_t i = 0;
+  while (i < end) {
+    bool match = true;
+    for (size_t j = 0; j < before.size(); j++) {
+      if (str[i + j] != before[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      result.append(after);
+      i += before.size();
+    } else {
+      result.append(1, str[i]);
+      i++;
+    }
+  }
+  if (i < str.size()) {
+    result.append(str.substr(i));
+  }
+  return result;
+}
+
 bool StrContains(std::string_view text, std::string_view pattern) {
   return tkrzw_memmem(text.data(), text.size(), pattern.data(), pattern.size()) != nullptr;
 }

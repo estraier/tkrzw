@@ -114,7 +114,8 @@ Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t 
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
-  Status status = file_->Open(path, writable, options);
+  const std::string norm_path = NormalizePath(path);
+  Status status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -125,7 +126,7 @@ Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t 
   }
   open_ = true;
   writable_ = writable;
-  path_ = path;
+  path_ = norm_path;
   return Status(Status::SUCCESS);
 }
 
