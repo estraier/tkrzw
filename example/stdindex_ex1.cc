@@ -20,14 +20,14 @@
 using namespace tkrzw;
 
 // Defines an index by the division ID to member employee IDs.
-typedef StdIndex<int32_t, int32_t> DivisionIndex;
+typedef StdIndex<int64_t, int64_t> DivisionIndex;
 
 // Structure for an employee.
 // Acutually, you should use a serious implementaton like Protocol Buffers.
 struct Employee {
-  int32_t employee_id = 0;
+  int64_t employee_id = 0;
   std::string name;
-  int32_t division_id = 0;
+  int64_t division_id = 0;
   std::string Serialize() const {
     return StrCat(employee_id, "\t", name, "\t", division_id);
   }
@@ -54,7 +54,7 @@ void LoadIndexRecords(DBM* dbm, DivisionIndex* division_index) {
         : division_index_(division_index) {}
     // This is called for each existing record.
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      const int32_t key_num = StrToInt(key);
+      const int64_t key_num = StrToInt(key);
       Employee employee;
       employee.Deserialize(value);
       division_index_->Add(employee.division_id, key_num);
@@ -77,7 +77,7 @@ void UpdateEmployee(const Employee& employee, DBM* dbm, DivisionIndex* division_
     }
     // This is called if there is an existing record of the key.
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      const int32_t key_num = StrToInt(key);
+      const int64_t key_num = StrToInt(key);
       Employee old_record;
       old_record.Deserialize(value);
       // Removes an entry for the existing record.
@@ -98,7 +98,7 @@ void UpdateEmployee(const Employee& employee, DBM* dbm, DivisionIndex* division_
     }
     // This is called if there is no existing record of the key.
     std::string_view ProcessEmpty(std::string_view key) override {
-      const int32_t key_num = StrToInt(key);
+      const int64_t key_num = StrToInt(key);
       // If the new name is empty, nothing is done.
       if (employee_.name.empty()) {
         return NOOP;
@@ -167,9 +167,9 @@ int main(int argc, char** argv) {
   }
 
   // Prints members for each division.
-  for (const int32_t division_id : {301, 401, 501}) {
+  for (const int64_t division_id : {301, 401, 501}) {
     std::cout << "-- Division " << division_id << "  --" << std::endl;
-    for (int32_t employee_id : division_index.GetValues(division_id)) {
+    for (int64_t employee_id : division_index.GetValues(division_id)) {
       Employee employee;
       employee.Deserialize(dbm.GetSimple(ToString(employee_id)));
       employee.Print();

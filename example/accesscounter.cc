@@ -39,7 +39,7 @@ void MultiplyEach(DBM* dbm, double factor) {
       if (value.data() == DBM::RecordProcessor::NOOP.data()) {
         return DBM::RecordProcessor::NOOP;
       }
-      const int64_t count = StrToInt(value) * factor;
+      const int64_t count = static_cast<int64_t>(StrToInt(value) * factor);
       if (count < 1) {
         return DBM::RecordProcessor::REMOVE;
       }

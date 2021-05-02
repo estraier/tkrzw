@@ -1,0 +1,110 @@
+# Makefile for Tkrzw for Win32
+
+VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
+SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
+VCINCPATH = $(VCPATH)\include
+VCLIBPATH = $(VCPATH)\lib\x64
+UMLIBPATH = $(SDKPATH)\um\x64
+UCRTLIBPATH = $(SDKPATH)\ucrt\x64
+
+COMMANDFILES = helloworld.exe accesscounter.exe \
+  hashdbm_ex1.exe hashdbm_ex2.exe hashdbm_ex3.exe \
+  treedbm_ex1.exe treedbm_ex2.exe treedbm_ex3.exe \
+  skipdbm_ex1.exe skipdbm_ex2.exe skipdbm_ex3.exe \
+  tinydbm_ex1.exe tinydbm_ex2.exe \
+  babydbm_ex1.exe babydbm_ex2.exe \
+  cachedbm_ex1.exe \
+  stdtreedbm_ex1.exe stdtreedbm_ex2.exe \
+  polydbm_ex1.exe sharddbm_ex1.exe \
+  fileindex_ex1.exe stdindex_ex1.exe \
+  invindex_ex1.exe
+
+CL = cl
+LINK = link
+CLFLAGS = /nologo \
+  /std:c++17 /Zc:__cplusplus \
+  /I "$(VCINCPATH)" /I .. \
+  /O2 /EHsc /W3 /MT
+LINKFLAGS = /nologo \
+  /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)" /libpath:..
+
+.SUFFIXES :
+.SUFFIXES : .cc .c .obj .exe
+
+.cc.obj :
+	$(CL) /c $(CLFLAGS) $<
+
+all : $(COMMANDFILES)
+
+clean :
+	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
+	-del casket* /F /Q > NUL: 2>&1
+
+helloworld.exe : helloworld.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ helloworld.obj tkrzw.lib
+
+accesscounter.exe : accesscounter.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ accesscounter.obj tkrzw.lib
+
+hashdbm_ex1.exe : hashdbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ hashdbm_ex1.obj tkrzw.lib
+
+hashdbm_ex2.exe : hashdbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ hashdbm_ex2.obj tkrzw.lib
+
+hashdbm_ex3.exe : hashdbm_ex3.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ hashdbm_ex3.obj tkrzw.lib
+
+treedbm_ex1.exe : treedbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ treedbm_ex1.obj tkrzw.lib
+
+treedbm_ex2.exe : treedbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ treedbm_ex2.obj tkrzw.lib
+
+treedbm_ex3.exe : treedbm_ex3.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ treedbm_ex3.obj tkrzw.lib
+
+skipdbm_ex1.exe : skipdbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ skipdbm_ex1.obj tkrzw.lib
+
+skipdbm_ex2.exe : skipdbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ skipdbm_ex2.obj tkrzw.lib
+
+skipdbm_ex3.exe : skipdbm_ex3.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ skipdbm_ex3.obj tkrzw.lib
+
+tinydbm_ex1.exe : tinydbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ tinydbm_ex1.obj tkrzw.lib
+
+tinydbm_ex2.exe : tinydbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ tinydbm_ex2.obj tkrzw.lib
+
+babydbm_ex1.exe : babydbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ babydbm_ex1.obj tkrzw.lib
+
+babydbm_ex2.exe : babydbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ babydbm_ex2.obj tkrzw.lib
+
+cachedbm_ex1.exe : cachedbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ cachedbm_ex1.obj tkrzw.lib
+
+stdtreedbm_ex1.exe : stdtreedbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ stdtreedbm_ex1.obj tkrzw.lib
+
+stdtreedbm_ex2.exe : stdtreedbm_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ stdtreedbm_ex2.obj tkrzw.lib
+
+polydbm_ex1.exe : polydbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ polydbm_ex1.obj tkrzw.lib
+
+sharddbm_ex1.exe : sharddbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ sharddbm_ex1.obj tkrzw.lib
+
+fileindex_ex1.exe : fileindex_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ fileindex_ex1.obj tkrzw.lib
+
+stdindex_ex1.exe : stdindex_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ stdindex_ex1.obj tkrzw.lib
+
+invindex_ex1.exe : invindex_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ invindex_ex1.obj tkrzw.lib

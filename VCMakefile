@@ -16,7 +16,7 @@ CL = cl
 LIB = lib
 LINK = link
 CLFLAGS = /nologo \
-	/std:c++17 /Zc:__cplusplus \
+  /std:c++17 /Zc:__cplusplus \
   /I "$(VCINCPATH)" \
   /DNDEBUG /D_CRT_SECURE_NO_WARNINGS \
   /D_TKRZW_PKG_VERSION="\"0.9.10\"" /D_TKRZW_LIB_VERSION="\"1.0.0\"" \

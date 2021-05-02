@@ -123,17 +123,7 @@ inline std::string ToString(T data) {
  * @param data The real number to convert.
  * @return The converted string.
  */
-inline std::string ToString(double data) {
-  char buf[NUM_BUFFER_SIZE];
-  int32_t size = std::sprintf(buf, "%.6f", data);
-  while (size > 0 && buf[size - 1] == '0') {
-    buf[size--] = '\0';
-  }
-  if (size > 0 && buf[size - 1] == '.') {
-    buf[size--] = '\0';
-  }
-  return std::string(buf, size);
-}
+std::string ToString(double data);
 
 /**
  * Converts a real number to a decimal string.

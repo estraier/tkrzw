@@ -22,9 +22,9 @@ using namespace tkrzw;
 // Structure for an employee.
 // Acutually, you should use a serious implementaton like Protocol Buffers.
 struct Employee {
-  int32_t employee_id = 0;
+  int64_t employee_id = 0;
   std::string name;
-  int32_t division_id = 0;
+  int64_t division_id = 0;
   std::string Serialize() const {
     return StrCat(employee_id, "\t", name, "\t", division_id);
   }
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
   }
 
   // Prints members for each division.
-  for (const int32_t division_id : {301, 401, 501}) {
+  for (const int64_t division_id : {301, 401, 501}) {
     std::cout << "-- Division " << division_id << "  --" << std::endl;
     for (const std::string employee_id :
              division_index.GetValues(ToString(division_id))) {

@@ -396,6 +396,18 @@ void VSPrintF(std::string* dest, const char* format, va_list ap) {
   }
 }
 
+std::string ToString(double data) {
+  char buf[NUM_BUFFER_SIZE];
+  int32_t size = std::sprintf(buf, "%.6f", data);
+  while (size > 0 && buf[size - 1] == '0') {
+    buf[size--] = '\0';
+  }
+  if (size > 0 && buf[size - 1] == '.') {
+    buf[size--] = '\0';
+  }
+  return std::string(buf, size);
+}
+
 bool StrToBool(std::string_view str, bool defval) {
   const std::string& lower = StrLowerCase(StrStripSpace(str));
   if (lower == "true" || lower == "t" || lower == "yes" || lower == "y" || lower == "1") {
