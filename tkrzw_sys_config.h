@@ -97,6 +97,13 @@
 
 #endif
 
+#if !defined(_TKRZW_PKG_VERSION)
+#define _TKRZW_PKG_VERSION  "0.0.1"
+#endif
+#if !defined(_TKRZW_LIB_VERSION)
+#define _TKRZW_LIB_VERSION  "0.0.1"
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -134,6 +141,8 @@
 #include <cstdint>
 #include <cstring>
 
+#if defined(_SYS_POSIX_)
+
 extern "C" {
 #include <unistd.h>
 #include <sys/param.h>
@@ -147,6 +156,21 @@ extern "C" {
 #include <fcntl.h>
 #include <dirent.h>
 }  // extern "C"
+
+#endif
+
+#if defined(_SYS_WINDOWS_)
+
+#define NOMINMAX
+#include <windows.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <direct.h>
+#include <io.h>
+#include <process.h>
+
+#endif
 
 namespace tkrzw {
 

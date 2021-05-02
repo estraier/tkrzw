@@ -32,6 +32,15 @@ const char* const TMP_DIR_CANDIDATES[] = {
   "\\tmp", "\\temp", "\\var\\tmp", "\\",
 };
 
+#define getpid _getpid
+#define open _open
+#define close _close
+#define read _read
+#define write _write
+#define unlink _unlink
+#define mkdir(a,b) _mkdir(a)
+#define rmdir _rmdir
+
 #else
 
 const char DIR_SEP_CHR = '/';
@@ -150,6 +159,27 @@ std::string PathToExtension(const std::string& path) {
 }
 
 Status GetRealPath(const std::string& path, std::string* real_path) {
+#if defined(_SYS_WINDOWS_)
+  assert(real_path != nullptr);
+  char buf[4096];
+  DWORD size = GetFullPathName(path.c_str(), sizeof(buf), buf, nullptr);
+  if (size < 1) {
+    return GetErrnoStatus("GetFullPathName", errno);
+  }
+  if (size < sizeof(buf)) {
+    *real_path = std::string(buf);
+    return Status(Status::SUCCESS);
+  }
+  char* lbuf = new char[size];
+  DWORD nsiz = GetFullPathName(path.c_str(), size, lbuf, nullptr);
+  if (nsiz < 1 || nsiz >= size) {
+    delete[] lbuf;
+    return GetErrnoStatus("GetFullPathName", errno);
+  }
+  *real_path = std::string(lbuf);
+  delete[] lbuf;
+  return Status(Status::SUCCESS);
+#else
   assert(real_path != nullptr);
   real_path->clear();
   char buf[PATH_MAX];
@@ -158,9 +188,32 @@ Status GetRealPath(const std::string& path, std::string* real_path) {
   }
   *real_path = std::string(buf);
   return Status(Status::SUCCESS);
+#endif
 }
 
 Status ReadFileStatus(const std::string& path, FileStatus* fstats) {
+#if defined(_SYS_WINDOWS_)
+  assert(fstats != nullptr);
+  WIN32_FILE_ATTRIBUTE_DATA ibuf;
+  if (!GetFileAttributesEx(path.c_str(), GetFileExInfoStandard, &ibuf)) {
+    return GetErrnoStatus("GetFileAttributesEx", errno);
+  }
+  if (ibuf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    fstats->is_file = false;
+    fstats->is_directory = true;
+  } else {
+    fstats->is_file = true;
+    fstats->is_directory = false;
+  }
+  LARGE_INTEGER li;
+  li.LowPart = ibuf.nFileSizeLow;
+  li.HighPart = ibuf.nFileSizeHigh;
+  fstats->file_size = li.QuadPart;
+  li.LowPart = ibuf.ftLastWriteTime.dwLowDateTime;
+  li.HighPart = ibuf.ftLastWriteTime.dwHighDateTime;
+  fstats->modified_time = li.QuadPart;
+  return Status(Status::SUCCESS);
+#else
   assert(fstats != nullptr);
   struct stat sbuf;
   if (lstat(path.c_str(), &sbuf) != 0) {
@@ -171,6 +224,7 @@ Status ReadFileStatus(const std::string& path, FileStatus* fstats) {
   fstats->file_size = sbuf.st_size;
   fstats->modified_time = sbuf.st_mtime;
   return Status(Status::SUCCESS);
+#endif
 }
 
 bool PathIsFile(const std::string& path) {
@@ -311,6 +365,33 @@ Status CopyFile(const std::string& src_path, const std::string& dest_path) {
 }
 
 Status ReadDirectory(const std::string& path, std::vector<std::string>* children) {
+#if defined(_SYS_WINDOWS_)
+  assert(children != nullptr);
+  std::string dpath = path;
+  if (path.empty() || path.back() != DIR_SEP_CHR) {
+    dpath.append(DIR_SEP_STR);
+  }
+  dpath.append("*");
+  WIN32_FIND_DATA fbuf;
+  HANDLE dh = FindFirstFile(dpath.c_str(), &fbuf);
+  if (!dh || dh == INVALID_HANDLE_VALUE) {
+    return GetErrnoStatus("FindFirstFile", errno);
+  }
+  if (std::strcmp(fbuf.cFileName, CURRENT_DIR_NAME) &&
+      std::strcmp(fbuf.cFileName, PARENT_DIR_NAME)) {
+    children->push_back(fbuf.cFileName);
+  }
+  while (FindNextFile(dh, &fbuf)) {
+    if (std::strcmp(fbuf.cFileName, CURRENT_DIR_NAME) &&
+        std::strcmp(fbuf.cFileName, PARENT_DIR_NAME)) {
+      children->push_back(fbuf.cFileName);
+    }
+  }
+  if (!FindClose(dh)) {
+    return GetErrnoStatus("FindClose", errno);
+  }
+  return Status(Status::SUCCESS);
+#else
   assert(children != nullptr);
   children->clear();
   DIR* dir = opendir(path.c_str());
@@ -319,7 +400,7 @@ Status ReadDirectory(const std::string& path, std::vector<std::string>* children
   }
   struct dirent *dp;
   while ((dp = readdir(dir)) != nullptr) {
-    if (std::strcmp(dp->d_name, ".") && std::strcmp(dp->d_name, "..")) {
+    if (std::strcmp(dp->d_name, CURRENT_DIR_NAME) && std::strcmp(dp->d_name, PARENT_DIR_NAME)) {
       children->emplace_back(dp->d_name);
     }
   }
@@ -327,6 +408,7 @@ Status ReadDirectory(const std::string& path, std::vector<std::string>* children
     return GetErrnoStatus("closedir", errno);
   }
   return Status(Status::SUCCESS);
+#endif
 }
 
 Status MakeDirectory(const std::string& path, bool recursive) {

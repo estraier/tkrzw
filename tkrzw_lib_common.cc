@@ -16,17 +16,27 @@
 
 namespace tkrzw {
 
-const int32_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
+#if defined(_SYS_WINDOWS_)
 
+const int32_t PAGE_SIZE = 4096;
 const char* const PACKAGE_VERSION = _TKRZW_PKG_VERSION;;
-
 const char* const LIBRARY_VERSION = _TKRZW_LIB_VERSION;;
-
 const char* const OS_NAME = _TKRZW_OSNAME;
-
 const bool IS_POSIX = _IS_POSIX;
-
 const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
+
+constexpr int32_t EDQUOT = 10001;
+
+#else
+
+const int32_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
+const char* const PACKAGE_VERSION = _TKRZW_PKG_VERSION;;
+const char* const LIBRARY_VERSION = _TKRZW_LIB_VERSION;;
+const char* const OS_NAME = _TKRZW_OSNAME;
+const bool IS_POSIX = _IS_POSIX;
+const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
+
+#endif
 
 const Status& Status::OrDie() const {
   if (code_ != SUCCESS) {

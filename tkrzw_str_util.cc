@@ -560,7 +560,7 @@ bool StrEndsWith(std::string_view text, std::string_view pattern) {
 }
 
 int32_t StrCaseCompare(std::string_view a, std::string_view b) {
-  int32_t length = std::min(a.size(), b.size());
+  const int32_t length = std::min(a.size(), b.size());
   for (int32_t i = 0; i < length; i++) {
     int32_t ac = static_cast<unsigned char>(a[i]);
     if (ac >= 'A' && ac <= 'Z') {
@@ -632,7 +632,7 @@ int32_t StrSearchMemchr(std::string_view text, std::string_view pattern) {
 
 int32_t StrSearchMemmem(std::string_view text, std::string_view pattern) {
   const void* result =
-      memmem(text.data(), text.size(), pattern.data(), pattern.size());
+      tkrzw_memmem(text.data(), text.size(), pattern.data(), pattern.size());
   if (result == nullptr) {
     return -1;
   }

@@ -1,0 +1,51 @@
+# Makefile for Tkrzw for Win32
+
+VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
+SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
+VCINCPATH = $(VCPATH)\include
+VCLIBPATH = $(VCPATH)\lib\x64
+UMLIBPATH = $(SDKPATH)\um\x64
+UCRTLIBPATH = $(SDKPATH)\ucrt\x64
+
+HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h
+LIBRARYFILES = tkrzw.lib
+LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj
+COMMANDFILES = tkrzw_build_util.exe
+
+CL = cl
+LIB = lib
+LINK = link
+CLFLAGS = /nologo \
+	/std:c++17 /Zc:__cplusplus \
+  /I "$(VCINCPATH)" \
+  /DNDEBUG /D_CRT_SECURE_NO_WARNINGS \
+  /O2 /EHsc /W3 /wd4244 /wd4267 /wd4351 /wd4800 /MT
+LIBFLAGS = /nologo \
+  /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)"
+LINKFLAGS = /nologo \
+  /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)"
+
+.SUFFIXES :
+.SUFFIXES : .cc .c .obj .exe
+
+.cc.obj :
+	$(CL) /c $(CLFLAGS) $<
+
+all : $(LIBRARYFILES) $(COMMANDFILES)
+	@echo #
+	@echo #================================================================
+	@echo # Ready to install.
+	@echo #================================================================
+
+clean :
+	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
+	-del casket* /F /Q > NUL: 2>&1
+
+tkrzw.lib : $(LIBOBJFILES)
+	$(LIB) $(LIBFLAGS) /OUT:$@ $(LIBOBJFILES)
+
+tkrzw_build_util.exe : tkrzw_build_util.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_build_util.obj tkrzw.lib
+
+$(LIBOBJFILES) $(COMMANDFILES) : $(HEADERFILES)
+
