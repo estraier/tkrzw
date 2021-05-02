@@ -200,11 +200,11 @@ bool HashMutex::LockOneShared(int64_t bucket_index) {
     return false;
   }
   const int32_t slot_index = bucket_index % num_slots_;
-  slots_[slot_index].lock();
+  slots_[slot_index].lock_shared();
   if (num_buckets_.load() == old_num_buckets) {
     return true;
   }
-  slots_[slot_index].unlock();
+  slots_[slot_index].unlock_shared();
   return false;
 }
 
