@@ -146,8 +146,10 @@ TEST(FileUtilTest, FileOperations) {
   std::string content;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ("abc\ndef\n", content);
+  EXPECT_EQ("abc\ndef\n", tkrzw::ReadFileSimple(file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(file_path));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, tkrzw::ReadFile(file_path, &content));
+  EXPECT_EQ("miss", tkrzw::ReadFileSimple(file_path, "miss"));
   const std::string& new_file_path =
       tkrzw::JoinPath(base_dir, "tkrzw-test-" + tkrzw::MakeTemporaryName());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(file_path, "abc\ndef\nefg\n"));
@@ -157,6 +159,12 @@ TEST(FileUtilTest, FileOperations) {
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(new_file_path, &content));
   EXPECT_EQ("abc\n", content);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(file_path, "old"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(new_file_path, "new"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RenameFile(file_path, new_file_path));
+  EXPECT_FALSE(tkrzw::PathIsFile(file_path));
+  EXPECT_EQ("old", tkrzw::ReadFileSimple(new_file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(new_file_path));
 }
 
@@ -207,6 +215,16 @@ TEST(FileUtilTest, DirectoryOperation) {
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, tkrzw::RemoveDirectory(dir_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveDirectory(dir_path, true));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, tkrzw::RemoveDirectory(dir_path, true));
+  const std::string& new_dir_path =
+      tkrzw::JoinPath(base_dir, "tkrzw-test-" + tkrzw::MakeTemporaryName());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MakeDirectory(dir_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(tkrzw::JoinPath(dir_path, "child"), ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MakeDirectory(new_dir_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RenameFile(dir_path, new_dir_path));
+  EXPECT_FALSE(tkrzw::PathIsDirectory(dir_path));
+  child_names.clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadDirectory(new_dir_path, &child_names));
+  EXPECT_THAT(child_names, UnorderedElementsAre("child"));
 }
 
 TEST(FileUtilTest, TemporaryDirectory) {

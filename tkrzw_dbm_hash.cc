@@ -526,8 +526,13 @@ Status HashDBMImpl::Rebuild(
       return status;
     }
     fbp_.Clear();
-    status |= tmp_file->Rename(path_);
-    status |= file_->Close();
+    if (IS_POSIX) {
+      status |= tmp_file->Rename(path_);
+      status |= file_->Close();
+    } else {
+      status |= file_->Close();
+      status |= tmp_file->Rename(path_);
+    }
     file_ = std::move(tmp_file);
     if (tuning_params.fbp_capacity >= 0) {
       fbp_.SetCapacity(tuning_params.fbp_capacity);
@@ -537,7 +542,7 @@ Status HashDBMImpl::Rebuild(
     db_type_ = db_type;
     opaque_ = opaque;
   }
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 Status HashDBMImpl::ShouldBeRebuilt(bool* tobe) {

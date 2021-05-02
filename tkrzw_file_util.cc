@@ -308,6 +308,11 @@ Status ReadFile(const std::string& path, std::string* content) {
   return status;
 }
 
+std::string ReadFileSimple(const std::string& path, std::string_view default_value) {
+  std::string content;
+  return ReadFile(path, &content) == Status::SUCCESS ? content : std::string(default_value);
+}
+
 Status RemoveFile(const std::string& path) {
   if (unlink(path.c_str()) != 0) {
     return GetErrnoStatus("unlink", errno);
@@ -316,6 +321,29 @@ Status RemoveFile(const std::string& path) {
 }
 
 Status RenameFile(const std::string& src_path, const std::string& dest_path) {
+  if (!IS_POSIX) {
+    FileStatus src_stats;
+    Status status = ReadFileStatus(src_path, &src_stats);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    FileStatus dest_stats;    
+    status = ReadFileStatus(dest_path, &dest_stats);
+    if (status == Status::SUCCESS) {
+      if (src_stats.is_file && dest_stats.is_file) {
+        status = RemoveFile(dest_path);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+      }
+      if (src_stats.is_directory && dest_stats.is_directory) {
+        status = RemoveDirectory(dest_path, false);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+      }
+    }
+  }
   if (rename(src_path.c_str(), dest_path.c_str()) != 0) {
     return GetErrnoStatus("rename", errno);
   }

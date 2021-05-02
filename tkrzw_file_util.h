@@ -159,6 +159,15 @@ Status WriteFile(const std::string& path, std::string_view content);
  */
 Status ReadFile(const std::string& path, std::string* content);
 
+
+/**
+ * Read the content from a file, in a simple way.
+ * @param path The path of the file to make.
+ * @param default_value The value to be returned on failure.
+ * @return The content of the file on success, or the default value on failure.
+ */
+std::string ReadFileSimple(const std::string& path, std::string_view default_value = "");
+
 /**
  * Removes a file.
  * @param path The path of the file.
@@ -171,6 +180,8 @@ Status RemoveFile(const std::string& path);
  * @param src_path The source path of the file.
  * @param dest_path The destination path of the file.
  * @return The result status.
+ * @details If there is a file at the destination path, the file is overwritten.  This function
+ * can rename directories too.
  */
 Status RenameFile(const std::string& src_path, const std::string& dest_path);
 

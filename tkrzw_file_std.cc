@@ -193,6 +193,7 @@ Status StdFileImpl::Rename(const std::string& new_path) {
   }
   status = RenameFile(old_path, new_path);
   if (status != Status::SUCCESS) {
+    OpenImpl(new_path, writable, options);
     return status;
   }
   return OpenImpl(new_path, writable, options);
