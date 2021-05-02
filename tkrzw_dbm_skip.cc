@@ -992,9 +992,6 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   } else {
     std::unique_ptr<File> swap_file(nullptr);
     if (file_->GetSizeSimple() > static_cast<int64_t>(METADATA_SIZE)) {
-      if (!IS_POSIX) {
-        swap_file->Close();
-      }
       status = file_->Rename(swap_path);
       if (status != Status::SUCCESS) {
         return status;
