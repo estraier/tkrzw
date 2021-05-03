@@ -6,8 +6,8 @@ VCINCPATH = $(VCPATH)\include
 VCLIBPATH = $(VCPATH)\lib\x64
 UMLIBPATH = $(SDKPATH)\um\x64
 UCRTLIBPATH = $(SDKPATH)\ucrt\x64
-TKRZWINCPATH = C:\Program Files (x86)\tkrzw\include
-TKRZWLIBPATH = C:\Program Files (x86)\tkrzw\lib
+TKRZWINCPATH = C:\Program Files\tkrzw\include
+TKRZWLIBPATH = C:\Program Files\tkrzw\lib
 
 COMMANDFILES = helloworld.exe accesscounter.exe \
   hashdbm_ex1.exe hashdbm_ex2.exe hashdbm_ex3.exe \

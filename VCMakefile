@@ -7,7 +7,7 @@ VCLIBPATH = $(VCPATH)\lib\x64
 UMLIBPATH = $(SDKPATH)\um\x64
 UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 
-PREFIX = C:\Program Files (x86)
+PREFIX = C:\Program Files
 BASEDIR = $(PREFIX)\tkrzw
 INCLUDEDIR = $(BASEDIR)\include
 LIBDIR = $(BASEDIR)\lib

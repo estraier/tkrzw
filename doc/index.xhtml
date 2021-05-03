@@ -647,12 +647,12 @@ UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 > nmake -f VCMakefile check 
 ]]></code></pre>
 
-<p>To install the library, open another command prompt as Administrator and run the following command.</p>
+<p>To install the library, open another command prompt of VC++ as Administrator and run the following command.</p>
 
 <pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile install
 ]]></code></pre>
 
-<p>By default, the library and related files are installed under "C:\Program Files (x86)\tkrzw".  You can change it by editing VCMakefile before installation.</p>
+<p>By default, the library and related files are installed under "C:\Program Files\tkrzw".  You can change it by editing VCMakefile before installation.</p>
 
 <p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
 
@@ -679,9 +679,9 @@ int main(int argc, char** argv) {
 <p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
 
 <pre><code class="language-shell-session"><![CDATA[> tkrzw_build_util config -i
-/I "C:\Program Files (x86)\tkrzw\include"
+/I "C:\Program Files\tkrzw\include"
 > tkrzw_build_util config -l
-/libpath:"C:\Program Files (x86)\tkrzw\lib" tkrzw.lib
+/libpath:"C:\Program Files\tkrzw\lib" tkrzw.lib
 ]]></code></pre>
 
 <p>By default, the compiler flag "/MT" is specified to link to the multithread, static version of the run-time library.  You can change it to "/MD" link to the dynamic run-time library.  You can also make a DLL for TKRZW by the linker option "/LD".</p>
