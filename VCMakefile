@@ -7,6 +7,13 @@ VCLIBPATH = $(VCPATH)\lib\x64
 UMLIBPATH = $(SDKPATH)\um\x64
 UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 
+PREFIX = C:\Program Files (x86)
+BASEDIR = $(PREFIX)\tkrzw
+INCLUDEDIR = $(BASEDIR)\include
+LIBDIR = $(BASEDIR)\lib
+BINDIR = $(BASEDIR)\bin
+LIBEXECDIR = $(BASEDIR)\bin
+
 HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h
 LIBRARYFILES = tkrzw.lib
 LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj
@@ -20,6 +27,11 @@ CLFLAGS = /nologo \
   /I "$(VCINCPATH)" \
   /DNDEBUG /D_CRT_SECURE_NO_WARNINGS \
   /D_TKRZW_PKG_VERSION="\"0.9.10\"" /D_TKRZW_LIB_VERSION="\"1.0.0\"" \
+  /D_TKRZW_PREFIX="R\"($(PREFIX))\"" /D_TKRZW_INCLUDEDIR="R\"($(INCLUDEDIR))\"" \
+  /D_TKRZW_LIBDIR="R\"($(LIBDIR))\"" /D_TKRZW_BINDIR="R\"($(BINDIR))\"" \
+  /D_TKRZW_LIBEXECDIR="R\"($(LIBEXECDIR))\"" \
+  /D_TKRZW_APPINC="R\"(/I \"$(INCLUDEDIR)\")\"" \
+  /D_TKRZW_APPLIBS="R\"(/libpath:\"$(LIBDIR)\" tkrzw.lib)\"" \
   /O2 /EHsc /W3 /wd4244 /wd4267 /wd4334 /wd4351 /wd4800 /MT
 LIBFLAGS = /nologo \
   /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)"
@@ -41,6 +53,17 @@ all : $(LIBRARYFILES) $(COMMANDFILES)
 clean :
 	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
 	-del casket* /F /Q > NUL: 2>&1
+
+install :
+	-md "$(INCLUDEDIR)" > NUL: 2>&1
+	-for %I in ($(HEADERFILES)) do copy /B /Y %I "$(INCLUDEDIR)"
+	-md "$(LIBDIR)" > NUL: 2>&1
+	-for %I in ($(LIBRARYFILES)) do copy /B /Y %I "$(LIBDIR)"
+	-md "$(BINDIR)" > NUL: 2>&1
+	-for %I in ($(COMMANDFILES)) do copy /B /Y %I "$(BINDIR)"
+
+uninstall :
+	-rd /S "$(BASEDIR)"
 
 check : check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf
 	-del casket* /F /Q > NUL: 2>&1

@@ -540,7 +540,11 @@ window.onload = function(){
 
 <h2 id="installation">Installation</h2>
 
-<p>Tkrzw is implemented based on the C++17 standard and POSIX.  To install the library, a Unix-like system (Linux, Mac OS X) and GCC (version 7 or later) are required.  Usually, you will run the following commands.</p>
+<p>Tkrzw is implemented based on the C++17 standard and POSIX/Win32 API.  On a Unix-like system (Linux, Mac OS X), GCC (version 9 or later) is required.  On a Windows system, Visual C++ (2019 or later) is required.</p>
+
+<h3 id="installation_unix">For UNIX</h3>
+
+<p>To build and install the library, usually, you will run the following commands.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-optarch
 $ make
@@ -623,56 +627,64 @@ $ pkg-config --libs tkrzw
 $ make testrun
 ]]></code></pre>
 
-<p>Performance tests described in the overview section can be done by the following commands.</p>
+<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
 
-<pre><code class="language-shell-session"><![CDATA[# Sequential access tests by one thread.
-$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm tiny --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm baby --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm cache --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm stdhash --iter 1000000
-$ tkrzw_dbm_perf sequence --dbm stdtree --iter 1000000
+<h3 id="installation_unix">For Windows</h3>
 
-# Sequential access tests by ten threads.
-$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm tiny --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm baby --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm cache --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm stdhash --iter 100000 --threads 10
-$ tkrzw_dbm_perf sequence --dbm stdtree --iter 100000 --threads 10
+<p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.</p>
 
-# Large scale random access tests by one thread.
-$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 100000000 --random_key \
-  --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 100000000 --random_key \
-  --align_pow 12 --buckets 1000000 --max_page_size 4080 --max_cached_pages 400000
-$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 100000000 --random_key \
-  --sort_mem_size 1500m --max_cached_records 25000000 --reducer last
-$ tkrzw_dbm_perf sequence --dbm tiny --iter 100000000 --random_key --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm baby --iter 100000000 --random_key
-$ tkrzw_dbm_perf sequence --dbm cache --iter 100000000 --random_key --cap_rec_num 110000000
-$ tkrzw_dbm_perf sequence --dbm stdhash --iter 100000000 --random_key --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm stdtree --iter 100000000 --random_key
-
-# Large scale random access tests by ten threads.
-$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 10000000 --threads 10 --random_key \
-  --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 10000000 --threads 10 --random_key \
-  --align_pow 12 --buckets 1000000 --max_page_size 4080 --max_cached_pages 400000
-$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 10000000 --threads 10 --random_key \
-  --sort_mem_size 1500m --max_cached_records 25000000 --reducer last
-$ tkrzw_dbm_perf sequence --dbm tiny --iter 10000000 --random_key --threads 10 --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm baby --iter 10000000 --random_key --threads 10
-$ tkrzw_dbm_perf sequence --dbm cache --iter 10000000 --random_key --threads 10 --cap_rec_num 110000000
-$ tkrzw_dbm_perf sequence --dbm stdhash --iter 10000000 --random_key --threads 10 --buckets 100000000
-$ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 10
+<pre><code class="language-shell-session"><![CDATA[VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
+SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
+VCINCPATH = $(VCPATH)\include
+VCLIBPATH = $(VCPATH)\lib\x64
+UMLIBPATH = $(SDKPATH)\um\x64
+UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 ]]></code></pre>
 
-<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
+<p>Open "x86 Native Tools Command Prompt for VS 2009" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile
+> nmake -f VCMakefile check 
+]]></code></pre>
+
+<p>To install the library, open another command prompt as Administrator and run the following command.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile install
+]]></code></pre>
+
+<p>By default, the library and related files are installed under "C:\Program Files (x86)\tkrzw".  You can change it by editing VCMakefile before installation.</p>
+
+<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
+
+<pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
+
+int main(int argc, char** argv) {
+  tkrzw::HashDBM dbm;
+  dbm.Open("casket.tkh", true).OrDie();
+  dbm.Set("hello", "world").OrDie();
+  std::cout << dbm.GetSimple("hello") << std::endl;
+  dbm.Close().OrDie();
+  return 0;
+}
+]]></code></pre>
+
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "/std:c++17" is necessary if the default C++ version of your compiler is older than C++17.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> cl /std:c++17 /Zc:__cplusplus \
+  /I "C:\Program Files (x86)\tkrzw\include" \
+  /O2 /EHsc /W3 /MT helloworld.cc tkrzw.lib \
+  /link /libpath:"C:\Program Files (x86)\tkrzw\lib"
+]]></code></pre>
+
+<p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
+
+<pre><code class="language-shell-session"><![CDATA[> tkrzw_build_util config -i
+/I "C:\Program Files (x86)\tkrzw\include"
+> tkrzw_build_util config -l
+/libpath:"C:\Program Files (x86)\tkrzw\lib" tkrzw.lib
+]]></code></pre>
+
+<p>By default, the compiler flag "/MT" is specified to link to the multithread, static version of the run-time library.  You can change it to "/MD" link to the dynamic run-time library.  You can also make a DLL for TKRZW by the linker option "/LD".</p>
 
 <h2 id="hashdbm_overview">HashDBM: The File Hash Database</h2>
 
@@ -3664,6 +3676,57 @@ dbm.Open("casket.tkh", true);
 
 <p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.</p>
 
+<h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
+
+<p>Performance tests described in the overview section can be done by the following commands.</p>
+
+<pre><code class="language-shell-session"><![CDATA[# Sequential access tests by one thread.
+$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm tiny --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm baby --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm cache --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm stdhash --iter 1000000
+$ tkrzw_dbm_perf sequence --dbm stdtree --iter 1000000
+
+# Sequential access tests by ten threads.
+$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm tiny --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm baby --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm cache --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm stdhash --iter 100000 --threads 10
+$ tkrzw_dbm_perf sequence --dbm stdtree --iter 100000 --threads 10
+
+# Large scale random access tests by one thread.
+$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 100000000 --random_key \
+  --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 100000000 --random_key \
+  --align_pow 12 --buckets 1000000 --max_page_size 4080 --max_cached_pages 400000
+$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 100000000 --random_key \
+  --sort_mem_size 1500m --max_cached_records 25000000 --reducer last
+$ tkrzw_dbm_perf sequence --dbm tiny --iter 100000000 --random_key --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm baby --iter 100000000 --random_key
+$ tkrzw_dbm_perf sequence --dbm cache --iter 100000000 --random_key --cap_rec_num 110000000
+$ tkrzw_dbm_perf sequence --dbm stdhash --iter 100000000 --random_key --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm stdtree --iter 100000000 --random_key
+
+# Large scale random access tests by ten threads.
+$ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 10000000 --threads 10 --random_key \
+  --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm tree --path casket.tkt --iter 10000000 --threads 10 --random_key \
+  --align_pow 12 --buckets 1000000 --max_page_size 4080 --max_cached_pages 400000
+$ tkrzw_dbm_perf sequence --dbm skip --path casket.tks --iter 10000000 --threads 10 --random_key \
+  --sort_mem_size 1500m --max_cached_records 25000000 --reducer last
+$ tkrzw_dbm_perf sequence --dbm tiny --iter 10000000 --random_key --threads 10 --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm baby --iter 10000000 --random_key --threads 10
+$ tkrzw_dbm_perf sequence --dbm cache --iter 10000000 --random_key --threads 10 --cap_rec_num 110000000
+$ tkrzw_dbm_perf sequence --dbm stdhash --iter 10000000 --random_key --threads 10 --buckets 100000000
+$ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 10
+]]></code></pre>
+
 <h3 id="tips_faq">Frequently Asked Questions</h3>
 
 <dl>
@@ -3673,8 +3736,8 @@ dbm.Open("casket.tkh", true);
 <dd>A: Tkrzw is a successor of them, utilizing C++17 features.  I believe Tkrzw is superior in many aspects to them.  Because API and data formats have been changed, there's no compatibility with the predecessors.</dd>
 <dt>Q: Do you have a plan to write a database server like Kyoto Tycoon?</dt>
 <dd>A: I don't so far.  I could consider it if there are demands.</dd>
-<dt>Q: Do you have a plan to write a Win32 version?</dt>
-<dd>A: I don't so far.  I don't have a Windows PC now.</dd>
+<dt>Q: Do you have a plan to host binary packages?</dt>
+<dd>A: I cannot do it myself.  I appriciate people who maintain binary packages for various environments.</dd>
 </dl>
 
 <h2 id="license">License</h2>

@@ -98,19 +98,19 @@
 #endif
 
 #if !defined(_TKRZW_PREFIX)
-#define _TKRZW_PREFIX       ""
+#define _TKRZW_PREFIX       "/"
 #endif
 #if !defined(_TKRZW_INCLUDEDIR)
-#define _TKRZW_INCLUDEDIR   ""
+#define _TKRZW_INCLUDEDIR   "/"
 #endif
 #if !defined(_TKRZW_LIBDIR)
-#define _TKRZW_LIBDIR       ""
+#define _TKRZW_LIBDIR       "/"
 #endif
 #if !defined(_TKRZW_BINDIR)
-#define _TKRZW_BINDIR       ""
+#define _TKRZW_BINDIR       "/"
 #endif
 #if !defined(_TKRZW_LIBEXECDIR)
-#define _TKRZW_LIBEXECDIR   ""
+#define _TKRZW_LIBEXECDIR   "/"
 #endif
 #if !defined(_TKRZW_APPINC)
 #define _TKRZW_APPINC       ""
@@ -119,10 +119,10 @@
 #define _TKRZW_APPLIBS      ""
 #endif
 #if !defined(_TKRZW_PKG_VERSION)
-#define _TKRZW_PKG_VERSION  "?"
+#define _TKRZW_PKG_VERSION  "0.0.0"
 #endif
 #if !defined(_TKRZW_LIB_VERSION)
-#define _TKRZW_LIB_VERSION  "?"
+#define _TKRZW_LIB_VERSION  "0.0.0"
 #endif
 
 #include <algorithm>

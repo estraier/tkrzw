@@ -56,11 +56,11 @@ clean :
 static :
 	make LDFLAGS="$(LDFLAGS) -static"
 
-check :
-	rm -rf casket*
-	$(RUNENV) ./tkhashex
+single :
+	g++ -std=c++17 -I/usr/local/include -Wall -fsigned-char -O2 \
+	  -o helloworld helloworld.cc -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
 
-.PHONY : all clean static
+.PHONY : all clean static single
 
 #================================================================
 # Building binaries

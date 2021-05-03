@@ -6,6 +6,8 @@ VCINCPATH = $(VCPATH)\include
 VCLIBPATH = $(VCPATH)\lib\x64
 UMLIBPATH = $(SDKPATH)\um\x64
 UCRTLIBPATH = $(SDKPATH)\ucrt\x64
+TKRZWINCPATH = C:\Program Files (x86)\tkrzw\include
+TKRZWLIBPATH = C:\Program Files (x86)\tkrzw\lib
 
 COMMANDFILES = helloworld.exe accesscounter.exe \
   hashdbm_ex1.exe hashdbm_ex2.exe hashdbm_ex3.exe \
@@ -26,7 +28,8 @@ CLFLAGS = /nologo \
   /I "$(VCINCPATH)" /I .. \
   /O2 /EHsc /W3 /MT
 LINKFLAGS = /nologo \
-  /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)" /libpath:..
+  /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)" \
+  /libpath:"$(TKRZWLIBPATH)" /libpath:..
 
 .SUFFIXES :
 .SUFFIXES : .cc .c .obj .exe
@@ -35,6 +38,11 @@ LINKFLAGS = /nologo \
 	$(CL) /c $(CLFLAGS) $<
 
 all : $(COMMANDFILES)
+
+single :
+	cl /nologo /std:c++17 /Zc:__cplusplus /I "$(TKRZWINCPATH)" \
+	  /O2 /EHsc /W3 /MT helloworld.cc tkrzw.lib \
+	  /link /nologo /libpath:"$(TKRZWLIBPATH)"
 
 clean :
 	-del *.obj *.lib *.dll *.exp *.exe /F /Q > NUL: 2>&1
