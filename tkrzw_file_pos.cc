@@ -19,7 +19,7 @@
 
 #elif defined(_SYS_WINDOWS_)
 
-#include "tkrzw_sys_file_pos_std.h"
+#include "tkrzw_sys_file_pos_windows.h"
 
 #else
 

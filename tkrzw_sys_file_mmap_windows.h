@@ -24,7 +24,6 @@
 
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
-#include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
@@ -602,7 +601,7 @@ class MemoryMapAtomicFileImpl final {
 
  private:
   Status AdjustMapSize(int64_t min_size);
-  
+
   HANDLE file_handle_;
   std::string path_;
   int64_t file_size_;
@@ -738,7 +737,7 @@ Status MemoryMapAtomicFileImpl::Open(
   } else {
     map = static_cast<void*>(const_cast<char*>(DUMMY_MAP));
   }
-  
+
   // Updates the internal data.
   file_handle_ = file_handle;
   path_ = path;

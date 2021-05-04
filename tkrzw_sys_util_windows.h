@@ -28,6 +28,11 @@
 
 namespace tkrzw {
 
+/**
+ * Get the message string of a system error code.
+ * @param error_code The system error code, typically gotton with GetLastError.
+ * @return The message string of the error code.
+ */
 inline std::string GetSysErrorString(int32_t error_code) {
   LPVOID msg_buf;
   const size_t msg_size = FormatMessageA(
@@ -39,6 +44,12 @@ inline std::string GetSysErrorString(int32_t error_code) {
   return msg_str;
 }
 
+/**
+ * Gets a status according to a system error code of a system call.
+ * @param call_name The name of the system call.
+ * @param error_code The system error code, typically gotton with GetLastError.
+ * @return The status object.
+ */
 inline Status GetSysErrorStatus(std::string_view call_name, int32_t error_code) {
   Status::Code status_code = Status::Code::SYSTEM_ERROR;
   switch (error_code) {
@@ -66,6 +77,12 @@ inline Status GetSysErrorStatus(std::string_view call_name, int32_t error_code) 
   return Status(status_code, message);
 }
 
+/**
+ * Truncates a file.
+ * @param file_handle The file to truncate.
+ * @param length The new length of the file.
+ * @return The result status.
+ */
 inline Status TruncateFile(HANDLE file_handle, int64_t length) {
   LARGE_INTEGER li;
   li.QuadPart = length;
@@ -78,6 +95,14 @@ inline Status TruncateFile(HANDLE file_handle, int64_t length) {
   return Status(Status::SUCCESS);
 }
 
+/**
+ * Remaps a memory map.
+ * @param file_handle The handle of the data file.
+ * @param map_size The new size of the mapping.
+ * @param map_handle The pointer to the map handle, which is modified as the new map handle.
+ * @param map The pointer to the map buffer, which is modified as the new map buffer.
+ * @return The result status.
+ */
 inline Status RemapMemory(
     HANDLE file_handle, int64_t map_size, HANDLE* map_handle, char** map) {
   if (!UnmapViewOfFile(*map)) {
@@ -100,6 +125,52 @@ inline Status RemapMemory(
   *map_handle = new_map_handle;
   *map = static_cast<char*>(new_map);
   return Status(Status::SUCCESS);
+}
+
+/**
+ * Read from a file at a given offset.
+ * @param file_handle The handle of the file to read from.
+ * @param buf The buffer to store the read data.
+ * @param count The number of bytes to read.
+ * @param offset The offset position to read at.
+ * @return The number of bytes acctuary read or -1 on failure.
+ */
+inline int32_t PositionalReadFile(
+    HANDLE file_handle, void* buf, size_t count, int64_t offset) {
+  OVERLAPPED obuf;
+  obuf.Internal = 0;
+  obuf.InternalHigh = 0;
+  obuf.Offset = offset;
+  obuf.OffsetHigh = offset >> 32;
+  obuf.hEvent = nullptr;
+  DWORD read_size = 0;
+  if (ReadFile(file_handle, buf, count, &read_size, &obuf)) {
+    return read_size;
+  }
+  return -1;
+}
+
+/**
+ * Write to a file at a given offset.
+ * @param file_handle The handle of the file to write to.
+ * @param buf The buffer of the data to write.
+ * @param count The number of bytes to write.
+ * @param offset The offset position to write at.
+ * @return The number of bytes acctuary written or -1 on failure.
+ */
+inline int32_t PositionalWriteFile(
+    HANDLE file_handle, const void* buf, size_t count, int64_t offset) {
+  OVERLAPPED obuf;
+  obuf.Internal = 0;
+  obuf.InternalHigh = 0;
+  obuf.Offset = offset;
+  obuf.OffsetHigh = offset >> 32;
+  obuf.hEvent = nullptr;
+  DWORD wrote_size = 0;
+  if (WriteFile(file_handle, buf, count, &wrote_size, &obuf)) {
+    return wrote_size;
+  }
+  return -1;
 }
 
 }  // namespace tkrzw

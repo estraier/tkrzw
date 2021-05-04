@@ -635,7 +635,7 @@ class MemoryMapAtomicFileImpl final {
 
  private:
   Status AdjustMapSize(int64_t min_size);
-  
+
   int32_t fd_;
   std::string path_;
   int64_t file_size_;
