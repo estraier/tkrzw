@@ -1413,16 +1413,21 @@ int main(int argc, char** argv) {
     tkrzw::PrintUsageAndDie();
   }
   int32_t rv = 0;
-  if (std::strcmp(args[1], "sequence") == 0) {
-    rv = tkrzw::ProcessSequence(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "parallel") == 0) {
-    rv = tkrzw::ProcessParallel(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "wicked") == 0) {
-    rv = tkrzw::ProcessWicked(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "index") == 0) {
-    rv = tkrzw::ProcessIndex(argc - 1, args + 1);
-  } else {
-    tkrzw::PrintUsageAndDie();
+  try {
+    if (std::strcmp(args[1], "sequence") == 0) {
+      rv = tkrzw::ProcessSequence(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "parallel") == 0) {
+      rv = tkrzw::ProcessParallel(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "wicked") == 0) {
+      rv = tkrzw::ProcessWicked(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "index") == 0) {
+      rv = tkrzw::ProcessIndex(argc - 1, args + 1);
+    } else {
+      tkrzw::PrintUsageAndDie();
+    }
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    rv = 1;
   }
   return rv;
 }

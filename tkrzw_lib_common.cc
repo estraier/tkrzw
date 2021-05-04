@@ -144,8 +144,8 @@ Status GetErrnoStatus(const char* call_name, int32_t sys_err_num) {
     case EISDIR: return Status(Status::INFEASIBLE_ERROR, msg("duplicated directory"));
     case ELOOP: return Status(Status::INFEASIBLE_ERROR, msg("looped path"));
     case EFBIG: return Status(Status::INFEASIBLE_ERROR, msg("too big file"));
-    case ENOSPC: return Status(Status::SYSTEM_ERROR, msg("no enough space"));
-    case ENOMEM: return Status(Status::SYSTEM_ERROR, msg("no enough memory"));
+    case ENOSPC: return Status(Status::INFEASIBLE_ERROR, msg("no enough space"));
+    case ENOMEM: return Status(Status::INFEASIBLE_ERROR, msg("no enough memory"));
     case EEXIST: return Status(Status::DUPLICATION_ERROR, msg("already exist"));
     case ENOTEMPTY: return Status(Status::INFEASIBLE_ERROR, msg("not empty"));
     case EBADF: return Status(Status::SYSTEM_ERROR, msg("bad file descriptor"));

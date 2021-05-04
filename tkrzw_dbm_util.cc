@@ -1115,30 +1115,35 @@ int main(int argc, char** argv) {
     tkrzw::PrintUsageAndDie();
   }
   int32_t rv = 0;
-  if (std::strcmp(args[1], "create") == 0) {
-    rv = tkrzw::ProcessCreate(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "inspect") == 0) {
-    rv = tkrzw::ProcessInspect(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "get") == 0) {
-    rv = tkrzw::ProcessGet(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "set") == 0) {
-    rv = tkrzw::ProcessSet(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "remove") == 0) {
-    rv = tkrzw::ProcessRemove(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "list") == 0) {
-    rv = tkrzw::ProcessList(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "rebuild") == 0) {
-    rv = tkrzw::ProcessRebuild(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "restore") == 0) {
-    rv = tkrzw::ProcessRestore(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "merge") == 0) {
-    rv = tkrzw::ProcessMerge(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "export") == 0) {
-    rv = tkrzw::ProcessExport(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "import") == 0) {
-    rv = tkrzw::ProcessImport(argc - 1, args + 1);
-  } else {
-    tkrzw::PrintUsageAndDie();
+  try {
+    if (std::strcmp(args[1], "create") == 0) {
+      rv = tkrzw::ProcessCreate(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "inspect") == 0) {
+      rv = tkrzw::ProcessInspect(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "get") == 0) {
+      rv = tkrzw::ProcessGet(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "set") == 0) {
+      rv = tkrzw::ProcessSet(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "remove") == 0) {
+      rv = tkrzw::ProcessRemove(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "list") == 0) {
+      rv = tkrzw::ProcessList(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "rebuild") == 0) {
+      rv = tkrzw::ProcessRebuild(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "restore") == 0) {
+      rv = tkrzw::ProcessRestore(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "merge") == 0) {
+      rv = tkrzw::ProcessMerge(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "export") == 0) {
+      rv = tkrzw::ProcessExport(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "import") == 0) {
+      rv = tkrzw::ProcessImport(argc - 1, args + 1);
+    } else {
+      tkrzw::PrintUsageAndDie();
+    }
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    rv = 1;
   }
   return rv;
 }

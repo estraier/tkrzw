@@ -87,12 +87,14 @@ TEST(LibCommonTest, StatusException) {
   } catch (const tkrzw::StatusException& e) {
     EXPECT_EQ(tkrzw::Status::SYSTEM_ERROR, e.GetStatus());
     EXPECT_EQ("foo", e.GetStatus().GetMessage());
+    EXPECT_EQ("SYSTEM_ERROR: foo", std::string(e));
   }
   try {
     throw tkrzw::StatusException(tkrzw::Status(tkrzw::Status::UNKNOWN_ERROR, "bar"));
   } catch (const tkrzw::StatusException& e) {
     EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, e.GetStatus());
     EXPECT_EQ("bar", e.GetStatus().GetMessage());
+    EXPECT_EQ("UNKNOWN_ERROR: bar", std::string(e));
   }
 }
 

@@ -47,6 +47,26 @@ inline std::string GetSysErrorString(int32_t error_code) {
 
 inline Status GetSysErrorStatus(std::string_view call_name, int32_t error_code) {
   Status::Code status_code = Status::Code::SYSTEM_ERROR;
+  switch (error_code) {
+    case ERROR_FILE_NOT_FOUND: status_code = Status::Code::NOT_FOUND_ERROR; break;
+    case ERROR_PATH_NOT_FOUND: status_code = Status::Code::NOT_FOUND_ERROR; break;
+    case ERROR_INVALID_DRIVE: status_code = Status::Code::NOT_FOUND_ERROR; break;
+    case ERROR_BAD_PATHNAME: status_code = Status::Code::NOT_FOUND_ERROR; break;
+    case ERROR_TOO_MANY_OPEN_FILES: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_NOT_ENOUGH_MEMORY: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_OUTOFMEMORY: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_HANDLE_DISK_FULL: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_CURRENT_DIRECTORY: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_DIR_NOT_EMPTY: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_ACCESS_DENIED: status_code = Status::Code::PERMISSION_ERROR; break;
+    case ERROR_WRITE_PROTECT: status_code = Status::Code::PERMISSION_ERROR; break;
+    case ERROR_CANNOT_MAKE: status_code = Status::Code::PERMISSION_ERROR; break;
+    case ERROR_NO_SUCH_PRIVILEGE: status_code = Status::Code::PERMISSION_ERROR; break;
+    case ERROR_BUSY: status_code = Status::Code::INFEASIBLE_ERROR; break;
+    case ERROR_ALREADY_EXISTS: status_code = Status::Code::DUPLICATION_ERROR; break;
+    case ERROR_FILE_EXISTS: status_code = Status::Code::DUPLICATION_ERROR; break;
+    default: break;
+  }
   const std::string message = StrCat(call_name, ": ", std::to_string(error_code),
                                      ": ", GetSysErrorString(error_code));
   return Status(status_code, message);

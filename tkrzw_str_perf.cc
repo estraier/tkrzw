@@ -189,10 +189,15 @@ int main(int argc, char** argv) {
     tkrzw::PrintUsageAndDie();
   }
   int32_t rv = 0;
-  if (std::strcmp(args[1], "search") == 0) {
-    rv = tkrzw::ProcessSearch(argc - 1, args + 1);
-  } else {
-    tkrzw::PrintUsageAndDie();
+  try {
+    if (std::strcmp(args[1], "search") == 0) {
+      rv = tkrzw::ProcessSearch(argc - 1, args + 1);
+    } else {
+      tkrzw::PrintUsageAndDie();
+    }
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    rv = 1;
   }
   return rv;
 }

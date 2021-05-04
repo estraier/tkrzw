@@ -116,12 +116,17 @@ int main(int argc, char** argv) {
     tkrzw::PrintUsageAndDie();
   }
   int32_t rv = 0;
-  if (std::strcmp(args[1], "config") == 0) {
-    rv = tkrzw::ProcessConfig(argc - 1, args + 1);
-  } else if (std::strcmp(args[1], "version") == 0 || std::strcmp(args[1], "--version") == 0) {
-    tkrzw::PrintVersion();
-  } else {
-    tkrzw::PrintUsageAndDie();
+  try {
+    if (std::strcmp(args[1], "config") == 0) {
+      rv = tkrzw::ProcessConfig(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "version") == 0 || std::strcmp(args[1], "--version") == 0) {
+      tkrzw::PrintVersion();
+    } else {
+      tkrzw::PrintUsageAndDie();
+    }
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    rv = 1;
   }
   return rv;
 }

@@ -425,6 +425,14 @@ class StatusException final : public std::runtime_error {
     return status_;
   }
 
+  /**
+   * Gets a string expression of the status.
+   * @return The string expression
+   */
+  operator std::string() const {
+    return std::string(status_);
+  }
+
  private:
   /** The status object. */
   Status status_;

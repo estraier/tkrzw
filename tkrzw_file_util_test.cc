@@ -59,6 +59,7 @@ TEST(FileUtilTest, NormalizePath) {
   EXPECT_EQ("a", tkrzw::NormalizePath("a/b/c/../.."));
   EXPECT_EQ("/a/d", tkrzw::NormalizePath("/a/./b/./c/../../d"));
   EXPECT_EQ("/d", tkrzw::NormalizePath("/a/../b/../c/../../d"));
+  EXPECT_EQ("c:/tako/uni/kani", tkrzw::NormalizePath("c:/tako/ika/../uni/./kani"));
 }
 
 TEST(FileUtilTest, PathToBaseName) {
