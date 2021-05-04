@@ -106,9 +106,9 @@ class MemoryMapParallelFileImpl final {
   Status AdjustMapSize(int64_t min_size);
 
   HANDLE file_handle_;
-  HANDLE map_handle_;
   std::string path_;
   std::atomic_int64_t file_size_;
+  HANDLE map_handle_;
   char* map_;
   std::atomic_int64_t map_size_;
   bool writable_;
@@ -136,8 +136,9 @@ class MemoryMapParallelFileZoneImpl final {
 };
 
 MemoryMapParallelFileImpl::MemoryMapParallelFileImpl() :
-    file_handle_(nullptr), map_handle_(nullptr), file_size_(-0),
-    map_(nullptr), map_size_(0), writable_(false), open_options_(0),
+    file_handle_(nullptr), file_size_(-0),
+    map_handle_(nullptr), map_(nullptr), map_size_(0),
+    writable_(false), open_options_(0),
     alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
     alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
@@ -240,9 +241,9 @@ Status MemoryMapParallelFileImpl::Open(
 
   // Updates the internal data.
   file_handle_ = file_handle;
-  map_handle_ = map_handle;
   path_ = path;
   file_size_.store(file_size);
+  map_handle_ = map_handle;
   map_ = static_cast<char*>(map);
   map_size_.store(map_size);
   writable_ = writable;
@@ -290,9 +291,9 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Updates the internal data.
   file_handle_ = nullptr;
-  map_handle_ = nullptr;
   path_.clear();
   file_size_ .store(0);
+  map_handle_ = nullptr;
   map_ = nullptr;
   map_size_.store(0);
   writable_ = false;
@@ -603,6 +604,7 @@ Status MemoryMapParallelFile::SetAllocationStrategy(int64_t init_size, double in
 }
 
 Status MemoryMapParallelFile::LockMemory(size_t size) {
+  assert(size <= MAX_MEMORY_SIZE);
   return Status(Status::SUCCESS);
 }
 
@@ -637,24 +639,404 @@ size_t MemoryMapParallelFile::Zone::Size() const {
   return impl_->Size();
 }
 
-
-
-
-
 class MemoryMapAtomicFileImpl final {
+  friend class MemoryMapAtomicFileZoneImpl;
  public:
-  StdFile file;
+  MemoryMapAtomicFileImpl();
+  ~MemoryMapAtomicFileImpl();
+  Status Open(const std::string& path, bool writable, int32_t options);
+  Status Close();
+  Status Truncate(int64_t size);
+  Status Synchronize(bool hard);
+  Status GetSize(int64_t* size);
+  Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status GetPath(std::string* path);
+  Status Rename(const std::string& new_path);
+
+ private:
+  Status AdjustMapSize(int64_t min_size);
+  
+  HANDLE file_handle_;
+  std::string path_;
+  int64_t file_size_;
+  HANDLE map_handle_;
+  char* map_;
+  int64_t map_size_;
+  int64_t lock_size_;
+  bool writable_;
+  int32_t open_options_;
+  int64_t alloc_init_size_;
+  double alloc_inc_factor_;
+  std::shared_timed_mutex mutex_;
 };
 
 class MemoryMapAtomicFileZoneImpl final {
  public:
-  StdFile* file;
-  bool writable;
-  int64_t off;
-  size_t size;
-  Status* status;
-  char* buf;
+  MemoryMapAtomicFileZoneImpl(
+      MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status);
+  ~MemoryMapAtomicFileZoneImpl();
+  void SetLockedMutex(std::shared_timed_mutex* mutex);
+  int64_t Offset() const;
+  char* Pointer() const;
+  size_t Size() const;
+
+ private:
+  MemoryMapAtomicFileImpl* file_;
+  int64_t off_;
+  size_t size_;
+  bool writable_;
 };
+
+MemoryMapAtomicFileImpl::MemoryMapAtomicFileImpl() :
+    file_handle_(nullptr), file_size_(0),
+    map_handle_(nullptr), map_(nullptr), map_size_(0), lock_size_(0),
+    writable_(false), open_options_(0),
+    alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
+    alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
+
+MemoryMapAtomicFileImpl::~MemoryMapAtomicFileImpl() {
+  if (file_handle_ != nullptr) {
+    Close();
+  }
+}
+
+Status MemoryMapAtomicFileImpl::Open(
+    const std::string& path, bool writable, int32_t options) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ != nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "opened file");
+  }
+
+  // Opens the file.
+  DWORD amode = GENERIC_READ;
+  DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+  DWORD cmode = OPEN_EXISTING;
+  if (writable) {
+    amode |= GENERIC_WRITE;
+    if (options & File::OPEN_NO_CREATE) {
+      if (options & File::OPEN_TRUNCATE) {
+        cmode = TRUNCATE_EXISTING;
+      }
+    } else {
+      cmode = OPEN_ALWAYS;
+      if (options & File::OPEN_TRUNCATE) {
+        cmode = CREATE_ALWAYS;
+      }
+    }
+  }
+  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode,
+                                  FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
+    return GetSysErrorStatus("CreateFile", GetLastError());
+  }
+
+  // Locks the file.
+  if (!(options & File::OPEN_NO_LOCK)) {
+    DWORD lmode = writable ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+    if (options & File::OPEN_NO_WAIT) {
+      lmode |= LOCKFILE_FAIL_IMMEDIATELY;
+    }
+    OVERLAPPED ol;
+    ol.Offset = INT32MAX;
+    ol.OffsetHigh = 0;
+    ol.hEvent = 0;
+    if (!LockFileEx(file_handle, lmode, 0, 1, 0, &ol)) {
+      const Status status = GetSysErrorStatus("LockFileEx", GetLastError());
+      CloseHandle(file_handle);
+      return status;
+    }
+  }
+
+  // Checks the file size and type.
+  LARGE_INTEGER sbuf;
+  if (!GetFileSizeEx(file_handle, &sbuf)) {
+    const Status status = GetSysErrorStatus("GetFileSizeEx", GetLastError());
+    CloseHandle(file_handle);
+    return status;
+  }
+  const int64_t file_size = sbuf.QuadPart;
+  if (file_size > MAX_MEMORY_SIZE) {
+    const Status status = Status(Status::INFEASIBLE_ERROR, "too large file");
+    CloseHandle(file_handle);
+    return status;
+  }
+
+  // Maps the memory.
+  int64_t map_size = file_size;
+  DWORD mprot = PAGE_READONLY;
+  DWORD vmode = FILE_MAP_READ;
+  if (writable) {
+    map_size = std::max(map_size, alloc_init_size_);
+    mprot = PAGE_READWRITE;
+    vmode = FILE_MAP_WRITE;
+  }
+  HANDLE map_handle = nullptr;
+  void* map = nullptr;
+  if (map_size > 0) {
+    sbuf.QuadPart = map_size;
+    map_handle = CreateFileMapping(
+        file_handle, nullptr, mprot, sbuf.HighPart, sbuf.LowPart, nullptr);
+    if (map_handle == nullptr || map_handle == INVALID_HANDLE_VALUE) {
+      const Status status = GetSysErrorStatus("CreateFileMapping", GetLastError());
+      CloseHandle(file_handle);
+      return status;
+    }
+    map = MapViewOfFile(map_handle, vmode, 0, 0, 0);
+    if (map == nullptr) {
+      const Status status = GetSysErrorStatus("MapViewOfFile", GetLastError());
+      CloseHandle(map_handle);
+      CloseHandle(file_handle);
+      return status;
+    }
+  } else {
+    map = static_cast<void*>(const_cast<char*>(DUMMY_MAP));
+  }
+  
+  // Updates the internal data.
+  file_handle_ = file_handle;
+  path_ = path;
+  file_size_ = file_size;
+  map_handle_ = map_handle;
+  map_ = static_cast<char*>(map);
+  map_size_ = map_size;
+  writable_ = writable;
+  open_options_ = options;
+
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::Close() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status(Status::SUCCESS);
+
+  // Unmaps the memory.
+  if (map_ != DUMMY_MAP) {
+    if (!UnmapViewOfFile(map_)) {
+      status |= GetSysErrorStatus("UnmapViewOfFile", GetLastError());
+    }
+    if (!CloseHandle(map_handle_)) {
+      status |= GetSysErrorStatus("CloseHandle", GetLastError());
+    }
+  }
+
+  // Truncates the file.
+  if (writable_) {
+    status |= TruncateFile(file_handle_, file_size_);
+  }
+
+  // Unlocks the file.
+  if (!(open_options_ & File::OPEN_NO_LOCK)) {
+    OVERLAPPED ol;
+    ol.Offset = INT32MAX;
+    ol.OffsetHigh = 0;
+    ol.hEvent = 0;
+    if (!UnlockFileEx(file_handle_, 0, 1, 0, &ol)) {
+      status |= GetSysErrorStatus("UnlockFileEx", GetLastError());
+    }
+  }
+
+  // Close the file.
+  if (!CloseHandle(file_handle_)) {
+    status |= GetSysErrorStatus("CloseHandle", GetLastError());
+  }
+
+  // Updates the internal data.
+  file_handle_ = nullptr;
+  path_.clear();
+  file_size_  = 0;
+  map_handle_ = nullptr;
+  map_ = nullptr;
+  map_size_ = 0;
+  writable_ = false;
+  open_options_ = 0;
+
+  return status;
+}
+
+Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  int64_t new_map_size =
+      std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
+  const int64_t diff = new_map_size % PAGE_SIZE;
+  if (diff > 0) {
+    new_map_size += PAGE_SIZE - diff;
+  }
+  Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  if (status != Status::SUCCESS) {
+    map_handle_ = nullptr;
+    map_ = nullptr;
+    CloseHandle(file_handle_);
+    file_handle_ = nullptr;
+    return status;
+  }
+  map_size_ = new_map_size;
+  status = TruncateFile(file_handle_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  file_size_ = size;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::Synchronize(bool hard) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  }
+  Status status(Status::SUCCESS);
+  map_size_ = file_size_;
+  status |= TruncateFile(file_handle_, map_size_);
+  if (hard) {
+    if (!FlushViewOfFile(map_, map_size_)) {
+      status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+    }
+    if (!FlushFileBuffers(file_handle_)) {
+      status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+    }
+  }
+  return status;
+}
+
+Status MemoryMapAtomicFileImpl::GetSize(int64_t* size) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *size = file_size_;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "alread opened file");
+  }
+  alloc_init_size_ = std::max<int64_t>(1, init_size);
+  alloc_inc_factor_ = std::max<double>(1.1, inc_factor);
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  *path = path_;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status = RenameFile(path_, new_path);
+  if (status == Status::SUCCESS) {
+    path_ = new_path;
+  }
+  return status;
+}
+
+Status MemoryMapAtomicFileImpl::AdjustMapSize(int64_t min_size) {
+  if (min_size <= map_size_) {
+    return Status(Status::SUCCESS);
+  }
+  int64_t new_map_size =
+      std::max(std::max(min_size, static_cast<int64_t>(
+          map_size_ * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
+  const int64_t diff = new_map_size % PAGE_SIZE;
+  if (diff > 0) {
+    new_map_size += PAGE_SIZE - diff;
+  }
+  Status status = TruncateFile(file_handle_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return GetSysErrorStatus("ftruncate", GetLastError());
+  }
+  status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  if (status != Status::SUCCESS) {
+    map_handle_ = nullptr;
+    map_ = nullptr;
+    CloseHandle(file_handle_);
+    file_handle_ = nullptr;
+    return status;
+  }
+  map_size_ = new_map_size;
+  return Status(Status::SUCCESS);
+}
+
+MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
+    MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
+    : file_(file), off_(-1), size_(0), writable_(writable) {
+  if (writable) {
+    file_->mutex_.lock();
+  } else {
+    file_->mutex_.lock_shared();
+  }
+  if (file_->file_handle_ == nullptr) {
+    status->Set(Status::PRECONDITION_ERROR, "not opened file");
+    return;
+  }
+  if (writable) {
+    if (!file_->writable_) {
+      status->Set(Status::PRECONDITION_ERROR, "not writable file");
+      return;
+    }
+    if (off < 0) {
+      off = file_->file_size_;
+    }
+    const int64_t end_position = off + size;
+    const Status adjust_status = file->AdjustMapSize(end_position);
+    if (adjust_status != Status::SUCCESS) {
+      *status = adjust_status;
+      return;
+    }
+    file_->file_size_ = std::max(file_->file_size_, end_position);
+  } else {
+    if (off < 0) {
+      status->Set(Status::PRECONDITION_ERROR, "negative offset");
+      return;
+    }
+    if (off > file_->file_size_) {
+      status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
+      return;
+    }
+    size = std::min(static_cast<int64_t>(size), file_->file_size_ - off);
+  }
+  off_ = off;
+  size_ = size;
+}
+
+MemoryMapAtomicFileZoneImpl::~MemoryMapAtomicFileZoneImpl() {
+  if (writable_) {
+    file_->mutex_.unlock();
+  } else {
+    file_->mutex_.unlock_shared();
+  }
+}
+
+int64_t MemoryMapAtomicFileZoneImpl::Offset() const {
+  return off_;
+}
+
+char* MemoryMapAtomicFileZoneImpl::Pointer() const {
+  return file_->map_ + off_;
+}
+
+size_t MemoryMapAtomicFileZoneImpl::Size() const {
+  return size_;
+}
 
 MemoryMapAtomicFile::MemoryMapAtomicFile() {
   impl_ = new MemoryMapAtomicFileImpl();
@@ -664,13 +1046,12 @@ MemoryMapAtomicFile::~MemoryMapAtomicFile() {
   delete impl_;
 }
 
-Status MemoryMapAtomicFile::Open(
-    const std::string& path, bool writable, int32_t options) {
-  return impl_->file.Open(path, writable, options);
+Status MemoryMapAtomicFile::Open(const std::string& path, bool writable, int32_t options) {
+  return impl_->Open(path, writable, options);
 }
 
 Status MemoryMapAtomicFile::Close() {
-  return impl_->file.Close();
+  return impl_->Close();
 }
 
 Status MemoryMapAtomicFile::MakeZone(
@@ -681,106 +1062,121 @@ Status MemoryMapAtomicFile::MakeZone(
 }
 
 Status MemoryMapAtomicFile::Read(int64_t off, void* buf, size_t size) {
-  return impl_->file.Read(off, buf, size);
+  assert(off >= 0 && buf != nullptr);
+  std::unique_ptr<Zone> zone;
+  Status status = MakeZone(false, off, size, &zone);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (zone->Size() != size) {
+    return Status(Status::INFEASIBLE_ERROR, "excessive size");
+  }
+  std::memcpy(buf, zone->Pointer(), zone->Size());
+  return Status(Status::SUCCESS);
 }
 
 std::string MemoryMapAtomicFile::ReadSimple(int64_t off, size_t size) {
-  std::string data(size, 0);
-  if (Read(off, const_cast<char*>(data.data()), size) != Status::SUCCESS) {
-    data.clear();
+  assert(off >= 0);
+  std::unique_ptr<Zone> zone;
+  Status status = MakeZone(false, off, size, &zone);
+  if (status != Status::SUCCESS || zone->Size() != size) {
+    return "";
   }
-  return data;
+  std::string result(zone->Pointer(), size);
+  return result;
 }
 
 Status MemoryMapAtomicFile::Write(int64_t off, const void* buf, size_t size) {
-  return impl_->file.Write(off, buf, size);
+  assert(off >= 0 && buf != nullptr && size <= MAX_MEMORY_SIZE);
+  std::unique_ptr<Zone> zone;
+  Status status = MakeZone(true, off, size, &zone);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::memcpy(zone->Pointer(), buf, zone->Size());
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::Append(const void* buf, size_t size, int64_t* off) {
-  return impl_->file.Append(buf, size, off);
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  std::unique_ptr<Zone> zone;
+  Status status = MakeZone(true, -1, size, &zone);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::memcpy(zone->Pointer(), buf, zone->Size());
+  if (off != nullptr) {
+    *off = zone->Offset();
+  }
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::Expand(size_t inc_size, int64_t* old_size) {
-  return impl_->file.Expand(inc_size, old_size);
+  assert(inc_size <= MAX_MEMORY_SIZE);
+  std::unique_ptr<Zone> zone;
+  Status status = MakeZone(true, -1, inc_size, &zone);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (old_size != nullptr) {
+    *old_size = zone->Offset();
+  }
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::Truncate(int64_t size) {
-  return impl_->file.Truncate(size);
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->Truncate(size);
 }
 
 Status MemoryMapAtomicFile::Synchronize(bool hard) {
-  return impl_->file.Synchronize(hard);
+  return impl_->Synchronize(hard);
 }
 
 Status MemoryMapAtomicFile::GetSize(int64_t* size) {
-  return impl_->file.GetSize(size);
+  assert(size != nullptr);
+  return impl_->GetSize(size);
 }
 
 Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  return impl_->file.SetAllocationStrategy(init_size, inc_factor);
+  assert(init_size > 0 && inc_factor > 0);
+  return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
 Status MemoryMapAtomicFile::LockMemory(size_t size) {
+  assert(size <= MAX_MEMORY_SIZE);
   return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::GetPath(std::string* path) {
   assert(path != nullptr);
-  return impl_->file.GetPath(path);
+  return impl_->GetPath(path);
 }
 
 Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
-  return impl_->file.Rename(new_path);
+  return impl_->Rename(new_path);
 }
 
 MemoryMapAtomicFile::Zone::Zone(
-    MemoryMapAtomicFileImpl* fileimpl, bool writable, int64_t off, size_t size, Status* status) {
-  const int64_t file_size = fileimpl->file.Lock();
-  if (off < 0) {
-    off = file_size;
-  }
-  const int64_t readable_size = std::max<int64_t>(0, std::min<int64_t>(file_size - off, size));
-  if (!writable) {
-    size = readable_size;
-  }
-  impl_ = new MemoryMapAtomicFileZoneImpl;
-  impl_->file = &fileimpl->file;
-  impl_->writable = writable;
-  impl_->off = off;
-  impl_->size = size;
-  impl_->status = status;
-  impl_->buf = new char[size + 1];
-  if (readable_size > 0) {
-    *impl_->status |= impl_->file->ReadInCriticalSection(off, impl_->buf, readable_size);
-  }
-  if (static_cast<int64_t>(size) > readable_size) {
-    std::memset(impl_->buf + readable_size, 0, size - readable_size);
-  }
+    MemoryMapAtomicFileImpl* file_impl, bool writable, int64_t off, size_t size, Status* status) {
+  impl_ = new MemoryMapAtomicFileZoneImpl(file_impl, writable, off, size, status);
 }
 
 MemoryMapAtomicFile::Zone::~Zone() {
-  StdFile* file = impl_->file;
-  if (impl_->writable) {
-    *impl_->status |= file->WriteInCriticalSection(impl_->off, impl_->buf, impl_->size);
-  }
-  delete[] impl_->buf;
   delete impl_;
-  file->Unlock();
 }
 
 int64_t MemoryMapAtomicFile::Zone::Offset() const {
-  return impl_->off;
+  return impl_->Offset();
 }
 
 char* MemoryMapAtomicFile::Zone::Pointer() const {
-  return impl_->buf;
+  return impl_->Pointer();
 }
 
 size_t MemoryMapAtomicFile::Zone::Size() const {
-  return impl_->size;
+  return impl_->Size();
 }
-
-
 
 
 
