@@ -785,7 +785,7 @@ Status HashDBMImpl::ImportFromFileForward(
     }
   }
   auto file = file_->MakeFile();
-  Status status = file->Open(path, false);
+  Status status = file->Open(path, false, File::OPEN_NO_LOCK);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -861,7 +861,7 @@ Status HashDBMImpl::ImportFromFileBackward(
     dead_path = path_ + ".tmp.dead";
   }
   auto file = file_->MakeFile();
-  Status status = file->Open(path, false);
+  Status status = file->Open(path, false, File::OPEN_NO_LOCK);
   if (status != Status::SUCCESS) {
     return status;
   }
