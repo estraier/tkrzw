@@ -11,8 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
-#ifndef _TKRZW_FILE_POS_STD_H
-#define _TKRZW_FILE_POS_STD_H
+#ifndef _TKRZW_SYS_FILE_POS_STD_H
+#define _TKRZW_SYS_FILE_POS_STD_H
 
 #include "tkrzw_sys_config.h"
 
@@ -160,6 +160,6 @@ Status PositionalAtomicFile::Rename(const std::string& new_path) {
 
 }  // namespace tkrzw
 
-#endif  // _TKRZW_FILE_POS_STD_H
+#endif  // _TKRZW_SYS_FILE_POS_STD_H
 
 // END OF FILE

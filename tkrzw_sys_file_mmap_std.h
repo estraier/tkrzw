@@ -11,8 +11,8 @@
  * and limitations under the License.
  *************************************************************************************************/
 
-#ifndef _TKRZW_FILE_MMAP_STD_H
-#define _TKRZW_FILE_MMAP_STD_H
+#ifndef _TKRZW_SYS_FILE_MMAP_STD_H
+#define _TKRZW_SYS_FILE_MMAP_STD_H
 
 #include "tkrzw_sys_config.h"
 
@@ -312,6 +312,6 @@ size_t MemoryMapAtomicFile::Zone::Size() const {
 
 }  // namespace tkrzw
 
-#endif  // _TKRZW_FILE_MMAP_STD_H
+#endif  // _TKRZW_SYS_FILE_MMAP_STD_H
 
 // END OF FILE
