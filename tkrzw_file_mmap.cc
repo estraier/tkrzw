@@ -272,7 +272,11 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   }
   void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
-    return GetErrnoStatus("mremap", errno);
+    const Status status = GetErrnoStatus("mremap", errno);
+    map_ = nullptr;
+    close(fd_);
+    fd_ = -1;
+    return status;
   }
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
@@ -381,7 +385,11 @@ Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
   }
   void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
-    return GetErrnoStatus("mremap", errno);
+    const Status status = GetErrnoStatus("mremap", errno);
+    map_ = nullptr;
+    close(fd_);
+    fd_ = -1;
+    return status;
   }
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
@@ -626,6 +634,8 @@ class MemoryMapAtomicFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
+  Status AdjustMapSize(int64_t min_size);
+  
   int32_t fd_;
   std::string path_;
   int64_t file_size_;
@@ -832,7 +842,11 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   }
   void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
   if (new_map == MAP_FAILED) {
-    return GetErrnoStatus("mremap", errno);
+    const Status status = GetErrnoStatus("mremap", errno);
+    map_ = nullptr;
+    close(fd_);
+    fd_ = -1;
+    return status;
   }
   map_ = static_cast<char*>(new_map);
   map_size_ = new_map_size;
@@ -923,6 +937,40 @@ Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
   return Status(Status::SUCCESS);
 }
 
+Status MemoryMapAtomicFileImpl::AdjustMapSize(int64_t min_size) {
+  if (min_size <= map_size_) {
+    return Status(Status::SUCCESS);
+  }
+  if (lock_size_ > 0 && munlock(map_, lock_size_) != 0) {
+    return GetErrnoStatus("munlock", errno);
+  }
+  int64_t new_map_size =
+      std::max(std::max(min_size, static_cast<int64_t>(
+          map_size_ * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
+  const int64_t diff = new_map_size % PAGE_SIZE;
+  if (diff > 0) {
+    new_map_size += PAGE_SIZE - diff;
+  }
+  if (ftruncate(fd_, new_map_size) != 0) {
+    return GetErrnoStatus("ftruncate", errno);
+  }
+  void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
+  if (new_map == MAP_FAILED) {
+    const Status status = GetErrnoStatus("mremap", errno);
+    map_ = nullptr;
+    close(fd_);
+    fd_ = -1;
+    return status;
+  }
+  map_ = static_cast<char*>(new_map);
+  map_size_ = new_map_size;
+  if (lock_size_ > 0 && mlock(map_, lock_size_) != 0) {
+    lock_size_ = 0;
+    return GetErrnoStatus("mlock", errno);
+  }
+  return Status(Status::SUCCESS);
+}
+
 MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
     MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
     : file_(file), off_(-1), size_(0), writable_(writable) {
@@ -944,34 +992,10 @@ MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
       off = file_->file_size_;
     }
     const int64_t end_position = off + size;
-    if (end_position > file_->map_size_) {
-      if (file_->lock_size_ > 0 && munlock(file->map_, file->lock_size_) != 0) {
-        *status = GetErrnoStatus("munlock", errno);
-        return;
-      }
-      int64_t new_map_size =
-          std::max(std::max(end_position, static_cast<int64_t>(
-              file_->map_size_ * file_->alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
-      const int64_t diff = new_map_size % PAGE_SIZE;
-      if (diff > 0) {
-        new_map_size += PAGE_SIZE - diff;
-      }
-      if (ftruncate(file_->fd_, new_map_size) != 0) {
-        *status = GetErrnoStatus("ftruncate", errno);
-        return;
-      }
-      void* new_map = tkrzw_mremap(file_->map_, file_->map_size_, new_map_size, file_->fd_);
-      if (new_map == MAP_FAILED) {
-        *status = GetErrnoStatus("mremap", errno);
-        return;
-      }
-      file_->map_ = static_cast<char*>(new_map);
-      file_->map_size_ = new_map_size;
-      if (file_->lock_size_ > 0 && mlock(file->map_, file_->lock_size_) != 0) {
-        file_->lock_size_ = 0;
-        *status = GetErrnoStatus("mlock", errno);
-        return;
-      }
+    const Status adjust_status = file->AdjustMapSize(end_position);
+    if (adjust_status != Status::SUCCESS) {
+      *status = adjust_status;
+      return;
     }
     file_->file_size_ = std::max(file_->file_size_, end_position);
   } else {
