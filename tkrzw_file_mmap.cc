@@ -15,11 +15,11 @@
 
 #if defined(_TKRZW_STDONLY)
 
-#include "tkrzw_file_mmap_std.h"
+#include "tkrzw_sys_file_mmap_std.h"
 
 #elif defined(_SYS_WINDOWS_)
 
-#include "tkrzw_file_mmap_windows.h"
+#include "tkrzw_sys_file_mmap_windows.h"
 
 #else
 

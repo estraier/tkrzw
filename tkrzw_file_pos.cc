@@ -15,11 +15,11 @@
 
 #if defined(_TKRZW_STDONLY)
 
-#include "tkrzw_file_pos_std.h"
+#include "tkrzw_sys_file_pos_std.h"
 
 #elif defined(_SYS_WINDOWS_)
 
-#include "tkrzw_file_pos_std.h"
+#include "tkrzw_sys_file_pos_std.h"
 
 #else
 
