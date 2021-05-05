@@ -81,6 +81,14 @@ untabify :
 	    [ -f $$name~ ] && mv -f $$name~ $$name ; \
 	  done
 
+setversion :
+	ls VCMakefile | while read name ; \
+	  do \
+	    sed -e "s/^PKG_VERSION = .*/PKG_VERSION = $(VERSION)/" \
+	      -e "s/^LIB_VERSION = .*/PKG_VERSION = $(LIBVER).$(LIBREV).$(LIBFMT)/" $$name > $$name~ ; \
+	    [ -f $$name~ ] && mv -f $$name~ $$name ; \
+    done
+
 install :
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -Rf $(HEADERFILES) $(DESTDIR)$(INCLUDEDIR)
@@ -107,6 +115,7 @@ uninstall :
 
 dist :
 	$(MAKE) untabify
+	$(MAKE) setversion
 	$(MAKE) distclean
 	rm -Rf "../$(PACKAGEDIR)" "../$(PACKAGETGZ)"
 	cd .. && cp -R tkrzw $(PACKAGEDIR) && \
