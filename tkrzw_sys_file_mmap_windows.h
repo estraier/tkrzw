@@ -51,7 +51,7 @@ class MemoryMapParallelFileImpl final {
  private:
   Status AdjustMapSize(int64_t min_size);
 
-  HANDLE file_handle_;
+  std::atomic<HANDLE> file_handle_;
   std::string path_;
   std::atomic_int64_t file_size_;
   HANDLE map_handle_;
@@ -89,14 +89,14 @@ MemoryMapParallelFileImpl::MemoryMapParallelFileImpl() :
     alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 MemoryMapParallelFileImpl::~MemoryMapParallelFileImpl() {
-  if (file_handle_ != nullptr) {
+  if (file_handle_.load() != nullptr) {
     Close();
   }
 }
 
 Status MemoryMapParallelFileImpl::Open(
     const std::string& path, bool writable, int32_t options) {
-  if (file_handle_ != nullptr) {
+  if (file_handle_.load() != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
 
@@ -186,7 +186,7 @@ Status MemoryMapParallelFileImpl::Open(
   }
 
   // Updates the internal data.
-  file_handle_ = file_handle;
+  file_handle_.store(file_handle);
   path_ = path;
   file_size_.store(file_size);
   map_handle_ = map_handle;
@@ -199,7 +199,7 @@ Status MemoryMapParallelFileImpl::Open(
 }
 
 Status MemoryMapParallelFileImpl::Close() {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status(Status::SUCCESS);
@@ -216,7 +216,7 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Truncates the file.
   if (writable_) {
-    status |= TruncateFile(file_handle_, file_size_.load());
+    status |= TruncateFile(file_handle_.load(), file_size_.load());
   }
 
   // Unlocks the file.
@@ -225,18 +225,18 @@ Status MemoryMapParallelFileImpl::Close() {
     ol.Offset = INT32MAX;
     ol.OffsetHigh = 0;
     ol.hEvent = 0;
-    if (!UnlockFileEx(file_handle_, 0, 1, 0, &ol)) {
+    if (!UnlockFileEx(file_handle_.load(), 0, 1, 0, &ol)) {
       status |= GetSysErrorStatus("UnlockFileEx", GetLastError());
     }
   }
 
   // Close the file.
-  if (!CloseHandle(file_handle_)) {
+  if (!CloseHandle(file_handle_.load())) {
     status |= GetSysErrorStatus("CloseHandle", GetLastError());
   }
 
   // Updates the internal data.
-  file_handle_ = nullptr;
+  file_handle_.store(nullptr);
   path_.clear();
   file_size_ .store(0);
   map_handle_ = nullptr;
@@ -249,7 +249,7 @@ Status MemoryMapParallelFileImpl::Close() {
 }
 
 Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -261,16 +261,16 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  Status status = RemapMemory(file_handle_.load(), new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
     map_ = nullptr;
-    CloseHandle(file_handle_);
-    file_handle_ = nullptr;
+    CloseHandle(file_handle_.load());
+    file_handle_.store(nullptr);
     return status;
   }
   map_size_.store(new_map_size);
-  status = TruncateFile(file_handle_, new_map_size);
+  status = TruncateFile(file_handle_.load(), new_map_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -279,7 +279,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
 }
 
 Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -288,12 +288,12 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   map_size_.store(file_size_.load());
-  status |= TruncateFile(file_handle_, map_size_.load());
+  status |= TruncateFile(file_handle_.load(), map_size_.load());
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_.load())) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
     }
-    if (!FlushFileBuffers(file_handle_)) {
+    if (!FlushFileBuffers(file_handle_.load())) {
       status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
     }
   }
@@ -301,7 +301,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
 }
 
 Status MemoryMapParallelFileImpl::GetSize(int64_t* size) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   *size = file_size_.load();
@@ -309,7 +309,7 @@ Status MemoryMapParallelFileImpl::GetSize(int64_t* size) {
 }
 
 Status MemoryMapParallelFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
   alloc_init_size_ = std::max<int64_t>(1, init_size);
@@ -318,7 +318,7 @@ Status MemoryMapParallelFileImpl::SetAllocationStrategy(int64_t init_size, doubl
 }
 
 Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   *path = path_;
@@ -326,7 +326,7 @@ Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
 }
 
 Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
-  if (file_handle_ == nullptr) {
+  if (file_handle_.load() == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status = RenameFile(path_, new_path);
@@ -351,16 +351,16 @@ Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  Status status = TruncateFile(file_handle_, new_map_size);
+  Status status = TruncateFile(file_handle_.load(), new_map_size);
   if (status != Status::SUCCESS) {
     return GetSysErrorStatus("ftruncate", GetLastError());
   }
-  status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  status = RemapMemory(file_handle_.load(), new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
     map_ = nullptr;
-    CloseHandle(file_handle_);
-    file_handle_ = nullptr;
+    CloseHandle(file_handle_.load());
+    file_handle_.store(nullptr);
     return status;
   }
   map_size_.store(new_map_size);
@@ -370,7 +370,7 @@ Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
 MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
     MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
     : file_(nullptr), off_(-1), size_(0), writable_(writable) {
-  if (file->file_handle_ == nullptr) {
+  if (file->file_handle_.load() == nullptr) {
     status->Set(Status::PRECONDITION_ERROR, "not opened file");
     return;
   }
