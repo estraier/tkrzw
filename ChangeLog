@@ -1,0 +1,10 @@
+2021-04-06  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.14
+
+	- Performance of file classes on Widows improves.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.7
+	- tkrzw-python: 0.1.7
+	- tkrzw-ruby: 0.1.7
