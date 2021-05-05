@@ -49,7 +49,7 @@ class MemoryMapParallelFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
-  Status AdjustMapSize(int64_t min_size);
+  Status AllocateSpace(int64_t min_size);
 
   HANDLE file_handle_;
   std::string path_;
@@ -336,7 +336,7 @@ Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
-Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
+Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
   }
@@ -351,11 +351,10 @@ Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  Status status = TruncateFile(file_handle_, new_map_size);
-  if (status != Status::SUCCESS) {
-    return GetSysErrorStatus("ftruncate", GetLastError());
+  if (PositionalWriteFile(file_handle_, "", 1, new_map_size - 1) != 1) {
+    return GetSysErrorStatus("WriteFile", GetLastError());
   }
-  status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
     map_ = nullptr;
@@ -384,7 +383,7 @@ MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
       while (true) {
         old_file_size = file->file_size_.load();
         const int64_t end_position = old_file_size + size;
-        const Status adjust_status = file->AdjustMapSize(end_position);
+        const Status adjust_status = file->AllocateSpace(end_position);
         if (adjust_status != Status::SUCCESS) {
           *status = adjust_status;
           return;
@@ -396,7 +395,7 @@ MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
       off = old_file_size;
     } else {
       const int64_t end_position = off + size;
-      const Status adjust_status = file->AdjustMapSize(end_position);
+      const Status adjust_status = file->AllocateSpace(end_position);
       if (adjust_status != Status::SUCCESS) {
         *status = adjust_status;
         return;
@@ -600,7 +599,7 @@ class MemoryMapAtomicFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
-  Status AdjustMapSize(int64_t min_size);
+  Status AllocateSpace(int64_t min_size);
 
   HANDLE file_handle_;
   std::string path_;
@@ -895,7 +894,7 @@ Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
-Status MemoryMapAtomicFileImpl::AdjustMapSize(int64_t min_size) {
+Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_) {
     return Status(Status::SUCCESS);
   }
@@ -906,11 +905,10 @@ Status MemoryMapAtomicFileImpl::AdjustMapSize(int64_t min_size) {
   if (diff > 0) {
     new_map_size += PAGE_SIZE - diff;
   }
-  Status status = TruncateFile(file_handle_, new_map_size);
-  if (status != Status::SUCCESS) {
-    return GetSysErrorStatus("ftruncate", GetLastError());
+  if (PositionalWriteFile(file_handle_, "", 1, new_map_size - 1) != 1) {
+    return GetSysErrorStatus("WriteFile", GetLastError());
   }
-  status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+  const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
     map_ = nullptr;
@@ -943,7 +941,7 @@ MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
       off = file_->file_size_;
     }
     const int64_t end_position = off + size;
-    const Status adjust_status = file->AdjustMapSize(end_position);
+    const Status adjust_status = file->AllocateSpace(end_position);
     if (adjust_status != Status::SUCCESS) {
       *status = adjust_status;
       return;

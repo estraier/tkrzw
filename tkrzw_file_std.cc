@@ -133,6 +133,22 @@ Status StdFileImpl::Truncate(int64_t size) {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
+  if (size == file_size_) {
+    return Status(Status::SUCCESS);
+  }
+  if (size > file_size_) {
+    file_->clear();
+    file_->seekp(size - 1);
+    if (!file_->good()) {
+      return Status(Status::SYSTEM_ERROR, "seekp failed");
+    }
+    file_->write("", 1);
+    if (!file_->good()) {
+      return Status(Status::SYSTEM_ERROR, "write failed");
+    }
+    file_size_ = size;
+    return Status(Status::SUCCESS);
+  }
   if (!PathIsFile(path_)) {
     return Status(Status::INFEASIBLE_ERROR, "missing file");
   }
@@ -369,9 +385,7 @@ Status StdFileImpl::ExpandImpl(size_t inc_size, int64_t* old_size) {
   if (!file_->good()) {
     return Status(Status::SYSTEM_ERROR, "seekp failed");
   }
-  char buf[1];
-  buf[0] = 0;
-  file_->write(buf, 1);
+  file_->write("", 1);
   if (!file_->good()) {
     return Status(Status::SYSTEM_ERROR, "write failed");
   }

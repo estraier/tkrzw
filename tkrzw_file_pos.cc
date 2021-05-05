@@ -49,7 +49,7 @@ class PositionalParallelFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
-  Status AdjustTruncSize(int64_t min_size);
+  Status AllocateSpace(int64_t min_size);
 
   std::atomic_int32_t fd_;
   std::string path_;
@@ -223,7 +223,7 @@ Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t si
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   const int64_t end_position = off + size;
-  const Status status = AdjustTruncSize(end_position);
+  const Status status = AllocateSpace(end_position);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -258,7 +258,7 @@ Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t*
   while (true) {
     position = file_size_.load();
     const int64_t end_position = position + size;
-    const Status status = AdjustTruncSize(end_position);
+    const Status status = AllocateSpace(end_position);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -359,7 +359,7 @@ Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
-Status PositionalParallelFileImpl::AdjustTruncSize(int64_t min_size) {
+Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= trunc_size_.load()) {
     return Status(Status::SUCCESS);
   }
@@ -461,6 +461,8 @@ class PositionalAtomicFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
+  Status AllocateSpace(int64_t min_size);
+
   int32_t fd_;
   std::string path_;
   int64_t file_size_;
@@ -638,16 +640,10 @@ Status PositionalAtomicFileImpl::Write(int64_t off, const void* buf, size_t size
   }
   const int64_t end_position = off + size;
   if (end_position > trunc_size_) {
-    int64_t new_trunc_size =
-        std::max(end_position, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
-    const int64_t diff = new_trunc_size % PAGE_SIZE;
-    if (diff > 0) {
-      new_trunc_size += PAGE_SIZE - diff;
+    const Status status = AllocateSpace(end_position);
+    if (status != Status::SUCCESS) {
+      return status;
     }
-    if (ftruncate(fd_, new_trunc_size) != 0) {
-      return GetErrnoStatus("ftruncate", errno);
-    }
-    trunc_size_ = new_trunc_size;
   }
   file_size_ = std::max(file_size_, end_position);
   const char* rp = static_cast<const char*>(buf);
@@ -674,16 +670,10 @@ Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* o
   int64_t position = file_size_;
   const int64_t end_position = position + size;
   if (end_position > trunc_size_) {
-    int64_t new_trunc_size =
-        std::max(end_position, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
-    const int64_t diff = new_trunc_size % PAGE_SIZE;
-    if (diff > 0) {
-      new_trunc_size += PAGE_SIZE - diff;
+    const Status status = AllocateSpace(end_position);
+    if (status != Status::SUCCESS) {
+      return status;
     }
-    if (ftruncate(fd_, new_trunc_size) != 0) {
-      return GetErrnoStatus("ftruncate", errno);
-    }
-    trunc_size_ = new_trunc_size;
   }
   file_size_ = end_position;
   if (off != nullptr) {
@@ -783,6 +773,20 @@ Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
     path_ = new_path;
   }
   return status;
+}
+
+Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
+  int64_t new_trunc_size =
+      std::max(min_size, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
+  const int64_t diff = new_trunc_size % PAGE_SIZE;
+  if (diff > 0) {
+    new_trunc_size += PAGE_SIZE - diff;
+  }
+  if (ftruncate(fd_, new_trunc_size) != 0) {
+    return GetErrnoStatus("ftruncate", errno);
+  }
+  trunc_size_ = new_trunc_size;
+  return Status(Status::SUCCESS);
 }
 
 PositionalAtomicFile::PositionalAtomicFile() {

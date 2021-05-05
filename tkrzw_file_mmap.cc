@@ -67,7 +67,7 @@ class MemoryMapParallelFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
-  Status AdjustMapSize(int64_t min_size);
+  Status AllocateSpace(int64_t min_size);
 
   int32_t fd_;
   std::string path_;
@@ -362,7 +362,7 @@ Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
-Status MemoryMapParallelFileImpl::AdjustMapSize(int64_t min_size) {
+Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
   }
@@ -417,7 +417,7 @@ MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
       while (true) {
         old_file_size = file->file_size_.load();
         const int64_t end_position = old_file_size + size;
-        const Status adjust_status = file->AdjustMapSize(end_position);
+        const Status adjust_status = file->AllocateSpace(end_position);
         if (adjust_status != Status::SUCCESS) {
           *status = adjust_status;
           return;
@@ -429,7 +429,7 @@ MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
       off = old_file_size;
     } else {
       const int64_t end_position = off + size;
-      const Status adjust_status = file->AdjustMapSize(end_position);
+      const Status adjust_status = file->AllocateSpace(end_position);
       if (adjust_status != Status::SUCCESS) {
         *status = adjust_status;
         return;
@@ -634,7 +634,7 @@ class MemoryMapAtomicFileImpl final {
   Status Rename(const std::string& new_path);
 
  private:
-  Status AdjustMapSize(int64_t min_size);
+  Status AllocateSpace(int64_t min_size);
 
   int32_t fd_;
   std::string path_;
@@ -937,7 +937,7 @@ Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status MemoryMapAtomicFileImpl::AdjustMapSize(int64_t min_size) {
+Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_) {
     return Status(Status::SUCCESS);
   }
@@ -992,7 +992,7 @@ MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
       off = file_->file_size_;
     }
     const int64_t end_position = off + size;
-    const Status adjust_status = file->AdjustMapSize(end_position);
+    const Status adjust_status = file->AllocateSpace(end_position);
     if (adjust_status != Status::SUCCESS) {
       *status = adjust_status;
       return;
