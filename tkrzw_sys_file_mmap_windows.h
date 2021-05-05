@@ -104,6 +104,7 @@ Status MemoryMapParallelFileImpl::Open(
   DWORD amode = GENERIC_READ;
   DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD cmode = OPEN_EXISTING;
+  DWORD flags = FILE_FLAG_RANDOM_ACCESS;
   if (writable) {
     amode |= GENERIC_WRITE;
     if (options & File::OPEN_NO_CREATE) {
@@ -117,8 +118,7 @@ Status MemoryMapParallelFileImpl::Open(
       }
     }
   }
-  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode,
-                                  FILE_ATTRIBUTE_NORMAL, nullptr);
+  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
   if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
     return GetSysErrorStatus("CreateFile", GetLastError());
   }
@@ -294,7 +294,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
     }
     if (!FlushFileBuffers(file_handle_)) {
-      status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+      status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
     }
   }
   return status;
@@ -657,6 +657,7 @@ Status MemoryMapAtomicFileImpl::Open(
   DWORD amode = GENERIC_READ;
   DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD cmode = OPEN_EXISTING;
+  DWORD flags = FILE_FLAG_RANDOM_ACCESS;
   if (writable) {
     amode |= GENERIC_WRITE;
     if (options & File::OPEN_NO_CREATE) {
@@ -670,8 +671,7 @@ Status MemoryMapAtomicFileImpl::Open(
       }
     }
   }
-  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode,
-                                  FILE_ATTRIBUTE_NORMAL, nullptr);
+  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
   if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
     return GetSysErrorStatus("CreateFile", GetLastError());
   }
@@ -849,7 +849,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
     }
     if (!FlushFileBuffers(file_handle_)) {
-      status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+      status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
     }
   }
   return status;
