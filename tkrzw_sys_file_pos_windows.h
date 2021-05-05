@@ -84,7 +84,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   DWORD amode = GENERIC_READ;
   DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD cmode = OPEN_EXISTING;
-  DWORD flags = FILE_FLAG_RANDOM_ACCESS | FILE_FLAG_WRITE_THROUGH;
+  DWORD flags = FILE_FLAG_RANDOM_ACCESS;
   if (writable) {
     amode |= GENERIC_WRITE;
     if (options & File::OPEN_NO_CREATE) {
@@ -496,7 +496,7 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
   DWORD amode = GENERIC_READ;
   DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD cmode = OPEN_EXISTING;
-  DWORD flags = FILE_FLAG_RANDOM_ACCESS | FILE_FLAG_WRITE_THROUGH;
+  DWORD flags = FILE_FLAG_RANDOM_ACCESS;
   if (writable) {
     amode |= GENERIC_WRITE;
     if (options & File::OPEN_NO_CREATE) {
