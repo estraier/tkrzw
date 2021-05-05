@@ -145,12 +145,6 @@ inline int32_t PositionalReadFile(
   obuf.hEvent = nullptr;
   DWORD read_size = 0;
   if (ReadFile(file_handle, buf, count, &read_size, &obuf)) {
-
-    if (read_size != count) {
-      std::cout << "$: c=" << count << " w=" << read_size << std::endl;
-    }
-
-
     return read_size;
   }
   return -1;
@@ -174,12 +168,6 @@ inline int32_t PositionalWriteFile(
   obuf.hEvent = nullptr;
   DWORD wrote_size = 0;
   if (WriteFile(file_handle, buf, count, &wrote_size, &obuf)) {
-
-    if (wrote_size != count) {
-      std::cout << "W: c=" << count << " w=" << wrote_size << std::endl;
-    }
-
-
     return wrote_size;
   }
   return -1;
