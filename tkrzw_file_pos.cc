@@ -68,13 +68,13 @@ PositionalParallelFileImpl::PositionalParallelFileImpl()
       alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
 PositionalParallelFileImpl::~PositionalParallelFileImpl() {
-  if (fd_.load() >= 0) {
+  if (fd_ >= 0) {
     Close();
   }
 }
 
 Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, int32_t options) {
-  if (fd_.load() >= 0) {
+  if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
 
@@ -144,7 +144,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   }
 
   // Updates the internal data.
-  fd_.store(fd);
+  fd_ = fd;
   path_ = path;
   file_size_.store(file_size);
   trunc_size_.store(trunc_size);
@@ -155,13 +155,13 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
 }
 
 Status PositionalParallelFileImpl::Close() {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status(Status::SUCCESS);
 
   // Truncates the file.
-  if (writable_ && ftruncate(fd_.load(), file_size_.load()) != 0) {
+  if (writable_ && ftruncate(fd_, file_size_.load()) != 0) {
     status |= GetErrnoStatus("ftruncate", errno);
   }
 
@@ -174,18 +174,18 @@ Status PositionalParallelFileImpl::Close() {
     flbuf.l_start = 0;
     flbuf.l_len = 0;
     flbuf.l_pid = 0;
-    if (fcntl(fd_.load(), F_SETLKW, &flbuf) != 0) {
+    if (fcntl(fd_, F_SETLKW, &flbuf) != 0) {
       status |= GetErrnoStatus("fcntl-unlock", errno);
     }
   }
 
   // Close the file.
-  if (close(fd_.load()) != 0) {
+  if (close(fd_) != 0) {
     status |= GetErrnoStatus("close", errno);
   }
 
   // Updates the internal data.
-  fd_.store(-1);
+  fd_ = -1;
   path_.clear();
   file_size_.store(0);
   trunc_size_.store(0);
@@ -196,12 +196,12 @@ Status PositionalParallelFileImpl::Close() {
 }
 
 Status PositionalParallelFileImpl::Read(int64_t off, void* buf, size_t size) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   char* wp = static_cast<char*>(buf);
   while (size > 0) {
-    const int32_t rsiz = pread(fd_.load(), wp, size, off);
+    const int32_t rsiz = pread(fd_, wp, size, off);
     if (rsiz < 0) {
       return GetErrnoStatus("pread", errno);
     }
@@ -216,7 +216,7 @@ Status PositionalParallelFileImpl::Read(int64_t off, void* buf, size_t size) {
 }
 
 Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t size) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -236,7 +236,7 @@ Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t si
   }
   const char* rp = static_cast<const char*>(buf);
   while (size > 0) {
-    const int32_t rsiz = pwrite(fd_.load(), rp, size, off);
+    const int32_t rsiz = pwrite(fd_, rp, size, off);
     if (rsiz < 0) {
       return GetErrnoStatus("pwrite", errno);
     }
@@ -248,7 +248,7 @@ Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t si
 }
 
 Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t* off) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -272,7 +272,7 @@ Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t*
   if (buf != nullptr) {
     const char* rp = static_cast<const char*>(buf);
     while (size > 0) {
-      const int32_t rsiz = pwrite(fd_.load(), rp, size, position);
+      const int32_t rsiz = pwrite(fd_, rp, size, position);
       if (rsiz < 0) {
         return GetErrnoStatus("pwrite", errno);
       }
@@ -285,7 +285,7 @@ Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t*
 }
 
 Status PositionalParallelFileImpl::Truncate(int64_t size) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -297,7 +297,7 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_trunc_size += PAGE_SIZE - diff;
   }
-  if (ftruncate(fd_.load(), new_trunc_size) != 0) {
+  if (ftruncate(fd_, new_trunc_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
   }
   file_size_.store(size);
@@ -306,7 +306,7 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
 }
 
 Status PositionalParallelFileImpl::Synchronize(bool hard) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   if (!writable_) {
@@ -314,17 +314,17 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   trunc_size_.store(file_size_.load());
-  if (ftruncate(fd_.load(), trunc_size_.load()) != 0) {
+  if (ftruncate(fd_, trunc_size_.load()) != 0) {
     status |= GetErrnoStatus("ftruncate", errno);
   }
-  if (hard && fsync(fd_.load()) != 0) {
+  if (hard && fsync(fd_) != 0) {
     status |= GetErrnoStatus("fsync", errno);
   }
   return status;
 }
 
 Status PositionalParallelFileImpl::GetSize(int64_t* size) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   *size = file_size_.load();
@@ -332,7 +332,7 @@ Status PositionalParallelFileImpl::GetSize(int64_t* size) {
 }
 
 Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  if (fd_.load() >= 0) {
+  if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
   alloc_init_size_ = std::max<int64_t>(1, init_size);
@@ -341,7 +341,7 @@ Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, doub
 }
 
 Status PositionalParallelFileImpl::GetPath(std::string* path) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   *path = path_;
@@ -349,7 +349,7 @@ Status PositionalParallelFileImpl::GetPath(std::string* path) {
 }
 
 Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
-  if (fd_.load() < 0) {
+  if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status = RenameFile(path_, new_path);
@@ -373,7 +373,7 @@ Status PositionalParallelFileImpl::AdjustTruncSize(int64_t min_size) {
   if (diff > 0) {
     new_trunc_size += PAGE_SIZE - diff;
   }
-  if (ftruncate(fd_.load(), new_trunc_size) != 0) {
+  if (ftruncate(fd_, new_trunc_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
   }
   trunc_size_.store(new_trunc_size);
