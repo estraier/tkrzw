@@ -1,3 +1,9 @@
+2021-04-xx  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.15
+
+	- Fix a bug in tkrzw_file_test_common.h where Synchronize shouldn't be called.
+
 2021-04-06  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.14

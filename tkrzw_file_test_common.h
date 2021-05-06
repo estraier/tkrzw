@@ -258,7 +258,7 @@ void CommonFileTest<FILE>::RandomThreadTest() {
       const int32_t size = std::min(size_dist(mt), file_size - off);
       if (file.IsAtomic() && trunc_dist(mt) == 0) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(off));
-      } else if (sync_dist(mt) == 0) {
+      } else if (file.IsAtomic() && sync_dist(mt) == 0) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, file.Synchronize(true));
       } else if (op_dist(mt) == 0) {
         const char* buf = write_buf_dist(mt) == 0 ? write_buf : read_buf;
