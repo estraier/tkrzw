@@ -24,7 +24,6 @@
 
 #include "tkrzw_file.h"
 #include "tkrzw_file_pos.h"
-#include "tkrzw_file_std.h"    // Remove me
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
@@ -201,20 +200,7 @@ Status PositionalParallelFileImpl::Read(int64_t off, void* buf, size_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
-  char* wp = static_cast<char*>(buf);
-  while (size > 0) {
-    const int32_t rsiz = PositionalReadFile(file_handle_, wp, size, off);
-    if (rsiz < 0) {
-      return GetSysErrorStatus("ReadFile", GetLastError());
-    }
-    if (rsiz == 0) {
-      return Status(Status::INFEASIBLE_ERROR, "excessive region");
-    }
-    off += rsiz;
-    wp += rsiz;
-    size -= rsiz;
-  }
-  return Status(Status::SUCCESS);
+  return PositionalReadSequence(file_handle_, off, buf, size);
 }
 
 Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t size) {
@@ -236,17 +222,7 @@ Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t si
       break;
     }
   }
-  const char* rp = static_cast<const char*>(buf);
-  while (size > 0) {
-    const int32_t rsiz = PositionalWriteFile(file_handle_, rp, size, off);
-    if (rsiz < 0) {
-      return GetSysErrorStatus("WriteFile", GetLastError());
-    }
-    off += rsiz;
-    rp += rsiz;
-    size -= rsiz;
-  }
-  return Status(Status::SUCCESS);
+  return PositionalWriteSequence(file_handle_, off, buf, size);
 }
 
 Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t* off) {
@@ -271,19 +247,10 @@ Status PositionalParallelFileImpl::Append(const void* buf, size_t size, int64_t*
   if (off != nullptr) {
     *off = position;
   }
-  if (buf != nullptr) {
-    const char* rp = static_cast<const char*>(buf);
-    while (size > 0) {
-      const int32_t rsiz = PositionalWriteFile(file_handle_, rp, size, position);
-      if (rsiz < 0) {
-        return GetSysErrorStatus("WriteFile", GetLastError());
-      }
-      position += rsiz;
-      rp += rsiz;
-      size -= rsiz;
-    }
+  if (buf == nullptr) {
+    return Status(Status::SUCCESS);
   }
-  return Status(Status::SUCCESS);
+  return PositionalWriteSequence(file_handle_, position, buf, size);
 }
 
 Status PositionalParallelFileImpl::Truncate(int64_t size) {
@@ -336,8 +303,8 @@ Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, doub
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  alloc_init_size_ = std::max<int64_t>(1, init_size);
-  alloc_inc_factor_ = std::max<double>(1.1, inc_factor);
+  alloc_init_size_ = init_size;
+  alloc_inc_factor_ = inc_factor;
   return Status(Status::SUCCESS);
 }
 
@@ -616,20 +583,7 @@ Status PositionalAtomicFileImpl::Read(int64_t off, void* buf, size_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
-  char* wp = static_cast<char*>(buf);
-  while (size > 0) {
-    const int32_t rsiz = PositionalReadFile(file_handle_, wp, size, off);
-    if (rsiz < 0) {
-      return GetSysErrorStatus("ReadFile", GetLastError());
-    }
-    if (rsiz == 0) {
-      return Status(Status::INFEASIBLE_ERROR, "excessive region");
-    }
-    off += rsiz;
-    wp += rsiz;
-    size -= rsiz;
-  }
-  return Status(Status::SUCCESS);
+  return PositionalReadSequence(file_handle_, off, buf, size);
 }
 
 Status PositionalAtomicFileImpl::Write(int64_t off, const void* buf, size_t size) {
@@ -648,17 +602,7 @@ Status PositionalAtomicFileImpl::Write(int64_t off, const void* buf, size_t size
     }
   }
   file_size_ = std::max(file_size_, end_position);
-  const char* rp = static_cast<const char*>(buf);
-  while (size > 0) {
-    const int32_t rsiz = PositionalWriteFile(file_handle_, rp, size, off);
-    if (rsiz < 0) {
-      return GetSysErrorStatus("WriteFile", GetLastError());
-    }
-    off += rsiz;
-    rp += rsiz;
-    size -= rsiz;
-  }
-  return Status(Status::SUCCESS);
+  return PositionalWriteSequence(file_handle_, off, buf, size);
 }
 
 Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* off) {
@@ -681,19 +625,10 @@ Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* o
   if (off != nullptr) {
     *off = position;
   }
-  if (buf != nullptr) {
-    const char* rp = static_cast<const char*>(buf);
-    while (size > 0) {
-      const int32_t rsiz = PositionalWriteFile(file_handle_, rp, size, position);
-      if (rsiz < 0) {
-        return GetSysErrorStatus("WriteFile", GetLastError());
-      }
-      position += rsiz;
-      rp += rsiz;
-      size -= rsiz;
-    }
+  if (buf == nullptr) {
+    return Status(Status::SUCCESS);
   }
-  return Status(Status::SUCCESS);
+  return PositionalWriteSequence(file_handle_, position, buf, size);
 }
 
 Status PositionalAtomicFileImpl::Truncate(int64_t size) {
@@ -750,8 +685,8 @@ Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  alloc_init_size_ = std::max<int64_t>(1, init_size);
-  alloc_inc_factor_ = std::max<double>(1.1, inc_factor);
+  alloc_init_size_ = init_size;
+  alloc_inc_factor_ = inc_factor;
   return Status(Status::SUCCESS);
 }
 

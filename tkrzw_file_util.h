@@ -159,7 +159,6 @@ Status WriteFile(const std::string& path, std::string_view content);
  */
 Status ReadFile(const std::string& path, std::string* content);
 
-
 /**
  * Read the content from a file, in a simple way.
  * @param path The path of the file to make.

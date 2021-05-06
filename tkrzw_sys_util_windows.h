@@ -173,6 +173,55 @@ inline int32_t PositionalWriteFile(
   return -1;
 }
 
+/**
+ * Reads data from a file handle at a position.
+ * @param fd The file handle.
+ * @param off The offset of a source region.
+ * @param buf The pointer to the destination buffer.
+ * @param size The size of the data to be read.
+ * @return The result status.
+ */
+inline Status PositionalReadSequence(
+    HANDLE file_handle, int64_t off, void* buf, size_t size) {
+  char* wp = static_cast<char*>(buf);
+  while (size > 0) {
+    const int32_t rsiz = PositionalReadFile(file_handle, wp, size, off);
+    if (rsiz < 0) {
+      return GetSysErrorStatus("ReadFile", GetLastError());
+    }
+    if (rsiz == 0) {
+      return Status(Status::INFEASIBLE_ERROR, "excessive region");
+    }
+    off += rsiz;
+    wp += rsiz;
+    size -= rsiz;
+  }
+  return Status(Status::SUCCESS);
+}
+
+/**
+ * Writes data to a file handle at a position.
+ * @param fd The file handle.
+ * @param off The offset of the destination region.
+ * @param buf The pointer to the source buffer.
+ * @param size The size of the data to be written.
+ * @return The result status.
+ */
+inline Status PositionalWriteSequence(
+    HANDLE file_handle, int64_t off, const void* buf, size_t size) {
+  const char* rp = static_cast<const char*>(buf);
+  while (size > 0) {
+    const int32_t rsiz = PositionalWriteFile(file_handle, rp, size, off);
+    if (rsiz < 0) {
+      return GetSysErrorStatus("WriteFile", GetLastError());
+    }
+    off += rsiz;
+    rp += rsiz;
+    size -= rsiz;
+  }
+  return Status(Status::SUCCESS);
+}
+
 }  // namespace tkrzw
 
 #endif  // _TKRZW_SYS_UTIL_WINDOWS_H

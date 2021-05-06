@@ -34,9 +34,9 @@ class File {
    */
   virtual ~File() = default;
 
-  /** The default value of initial allocation size. */
+  /** The default value of the initial allocation size. */
   static constexpr int64_t DEFAULT_ALLOC_INIT_SIZE = 1LL << 20;
-  /** The default value of allocation increment factor. */
+  /** The default value of the allocation increment factor. */
   static constexpr double DEFAULT_ALLOC_INC_FACTOR = 2.0;
 
   /**

@@ -312,8 +312,8 @@ Status MemoryMapParallelFileImpl::SetAllocationStrategy(int64_t init_size, doubl
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  alloc_init_size_ = std::max<int64_t>(1, init_size);
-  alloc_inc_factor_ = std::max<double>(1.1, inc_factor);
+  alloc_init_size_ = init_size;
+  alloc_inc_factor_ = inc_factor;
   return Status(Status::SUCCESS);
 }
 
@@ -868,8 +868,8 @@ Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double 
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  alloc_init_size_ = std::max<int64_t>(1, init_size);
-  alloc_inc_factor_ = std::max<double>(1.1, inc_factor);
+  alloc_init_size_ = init_size;
+  alloc_inc_factor_ = inc_factor;
   return Status(Status::SUCCESS);
 }
 
