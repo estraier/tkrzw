@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-class StdFileTest : public CommonFileTest<tkrzw::StdFile> {};
+class StdFileTest : public CommonFileTest {};
 
 TEST_F(StdFileTest, Attributes) {
   tkrzw::StdFile file;
@@ -39,47 +39,58 @@ TEST_F(StdFileTest, Attributes) {
 }
 
 TEST_F(StdFileTest, EmptyFile) {
-  EmptyFileTest();
+  tkrzw::StdFile file;
+  EmptyFileTest(&file);
 }
 
 TEST_F(StdFileTest, SimpleRead) {
-  SimpleReadTest();
+  tkrzw::StdFile file;
+  SimpleReadTest(&file);
 }
 
 TEST_F(StdFileTest, SimpleWrite) {
-  SimpleWriteTest();
+  tkrzw::StdFile file;
+  SimpleWriteTest(&file);
 }
 
 TEST_F(StdFileTest, ReallocWrite) {
-  ReallocWriteTest();
+  tkrzw::StdFile file;
+  ReallocWriteTest(&file);
 }
 
 TEST_F(StdFileTest, ImplicitClose) {
-  ImplicitCloseTest();
+  tkrzw::StdFile file;
+  ImplicitCloseTest(&file);
 }
 
 TEST_F(StdFileTest, OpenOptions) {
-  OpenOptionsTest();
+  tkrzw::StdFile file;
+  OpenOptionsTest(&file);
 }
 
 TEST_F(StdFileTest, OrderedThread) {
-  OrderedThreadTest();
+  tkrzw::StdFile file;
+  OrderedThreadTest(&file);
 }
 
 TEST_F(StdFileTest, RandomThread) {
-  RandomThreadTest();
+  tkrzw::StdFile file;
+  RandomThreadTest(&file);
 }
 
 TEST_F(StdFileTest, FileReader) {
-  FileReaderTest();
+  tkrzw::StdFile file;
+  FileReaderTest(&file);
 }
 
 TEST_F(StdFileTest, FlatRecord) {
-  FlatRecordTest();
+  tkrzw::StdFile file;
+  FlatRecordTest(&file);
 }
 
 TEST_F(StdFileTest, Rename) {
-  RenameTest();
+  tkrzw::StdFile file;
+  RenameTest(&file);
 }
 
 TEST_F(StdFileTest, CriticalSection) {

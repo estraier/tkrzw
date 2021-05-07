@@ -46,6 +46,45 @@ const Status& Status::OrDie() const {
   return *this;
 }
 
+void* xmallocaligned(size_t alignment, size_t size) {
+#if defined(_SYS_POSIX_)
+  assert(alignment > 0);
+  void* ptr = std::aligned_alloc(alignment, size);
+  if (ptr == nullptr) {
+    throw std::bad_alloc();
+  }
+  return ptr;
+#elif defined(_SYS_WINDOWS_)
+  assert(alignment > 0);
+  void* ptr = _aligned_malloc(alignment, size);
+  if (ptr == nullptr) {
+    throw std::bad_alloc();
+  }
+  return ptr;
+#else
+  assert(alignment > 0);
+  void* ptr = xmalloc(size + alignment + sizeof(void*));
+  void* aligned = (char*)ptr + alignment - (intptr_t)ptr % alignment;
+  std::memcpy((char*)aligned - sizeof(void*), &ptr, sizeof(void*));
+  return aligned;
+#endif
+}
+
+void xfreealigned(void* ptr) {
+#if defined(_SYS_POSIX_)
+  assert(ptr != nullptr);
+  std::free(ptr);  
+#elif defined(_SYS_WINDOWS_)
+  assert(ptr != nullptr);
+  _aligned_free(ptr);
+#else
+  assert(ptr != nullptr);
+  void* orig = nullptr;
+  std::memcpy(&orig, (char*)ptr - sizeof(void*), sizeof(void*));
+  std::free(orig);
+#endif
+}
+
 uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed) {
   assert(buf != nullptr && size <= (1 << 30));
   const uint64_t mul = 0xc6a4a7935bd1e995ULL;

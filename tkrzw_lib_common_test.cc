@@ -170,6 +170,13 @@ TEST(LibCommonTest, XMalloc) {
     EXPECT_NE(nullptr, ptr);
   }
   tkrzw::xfree(ptr);
+  for (size_t size = 1; size <= 8192; size *= 2) {
+    ptr = tkrzw::xmallocaligned(512, size);
+    EXPECT_NE(nullptr, ptr);
+    EXPECT_EQ(0, reinterpret_cast<intptr_t>(ptr) % 512);
+    std::memset(ptr, 0, size);
+    tkrzw::xfreealigned(ptr);
+  }
 }
 
 TEST(LibCommonTest, CheckSet) {

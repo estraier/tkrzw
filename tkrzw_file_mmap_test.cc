@@ -31,80 +31,78 @@ int main(int argc, char** argv) {
 }
 
 template <class FILE>
-class MemoryMapFileTest : public CommonFileTest<FILE> {
+class MemoryMapFileTest : public CommonFileTest {
  protected:
-  void ZoneTest();
-  void LockMemoryTest();
+  void ZoneTest(FILE* file);
+  void LockMemoryTest(FILE* file);
 };
 
 template <class FILE>
-void MemoryMapFileTest<FILE>::ZoneTest() {
+void MemoryMapFileTest<FILE>::ZoneTest(FILE* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
-  FILE file;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(true, 0, 4, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, 0, 4, &zone));
     std::memcpy(zone->Pointer(), "abcd", 4);
   }
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(false, 0, tkrzw::INT32MAX, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 0, tkrzw::INT32MAX, &zone));
     EXPECT_EQ(4, zone->Size());
     EXPECT_EQ("abcd", std::string(zone->Pointer(), zone->Size()));
   }
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(true, -1, 3, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, -1, 3, &zone));
     std::memcpy(zone->Pointer(), "xyz", 3);
   }
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(false, 0, tkrzw::INT32MAX, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 0, tkrzw::INT32MAX, &zone));
     EXPECT_EQ(7, zone->Size());
     EXPECT_EQ("abcdxyz", std::string(zone->Pointer(), zone->Size()));
   }
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(true, 3, 2, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, 3, 2, &zone));
     std::memcpy(zone->Pointer(), "00", 2);
   }
   {
     std::unique_ptr<typename FILE::Zone> zone;
-    ASSERT_EQ(tkrzw::Status::SUCCESS, file.MakeZone(false, 2, 4, &zone));
+    ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 2, 4, &zone));
     EXPECT_EQ(4, zone->Size());
     EXPECT_EQ("c00y", std::string(zone->Pointer(), zone->Size()));
   }
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
   std::string content;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ("abc00yz", content);
 }
 
 template <class FILE>
-void MemoryMapFileTest<FILE>::LockMemoryTest() {
+void MemoryMapFileTest<FILE>::LockMemoryTest(FILE* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
-  FILE file;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.SetAllocationStrategy(1, 2));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 2));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
   const std::string data(4096, 'z');
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.LockMemory(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.LockMemory(8192));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.LockMemory(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(4096));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(8192));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(4096));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(4096));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
 class MemoryMapParallelFileTest : public MemoryMapFileTest<tkrzw::MemoryMapParallelFile> {};
@@ -116,55 +114,68 @@ TEST_F(MemoryMapParallelFileTest, Attributes) {
 }
 
 TEST_F(MemoryMapParallelFileTest, EmptyFile) {
-  EmptyFileTest();
+  tkrzw::MemoryMapParallelFile file;
+  EmptyFileTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, SimpleRead) {
-  SimpleReadTest();
+  tkrzw::MemoryMapParallelFile file;
+  SimpleReadTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, SimpleWrite) {
-  SimpleWriteTest();
+  tkrzw::MemoryMapParallelFile file;
+  SimpleWriteTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, ReallocWrite) {
-  ReallocWriteTest();
+  tkrzw::MemoryMapParallelFile file;
+  ReallocWriteTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, ImplicitClose) {
-  ImplicitCloseTest();
+  tkrzw::MemoryMapParallelFile file;
+  ImplicitCloseTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, OpenOptions) {
-  OpenOptionsTest();
+  tkrzw::MemoryMapParallelFile file;
+  OpenOptionsTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, OrderedThread) {
-  OrderedThreadTest();
+  tkrzw::MemoryMapParallelFile file;
+  OrderedThreadTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, RandomThread) {
-  RandomThreadTest();
+  tkrzw::MemoryMapParallelFile file;
+  RandomThreadTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, FileReader) {
-  FileReaderTest();
+  tkrzw::MemoryMapParallelFile file;
+  FileReaderTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, FlatRecord) {
-  FlatRecordTest();
+  tkrzw::MemoryMapParallelFile file;
+  FlatRecordTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, Rename) {
-  RenameTest();
+  tkrzw::MemoryMapParallelFile file;
+  RenameTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, Zone) {
-  ZoneTest();
+  tkrzw::MemoryMapParallelFile file;
+  ZoneTest(&file);
 }
 
 TEST_F(MemoryMapParallelFileTest, LockMemory) {
-  LockMemoryTest();
+  tkrzw::MemoryMapParallelFile file;
+  LockMemoryTest(&file);
 }
 
 class MemoryMapAtomicFileTest : public MemoryMapFileTest<tkrzw::MemoryMapAtomicFile> {};
@@ -176,55 +187,68 @@ TEST_F(MemoryMapAtomicFileTest, Attributes) {
 }
 
 TEST_F(MemoryMapAtomicFileTest, EmptyFile) {
-  EmptyFileTest();
+  tkrzw::MemoryMapAtomicFile file;
+  EmptyFileTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, SimpleRead) {
-  SimpleReadTest();
+  tkrzw::MemoryMapAtomicFile file;
+  SimpleReadTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, SimpleWrite) {
-  SimpleWriteTest();
+  tkrzw::MemoryMapAtomicFile file;
+  SimpleWriteTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, ReallocWrite) {
-  ReallocWriteTest();
+  tkrzw::MemoryMapAtomicFile file;
+  ReallocWriteTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, ImplicitClose) {
-  ImplicitCloseTest();
+  tkrzw::MemoryMapAtomicFile file;
+  ImplicitCloseTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, OpenOptions) {
-  OpenOptionsTest();
+  tkrzw::MemoryMapAtomicFile file;
+  OpenOptionsTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, OrderedThread) {
-  OrderedThreadTest();
+  tkrzw::MemoryMapAtomicFile file;
+  OrderedThreadTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, RandomThread) {
-  RandomThreadTest();
+  tkrzw::MemoryMapAtomicFile file;
+  RandomThreadTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, FileReader) {
-  FileReaderTest();
+  tkrzw::MemoryMapAtomicFile file;
+  FileReaderTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, FlatRecord) {
-  FlatRecordTest();
+  tkrzw::MemoryMapAtomicFile file;
+  FlatRecordTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, Rename) {
-  RenameTest();
+  tkrzw::MemoryMapAtomicFile file;
+  RenameTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, Zone) {
-  ZoneTest();
+  tkrzw::MemoryMapAtomicFile file;
+  ZoneTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, LockMemory) {
-  LockMemoryTest();
+  tkrzw::MemoryMapAtomicFile file;
+  LockMemoryTest(&file);
 }
 
 // END OF FILE

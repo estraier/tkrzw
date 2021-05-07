@@ -502,6 +502,20 @@ inline void xfree(void* ptr) {
 }
 
 /**
+ * Allocates an aligned region on memory.
+ * @param alignment The alignment of the address.
+ * @param size The size of the region.
+ * @return The pointer to the allocated region.
+ */
+void* xmallocaligned(size_t alignment, size_t size);
+
+/**
+ * Frees an aligned region on memory.
+ * @param ptr The pointer to the region.
+ */
+void xfreealigned(void* ptr);
+
+/**
  * Checks whether a set has an element.
  * @param set The set to search.
  * @param elem The element to search for.

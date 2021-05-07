@@ -94,6 +94,10 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   EXPECT_EQ("XX", dbm->GetSimple("x"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  for (int i = 0; i < 4; i++) {
+    auto tmp_dbm = dbm->MakeDBM();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_dbm->Open(export_path, i % 2 == 0));
+  }
 }
 
 inline void CommonDBMTest::LargeRecordTest(tkrzw::DBM* dbm) {

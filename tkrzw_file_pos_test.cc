@@ -30,10 +30,7 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-template <class FILE>
-class PositionalFileTest : public CommonFileTest<FILE> {};
-
-class PositionalParallelFileTest : public PositionalFileTest<tkrzw::PositionalParallelFile> {};
+class PositionalParallelFileTest : public CommonFileTest {};
 
 TEST_F(PositionalParallelFileTest, Attributes) {
   tkrzw::PositionalParallelFile file;
@@ -42,50 +39,61 @@ TEST_F(PositionalParallelFileTest, Attributes) {
 }
 
 TEST_F(PositionalParallelFileTest, EmptyFile) {
-  EmptyFileTest();
+  tkrzw::PositionalParallelFile file;
+  EmptyFileTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, SimpleRead) {
-  SimpleReadTest();
+  tkrzw::PositionalParallelFile file;
+  SimpleReadTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, SimpleWrite) {
-  SimpleWriteTest();
+  tkrzw::PositionalParallelFile file;
+  SimpleWriteTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, ReallocWrite) {
-  ReallocWriteTest();
+  tkrzw::PositionalParallelFile file;
+  ReallocWriteTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, ImplicitClose) {
-  ImplicitCloseTest();
+  tkrzw::PositionalParallelFile file;
+  ImplicitCloseTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, OpenOptions) {
-  OpenOptionsTest();
+  tkrzw::PositionalParallelFile file;
+  OpenOptionsTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, OrderedThread) {
-  OrderedThreadTest();
+  tkrzw::PositionalParallelFile file;
+  OrderedThreadTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, RandomThread) {
-  RandomThreadTest();
+  tkrzw::PositionalParallelFile file;
+  RandomThreadTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, FileReader) {
-  FileReaderTest();
+  tkrzw::PositionalParallelFile file;
+  FileReaderTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, FlatRecord) {
-  FlatRecordTest();
+  tkrzw::PositionalParallelFile file;
+  FlatRecordTest(&file);
 }
 
 TEST_F(PositionalParallelFileTest, Rename) {
-  RenameTest();
+  tkrzw::PositionalParallelFile file;
+  RenameTest(&file);
 }
 
-class PositionalAtomicFileTest : public PositionalFileTest<tkrzw::PositionalAtomicFile> {};
+class PositionalAtomicFileTest : public CommonFileTest {};
 
 TEST_F(PositionalAtomicFileTest, Attributes) {
   tkrzw::PositionalAtomicFile file;
@@ -94,47 +102,58 @@ TEST_F(PositionalAtomicFileTest, Attributes) {
 }
 
 TEST_F(PositionalAtomicFileTest, EmptyFile) {
-  EmptyFileTest();
+  tkrzw::PositionalAtomicFile file;
+  EmptyFileTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, SimpleRead) {
-  SimpleReadTest();
+  tkrzw::PositionalAtomicFile file;
+  SimpleReadTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, SimpleWrite) {
-  SimpleWriteTest();
+  tkrzw::PositionalAtomicFile file;
+  SimpleWriteTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, ReallocWrite) {
-  ReallocWriteTest();
+  tkrzw::PositionalAtomicFile file;
+  ReallocWriteTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, ImplicitClose) {
-  ImplicitCloseTest();
+  tkrzw::PositionalAtomicFile file;
+  ImplicitCloseTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, OpenOptions) {
-  OpenOptionsTest();
+  tkrzw::PositionalAtomicFile file;
+  OpenOptionsTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, OrderedThread) {
-  OrderedThreadTest();
+  tkrzw::PositionalAtomicFile file;
+  OrderedThreadTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, RandomThread) {
-  RandomThreadTest();
+  tkrzw::PositionalAtomicFile file;
+  RandomThreadTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, FileReader) {
-  FileReaderTest();
+  tkrzw::PositionalAtomicFile file;
+  FileReaderTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, FlatRecord) {
-  FlatRecordTest();
+  tkrzw::PositionalAtomicFile file;
+  FlatRecordTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, Rename) {
-  RenameTest();
+  tkrzw::PositionalAtomicFile file;
+  RenameTest(&file);
 }
 
 // END OF FILE
