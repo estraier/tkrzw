@@ -34,6 +34,7 @@ template <class FILEIMPL>
 class BlockFileTest : public CommonFileTest {
  protected:
   void BasicTest(FILEIMPL* file);
+  void DirectIOTest(FILEIMPL* file);
 };
 
 template <class FILEIMPL>
@@ -114,6 +115,66 @@ void BlockFileTest<FILEIMPL>::BasicTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
+template <class FILEIMPL>
+void BlockFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
+  /*
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  */
+  const std::string file_path = "casket";
+  constexpr int64_t block_size = 512;
+  constexpr int64_t head_buffer_size = block_size * 10;
+  constexpr int32_t file_size = block_size * 200;
+  constexpr int32_t max_record_size = 1024;
+  char* write_buf = static_cast<char*>(tkrzw::xmallocaligned(512, max_record_size));
+  char* read_buf = static_cast<char*>(tkrzw::xmallocaligned(512, max_record_size));
+  std::mt19937 mt(1);
+  std::uniform_int_distribution<int32_t> size_dist(1, max_record_size);
+  std::uniform_int_distribution<int32_t> append_dist(0, 1);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file->SetAccessStrategy(block_size, head_buffer_size,
+                                    tkrzw::BlockParallelFile::ACCESS_DIRECT));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  int64_t pos = 0;
+  while (pos < file_size + max_record_size * 2) {
+    const int32_t record_size = size_dist(mt);
+    for (int32_t i = 0; i < record_size; i++) {
+      write_buf[i] = 'a' + (pos + i) % 26;
+    }
+    if (append_dist(mt) == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(pos, write_buf, record_size));
+    } else {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(write_buf, record_size));
+    }
+    pos += record_size;
+  }
+  pos = 0;
+  while (pos < file_size + max_record_size) {
+    const int32_t record_size = size_dist(mt);
+    for (int32_t i = 0; i < record_size; i++) {
+      write_buf[i] = 'A' + (pos + i) % 26;
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(pos, write_buf, record_size));
+    pos += record_size + size_dist(mt);
+  }
+  pos = 0;
+  while (pos < file_size + max_record_size) {
+    const int32_t record_size = size_dist(mt);
+    for (int32_t i = 0; i < record_size; i++) {
+      write_buf[i] = 'A' + (pos + i) % 26;
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(pos, read_buf, record_size));
+    EXPECT_EQ(tkrzw::StrLowerCase(std::string_view(write_buf, record_size)),
+              tkrzw::StrLowerCase(std::string_view(read_buf, record_size)));
+    pos += record_size;
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  tkrzw::xfreealigned(read_buf);
+  tkrzw::xfreealigned(write_buf);
+}
+
 class BlockParallelFileTest : public BlockFileTest<tkrzw::BlockParallelFile> {};
 
 TEST_F(BlockParallelFileTest, Attributes) {
@@ -125,6 +186,11 @@ TEST_F(BlockParallelFileTest, Attributes) {
 TEST_F(BlockParallelFileTest, Basic) {
   tkrzw::BlockParallelFile file;
   BasicTest(&file);
+}
+
+TEST_F(BlockParallelFileTest, DirectIO) {
+  tkrzw::BlockParallelFile file;
+  DirectIOTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, EmptyFile) {
@@ -204,6 +270,11 @@ TEST_F(BlockAtomicFileTest, Attributes) {
 TEST_F(BlockAtomicFileTest, Basic) {
   tkrzw::BlockAtomicFile file;
   BasicTest(&file);
+}
+
+TEST_F(BlockAtomicFileTest, DirectIO) {
+  tkrzw::BlockAtomicFile file;
+  DirectIOTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, EmptyFile) {
