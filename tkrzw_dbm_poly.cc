@@ -133,6 +133,10 @@ std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* param
     return std::make_unique<PositionalParallelFile>();
   } else if (file_class == "positionalatomicfile" || file_class == "pos-atom") {
     return std::make_unique<PositionalAtomicFile>();
+  } else if (file_class == "blockparallelfile" || file_class == "block-para") {
+    return std::make_unique<BlockParallelFile>();
+  } else if (file_class == "blockatomicfile" || file_class == "block-atom") {
+    return std::make_unique<BlockAtomicFile>();
   }
   return nullptr;
 }

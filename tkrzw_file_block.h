@@ -56,7 +56,7 @@ class BlockParallelFile final : public File {
   static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
 
   /**
-   * Enumeration of options for SetAccessStrateg.
+   * Enumeration of options for SetAccessStrategy.
    */
   enum OpenOption : int32_t {
     /** The default behavior. */
@@ -238,7 +238,7 @@ class BlockAtomicFile final : public File {
   static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
 
   /**
-   * Enumeration of options for SetAccessStrateg.
+   * Enumeration of options for SetAccessStrategy.
    */
   enum OpenOption : int32_t {
     /** The default behavior. */

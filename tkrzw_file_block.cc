@@ -19,7 +19,7 @@
 
 #elif defined(_SYS_WINDOWS_)
 
-#include "tkrzw_sys_file_block_windows.h"
+#include "tkrzw_sys_file_block_std.h"
 
 #else
 
