@@ -29,7 +29,7 @@ class MemoryMapParallelFileImpl;
 class MemoryMapParallelFileZoneImpl;
 
 /**
- * File implementation with memory mapping and locking for parallel operations.
+ * File implementation my memory mapping and locking for parallel operations.
  * @details Reading and writing operations are thread-safe; Multiple threads can access the same
  * file concurrently.  Other operations including Open, Close, Truncate, and Synchronize are not
  * thread-safe.  Moreover, locking doesn't assure atomicity of reading and writing operations.
@@ -272,7 +272,7 @@ class MemoryMapAtomicFileImpl;
 class MemoryMapAtomicFileZoneImpl;
 
 /**
- * File implementation with memory mapping and locking for atomic operations.
+ * File implementation by memory mapping and locking for atomic operations.
  * @details All operations are thread-safe; Multiple threads can access the same file concurrently.
  * Also, locking assures that every operation is observed in an atomic manner.
  */

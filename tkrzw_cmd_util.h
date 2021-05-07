@@ -45,6 +45,7 @@
 #include "tkrzw_dbm_tree.h"
 #include "tkrzw_dbm_tree_impl.h"
 #include "tkrzw_file.h"
+#include "tkrzw_file_block.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_std.h"
@@ -244,6 +245,17 @@ inline void Die(const FIRST& first, const REST&... rest) {
  */
 std::unique_ptr<File> MakeFileOrDie(
     const std::string& impl_name, int64_t alloc_init_size, double alloc_inc_factor);
+
+/**
+ * Sets access strategy of the block-aligned direct access file.
+ * @param file The file object.
+ * @param block_size The block size to which all records should be aligned.
+ * @param head_buffer_size The size of the head buffer.
+ * @param is_direct If true, the direct access option is set.
+ * @param is_sync If true, the sync access option is set.
+ */
+void SetBlockAccessStrategyOrDie(File* file, int64_t block_size, int64_t head_buffer_size,
+                                 bool is_direct, bool is_sync);
 
 /**
  * Locks the memory of the beginning region or die.

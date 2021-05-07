@@ -253,6 +253,10 @@ std::unique_ptr<File> MakeFileOrDie(
     file = std::make_unique<PositionalParallelFile>();
   } else if (impl_name == "pos-atom") {
     file = std::make_unique<PositionalAtomicFile>();
+  } else if (impl_name == "block-para") {
+    file = std::make_unique<BlockParallelFile>();
+  } else if (impl_name == "block-atom") {
+    file = std::make_unique<BlockAtomicFile>();
   } else {
     Die("Unknown File implementation: ", impl_name);
   }
@@ -260,6 +264,32 @@ std::unique_ptr<File> MakeFileOrDie(
     file->SetAllocationStrategy(alloc_init_size, alloc_inc_factor);
   }
   return file;
+}
+
+void SetBlockAccessStrategyOrDie(File* file, int64_t block_size, int64_t head_buffer_size,
+                                 bool is_direct, bool is_sync) {
+  if (typeid(*file) == typeid(BlockParallelFile)) {
+    int32_t options = BlockParallelFile::ACCESS_DEFAULT;
+    if (is_direct) {
+      options |= BlockParallelFile::ACCESS_DIRECT;
+    }
+    if (is_sync) {
+      options |= BlockParallelFile::ACCESS_SYNC;
+    }
+    auto* block_file = dynamic_cast<BlockParallelFile*>(file);
+    block_file->SetAccessStrategy(block_size, head_buffer_size, options).OrDie();
+  }
+  if (typeid(*file) == typeid(BlockAtomicFile)) {
+    int32_t options = BlockAtomicFile::ACCESS_DEFAULT;
+    if (is_direct) {
+      options |= BlockAtomicFile::ACCESS_DIRECT;
+    }
+    if (is_sync) {
+      options |= BlockAtomicFile::ACCESS_SYNC;
+    }
+    auto* block_file = dynamic_cast<BlockAtomicFile*>(file);
+    block_file->SetAccessStrategy(block_size, head_buffer_size, options).OrDie();
+  }
 }
 
 void LockMemoryOfFileOrDie(File* file, size_t size) {

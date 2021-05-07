@@ -216,6 +216,22 @@ check-file-perf :
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-para \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-para \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer_size 1000 --random casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-para \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer_size 1000 --append casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file block-para \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer_size 8192 casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-atom \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-atom \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer_size 1000 --random casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file block-atom \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer_size 1000 --append casket
+	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file block-atom \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer_size 8192 casket
 
 check-hashdbm-perf :
 	rm -Rf casket*

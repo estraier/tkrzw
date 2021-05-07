@@ -42,7 +42,8 @@ static void PrintUsageAndDie() {
   P("  --verbose : Prints verbose reports.\n");
   P("  --path path : The path of the file to write or read.\n");
   P("  --file impl : The name of a file implementation:"
-    " std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
+    " std, mmap-para, mmap-atom, pos-para, pos-atom, block-para, block-atom."
+    " (default: mmap-para)\n");
   P("  --no_wait : Fails if the file is locked by another process.\n");
   P("  --no_lock : Omits file locking.\n");
   P("  --alloc_init num : The initial allocation size. (default: %lld)\n",

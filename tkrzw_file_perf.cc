@@ -29,7 +29,8 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Common options:\n");
   P("  --file impl : The name of a file implementation:"
-    " std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
+    " std, mmap-para, mmap-atom, pos-para, pos-atom, block-para, block-atom."
+    " (default: mmap-para)\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --size num : The size of each record. (default: 100)\n");
   P("  --threads num : The number of threads. (default: 1)\n");
@@ -39,6 +40,12 @@ static void PrintUsageAndDie() {
     File::DEFAULT_ALLOC_INC_FACTOR);
   P("  --lock_memory num : The size to lock the memory of the beginning region."
     " (default: 0)\n");
+  P("  --block_size num : The block size for block-aligned direct IO. (default: %d)\n",
+    BlockParallelFile::DEFAULT_BLOCK_SIZE);
+  P("  --head_buffer_size num : The head buffer size for block-aligned direct IO."
+    " (default: 0)\n");
+  P("  --direct : Enables the direct option for the block file.\n");
+  P("  --sync : Enables the sync option for the block file.\n");
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random : Uses random offsets rather than pre-defined ones.\n");
@@ -54,6 +61,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
+    {"--block_size", 1}, {"--head_buffer_size", 1}, {"--direct", 0}, {"--sync", 0},
     {"--random", 0}, {"--append", 0}, {"--write_only", 0}, {"--read_only", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -72,11 +80,17 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const double alloc_increment = GetDoubleArgument(
       cmd_args, "--alloc_inc", 0, File::DEFAULT_ALLOC_INC_FACTOR);
   const int64_t lock_memory = GetIntegerArgument(cmd_args, "--lock_memory", 0, 0);
+  const int64_t block_size = GetIntegerArgument(
+      cmd_args, "--block_size", 0, BlockParallelFile::DEFAULT_BLOCK_SIZE);
+  const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer_size", 0, 0);
+  const bool is_direct = CheckMap(cmd_args, "--direct");
+  const bool is_sync = CheckMap(cmd_args, "--sync");
   const bool is_random = CheckMap(cmd_args, "--random");
   const bool is_append = CheckMap(cmd_args, "--append");
   const bool is_write_only = CheckMap(cmd_args, "--write_only");
   const bool is_read_only = CheckMap(cmd_args, "--read_only");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
+  SetBlockAccessStrategyOrDie(file.get(), block_size, head_buffer_size, is_direct, is_sync);
   if (path.empty()) {
     Die("The file path must be specified");
   }
@@ -234,6 +248,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
+    {"--block_size", 1}, {"--head_buffer_size", 1}, {"--direct", 0}, {"--sync", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -251,7 +266,13 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const double alloc_increment = GetDoubleArgument(
       cmd_args, "--alloc_inc", 0, File::DEFAULT_ALLOC_INC_FACTOR);
   const int64_t lock_memory = GetIntegerArgument(cmd_args, "--lock_memory", 0, 0);
+  const int64_t block_size = GetIntegerArgument(
+      cmd_args, "--block_size", 0, BlockParallelFile::DEFAULT_BLOCK_SIZE);
+  const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer_size", 0, 0);
+  const bool is_direct = CheckMap(cmd_args, "--direct");
+  const bool is_sync = CheckMap(cmd_args, "--sync");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
+  SetBlockAccessStrategyOrDie(file.get(), block_size, head_buffer_size, is_direct, is_sync);
   if (path.empty()) {
     Die("The file path must be specified");
   }

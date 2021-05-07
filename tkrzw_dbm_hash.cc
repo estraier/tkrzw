@@ -18,6 +18,7 @@
 #include "tkrzw_dbm_hash.h"
 #include "tkrzw_dbm_hash_impl.h"
 #include "tkrzw_file.h"
+#include "tkrzw_file_block.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_std.h"

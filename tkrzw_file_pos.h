@@ -28,7 +28,7 @@ namespace tkrzw {
 class PositionalParallelFileImpl;
 
 /**
- * File implementation with positional access and locking for parallel operations.
+ * File implementation by positional access and locking for parallel operations.
  * @details Reading and writing operations are thread-safe; Multiple threads can access the same
  * file concurrently.  Other operations including Open, Close, Truncate, and Synchronize are not
  * thread-safe.  Moreover, locking doesn't assure atomicity of reading and writing operations.

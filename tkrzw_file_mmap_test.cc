@@ -17,8 +17,8 @@
 #include "gmock/gmock.h"
 
 #include "tkrzw_file.h"
-#include "tkrzw_file_test_common.h"
 #include "tkrzw_file_mmap.h"
+#include "tkrzw_file_test_common.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 
@@ -30,47 +30,47 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-template <class FILE>
+template <class FILEIMPL>
 class MemoryMapFileTest : public CommonFileTest {
  protected:
-  void ZoneTest(FILE* file);
-  void LockMemoryTest(FILE* file);
+  void ZoneTest(FILEIMPL* file);
+  void LockMemoryTest(FILEIMPL* file);
 };
 
-template <class FILE>
-void MemoryMapFileTest<FILE>::ZoneTest(FILE* file) {
+template <class FILEIMPL>
+void MemoryMapFileTest<FILEIMPL>::ZoneTest(FILEIMPL* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, 0, 4, &zone));
     std::memcpy(zone->Pointer(), "abcd", 4);
   }
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 0, tkrzw::INT32MAX, &zone));
     EXPECT_EQ(4, zone->Size());
     EXPECT_EQ("abcd", std::string(zone->Pointer(), zone->Size()));
   }
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, -1, 3, &zone));
     std::memcpy(zone->Pointer(), "xyz", 3);
   }
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 0, tkrzw::INT32MAX, &zone));
     EXPECT_EQ(7, zone->Size());
     EXPECT_EQ("abcdxyz", std::string(zone->Pointer(), zone->Size()));
   }
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(true, 3, 2, &zone));
     std::memcpy(zone->Pointer(), "00", 2);
   }
   {
-    std::unique_ptr<typename FILE::Zone> zone;
+    std::unique_ptr<typename FILEIMPL::Zone> zone;
     ASSERT_EQ(tkrzw::Status::SUCCESS, file->MakeZone(false, 2, 4, &zone));
     EXPECT_EQ(4, zone->Size());
     EXPECT_EQ("c00y", std::string(zone->Pointer(), zone->Size()));
@@ -81,8 +81,8 @@ void MemoryMapFileTest<FILE>::ZoneTest(FILE* file) {
   EXPECT_EQ("abc00yz", content);
 }
 
-template <class FILE>
-void MemoryMapFileTest<FILE>::LockMemoryTest(FILE* file) {
+template <class FILEIMPL>
+void MemoryMapFileTest<FILEIMPL>::LockMemoryTest(FILEIMPL* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 2));
