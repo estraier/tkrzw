@@ -25,6 +25,51 @@
 
 namespace tkrzw {
 
+/**
+ * Interface for positional access file implementations.
+ */
+class PositionalFile : public File {
+ public:
+  /**
+   * Destructor.
+   */
+  virtual ~PositionalFile() = default;
+
+  /**
+   * Enumeration of options for SetAccessStrategy.
+   */
+  enum AccessOption : int32_t {
+    /** The default behavior. */
+    ACCESS_DEFAULT = 0,
+    /** To access the data block directry without caching. */
+    ACCESS_DIRECT = 1 << 0,
+    /** To synchronize the update operation through the device. */
+    ACCESS_SYNC = 1 << 1,
+  };
+
+  /**
+   * Sets the head buffer to cache the beginning region of the file.
+   * @param size The size of the head buffer.  If it is not positive, it is not used.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  virtual Status SetHeadBuffer(int64_t size) = 0;
+
+  /**
+   * Sets access strategy.
+   * @param block_size The block size to which all records should be aligned.  It must be a
+   * multiple of the block size of the underlying file system or device.
+   * @param options Bit-sum options of PositionalFile::AccessOption enums;
+   * @return The result status.
+   */
+  virtual Status SetAccessStrategy(int64_t block_size, int32_t options) = 0;
+
+  /**
+   * Gets the block size.
+   */
+  virtual int64_t GetBlockSize() const = 0;
+};
+
 class PositionalParallelFileImpl;
 
 /**
@@ -33,7 +78,7 @@ class PositionalParallelFileImpl;
  * file concurrently.  Other operations including Open, Close, Truncate, and Synchronize are not
  * thread-safe.  Moreover, locking doesn't assure atomicity of reading and writing operations.
  */
-class PositionalParallelFile final : public File {
+class PositionalParallelFile final : public PositionalFile {
  public:
   /**
    * Default constructor
@@ -51,26 +96,11 @@ class PositionalParallelFile final : public File {
   explicit PositionalParallelFile(const PositionalParallelFile& rhs) = delete;
   PositionalParallelFile& operator =(const PositionalParallelFile& rhs) = delete;
 
-  /** The default value of the block size. */
-  static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
-
-  /**
-   * Enumeration of options for SetAccessStrategy.
-   */
-  enum OpenOption : int32_t {
-    /** The default behavior. */
-    ACCESS_DEFAULT = 0,
-    /** To access the data block directry without caching. */
-    ACCESS_DIRECT = 1 << 0,
-    /** To synchronize the update operation through the device. */
-    ACCESS_SYNC = 1 << 1,
-  };
-
   /**
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of File::OpenOption enums.
    * @return The result status.
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.
@@ -151,16 +181,16 @@ class PositionalParallelFile final : public File {
    * @return The result status.
    * @details This method must be called after the file is opened.
    */
-  Status SetHeadBuffer(int64_t size);
+  Status SetHeadBuffer(int64_t size) override;
 
   /**
    * Sets access strategy.
    * @param block_size The block size to which all records should be aligned.  It must be a
    * multiple of the block size of the underlying file system or device.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of PositionalFile::AccessOption enums;
    * @return The result status.
    */
-  Status SetAccessStrategy(int64_t block_size, int32_t options);
+  Status SetAccessStrategy(int64_t block_size, int32_t options) override;
 
   /**
    * Sets allocation strategy.
@@ -205,7 +235,7 @@ class PositionalParallelFile final : public File {
   /**
    * Gets the block size.
    */
-  int64_t GetBlockSize() const;
+  int64_t GetBlockSize() const override;
 
   /**
    * Makes a new file object of the same concrete class.
@@ -227,7 +257,7 @@ class PositionalAtomicFileImpl;
  * @details All operations are thread-safe; Multiple threads can access the same file concurrently.
  * Also, locking assures that every operation is observed in an atomic manner.
  */
-class PositionalAtomicFile final : public File {
+class PositionalAtomicFile final : public PositionalFile {
  public:
   /**
    * Default constructor
@@ -246,22 +276,10 @@ class PositionalAtomicFile final : public File {
   PositionalAtomicFile& operator =(const PositionalAtomicFile& rhs) = delete;
 
   /**
-   * Enumeration of options for SetAccessStrategy.
-   */
-  enum OpenOption : int32_t {
-    /** The default behavior. */
-    ACCESS_DEFAULT = 0,
-    /** To access the block directry without caching. */
-    ACCESS_DIRECT = 1 << 0,
-    /** To synchronize the update operation through the device. */
-    ACCESS_SYNC = 1 << 1,
-  };
-
-  /**
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of File::OpenOption enums.
    * @return The result status.
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.
@@ -342,16 +360,16 @@ class PositionalAtomicFile final : public File {
    * @return The result status.
    * @details This method must be called after the file is opened.
    */
-  Status SetHeadBuffer(int64_t size);
+  Status SetHeadBuffer(int64_t size) override;
 
   /**
    * Sets access strategy.
    * @param block_size The block size to which all records should be aligned.  It must be a
    * multiple of the block size of the underlying file system or device.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of PositionalFile::AccessOption enums;
    * @return The result status.
    */
-  Status SetAccessStrategy(int64_t block_size, int32_t options);
+  Status SetAccessStrategy(int64_t block_size, int32_t options) override;
 
   /**
    * Sets allocation strategy.
@@ -396,7 +414,7 @@ class PositionalAtomicFile final : public File {
   /**
    * Gets the block size.
    */
-  int64_t GetBlockSize() const;
+  int64_t GetBlockSize() const override;
 
   /**
    * Makes a new file object of the same concrete class.

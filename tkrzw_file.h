@@ -59,7 +59,7 @@ class File {
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of File::OpenOption enums.
    * @return The result status.
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.

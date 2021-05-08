@@ -55,7 +55,8 @@ class StdFile final : public File {
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.  OPEN_NO_WAIT are OPEN_NO_LOCK are ignored.
+   * @param options Bit-sum options of File::OpenOption enums.  OPEN_NO_WAIT are OPEN_NO_LOCK
+   * are ignored.
    * @return The result status.
    */
   Status Open(const std::string& path, bool writable, int32_t options = OPEN_DEFAULT) override;

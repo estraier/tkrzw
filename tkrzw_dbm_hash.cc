@@ -1067,16 +1067,16 @@ Status HashDBMImpl::CloseImpl() {
     file_size_ = file_->GetSizeSimple();
 
 
-      /*      
+      /*
     if (direct_io_)
       // Align the size by inserting a free block.
 
-      const int64_t block_size = 
+      const int64_t block_size =
       const int64_t size_rem = file_size_ % 512;
       if (size_rem != 0) {
 
 
-        
+
         std::cout << "MISS:" << file_size_ << " : " << (file_size_ % 512) << std::endl;
 
 
@@ -1084,15 +1084,15 @@ Status HashDBMImpl::CloseImpl() {
             : file_(file), offset_width_(offset_width), align_pow_(align_pow), body_buf_(nullptr) {}
 
 
-        
+
       }
 
     }
-      */      
+      */
 
 
 
-    
+
     mod_time_ = GetWallTime() * 1000000;
     status |= SaveMetadata(true);
     status |= SaveFBP();
@@ -1220,19 +1220,15 @@ Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path) {
     // check file size and 512 alignment.
     const int64_t file_size = tkrzw::GetFileSize(path);
     if (file_size > 0 && file_size % 512 != 0) {
-      
+
       std::cout << "YABAI:" << file_size << std::endl;
     }
 
-    
-    
-    if (typeid(*file_) == typeid(PositionalParallelFile)) {
+
+    auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+    if (pos_file != nullptr) {
       std::cout << "DIRECT" << std::endl;
-      auto* pos_file = dynamic_cast<PositionalParallelFile*>(file_.get());
       status |= pos_file->SetAccessStrategy(512, PositionalParallelFile::ACCESS_DIRECT);
-    } else if (typeid(*file_) == typeid(PositionalAtomicFile)) {
-      auto* pos_file = dynamic_cast<PositionalAtomicFile*>(file_.get());
-      status |= pos_file->SetAccessStrategy(512, PositionalAtomicFile::ACCESS_DIRECT);
     }
   }
   return Status(Status::SUCCESS);
@@ -1241,22 +1237,16 @@ Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path) {
 Status HashDBMImpl::TuneFileAfterOpen() {
   Status status(Status::SUCCESS);
   if (lock_mem_buckets_) {
-    if (typeid(*file_) == typeid(MemoryMapParallelFile)) {
+    auto* mem_file = dynamic_cast<MemoryMapFile*>(file_.get());
+    if (mem_file != nullptr) {
       std::cout << "LOCK" << std::endl;
-      auto* mem_file = dynamic_cast<MemoryMapParallelFile*>(file_.get());
-      status |= mem_file->LockMemory(record_base_);
-    } else if (typeid(*file_) == typeid(MemoryMapAtomicFile)) {
-      auto* mem_file = dynamic_cast<MemoryMapAtomicFile*>(file_.get());
       status |= mem_file->LockMemory(record_base_);
     }
   }
   if (cache_buckets_) {
-    if (typeid(*file_) == typeid(PositionalParallelFile)) {
+    auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+    if (pos_file != nullptr) {
       std::cout << "CACHE" << std::endl;
-      auto* pos_file = dynamic_cast<PositionalParallelFile*>(file_.get());
-      status |= pos_file->SetHeadBuffer(record_base_);
-    } else if (typeid(*file_) == typeid(PositionalAtomicFile)) {
-      auto* pos_file = dynamic_cast<PositionalAtomicFile*>(file_.get());
       status |= pos_file->SetHeadBuffer(record_base_);
     }
   }

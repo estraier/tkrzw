@@ -1274,6 +1274,8 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     tuning_params.num_buckets = num_buckets;
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
+    tuning_params.cache_buckets = cache_buckets;
+    tuning_params.direct_io = is_direct_io;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;

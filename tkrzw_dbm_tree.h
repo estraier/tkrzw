@@ -231,7 +231,7 @@ class TreeDBM final : public DBM {
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options for opening the file.
+   * @param options Bit-sum options of File::OpenOption enums for opening the file.
    * @return The result status.
    * @details Precondition: The database is not opened.
    */

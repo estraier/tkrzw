@@ -254,7 +254,7 @@ Status PositionalParallelFileImpl::Write(int64_t off, const void* buf, size_t si
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  const int64_t end_position = off + size;  
+  const int64_t end_position = off + size;
   const Status status = AllocateSpace(end_position);
   if (status != Status::SUCCESS) {
     return status;
@@ -865,7 +865,7 @@ Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* o
   file_size_ = end_position;
   if (off != nullptr) {
     *off = position;
-  }  
+  }
   if (buf == nullptr) {
     return Status(Status::SUCCESS);
   }

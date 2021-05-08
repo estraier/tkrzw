@@ -25,16 +25,35 @@
 
 namespace tkrzw {
 
+/**
+ * Interface for memory mapping file implementations.
+ */
+class MemoryMapFile : public File {
+ public:
+  /**
+   * Destructor.
+   */
+  virtual ~MemoryMapFile() = default;
+
+  /**
+   * Locks the memory of the beginning region of the file, not to be swapped out.
+   * @param size The size of the beginning region to lock.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  virtual Status LockMemory(size_t size) = 0;
+};
+
 class MemoryMapParallelFileImpl;
 class MemoryMapParallelFileZoneImpl;
 
 /**
- * File implementation my memory mapping and locking for parallel operations.
+ * File implementation by memory mapping and locking for parallel operations.
  * @details Reading and writing operations are thread-safe; Multiple threads can access the same
  * file concurrently.  Other operations including Open, Close, Truncate, and Synchronize are not
  * thread-safe.  Moreover, locking doesn't assure atomicity of reading and writing operations.
  */
-class MemoryMapParallelFile final : public File {
+class MemoryMapParallelFile final : public MemoryMapFile {
  public:
   /**
    * Structure to make a shared section where a region can be accessed.
@@ -108,7 +127,7 @@ class MemoryMapParallelFile final : public File {
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of File::OpenOption enums.
    * @return The result status.
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.
@@ -222,7 +241,7 @@ class MemoryMapParallelFile final : public File {
    * @return The result status.
    * @details This method must be called after the file is opened.
    */
-  Status LockMemory(size_t size);
+  Status LockMemory(size_t size) override;
 
   /**
    * Gets the path of the file.
@@ -276,7 +295,7 @@ class MemoryMapAtomicFileZoneImpl;
  * @details All operations are thread-safe; Multiple threads can access the same file concurrently.
  * Also, locking assures that every operation is observed in an atomic manner.
  */
-class MemoryMapAtomicFile final : public File {
+class MemoryMapAtomicFile final : public MemoryMapFile {
  public:
   /**
    * Structure to make a critical section where a region can be accessed.
@@ -350,7 +369,7 @@ class MemoryMapAtomicFile final : public File {
    * Opens a file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options.
+   * @param options Bit-sum options of File::OpenOption enums.
    * @return The result status.
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.
@@ -464,7 +483,7 @@ class MemoryMapAtomicFile final : public File {
    * @return The result status.
    * @details This method must be called after the file is opened.
    */
-  Status LockMemory(size_t size);
+  Status LockMemory(size_t size) override;
 
   /**
    * Gets the path of the file.

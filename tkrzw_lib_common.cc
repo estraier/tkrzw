@@ -74,7 +74,7 @@ void* xmallocaligned(size_t alignment, size_t size) {
 void xfreealigned(void* ptr) {
 #if defined(_SYS_POSIX_)
   assert(ptr != nullptr);
-  std::free(ptr);  
+  std::free(ptr);
 #elif defined(_SYS_WINDOWS_)
   assert(ptr != nullptr);
   _aligned_free(ptr);

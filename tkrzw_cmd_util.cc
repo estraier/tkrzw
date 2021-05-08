@@ -263,7 +263,8 @@ std::unique_ptr<File> MakeFileOrDie(
 }
 
 void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct, bool is_sync) {
-  if (typeid(*file) == typeid(PositionalParallelFile)) {
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);;
+  if (pos_file != nullptr) {
     int32_t options = PositionalParallelFile::ACCESS_DEFAULT;
     if (is_direct) {
       options |= PositionalParallelFile::ACCESS_DIRECT;
@@ -271,40 +272,21 @@ void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct, bool
     if (is_sync) {
       options |= PositionalParallelFile::ACCESS_SYNC;
     }
-    auto* block_file = dynamic_cast<PositionalParallelFile*>(file);
-    block_file->SetAccessStrategy(block_size, options).OrDie();
-  }
-  if (typeid(*file) == typeid(PositionalAtomicFile)) {
-    int32_t options = PositionalAtomicFile::ACCESS_DEFAULT;
-    if (is_direct) {
-      options |= PositionalAtomicFile::ACCESS_DIRECT;
-    }
-    if (is_sync) {
-      options |= PositionalAtomicFile::ACCESS_SYNC;
-    }
-    auto* block_file = dynamic_cast<PositionalAtomicFile*>(file);
-    block_file->SetAccessStrategy(block_size, options).OrDie();
+    pos_file->SetAccessStrategy(block_size, options).OrDie();
   }
 }
 
 void LockMemoryOfFileOrDie(File* file, size_t size) {
-  if (typeid(*file) == typeid(MemoryMapParallelFile)) {
-    auto* mem_file = dynamic_cast<MemoryMapParallelFile*>(file);
-    mem_file->LockMemory(size).OrDie();
-  } else if (typeid(*file) == typeid(MemoryMapAtomicFile)) {
-    auto* mem_file = dynamic_cast<MemoryMapAtomicFile*>(file);
+  auto* mem_file = dynamic_cast<MemoryMapFile*>(file);
+  if (mem_file != nullptr) {
     mem_file->LockMemory(size).OrDie();
   }
 }
 
 void SetHeadBufferOfFileOrDie(File* file, int64_t size) {
-  if (typeid(*file) == typeid(PositionalParallelFile)) {
-    auto* block_file = dynamic_cast<PositionalParallelFile*>(file);
-    block_file->SetHeadBuffer(size).OrDie();
-  }
-  if (typeid(*file) == typeid(PositionalAtomicFile)) {
-    auto* block_file = dynamic_cast<PositionalAtomicFile*>(file);
-    block_file->SetHeadBuffer(size).OrDie();
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);;
+  if (pos_file != nullptr) {
+    pos_file->SetHeadBuffer(size).OrDie();
   }
 }
 

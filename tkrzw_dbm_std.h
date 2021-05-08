@@ -169,7 +169,7 @@ class StdHashDBM final : public DBM {
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options for opening the file.
+   * @param options Bit-sum options of File::OpenOption enums for opening the file.
    * @return The result status.
    * @details As this database is an on-memory database, you can set records and retrieve them
    * without opening a file.  If you open a file, records are loaded from the file.
@@ -445,7 +445,7 @@ class StdTreeDBM final : public DBM {
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
-   * @param options Bit-sum options for opening the file.
+   * @param options Bit-sum options of File::OpenOption enums for opening the file.
    * @return The result status.
    * @details As this database is an on-memory database, you can set records and retrieve them
    * without opening a file.  If you open a file, records are loaded from the file.

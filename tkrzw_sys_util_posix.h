@@ -46,8 +46,8 @@ inline Status PReadSequence(int32_t fd, int64_t off, void* buf, size_t size) {
       std::cout << "off=" << (off) << " buf=" << intptr_t(buf) << " size="  << size<< std::endl;
       std::cout << "off=" << (off % 512) << " buf=" << intptr_t(buf) % 512
                 << " size=" << size % 512 << std::endl;
-      
-      
+
+
       return GetErrnoStatus("pread", errno);
     }
     if (rsiz == 0) {
