@@ -44,8 +44,9 @@ void BlockFileTest<FILEIMPL>::BasicTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(8, 6, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
+            file->SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(6));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(0, "ab", 2));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(3, "cde", 3));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(5, "EFG", 3));
@@ -117,11 +118,8 @@ void BlockFileTest<FILEIMPL>::BasicTest(FILEIMPL* file) {
 
 template <class FILEIMPL>
 void BlockFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
-  /*
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
-  */
-  const std::string file_path = "casket";
   constexpr int64_t block_size = 512;
   constexpr int64_t head_buffer_size = block_size * 10;
   constexpr int32_t file_size = block_size * 200;
@@ -134,9 +132,9 @@ void BlockFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(block_size, head_buffer_size,
-                                    tkrzw::BlockParallelFile::ACCESS_DIRECT));
+            file->SetAccessStrategy(block_size, tkrzw::BlockParallelFile::ACCESS_DIRECT));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(head_buffer_size));
   int64_t pos = 0;
   while (pos < file_size + max_record_size * 2) {
     const int32_t record_size = size_dist(mt);
@@ -195,67 +193,78 @@ TEST_F(BlockParallelFileTest, DirectIO) {
 
 TEST_F(BlockParallelFileTest, EmptyFile) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   EmptyFileTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, SimpleRead) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   SimpleReadTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, SimpleWrite) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   SimpleWriteTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, ReallocWrite) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   ReallocWriteTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, ImplicitClose) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   ImplicitCloseTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, OpenOptions) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   OpenOptionsTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, OrderedThread) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(100,  1000, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(100, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   OrderedThreadTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, RandomThread) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(32, 512, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(32, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   RandomThreadTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, FileReader) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   FileReaderTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, FlatRecord) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(16, 64, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(16, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   FlatRecordTest(&file);
 }
 
 TEST_F(BlockParallelFileTest, Rename) {
   tkrzw::BlockParallelFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockParallelFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockParallelFile::ACCESS_DEFAULT));
   RenameTest(&file);
 }
 
@@ -279,67 +288,78 @@ TEST_F(BlockAtomicFileTest, DirectIO) {
 
 TEST_F(BlockAtomicFileTest, EmptyFile) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   EmptyFileTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, SimpleRead) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   SimpleReadTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, SimpleWrite) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   SimpleWriteTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, ReallocWrite) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   ReallocWriteTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, ImplicitClose) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   ImplicitCloseTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, OpenOptions) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   OpenOptionsTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, OrderedThread) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(100,  1000, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(100, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   OrderedThreadTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, RandomThread) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(32, 512, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(32, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   RandomThreadTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, FileReader) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   FileReaderTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, FlatRecord) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(16, 64, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(16, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   FlatRecordTest(&file);
 }
 
 TEST_F(BlockAtomicFileTest, Rename) {
   tkrzw::BlockAtomicFile file;
-  file.SetAccessStrategy(8, 8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT);
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::BlockAtomicFile::ACCESS_DEFAULT));
   RenameTest(&file);
 }
 

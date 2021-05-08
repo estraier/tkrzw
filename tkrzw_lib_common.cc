@@ -63,9 +63,10 @@ void* xmallocaligned(size_t alignment, size_t size) {
   return ptr;
 #else
   assert(alignment > 0);
-  void* ptr = xmalloc(size + alignment + sizeof(void*));
-  void* aligned = (char*)ptr + alignment - (intptr_t)ptr % alignment;
-  std::memcpy((char*)aligned - sizeof(void*), &ptr, sizeof(void*));
+  void* ptr = xmalloc(size + sizeof(void*) + alignment);
+  char* aligned = (char*)ptr + sizeof(void*);
+  aligned += alignment - (intptr_t)aligned % alignment;
+  std::memcpy(aligned - sizeof(void*), &ptr, sizeof(void*));
   return aligned;
 #endif
 }

@@ -52,7 +52,8 @@ class BlockParallelFileImpl final {
   Status Truncate(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
-  Status SetAccessStrategy(int64_t block_size, int64_t head_buffer_size, int32_t options);
+  Status SetHeadBuffer(int64_t size);
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
@@ -64,13 +65,13 @@ class BlockParallelFileImpl final {
 
   std::atomic_int32_t fd_;
   char* head_buffer_;
+  std::atomic_int64_t head_buffer_size_;
   std::string path_;
   std::atomic_int64_t file_size_;
   std::atomic_int64_t trunc_size_;
   bool writable_;
   int32_t open_options_;
   int64_t block_size_;
-  int64_t head_buffer_size_;
   int32_t access_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
@@ -78,10 +79,9 @@ class BlockParallelFileImpl final {
 };
 
 BlockParallelFileImpl::BlockParallelFileImpl()
-    : fd_(-1), head_buffer_(nullptr),
+    : fd_(-1), head_buffer_(nullptr), head_buffer_size_(0),
       file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
-      block_size_(BlockParallelFile::DEFAULT_BLOCK_SIZE),
-      head_buffer_size_(0), access_options_(0),
+      block_size_(BlockParallelFile::DEFAULT_BLOCK_SIZE), access_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
       alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
@@ -168,21 +168,10 @@ Status BlockParallelFileImpl::Open(const std::string& path, bool writable, int32
     }
   }
 
-  // Allocate the head buffer.
-  char* head_buffer = nullptr;
-  if (head_buffer_size_ > 0) {
-    head_buffer = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
-    std::memset(head_buffer, 0, head_buffer_size_);
-    const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size);
-    const Status status = PReadSequence(fd, 0, head_buffer, read_size);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-  }
-
   // Updates the internal data.
   fd_ = fd;
-  head_buffer_ = head_buffer;
+  head_buffer_ = nullptr;
+  head_buffer_size_.store(0);
   path_ = path;
   file_size_.store(file_size);
   trunc_size_.store(trunc_size);
@@ -201,7 +190,7 @@ Status BlockParallelFileImpl::Close() {
   // Truncates the file.
   if (writable_) {
     if (head_buffer_ != nullptr) {
-      status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+      status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
     }
     if (file_size_.load() % block_size_ == 0) {
       if (ftruncate(fd_, file_size_.load()) != 0) {
@@ -230,7 +219,7 @@ Status BlockParallelFileImpl::Close() {
 
   // Releases the head buffer.
   if (head_buffer_ != nullptr) {
-    std::free(head_buffer_);
+    xfreealigned(head_buffer_);
   }
 
   // Close the file.
@@ -241,6 +230,7 @@ Status BlockParallelFileImpl::Close() {
   // Updates the internal data.
   fd_ = -1;
   head_buffer_ = nullptr;
+  head_buffer_size_.store(0);
   path_.clear();
   file_size_.store(0);
   trunc_size_.store(0);
@@ -338,7 +328,7 @@ Status BlockParallelFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
   }
   trunc_size_.store(file_size_.load());
   if (trunc_size_.load() % block_size_ == 0) {
@@ -364,21 +354,37 @@ Status BlockParallelFileImpl::GetSize(int64_t* size) {
   return Status(Status::SUCCESS);
 }
 
-Status BlockParallelFileImpl::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockParallelFileImpl::SetHeadBuffer(int64_t size) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status(Status::SUCCESS);
+  if (head_buffer_ != nullptr) {
+    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
+    xfreealigned(head_buffer_);
+  }
+  if (size < 1) {
+    head_buffer_size_.store(0);
+    head_buffer_ = nullptr;
+    return status;
+  }
+  const int64_t diff = size % block_size_;
+  if (diff > 0) {
+    size += block_size_ - diff;
+  }
+  head_buffer_size_.store(size);
+  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_.load()));
+  std::memset(head_buffer_, 0, head_buffer_size_.load());
+  const int64_t read_size = std::min<int64_t>(head_buffer_size_.load(), file_size_.load());
+  status |= PReadSequence(fd_, 0, head_buffer_, read_size);
+  return status;
+}
+
+Status BlockParallelFileImpl::SetAccessStrategy(int64_t block_size, int32_t options) {
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
   block_size_ = block_size;
-  if (head_buffer_size > 0) {
-    const int64_t diff = head_buffer_size % block_size;
-    if (diff > 0) {
-      head_buffer_size += block_size - diff;
-    }
-  } else {
-    head_buffer_size = 0;
-  }
-  head_buffer_size_ = head_buffer_size;
   access_options_ = options;
   return Status(Status::SUCCESS);
 }
@@ -441,11 +447,11 @@ Status BlockParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   if (static_cast<int64_t>(off + size) > file_size_.load()) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
-  if (off < head_buffer_size_) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
+  if (off < head_buffer_size_.load()) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
     std::memcpy(buf, head_buffer_ + off, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_;
+    off = head_buffer_size_.load();
     size -= prefix_size;
   }
   if (size < 1) {
@@ -479,11 +485,11 @@ Status BlockParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
 }
 
 Status BlockParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_t size) {
-  if (off < head_buffer_size_) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
+  if (off < head_buffer_size_.load()) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
     std::memcpy(head_buffer_ + off, buf, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_;
+    off = head_buffer_size_.load();
     size -= prefix_size;
   }
   if (size < 1) {
@@ -573,10 +579,13 @@ Status BlockParallelFile::GetSize(int64_t* size) {
   return impl_->GetSize(size);
 }
 
-Status BlockParallelFile::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockParallelFile::SetHeadBuffer(int64_t size) {
+  return impl_->SetHeadBuffer(size);
+}
+
+Status BlockParallelFile::SetAccessStrategy(int64_t block_size, int32_t options) {
   assert(block_size > 0);
-  return impl_->SetAccessStrategy(block_size, head_buffer_size, options);
+  return impl_->SetAccessStrategy(block_size, options);
 }
 
 Status BlockParallelFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
@@ -605,7 +614,8 @@ class BlockAtomicFileImpl final {
   Status Truncate(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
-  Status SetAccessStrategy(int64_t block_size, int64_t head_buffer_size, int32_t options);
+  Status SetHeadBuffer(int64_t size);
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
@@ -617,13 +627,13 @@ class BlockAtomicFileImpl final {
 
   int32_t fd_;
   char* head_buffer_;
+  int64_t head_buffer_size_;
   std::string path_;
   int64_t file_size_;
   int64_t trunc_size_;
   bool writable_;
   int32_t open_options_;
   int64_t block_size_;
-  int64_t head_buffer_size_;
   int32_t access_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
@@ -631,10 +641,9 @@ class BlockAtomicFileImpl final {
 };
 
 BlockAtomicFileImpl::BlockAtomicFileImpl()
-    : fd_(-1), head_buffer_(nullptr),
+    : fd_(-1), head_buffer_(nullptr), head_buffer_size_(0),
       file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
-      block_size_(BlockAtomicFile::DEFAULT_BLOCK_SIZE),
-      head_buffer_size_(0), access_options_(0),
+      block_size_(BlockAtomicFile::DEFAULT_BLOCK_SIZE), access_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
       alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
 
@@ -722,21 +731,10 @@ Status BlockAtomicFileImpl::Open(const std::string& path, bool writable, int32_t
     }
   }
 
-  // Allocate the head buffer.
-  char* head_buffer = nullptr;
-  if (head_buffer_size_ > 0) {
-    head_buffer = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
-    std::memset(head_buffer, 0, head_buffer_size_);
-    const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size);
-    const Status status = PReadSequence(fd, 0, head_buffer, read_size);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-  }
-
   // Updates the internal data.
   fd_ = fd;
-  head_buffer_ = head_buffer;
+  head_buffer_ = nullptr;
+  head_buffer_size_ = 0;
   path_ = path;
   file_size_ = file_size;
   trunc_size_ = trunc_size;
@@ -785,7 +783,7 @@ Status BlockAtomicFileImpl::Close() {
 
   // Releases the head buffer.
   if (head_buffer_ != nullptr) {
-    std::free(head_buffer_);
+    xfreealigned(head_buffer_);
   }
 
   // Close the file.
@@ -796,6 +794,7 @@ Status BlockAtomicFileImpl::Close() {
   // Updates the internal data.
   fd_ = -1;
   head_buffer_ = nullptr;
+  head_buffer_size_ = 0;
   path_.clear();
   file_size_ = 0;
   trunc_size_ = 0;
@@ -918,22 +917,39 @@ Status BlockAtomicFileImpl::GetSize(int64_t* size) {
   return Status(Status::SUCCESS);
 }
 
-Status BlockAtomicFileImpl::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockAtomicFileImpl::SetHeadBuffer(int64_t size) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  Status status(Status::SUCCESS);
+  if (head_buffer_ != nullptr) {
+    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+    xfreealigned(head_buffer_);
+  }
+  if (size < 1) {
+    head_buffer_size_ = 0;
+    head_buffer_ = nullptr;
+    return status;
+  }
+  const int64_t diff = size % block_size_;
+  if (diff > 0) {
+    size += block_size_ - diff;
+  }
+  head_buffer_size_ = size;
+  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
+  std::memset(head_buffer_, 0, head_buffer_size_);
+  const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_);
+  status |= PReadSequence(fd_, 0, head_buffer_, read_size);
+  return status;
+}
+
+Status BlockAtomicFileImpl::SetAccessStrategy(int64_t block_size, int32_t options) {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
   block_size_ = block_size;
-  if (head_buffer_size > 0) {
-    const int64_t diff = head_buffer_size % block_size;
-    if (diff > 0) {
-      head_buffer_size += block_size - diff;
-    }
-  } else {
-    head_buffer_size = 0;
-  }
-  head_buffer_size_ = head_buffer_size;
   access_options_ = options;
   return Status(Status::SUCCESS);
 }
@@ -1120,10 +1136,13 @@ Status BlockAtomicFile::GetSize(int64_t* size) {
   return impl_->GetSize(size);
 }
 
-Status BlockAtomicFile::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockAtomicFile::SetHeadBuffer(int64_t size) {
+  return impl_->SetHeadBuffer(size);
+}
+
+Status BlockAtomicFile::SetAccessStrategy(int64_t block_size, int32_t options) {
   assert(block_size > 0);
-  return impl_->SetAccessStrategy(block_size, head_buffer_size, options);
+  return impl_->SetAccessStrategy(block_size, options);
 }
 
 Status BlockAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {

@@ -90,7 +90,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool is_write_only = CheckMap(cmd_args, "--write_only");
   const bool is_read_only = CheckMap(cmd_args, "--read_only");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
-  SetBlockAccessStrategyOrDie(file.get(), block_size, head_buffer_size, is_direct, is_sync);
+  SetBlockAccessStrategyOrDie(file.get(), block_size, is_direct, is_sync);
   if (path.empty()) {
     Die("The file path must be specified");
   }
@@ -157,6 +157,9 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     if (lock_memory > 0) {
       LockMemoryOfFileOrDie(file.get(), lock_memory);
+    }
+    if (head_buffer_size > 0) {
+      SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);
     }
     PrintF("Writing: path=%s num_iteratins=%d record_size=%d num_threads=%d\n",
            path.c_str(), num_iterations, record_size, num_threads);
@@ -272,7 +275,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const bool is_direct = CheckMap(cmd_args, "--direct");
   const bool is_sync = CheckMap(cmd_args, "--sync");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
-  SetBlockAccessStrategyOrDie(file.get(), block_size, head_buffer_size, is_direct, is_sync);
+  SetBlockAccessStrategyOrDie(file.get(), block_size, is_direct, is_sync);
   if (path.empty()) {
     Die("The file path must be specified");
   }
@@ -359,6 +362,9 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   }
   if (lock_memory > 0) {
     LockMemoryOfFileOrDie(file.get(), lock_memory);
+  }
+  if (head_buffer_size > 0) {
+    SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);
   }
   PrintF("Doing: path=%s num_iteratins=%d record_size=%d num_threads=%d\n",
          path.c_str(), num_iterations, record_size, num_threads);

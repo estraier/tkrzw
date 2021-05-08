@@ -82,8 +82,11 @@ Status BlockParallelFile::GetSize(int64_t* size) {
   return impl_->file.GetSize(size);
 }
 
-Status BlockParallelFile::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockParallelFile::SetHeadBuffer(int64_t size) {
+  return Status(Status::SUCCESS);
+}
+
+Status BlockParallelFile::SetAccessStrategy(int64_t block_size, int32_t options) {
   return Status(Status::SUCCESS);
 }
 
@@ -150,8 +153,11 @@ Status BlockAtomicFile::GetSize(int64_t* size) {
   return impl_->file.GetSize(size);
 }
 
-Status BlockAtomicFile::SetAccessStrategy(
-    int64_t block_size, int64_t head_buffer_size, int32_t options) {
+Status BlockAtomicFile::SetHeadBuffer(int64_t size) {
+  return Status(Status::SUCCESS);
+}
+
+Status BlockAtomicFile::SetAccessStrategy(int64_t block_size, int32_t options) {
   return Status(Status::SUCCESS);
 }
 

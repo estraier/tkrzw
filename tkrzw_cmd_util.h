@@ -250,12 +250,10 @@ std::unique_ptr<File> MakeFileOrDie(
  * Sets access strategy of the block-aligned direct access file.
  * @param file The file object.
  * @param block_size The block size to which all records should be aligned.
- * @param head_buffer_size The size of the head buffer.
  * @param is_direct If true, the direct access option is set.
  * @param is_sync If true, the sync access option is set.
  */
-void SetBlockAccessStrategyOrDie(File* file, int64_t block_size, int64_t head_buffer_size,
-                                 bool is_direct, bool is_sync);
+void SetBlockAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct, bool is_sync);
 
 /**
  * Locks the memory of the beginning region or die.
@@ -264,6 +262,13 @@ void SetBlockAccessStrategyOrDie(File* file, int64_t block_size, int64_t head_bu
  * @details If the operation is not supported, this does nothing.
  */
 void LockMemoryOfFileOrDie(File* file, size_t size);
+
+/**
+ * Sets the head buffer of the block-aligned direct access file.
+ * @param file The file object.
+ * @param size The size of the head buffer.
+ */
+void SetHeadBufferOfFileOrDie(File* file, int64_t size);
 
 /**
  * Prints all records of a DBM in TSV format.

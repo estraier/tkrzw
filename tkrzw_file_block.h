@@ -147,14 +147,21 @@ class BlockParallelFile final : public File {
   Status GetSize(int64_t* size) override;
 
   /**
+   * Sets the head buffer to cache the beginning region of the file.
+   * @param size The size of the head buffer.  If it is not positive, it is not used.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  Status SetHeadBuffer(int64_t size);
+
+  /**
    * Sets access strategy.
    * @param block_size The block size to which all records should be aligned.  It must be a
    * multiple of the block size of the underlying file system or device.
-   * @param head_buffer_size The size of the head buffer.  If it is not positive, it is not used.
    * @param options Bit-sum options.
    * @return The result status.
    */
-  Status SetAccessStrategy(int64_t block_size, int64_t head_buffer_size, int32_t options);
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
 
   /**
    * Sets allocation strategy.
@@ -329,14 +336,21 @@ class BlockAtomicFile final : public File {
   Status GetSize(int64_t* size) override;
 
   /**
+   * Sets the head buffer to cache the beginning region of the file.
+   * @param size The size of the head buffer.  If it is not positive, it is not used.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  Status SetHeadBuffer(int64_t size);
+
+  /**
    * Sets access strategy.
    * @param block_size The block size to which all records should be aligned.  It must be a
    * multiple of the block size of the underlying file system or device.
-   * @param head_buffer_size The size of the head buffer.  If it is not positive, it is not used.
    * @param options Bit-sum options.
    * @return The result status.
    */
-  Status SetAccessStrategy(int64_t block_size, int64_t head_buffer_size, int32_t options);
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
 
   /**
    * Sets allocation strategy.
