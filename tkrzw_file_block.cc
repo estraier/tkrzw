@@ -457,6 +457,9 @@ Status BlockParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   if (size < 1) {
     return Status(Status::SUCCESS);
   }
+  if (block_size_ == 1) {
+    return PReadSequence(fd_, off, buf, size);
+  }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
   const int64_t off_rem = off % block_size_;
@@ -494,6 +497,9 @@ Status BlockParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_t siz
   }
   if (size < 1) {
     return Status(Status::SUCCESS);
+  }
+  if (block_size_ == 1) {
+    return PWriteSequence(fd_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -1014,6 +1020,9 @@ Status BlockAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   if (size < 1) {
     return Status(Status::SUCCESS);
   }
+  if (block_size_ == 1) {
+    return PReadSequence(fd_, off, buf, size);
+  }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
   const int64_t off_rem = off % block_size_;
@@ -1051,6 +1060,9 @@ Status BlockAtomicFileImpl::WriteImpl(int64_t off, const char* buf, size_t size)
   }
   if (size < 1) {
     return Status(Status::SUCCESS);
+  }
+  if (block_size_ == 1) {
+    return PWriteSequence(fd_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);

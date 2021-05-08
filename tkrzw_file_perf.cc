@@ -221,6 +221,12 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       PrintL("Open failed: ", status);
       has_error = true;
     }
+    if (lock_memory > 0) {
+      LockMemoryOfFileOrDie(file.get(), lock_memory);
+    }
+    if (head_buffer_size > 0) {
+      SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);
+    }
     PrintF("Reading: path=%s num_iteratins=%d record_size=%d num_threads=%d\n",
            path.c_str(), num_iterations, record_size, num_threads);
     const double start_time = GetWallTime();
