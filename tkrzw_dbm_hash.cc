@@ -56,6 +56,7 @@ constexpr int32_t MAX_ALIGN_POW = 16;
 constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
 constexpr int32_t REBUILD_NONBLOCKING_MAX_TRIES = 3;
 constexpr int64_t REBUILD_BLOCKING_ALLOWANCE = 65536;
+constexpr int64_t DEFAULT_DIO_BLOCK_SIZE = 512;
 
 enum StaticFlag : uint8_t {
   STATIC_FLAG_NONE = 0,
@@ -117,7 +118,8 @@ class HashDBMImpl final {
   Status SaveMetadata(bool finish);
   Status LoadMetadata();
   void SetRecordBase();
-  Status TuneFileBeforeOpen(File* file, const std::string& path);
+  Status PadFileForDirectIO();
+  Status TuneFileBeforeOpen(File* file, const std::string& path, bool writable);
   Status TuneFileAfterOpen();
   Status InitializeBuckets();
   Status SaveFBP();
@@ -228,8 +230,11 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   lock_mem_buckets_ = tuning_params.lock_mem_buckets;
   cache_buckets_ = tuning_params.cache_buckets;
   direct_io_ = tuning_params.direct_io;
-  TuneFileBeforeOpen(file_.get(), path);
-  Status status = file_->Open(norm_path, writable, options);
+  Status status = TuneFileBeforeOpen(file_.get(), path, writable);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -248,7 +253,11 @@ Status HashDBMImpl::Close() {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   CancelIterators();
-  Status status = CloseImpl();
+  Status status(Status::SUCCESS);
+  if (writable_) {
+    status |= PadFileForDirectIO();
+  }
+  status |= CloseImpl();
   status |= file_->Close();
   path_.clear();
   return status;
@@ -595,9 +604,10 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   if (!healthy_) {
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
+  Status status = PadFileForDirectIO();
   file_size_ = file_->GetSizeSimple();
   mod_time_ = GetWallTime() * 1000000;
-  Status status = SaveMetadata(true);
+  status |= SaveMetadata(true);
   status |= file_->Synchronize(hard);
   if (proc != nullptr) {
     proc->Process(path_);
@@ -1065,34 +1075,6 @@ Status HashDBMImpl::CloseImpl() {
   Status status(Status::SUCCESS);
   if (writable_ && healthy_) {
     file_size_ = file_->GetSizeSimple();
-
-
-      /*
-    if (direct_io_)
-      // Align the size by inserting a free block.
-
-      const int64_t block_size =
-      const int64_t size_rem = file_size_ % 512;
-      if (size_rem != 0) {
-
-
-
-        std::cout << "MISS:" << file_size_ << " : " << (file_size_ % 512) << std::endl;
-
-
-        HashRecord::HashRecord(File* file, int32_t offset_width, int32_t align_pow)
-            : file_(file), offset_width_(offset_width), align_pow_(align_pow), body_buf_(nullptr) {}
-
-
-
-      }
-
-    }
-      */
-
-
-
-
     mod_time_ = GetWallTime() * 1000000;
     status |= SaveMetadata(true);
     status |= SaveFBP();
@@ -1213,25 +1195,64 @@ void HashDBMImpl::SetRecordBase() {
   }
 }
 
-Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path) {
-  Status status(Status::SUCCESS);
-  if (direct_io_) {
+Status HashDBMImpl::PadFileForDirectIO() {
+  if (!direct_io_) {
+    return Status::SUCCESS;
+  }
+  auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+  if (pos_file == nullptr) {
+    return Status::SUCCESS;
+  }
+  const int64_t file_size = file_->GetSizeSimple();
+  const int64_t block_size = pos_file->GetBlockSize();
+  const int64_t size_rem = file_size % block_size;
+  if (size_rem == 0) {
+    return Status::SUCCESS;
+  }
 
-    // check file size and 512 alignment.
-    const int64_t file_size = tkrzw::GetFileSize(path);
-    if (file_size > 0 && file_size % 512 != 0) {
+  std::cout << "PAD:" << file_size << " : " << size_rem << std::endl;
 
-      std::cout << "YABAI:" << file_size << std::endl;
+  HashRecord rec(file_.get(), offset_width_, align_pow_);
+  int64_t ideal_whole_size = block_size - size_rem;
+  while (true) {
+    rec.SetData(HashRecord::OP_VOID, ideal_whole_size, "", 0, "", 0, 0);
+    if (rec.GetWholeSize() == ideal_whole_size) {
+      break;
     }
+    ideal_whole_size += block_size;
+  }
 
+  std::cout << "PPP:" << rec.GetWholeSize() << std::endl;
+  
+  return rec.Write(file_size, nullptr);;
+}
 
+Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path, bool writable) {
+  if (direct_io_) {
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
-      std::cout << "DIRECT" << std::endl;
-      status |= pos_file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+      const int64_t file_size = tkrzw::GetFileSize(path);
+      int64_t block_size = pos_file->GetBlockSize();
+      if (block_size < 2) {
+        block_size = DEFAULT_DIO_BLOCK_SIZE;
+      }
+      std::cout << "DIRECT: fs=" << file_size
+                << " bs=" << block_size
+                << " rem=" << (file_size % block_size)
+                << " w=" << writable
+                << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
+                << std::endl;
+
+      if (!writable && file_size > 0 && file_size % block_size != 0) {
+        return Status(Status::INFEASIBLE_ERROR, "The file size not aligned to the block size");
+      }
+      const Status status = pos_file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
     }
   }
-  return Status(Status::SUCCESS);
+  return Status(Status::SUCCESS);;
 }
 
 Status HashDBMImpl::TuneFileAfterOpen() {
@@ -1239,14 +1260,12 @@ Status HashDBMImpl::TuneFileAfterOpen() {
   if (lock_mem_buckets_) {
     auto* mem_file = dynamic_cast<MemoryMapFile*>(file_.get());
     if (mem_file != nullptr) {
-      std::cout << "LOCK" << std::endl;
       status |= mem_file->LockMemory(record_base_);
     }
   }
   if (cache_buckets_) {
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
-      std::cout << "CACHE" << std::endl;
       status |= pos_file->SetHeadBuffer(record_base_);
     }
   }

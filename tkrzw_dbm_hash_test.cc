@@ -57,6 +57,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
   void HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm);
   void HashDBMRestoreTest(tkrzw::HashDBM* dbm);
+  void HashDBMDirectIOTest(tkrzw::HashDBM* dbm);
 };
 
 void HashDBMTest::HashDBMEmptyDatabaseTest(tkrzw::HashDBM* dbm) {
@@ -979,6 +980,74 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
 }
 
+void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::HashDBM::TuningParameters tuning_params;
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 3;
+  tuning_params.cache_buckets = true;
+  tuning_params.direct_io = true;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
+  }
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, false, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 11; i <= 20; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
+  }
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value, true));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 3;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(HashDBMTest, EmptyDatabase) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMEmptyDatabaseTest(&dbm);
@@ -1063,6 +1132,11 @@ TEST_F(HashDBMTest, RebuildRandom) {
 TEST_F(HashDBMTest, Restore) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMRestoreTest(&dbm);
+}
+
+TEST_F(HashDBMTest, DirectIO) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::PositionalParallelFile>());
+  HashDBMDirectIOTest(&dbm);
 }
 
 // END OF FILE

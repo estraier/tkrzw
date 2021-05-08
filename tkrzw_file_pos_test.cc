@@ -194,13 +194,34 @@ TEST_F(PositionalParallelFileTest, SimpleRead) {
   SimpleReadTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, SimpleReadBlock) {
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  SimpleReadTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, SimpleWrite) {
   tkrzw::PositionalParallelFile file;
   SimpleWriteTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, SimpleWriteBlock) {
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  SimpleWriteTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, ReallocWrite) {
   tkrzw::PositionalParallelFile file;
+  ReallocWriteTest(&file);
+}
+
+TEST_F(PositionalParallelFileTest, ReallocWriteBlock) {
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
   ReallocWriteTest(&file);
 }
 
@@ -219,8 +240,22 @@ TEST_F(PositionalParallelFileTest, OrderedThread) {
   OrderedThreadTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, OrderedThreadBlock) {
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(100, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  OrderedThreadTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, RandomThread) {
   tkrzw::PositionalParallelFile file;
+  RandomThreadTest(&file);
+}
+
+TEST_F(PositionalParallelFileTest, RandomThreadBlock) {
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(32, tkrzw::PositionalFile::ACCESS_DEFAULT));
   RandomThreadTest(&file);
 }
 
@@ -267,13 +302,34 @@ TEST_F(PositionalAtomicFileTest, SimpleRead) {
   SimpleReadTest(&file);
 }
 
+TEST_F(PositionalAtomicFileTest, SimpleReadBlock) {
+  tkrzw::PositionalAtomicFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  SimpleReadTest(&file);
+}
+
 TEST_F(PositionalAtomicFileTest, SimpleWrite) {
   tkrzw::PositionalAtomicFile file;
   SimpleWriteTest(&file);
 }
 
+TEST_F(PositionalAtomicFileTest, SimpleWriteBlock) {
+  tkrzw::PositionalAtomicFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  SimpleWriteTest(&file);
+}
+
 TEST_F(PositionalAtomicFileTest, ReallocWrite) {
   tkrzw::PositionalAtomicFile file;
+  ReallocWriteTest(&file);
+}
+
+TEST_F(PositionalAtomicFileTest, ReallocWriteBlock) {
+  tkrzw::PositionalAtomicFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
   ReallocWriteTest(&file);
 }
 
@@ -292,8 +348,22 @@ TEST_F(PositionalAtomicFileTest, OrderedThread) {
   OrderedThreadTest(&file);
 }
 
+TEST_F(PositionalAtomicFileTest, OrderedThreadBlock) {
+  tkrzw::PositionalAtomicFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(100, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  OrderedThreadTest(&file);
+}
+
 TEST_F(PositionalAtomicFileTest, RandomThread) {
   tkrzw::PositionalAtomicFile file;
+  RandomThreadTest(&file);
+}
+
+TEST_F(PositionalAtomicFileTest, RandomThreadBlock) {
+  tkrzw::PositionalAtomicFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file.SetAccessStrategy(32, tkrzw::PositionalFile::ACCESS_DEFAULT));
   RandomThreadTest(&file);
 }
 
