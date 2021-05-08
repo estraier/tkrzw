@@ -51,6 +51,21 @@ class PositionalParallelFile final : public File {
   explicit PositionalParallelFile(const PositionalParallelFile& rhs) = delete;
   PositionalParallelFile& operator =(const PositionalParallelFile& rhs) = delete;
 
+  /** The default value of the block size. */
+  static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
+
+  /**
+   * Enumeration of options for SetAccessStrategy.
+   */
+  enum OpenOption : int32_t {
+    /** The default behavior. */
+    ACCESS_DEFAULT = 0,
+    /** To access the block directry without caching. */
+    ACCESS_DIRECT = 1 << 0,
+    /** To synchronize the update operation through the device. */
+    ACCESS_SYNC = 1 << 1,
+  };
+
   /**
    * Opens a file.
    * @param path A path of the file.
@@ -129,6 +144,23 @@ class PositionalParallelFile final : public File {
    * @return The result status.
    */
   Status GetSize(int64_t* size) override;
+
+  /**
+   * Sets the head buffer to cache the beginning region of the file.
+   * @param size The size of the head buffer.  If it is not positive, it is not used.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  Status SetHeadBuffer(int64_t size);
+
+  /**
+   * Sets access strategy.
+   * @param block_size The block size to which all records should be aligned.  It must be a
+   * multiple of the block size of the underlying file system or device.
+   * @param options Bit-sum options.
+   * @return The result status.
+   */
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
 
   /**
    * Sets allocation strategy.
@@ -186,7 +218,7 @@ class PositionalParallelFile final : public File {
 class PositionalAtomicFileImpl;
 
 /**
- * File implementation by positional access and locking for atomic operations.
+ * File implementation with block-aligned direct access and locking for atomic operations.
  * @details All operations are thread-safe; Multiple threads can access the same file concurrently.
  * Also, locking assures that every operation is observed in an atomic manner.
  */
@@ -207,6 +239,21 @@ class PositionalAtomicFile final : public File {
    */
   explicit PositionalAtomicFile(const PositionalAtomicFile& rhs) = delete;
   PositionalAtomicFile& operator =(const PositionalAtomicFile& rhs) = delete;
+
+  /** The default value of the block size. */
+  static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
+
+  /**
+   * Enumeration of options for SetAccessStrategy.
+   */
+  enum OpenOption : int32_t {
+    /** The default behavior. */
+    ACCESS_DEFAULT = 0,
+    /** To access the block directry without caching. */
+    ACCESS_DIRECT = 1 << 0,
+    /** To synchronize the update operation through the device. */
+    ACCESS_SYNC = 1 << 1,
+  };
 
   /**
    * Opens a file.
@@ -286,6 +333,23 @@ class PositionalAtomicFile final : public File {
    * @return The result status.
    */
   Status GetSize(int64_t* size) override;
+
+  /**
+   * Sets the head buffer to cache the beginning region of the file.
+   * @param size The size of the head buffer.  If it is not positive, it is not used.
+   * @return The result status.
+   * @details This method must be called after the file is opened.
+   */
+  Status SetHeadBuffer(int64_t size);
+
+  /**
+   * Sets access strategy.
+   * @param block_size The block size to which all records should be aligned.  It must be a
+   * multiple of the block size of the underlying file system or device.
+   * @param options Bit-sum options.
+   * @return The result status.
+   */
+  Status SetAccessStrategy(int64_t block_size, int32_t options);
 
   /**
    * Sets allocation strategy.

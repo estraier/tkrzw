@@ -17,10 +17,10 @@ LIBDIR = $(BASEDIR)\lib
 BINDIR = $(BASEDIR)\bin
 LIBEXECDIR = $(BASEDIR)\bin
 
-HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_file_block.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h
-IMPLHEADERFILES = tkrzw_sys_config.h tkrzw_sys_util_windows.h tkrzw_sys_file_mmap_std.h tkrzw_sys_file_mmap_windows.h tkrzw_sys_file_pos_std.h tkrzw_sys_file_pos_windows.h tkrzw_sys_file_block_std.h
+HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h
+IMPLHEADERFILES = tkrzw_sys_config.h tkrzw_sys_util_windows.h tkrzw_sys_file_mmap_std.h tkrzw_sys_file_mmap_windows.h tkrzw_sys_file_pos_std.h tkrzw_sys_file_pos_windows.h
 LIBRARYFILES = tkrzw.lib
-LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_file_block.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj
+LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj
 COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe
 
 CL = cl
@@ -131,6 +131,14 @@ check-file-perf :
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
 	tkrzw_file_perf.exe wicked --file pos-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --append casket
+	tkrzw_file_perf.exe wicked --file pos-para \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer 8192 casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
@@ -139,6 +147,14 @@ check-file-perf :
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --append casket
 	tkrzw_file_perf.exe wicked --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --append casket
+	tkrzw_file_perf.exe wicked --file pos-atom \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer 8192 casket
 
 check-hashdbm-perf :
 	-del casket* /F /Q > NUL: 2>&1

@@ -20,7 +20,6 @@
 #include "tkrzw_dbm_test_common.h"
 #include "tkrzw_dbm_tiny.h"
 #include "tkrzw_file.h"
-#include "tkrzw_file_block.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_std.h"

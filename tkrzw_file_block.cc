@@ -39,7 +39,6 @@ inline void SetDirectAccessToOpenFlag(int32_t* oflags) {
 #endif
 }
 
-
 class BlockParallelFileImpl final {
  public:
   BlockParallelFileImpl();

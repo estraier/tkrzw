@@ -1,12 +1,17 @@
 2021-04-xx  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.15
+	- Library version: 1.5.0
+
+	- Add features to do direct IO on Linux.
+	- Positional access file classes support block IO and head caching.
 
 	- Fix a bug in tkrzw_file_test_common.h where Synchronize shouldn't be called.
 
 2021-04-06  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.14
+	- Library version: 1.4.0
 
 	- Performance of file classes on Windows improves.
 
