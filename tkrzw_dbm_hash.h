@@ -216,6 +216,20 @@ class HashDBM final : public DBM {
      * saved as a metadata of the database, it should be set each time when opening the database.
      */
     bool lock_mem_buckets = false;
+    /**
+     * Whether to cache the hash buckets on memory.
+     * @details If true and the underlying file class supports caching, the file region of the
+     * hash buckets is cached in order to improve performance.  As this parameter is not
+     * saved as a metadata of the database, it should be set each time when opening the database.
+     */
+    bool cache_buckets = false;
+    /**
+     * Whether to enable direct I/O without caching by the file system.
+     * @details If true and the underlying file class supports direct I/O, the file region of the
+     * hash buckets is cached in order to improve performance.  As this parameter is not
+     * saved as a metadata of the database, it should be set each time when opening the database.
+     */
+    bool direct_io = false;
 
     /**
      * Constructor

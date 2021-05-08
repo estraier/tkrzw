@@ -117,6 +117,8 @@ class HashDBMImpl final {
   Status SaveMetadata(bool finish);
   Status LoadMetadata();
   void SetRecordBase();
+  Status TuneFileBeforeOpen(File* file, const std::string& path);
+  Status TuneFileAfterOpen();
   Status InitializeBuckets();
   Status SaveFBP();
   Status LoadFBP();
@@ -147,6 +149,8 @@ class HashDBMImpl final {
   IteratorList iterators_;
   FreeBlockPool fbp_;
   bool lock_mem_buckets_;
+  bool cache_buckets_;
+  bool direct_io_;
   std::unique_ptr<File> file_;
   std::shared_timed_mutex mutex_;
   HashMutex record_mutex_;
@@ -181,6 +185,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
       fbp_(HashDBM::DEFAULT_FBP_CAPACITY), lock_mem_buckets_(false),
+      cache_buckets_(false), direct_io_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
       file_mutex_() {}
@@ -221,6 +226,9 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
   }
   lock_mem_buckets_ = tuning_params.lock_mem_buckets;
+  cache_buckets_ = tuning_params.cache_buckets;
+  direct_io_ = tuning_params.direct_io;
+  TuneFileBeforeOpen(file_.get(), path);
   Status status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
@@ -452,6 +460,8 @@ Status HashDBMImpl::Rebuild(
       tuning_params.align_pow : align_pow_;
   tmp_tuning_params.num_buckets = tuning_params.num_buckets >= 0 ?
       tuning_params.num_buckets : est_num_records * 2 + 1;
+  tmp_tuning_params.cache_buckets = tuning_params.cache_buckets;
+  tmp_tuning_params.direct_io = tuning_params.direct_io;
   HashDBM tmp_dbm(file_->MakeFile());
   auto CleanUp = [&]() {
     tmp_dbm.Close();
@@ -539,6 +549,8 @@ Status HashDBMImpl::Rebuild(
       fbp_.SetCapacity(tuning_params.fbp_capacity);
     }
     lock_mem_buckets_ = tuning_params.lock_mem_buckets;
+    cache_buckets_ = tuning_params.cache_buckets;
+    direct_io_ = tuning_params.direct_io;
     status |= OpenImpl(true);
     db_type_ = db_type;
     opaque_ = opaque;
@@ -1022,6 +1034,10 @@ Status HashDBMImpl::OpenImpl(bool writable) {
     return status;
   }
   SetRecordBase();
+  status = TuneFileAfterOpen();
+  if (status != Status::SUCCESS) {
+    return status;
+  }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
   if (file_size_ != file_->GetSizeSimple()) {
     healthy = false;
@@ -1049,6 +1065,34 @@ Status HashDBMImpl::CloseImpl() {
   Status status(Status::SUCCESS);
   if (writable_ && healthy_) {
     file_size_ = file_->GetSizeSimple();
+
+
+      /*      
+    if (direct_io_)
+      // Align the size by inserting a free block.
+
+      const int64_t block_size = 
+      const int64_t size_rem = file_size_ % 512;
+      if (size_rem != 0) {
+
+
+        
+        std::cout << "MISS:" << file_size_ << " : " << (file_size_ % 512) << std::endl;
+
+
+        HashRecord::HashRecord(File* file, int32_t offset_width, int32_t align_pow)
+            : file_(file), offset_width_(offset_width), align_pow_(align_pow), body_buf_(nullptr) {}
+
+
+        
+      }
+
+    }
+      */      
+
+
+
+    
     mod_time_ = GetWallTime() * 1000000;
     status |= SaveMetadata(true);
     status |= SaveFBP();
@@ -1072,6 +1116,8 @@ Status HashDBMImpl::CloseImpl() {
   record_base_ = 0;
   fbp_.Clear();
   lock_mem_buckets_ = false;
+  cache_buckets_ = false;
+  direct_io_ = false;
   return status;
 }
 
@@ -1167,12 +1213,36 @@ void HashDBMImpl::SetRecordBase() {
   }
 }
 
-Status HashDBMImpl::InitializeBuckets() {
-  int64_t offset = METADATA_SIZE;
-  int64_t size = record_base_ - offset;
-  Status status = file_->Truncate(record_base_);
+Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path) {
+  Status status(Status::SUCCESS);
+  if (direct_io_) {
+
+    // check file size and 512 alignment.
+    const int64_t file_size = tkrzw::GetFileSize(path);
+    if (file_size > 0 && file_size % 512 != 0) {
+      
+      std::cout << "YABAI:" << file_size << std::endl;
+    }
+
+    
+    
+    if (typeid(*file_) == typeid(PositionalParallelFile)) {
+      std::cout << "DIRECT" << std::endl;
+      auto* pos_file = dynamic_cast<PositionalParallelFile*>(file_.get());
+      status |= pos_file->SetAccessStrategy(512, PositionalParallelFile::ACCESS_DIRECT);
+    } else if (typeid(*file_) == typeid(PositionalAtomicFile)) {
+      auto* pos_file = dynamic_cast<PositionalAtomicFile*>(file_.get());
+      status |= pos_file->SetAccessStrategy(512, PositionalAtomicFile::ACCESS_DIRECT);
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status HashDBMImpl::TuneFileAfterOpen() {
+  Status status(Status::SUCCESS);
   if (lock_mem_buckets_) {
     if (typeid(*file_) == typeid(MemoryMapParallelFile)) {
+      std::cout << "LOCK" << std::endl;
       auto* mem_file = dynamic_cast<MemoryMapParallelFile*>(file_.get());
       status |= mem_file->LockMemory(record_base_);
     } else if (typeid(*file_) == typeid(MemoryMapAtomicFile)) {
@@ -1180,6 +1250,23 @@ Status HashDBMImpl::InitializeBuckets() {
       status |= mem_file->LockMemory(record_base_);
     }
   }
+  if (cache_buckets_) {
+    if (typeid(*file_) == typeid(PositionalParallelFile)) {
+      std::cout << "CACHE" << std::endl;
+      auto* pos_file = dynamic_cast<PositionalParallelFile*>(file_.get());
+      status |= pos_file->SetHeadBuffer(record_base_);
+    } else if (typeid(*file_) == typeid(PositionalAtomicFile)) {
+      auto* pos_file = dynamic_cast<PositionalAtomicFile*>(file_.get());
+      status |= pos_file->SetHeadBuffer(record_base_);
+    }
+  }
+  return status;
+}
+
+Status HashDBMImpl::InitializeBuckets() {
+  int64_t offset = METADATA_SIZE;
+  int64_t size = record_base_ - offset;
+  Status status = file_->Truncate(record_base_);
   char* buf = new char[PAGE_SIZE];
   std::memset(buf, 0, PAGE_SIZE);
   while (size > 0) {

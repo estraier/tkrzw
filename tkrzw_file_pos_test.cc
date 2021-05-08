@@ -43,9 +43,12 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
   const std::string file_path = tmp_dir.MakeUniquePath();
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
+  EXPECT_EQ(1, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             file->SetAccessStrategy(8, tkrzw::PositionalParallelFile::ACCESS_DEFAULT));
+  EXPECT_EQ(8, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  EXPECT_EQ(8, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(6));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(0, "ab", 2));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(3, "cde", 3));

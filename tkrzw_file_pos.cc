@@ -56,6 +56,7 @@ class PositionalParallelFileImpl final {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  int64_t GetBlockSize();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -416,6 +417,10 @@ Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
+int64_t PositionalParallelFileImpl::GetBlockSize() {
+  return block_size_;
+}
+
 Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   int64_t diff = min_size % block_size_;
   if (diff > 0) {
@@ -466,7 +471,7 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
   if (off_rem > 0 || end_rem > 0) {
     const int64_t mod_off = off - off_rem;
     int64_t end_len = end_rem > 0 ? block_size_ - end_rem : 0;
-    if (end_position + end_len > file_size_.load()) {
+    if (!writable_ && end_position + end_len > file_size_.load()) {
       end_len = file_size_.load() - end_position;
     }
     const int64_t mod_end = end_position + end_len;
@@ -607,6 +612,10 @@ Status PositionalParallelFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
 }
 
+int64_t PositionalParallelFile::GetBlockSize() const {
+  return impl_->GetBlockSize();
+}
+
 class PositionalAtomicFileImpl final {
  public:
   PositionalAtomicFileImpl();
@@ -624,6 +633,7 @@ class PositionalAtomicFileImpl final {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  int64_t GetBlockSize();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -990,6 +1000,11 @@ Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
   return status;
 }
 
+int64_t PositionalAtomicFileImpl::GetBlockSize() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return block_size_;
+}
+
 Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_trunc_size =
       std::max(min_size, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
@@ -1029,7 +1044,7 @@ Status PositionalAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   if (off_rem > 0 || end_rem > 0) {
     const int64_t mod_off = off - off_rem;
     int64_t end_len = end_rem > 0 ? block_size_ - end_rem : 0;
-    if (end_position + end_len > file_size_) {
+    if (!writable_ && end_position + end_len > file_size_) {
       end_len = file_size_ - end_position;
     }
     const int64_t mod_end = end_position + end_len;
@@ -1168,6 +1183,10 @@ Status PositionalAtomicFile::GetPath(std::string* path) {
 
 Status PositionalAtomicFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+int64_t PositionalAtomicFile::GetBlockSize() const {
+  return impl_->GetBlockSize();
 }
 
 }  // namespace tkrzw

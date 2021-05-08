@@ -60,7 +60,7 @@ class PositionalParallelFile final : public File {
   enum OpenOption : int32_t {
     /** The default behavior. */
     ACCESS_DEFAULT = 0,
-    /** To access the block directry without caching. */
+    /** To access the data block directry without caching. */
     ACCESS_DIRECT = 1 << 0,
     /** To synchronize the update operation through the device. */
     ACCESS_SYNC = 1 << 1,
@@ -203,6 +203,11 @@ class PositionalParallelFile final : public File {
   }
 
   /**
+   * Gets the block size.
+   */
+  int64_t GetBlockSize() const;
+
+  /**
    * Makes a new file object of the same concrete class.
    * @return The new file object.
    */
@@ -218,7 +223,7 @@ class PositionalParallelFile final : public File {
 class PositionalAtomicFileImpl;
 
 /**
- * File implementation with block-aligned direct access and locking for atomic operations.
+ * File implementation with positional access and locking for atomic operations.
  * @details All operations are thread-safe; Multiple threads can access the same file concurrently.
  * Also, locking assures that every operation is observed in an atomic manner.
  */
@@ -239,9 +244,6 @@ class PositionalAtomicFile final : public File {
    */
   explicit PositionalAtomicFile(const PositionalAtomicFile& rhs) = delete;
   PositionalAtomicFile& operator =(const PositionalAtomicFile& rhs) = delete;
-
-  /** The default value of the block size. */
-  static constexpr int64_t DEFAULT_BLOCK_SIZE = 512;
 
   /**
    * Enumeration of options for SetAccessStrategy.
@@ -390,6 +392,11 @@ class PositionalAtomicFile final : public File {
   bool IsAtomic() const override {
     return true;
   }
+
+  /**
+   * Gets the block size.
+   */
+  int64_t GetBlockSize() const;
 
   /**
    * Makes a new file object of the same concrete class.
