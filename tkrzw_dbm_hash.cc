@@ -1228,7 +1228,7 @@ Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path) {
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
       std::cout << "DIRECT" << std::endl;
-      status |= pos_file->SetAccessStrategy(512, PositionalParallelFile::ACCESS_DIRECT);
+      status |= pos_file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
     }
   }
   return Status(Status::SUCCESS);

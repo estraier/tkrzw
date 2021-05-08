@@ -107,10 +107,10 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
       oflags |= O_TRUNC;
     }
   }
-  if (access_options_ & PositionalParallelFile::ACCESS_DIRECT) {
+  if (access_options_ & PositionalFile::ACCESS_DIRECT) {
     SetDirectAccessToOpenFlag(&oflags);
   }
-  if (access_options_ & PositionalParallelFile::ACCESS_SYNC) {
+  if (access_options_ & PositionalFile::ACCESS_SYNC) {
     oflags |= O_SYNC;
   }
   const int32_t fd = open(path.c_str(), oflags, FILEPERM);
@@ -685,10 +685,10 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
       oflags |= O_TRUNC;
     }
   }
-  if (access_options_ & PositionalAtomicFile::ACCESS_DIRECT) {
+  if (access_options_ & PositionalFile::ACCESS_DIRECT) {
     SetDirectAccessToOpenFlag(&oflags);
   }
-  if (access_options_ & PositionalAtomicFile::ACCESS_SYNC) {
+  if (access_options_ & PositionalFile::ACCESS_SYNC) {
     oflags |= O_SYNC;
   }
   const int32_t fd = open(path.c_str(), oflags, FILEPERM);

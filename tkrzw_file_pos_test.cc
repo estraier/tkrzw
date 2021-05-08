@@ -45,7 +45,7 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(1, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(8, tkrzw::PositionalParallelFile::ACCESS_DEFAULT));
+            file->SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
   EXPECT_EQ(8, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
   EXPECT_EQ(8, file->GetBlockSize());
@@ -135,7 +135,7 @@ void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(block_size, tkrzw::PositionalParallelFile::ACCESS_DIRECT));
+            file->SetAccessStrategy(block_size, tkrzw::PositionalFile::ACCESS_DIRECT));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(head_buffer_size));
   int64_t pos = 0;
