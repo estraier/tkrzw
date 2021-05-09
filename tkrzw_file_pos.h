@@ -57,7 +57,7 @@ class PositionalFile : public File {
 
   /**
    * Sets access strategy.
-   * @param block_size The block size to which all records should be aligned.  It must be a
+   * @param block_size The block size to which all blocks should be aligned.  It must be a
    * multiple of the block size of the underlying file system or device.
    * @param options Bit-sum options of PositionalFile::AccessOption enums;
    * @return The result status.
@@ -66,8 +66,15 @@ class PositionalFile : public File {
 
   /**
    * Gets the block size.
+   * @return the block size.
    */
   virtual int64_t GetBlockSize() const = 0;
+
+  /**
+   * Checks whether the access mode is direct I/O.
+   * @return True if the access mode is direct I/O, or false if not.
+   */
+  virtual bool IsDirectIO() const = 0;
 };
 
 class PositionalParallelFileImpl;
@@ -234,8 +241,15 @@ class PositionalParallelFile final : public PositionalFile {
 
   /**
    * Gets the block size.
+   * @return the block size.
    */
   int64_t GetBlockSize() const override;
+
+  /**
+   * Checks whether the access mode is direct I/O.
+   * @return True if the access mode is direct I/O, or false if not.
+   */
+  bool IsDirectIO() const override;
 
   /**
    * Makes a new file object of the same concrete class.
@@ -413,8 +427,15 @@ class PositionalAtomicFile final : public PositionalFile {
 
   /**
    * Gets the block size.
+   * @return the block size.
    */
   int64_t GetBlockSize() const override;
+
+  /**
+   * Checks whether the access mode is direct I/O.
+   * @return True if the access mode is direct I/O, or false if not.
+   */
+  bool IsDirectIO() const override;
 
   /**
    * Makes a new file object of the same concrete class.

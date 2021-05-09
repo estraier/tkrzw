@@ -280,6 +280,7 @@ class PolyDBM final : public ParamDBM {
    *   - num_buckets (int): The number of buckets for hashing.
    *   - fbp_capacity (int): The capacity of the free block pool.
    *   - lock_mem_buckets (bool): True to lock the memory for the hash buckets.
+   *   - cache_buckets (bool): True to cache the hash buckets on memory.
    * @details For TreeDBM, all optional parameters for HashDBM are available.  In addition,
    * these optional parameters are supported.
    *   - max_page_size (int): The maximum size of a page.
@@ -306,6 +307,11 @@ class PolyDBM final : public ParamDBM {
    * @details For CacheDBM, these optional parameters are supported.
    *   - cap_rec_num (int): The maximum number of records.
    *   - cap_mem_size (int): The total memory size to use.
+   * @details For the file "PositionalParallelFile" and "PositionalAtomicFile", these optional
+   * parameters are supported.
+   *   - block_size (int): The block size to which all blocks should be aligned.
+   *   - access_options (str): Values separated by colon.  "direct" for direct I/O.  "sync" for
+   *     synchrnizing I/O.
    */
   Status OpenAdvanced(const std::string& path, bool writable,
                       int32_t options = File::OPEN_DEFAULT,

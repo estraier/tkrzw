@@ -120,20 +120,42 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
 
 std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* params) {
   const std::string file_class = StrLowerCase(SearchMap(*params, "file", ""));
-  params->erase("file");
+  std::unique_ptr<File> file;
   if (file_class == "stdfile" || file_class == "std") {
-    return std::make_unique<StdFile>();
+    file = std::make_unique<StdFile>();
   } else if (file_class == "" ||
              file_class == "memorymapparallelfile" || file_class == "mmap-para") {
-    return std::make_unique<MemoryMapParallelFile>();
+    file = std::make_unique<MemoryMapParallelFile>();
   } else if (file_class == "memorymapatomicfile" || file_class == "mmap-atom") {
-    return std::make_unique<MemoryMapAtomicFile>();
+    file = std::make_unique<MemoryMapAtomicFile>();
   } else if (file_class == "positionalparallelfile" || file_class == "pos-para") {
-    return std::make_unique<PositionalParallelFile>();
+    file = std::make_unique<PositionalParallelFile>();
   } else if (file_class == "positionalatomicfile" || file_class == "pos-atom") {
-    return std::make_unique<PositionalAtomicFile>();
+    file = std::make_unique<PositionalAtomicFile>();
   }
-  return nullptr;
+  params->erase("file");
+  if (file == nullptr) {
+    return nullptr;
+  }
+  auto* pos_file = dynamic_cast<PositionalFile*>(file.get());
+  if (pos_file) {
+    const int64_t block_size =
+        std::max<int64_t>(StrToInt(SearchMap(*params, "block_size", "-1")), 1);
+    int32_t options = PositionalFile::ACCESS_DEFAULT;
+    for (const auto& expr : StrSplit(SearchMap(*params, "access_options", ""), ':')) {
+      const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
+      if (norm_expr == "direct") {
+        options |= PositionalFile::ACCESS_DIRECT;
+      }
+      if (norm_expr == "sync") {
+        options |= PositionalFile::ACCESS_SYNC;
+      }
+    }
+    pos_file->SetAccessStrategy(block_size, options);
+    params->erase("block_size");
+    params->erase("access_options");
+  }
+  return file;
 }
 
 void SetHashTuningParams(std::map<std::string, std::string>* params,
@@ -150,12 +172,14 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
   tuning_params->fbp_capacity = StrToInt(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->lock_mem_buckets = StrToBool(SearchMap(*params, "lock_mem_buckets", "false"));
+  tuning_params->cache_buckets = StrToBool(SearchMap(*params, "cache_buckets", "false"));
   params->erase("update_mode");
   params->erase("offset_width");
   params->erase("align_pow");
   params->erase("num_buckets");
   params->erase("fbp_capacity");
   params->erase("lock_mem_buckets");
+  params->erase("cache_buckets");
 }
 
 void SetTreeTuningParams(std::map<std::string, std::string>* params,
@@ -541,7 +565,7 @@ Status PolyDBM::SynchronizeAdvanced(
   std::map<std::string, std::string> mod_params = params;
   if (typeid(*dbm_) == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
-    const auto& merge_paths = StrSplit(SearchMap(mod_params, "merge", ""), ":", true);
+    const auto& merge_paths = StrSplit(SearchMap(mod_params, "merge", ""), ':', true);
     for (const auto& merge_path : merge_paths) {
       const Status status = skip_dbm->MergeSkipDatabase(merge_path);
       if (status != Status::SUCCESS) {

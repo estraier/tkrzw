@@ -49,6 +49,9 @@ static void PrintUsageAndDie() {
     File::DEFAULT_ALLOC_INIT_SIZE);
   P("  --alloc_inc num : The allocation increment factor. (default: %.1f)\n",
     File::DEFAULT_ALLOC_INC_FACTOR);
+  P("  --block_size num : The block size of the positional access file. (default: 1)\n");
+  P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
+  P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -87,7 +90,6 @@ static void PrintUsageAndDie() {
     HashDBM::DEFAULT_FBP_CAPACITY);
   P("  --lock_mem_buckets : Locks the memory for the hash buckets.\n");
   P("  --cache_buckets : Caches the hash buckets on memory.\n");
-  P("  --direct_io : Enables direct I/O.\n");
   P("\n");
   P("Options for TreeDBM and FileIndex:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
@@ -101,7 +103,6 @@ static void PrintUsageAndDie() {
     TreeDBM::DEFAULT_FBP_CAPACITY);
   P("  --lock_mem_buckets : Locks the memory for the hash buckets.\n");
   P("  --cache_buckets : Caches the hash buckets on memory.\n");
-  P("  --direct_io : Enables direct I/O.\n");
   P("  --max_page_size num : Sets the maximum size of a page. (default: %d)\n",
     TreeDBM::DEFAULT_MAX_PAGE_SIZE);
   P("  --max_branches num : Sets the maximum number of branches of inner nodes. (default: %d)\n",
@@ -143,6 +144,7 @@ static void PrintUsageAndDie() {
 std::unique_ptr<DBM> MakeDBMOrDie(
     const std::string& dbm_impl, const std::string& file_impl,
     const std::string& file_path, int32_t alloc_init_size, double alloc_increment,
+    int64_t block_size, bool is_direct_io, bool is_sync_io,
     int64_t num_buckets, int64_t cap_rec_num, int64_t cap_mem_size) {
   std::string dbm_impl_mod = dbm_impl;
   if (dbm_impl == "auto") {
@@ -167,37 +169,35 @@ std::unique_ptr<DBM> MakeDBMOrDie(
       dbm_impl_mod = ext;
     }
   }
+  auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
+  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io);
   std::unique_ptr<DBM> dbm;
   if (dbm_impl_mod == "hash") {
     if (file_path.empty()) {
       Die("The file path must be specified");
     }
-    dbm = std::make_unique<HashDBM>(MakeFileOrDie(file_impl, alloc_init_size, alloc_increment));
+    dbm = std::make_unique<HashDBM>(std::move(file));
   } else if (dbm_impl_mod == "tree") {
     if (file_path.empty()) {
       Die("The file path must be specified");
     }
-    dbm = std::make_unique<TreeDBM>(MakeFileOrDie(file_impl, alloc_init_size, alloc_increment));
+    dbm = std::make_unique<TreeDBM>(std::move(file));
   } else if (dbm_impl_mod == "skip") {
     if (file_path.empty()) {
       Die("The file path must be specified");
     }
-    dbm = std::make_unique<SkipDBM>(MakeFileOrDie(file_impl, alloc_init_size, alloc_increment));
+    dbm = std::make_unique<SkipDBM>(std::move(file));
   } else if (dbm_impl_mod == "tiny") {
-    dbm = std::make_unique<TinyDBM>(
-        MakeFileOrDie(file_impl, alloc_init_size, alloc_increment), num_buckets);
+    dbm = std::make_unique<TinyDBM>(std::move(file), num_buckets);
   } else if (dbm_impl_mod == "baby") {
     dbm = std::make_unique<BabyDBM>(
-        MakeFileOrDie(file_impl, alloc_init_size, alloc_increment));
+        std::move(file));
   } else if (dbm_impl_mod == "cache") {
-    dbm = std::make_unique<CacheDBM>(
-        MakeFileOrDie(file_impl, alloc_init_size, alloc_increment), cap_rec_num, cap_mem_size);
+    dbm = std::make_unique<CacheDBM>(std::move(file), cap_rec_num, cap_mem_size);
   } else if (dbm_impl_mod == "stdhash") {
-    dbm = std::make_unique<StdHashDBM>(
-        MakeFileOrDie(file_impl, alloc_init_size, alloc_increment), num_buckets);
+    dbm = std::make_unique<StdHashDBM>(std::move(file), num_buckets);
   } else if (dbm_impl_mod == "stdtree") {
-    dbm = std::make_unique<StdTreeDBM>(
-        MakeFileOrDie(file_impl, alloc_init_size, alloc_increment));
+    dbm = std::make_unique<StdTreeDBM>(std::move(file));
   } else if (dbm_impl_mod == "poly") {
     dbm = std::make_unique<PolyDBM>();
   } else if (dbm_impl_mod == "shard") {
@@ -212,7 +212,7 @@ std::unique_ptr<DBM> MakeDBMOrDie(
 bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_path,
               bool with_no_wait, bool with_no_lock,
               bool is_append, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
-              int32_t fbp_cap, bool lock_mem_buckets, bool cache_buckets, bool is_direct_io,
+              int32_t fbp_cap, bool lock_mem_buckets, bool cache_buckets,
               int32_t max_page_size, int32_t max_branches, int32_t max_cached_pages,
               int32_t step_unit, int32_t max_level, int64_t sort_mem_size,
               bool insert_in_order, int32_t max_cached_records,
@@ -239,7 +239,6 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
     tuning_params.cache_buckets = cache_buckets;
-    tuning_params.direct_io = is_direct_io;
     const Status status =
         hash_dbm->OpenAdvanced(file_path, writable, open_options, tuning_params);
     if (status != Status::SUCCESS) {
@@ -258,7 +257,6 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
     tuning_params.cache_buckets = cache_buckets;
-    tuning_params.direct_io = is_direct_io;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;
@@ -476,8 +474,9 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0}, {"--direct_io", 0},
+    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
@@ -505,6 +504,9 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
@@ -512,7 +514,6 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
   const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
-  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -537,6 +538,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
@@ -576,7 +578,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (!is_get_only && !is_remove_only) {
     if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
                   is_append, offset_width, align_pow, num_buckets, fbp_cap,
-                  lock_mem_buckets, cache_buckets, is_direct_io,
+                  lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -641,7 +643,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (!is_set_only && !is_remove_only) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
                   is_append, offset_width, align_pow, num_buckets, fbp_cap,
-                  lock_mem_buckets, cache_buckets, is_direct_io,
+                  lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -699,7 +701,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (!is_set_only && !is_get_only) {
     if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock,
                   is_append, offset_width, align_pow, num_buckets, fbp_cap,
-                  lock_mem_buckets, cache_buckets, is_direct_io,
+                  lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -744,8 +746,9 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1}, {"--rebuild", 0}, {"--sleep", 1},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0}, {"--direct_io", 0},
+    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
@@ -773,6 +776,9 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
@@ -780,7 +786,6 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
   const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
-  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -805,6 +810,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
@@ -884,7 +890,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
                 is_append, offset_width, align_pow, num_buckets, fbp_cap,
-                lock_mem_buckets, cache_buckets, is_direct_io,
+                lock_mem_buckets, cache_buckets,
                 max_page_size, max_branches, max_cached_pages,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
@@ -928,8 +934,9 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0}, {"--direct_io", 0},
+    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
@@ -956,6 +963,9 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
@@ -963,7 +973,6 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
   const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
-  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -988,6 +997,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
@@ -1165,7 +1175,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
                 is_append, offset_width, align_pow, num_buckets, fbp_cap,
-                lock_mem_buckets, cache_buckets, is_direct_io,
+                lock_mem_buckets, cache_buckets,
                 max_page_size, max_branches, max_cached_pages,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
@@ -1209,7 +1219,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     {"--random_key", 0}, {"--random_value", 0},
     {"--path", 1},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0}, {"--direct_io", 0},
+    {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -1231,7 +1241,6 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
   const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
-  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -1275,7 +1284,6 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
     tuning_params.cache_buckets = cache_buckets;
-    tuning_params.direct_io = is_direct_io;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;

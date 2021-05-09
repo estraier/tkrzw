@@ -249,10 +249,10 @@ std::unique_ptr<File> MakeFileOrDie(
  * Sets access strategy of the positional access file.
  * @param file The file object.
  * @param block_size The block size to which all records should be aligned.
- * @param is_direct If true, the direct access option is set.
- * @param is_sync If true, the sync access option is set.
+ * @param is_direct_io If true, the direct I/O access option is set.
+ * @param is_sync_io If true, the synchronous I/O access option is set.
  */
-void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct, bool is_sync);
+void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct_io, bool is_sync_io);
 
 /**
  * Locks the memory of the beginning region or die.

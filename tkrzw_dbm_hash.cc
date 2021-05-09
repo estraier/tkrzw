@@ -56,7 +56,7 @@ constexpr int32_t MAX_ALIGN_POW = 16;
 constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
 constexpr int32_t REBUILD_NONBLOCKING_MAX_TRIES = 3;
 constexpr int64_t REBUILD_BLOCKING_ALLOWANCE = 65536;
-constexpr int64_t DEFAULT_DIO_BLOCK_SIZE = 512;
+constexpr int64_t MINIMUM_DIO_BLOCK_SIZE = 512;
 
 enum StaticFlag : uint8_t {
   STATIC_FLAG_NONE = 0,
@@ -119,7 +119,7 @@ class HashDBMImpl final {
   Status LoadMetadata();
   void SetRecordBase();
   Status PadFileForDirectIO();
-  Status TuneFileBeforeOpen(File* file, const std::string& path, bool writable);
+  Status CheckFileBeforeOpen(File* file, const std::string& path, bool writable);
   Status TuneFileAfterOpen();
   Status InitializeBuckets();
   Status SaveFBP();
@@ -152,7 +152,6 @@ class HashDBMImpl final {
   FreeBlockPool fbp_;
   bool lock_mem_buckets_;
   bool cache_buckets_;
-  bool direct_io_;
   std::unique_ptr<File> file_;
   std::shared_timed_mutex mutex_;
   HashMutex record_mutex_;
@@ -186,8 +185,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       num_records_(0), eff_data_size_(0), file_size_(0), mod_time_(0),
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
-      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), lock_mem_buckets_(false),
-      cache_buckets_(false), direct_io_(false),
+      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), lock_mem_buckets_(false), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
       file_mutex_() {}
@@ -229,8 +227,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   }
   lock_mem_buckets_ = tuning_params.lock_mem_buckets;
   cache_buckets_ = tuning_params.cache_buckets;
-  direct_io_ = tuning_params.direct_io;
-  Status status = TuneFileBeforeOpen(file_.get(), path, writable);
+  Status status = CheckFileBeforeOpen(file_.get(), path, writable);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -470,7 +467,6 @@ Status HashDBMImpl::Rebuild(
   tmp_tuning_params.num_buckets = tuning_params.num_buckets >= 0 ?
       tuning_params.num_buckets : est_num_records * 2 + 1;
   tmp_tuning_params.cache_buckets = tuning_params.cache_buckets;
-  tmp_tuning_params.direct_io = tuning_params.direct_io;
   HashDBM tmp_dbm(file_->MakeFile());
   auto CleanUp = [&]() {
     tmp_dbm.Close();
@@ -559,7 +555,6 @@ Status HashDBMImpl::Rebuild(
     }
     lock_mem_buckets_ = tuning_params.lock_mem_buckets;
     cache_buckets_ = tuning_params.cache_buckets;
-    direct_io_ = tuning_params.direct_io;
     status |= OpenImpl(true);
     db_type_ = db_type;
     opaque_ = opaque;
@@ -1099,7 +1094,6 @@ Status HashDBMImpl::CloseImpl() {
   fbp_.Clear();
   lock_mem_buckets_ = false;
   cache_buckets_ = false;
-  direct_io_ = false;
   return status;
 }
 
@@ -1196,15 +1190,15 @@ void HashDBMImpl::SetRecordBase() {
 }
 
 Status HashDBMImpl::PadFileForDirectIO() {
-  if (!direct_io_) {
-    return Status::SUCCESS;
-  }
   auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
-  if (pos_file == nullptr) {
+  if (pos_file == nullptr || !pos_file->IsDirectIO()) {
     return Status::SUCCESS;
   }
   const int64_t file_size = file_->GetSizeSimple();
   const int64_t block_size = pos_file->GetBlockSize();
+
+  std::cout << "BLC:" << block_size << std::endl;
+
   const int64_t size_rem = file_size % block_size;
   if (size_rem == 0) {
     return Status::SUCCESS;
@@ -1223,33 +1217,30 @@ Status HashDBMImpl::PadFileForDirectIO() {
   }
 
   std::cout << "PPP:" << rec.GetWholeSize() << std::endl;
-  
+  std::cout << "END:" << file_size + rec.GetWholeSize() << std::endl;
+  std::cout << "REM:" << (file_size + rec.GetWholeSize()) % block_size << std::endl;
+
   return rec.Write(file_size, nullptr);;
 }
 
-Status HashDBMImpl::TuneFileBeforeOpen(File* file, const std::string& path, bool writable) {
-  if (direct_io_) {
-    auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
-    if (pos_file != nullptr) {
-      const int64_t file_size = tkrzw::GetFileSize(path);
-      int64_t block_size = pos_file->GetBlockSize();
-      if (block_size < 2) {
-        block_size = DEFAULT_DIO_BLOCK_SIZE;
-      }
-      std::cout << "DIRECT: fs=" << file_size
-                << " bs=" << block_size
-                << " rem=" << (file_size % block_size)
-                << " w=" << writable
-                << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
-                << std::endl;
+Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, bool writable) {
+  auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+  if (pos_file != nullptr && pos_file->IsDirectIO()) {
+    const int64_t file_size = tkrzw::GetFileSize(path);
+    const int64_t block_size = pos_file->GetBlockSize();
 
-      if (!writable && file_size > 0 && file_size % block_size != 0) {
-        return Status(Status::INFEASIBLE_ERROR, "The file size not aligned to the block size");
-      }
-      const Status status = pos_file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
+    std::cout << "DIRECT: fs=" << file_size
+              << " bs=" << block_size
+              << " rem=" << (file_size % block_size)
+              << " w=" << writable
+              << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
+              << std::endl;
+
+    if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
+      return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
+    }
+    if (!writable && file_size > 0 && file_size % block_size != 0) {
+      return Status(Status::INFEASIBLE_ERROR, "The file size not aligned to the block size");
     }
   }
   return Status(Status::SUCCESS);;

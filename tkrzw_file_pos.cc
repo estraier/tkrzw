@@ -57,6 +57,7 @@ class PositionalParallelFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   int64_t GetBlockSize();
+  bool IsDirectIO();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -421,6 +422,10 @@ int64_t PositionalParallelFileImpl::GetBlockSize() {
   return block_size_;
 }
 
+bool PositionalParallelFileImpl::IsDirectIO() {
+  return access_options_ & PositionalFile::ACCESS_DIRECT;
+}
+
 Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   int64_t diff = min_size % block_size_;
   if (diff > 0) {
@@ -616,6 +621,10 @@ int64_t PositionalParallelFile::GetBlockSize() const {
   return impl_->GetBlockSize();
 }
 
+bool PositionalParallelFile::IsDirectIO() const {
+  return impl_->IsDirectIO();
+}
+
 class PositionalAtomicFileImpl final {
  public:
   PositionalAtomicFileImpl();
@@ -634,6 +643,7 @@ class PositionalAtomicFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   int64_t GetBlockSize();
+  bool IsDirectIO();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -1005,6 +1015,11 @@ int64_t PositionalAtomicFileImpl::GetBlockSize() {
   return block_size_;
 }
 
+bool PositionalAtomicFileImpl::IsDirectIO() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return access_options_ & PositionalFile::ACCESS_DIRECT;
+}
+
 Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_trunc_size =
       std::max(min_size, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
@@ -1187,6 +1202,10 @@ Status PositionalAtomicFile::Rename(const std::string& new_path) {
 
 int64_t PositionalAtomicFile::GetBlockSize() const {
   return impl_->GetBlockSize();
+}
+
+bool PositionalAtomicFile::IsDirectIO() const {
+  return impl_->IsDirectIO();
 }
 
 }  // namespace tkrzw

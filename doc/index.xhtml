@@ -2668,6 +2668,9 @@ applet  A small application.
 <dd><code>--no_lock</code> : Omits file locking.</dd>
 <dd><code>--alloc_init <var>num</var></code> : The initial allocation size. (default: 1048576)</dd>
 <dd><code>--alloc_inc <var>num</var></code> : The allocation increment factor. (default: 2.0)</dd>
+<dd><code>--block_size <var>num</var></code> : The block size of the positional access file. (default: 1)</dd>
+<dd><code>--direct_io</code> : Enables the direct I/O option of the positional access file.</dd>
+<dd><code>--sync_io</code> : Enables the synchronous I/O option of the positional access file.</dd>
 <dt>Options for the sequence subcommand:</dt>
 <dd><code>--random_key</code> : Uses random keys rather than sequential ones.</dd>
 <dd><code>--random_value</code> : Uses random length values rather than fixed ones.</dd>
@@ -2696,7 +2699,6 @@ applet  A small application.
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--lock_mem_buckets</code> : Locks the memory for the hash buckets.</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
-<dd><code>--direct_io</code> : Enables direct I/O.</dd>
 <dt>Options for TreeDBM:</dt>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4)</dd>
@@ -2705,7 +2707,6 @@ applet  A small application.
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--lock_mem_buckets</code> : Locks the memory for the hash buckets.</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
-<dd><code>--direct_io</code> : Enables direct I/O.</dd>
 <dd><code>--max_page_size <var>num</var></code> : Sets the maximum size of a page. (default: 8130)</dd>
 <dd><code>--max_branches <var>num</var></code> : Sets the maximum number of branches of inner nodes. (default: 256)</dd>
 <dd><code>--max_chached_pages <var>num</var></code> : Sets the maximum number of cached pages. (default: 10000)</dd>

@@ -262,14 +262,14 @@ std::unique_ptr<File> MakeFileOrDie(
   return file;
 }
 
-void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct, bool is_sync) {
+void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct_io, bool is_sync_io) {
   auto* pos_file = dynamic_cast<PositionalFile*>(file);;
   if (pos_file != nullptr) {
     int32_t options = PositionalFile::ACCESS_DEFAULT;
-    if (is_direct) {
+    if (is_direct_io) {
       options |= PositionalFile::ACCESS_DIRECT;
     }
-    if (is_sync) {
+    if (is_sync_io) {
       options |= PositionalFile::ACCESS_SYNC;
     }
     pos_file->SetAccessStrategy(block_size, options).OrDie();
