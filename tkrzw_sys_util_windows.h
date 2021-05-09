@@ -181,7 +181,7 @@ inline int32_t PositionalWriteFile(
  * @param size The size of the data to be read.
  * @return The result status.
  */
-inline Status PositionalReadSequence(
+inline Status PReadSequence(
     HANDLE file_handle, int64_t off, void* buf, size_t size) {
   char* wp = static_cast<char*>(buf);
   while (size > 0) {
@@ -207,7 +207,7 @@ inline Status PositionalReadSequence(
  * @param size The size of the data to be written.
  * @return The result status.
  */
-inline Status PositionalWriteSequence(
+inline Status PWriteSequence(
     HANDLE file_handle, int64_t off, const void* buf, size_t size) {
   const char* rp = static_cast<const char*>(buf);
   while (size > 0) {
