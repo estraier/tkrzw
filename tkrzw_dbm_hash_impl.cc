@@ -188,11 +188,7 @@ void HashRecord::SetData(OperationType type, int32_t ideal_whole_size,
       SizeVarNum(key_size) + SizeVarNum(value_size) + sizeof(uint8_t) +
       key_size + value_size;
   whole_size_ = std::max(base_size, ideal_whole_size);
-  const int32_t align = 1 << align_pow_;
-  const int32_t diff = whole_size_ % align;
-  if (diff > 0) {
-    whole_size_ += align - diff;
-  }
+  whole_size_ = AlignNumber(whole_size_, 1 << align_pow_);
   key_size_ = key_size;
   value_size_ = value_size;
   padding_size_ = whole_size_ - base_size;
@@ -261,10 +257,7 @@ Status HashRecord::FindNextOffset(int64_t offset, int64_t* next_offset) {
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
   const int32_t align = 1 << align_pow_;
   offset += min_record_size;
-  const int32_t diff = offset % align;
-  if (diff > 0) {
-    offset += align - diff;
-  }
+  offset = AlignNumber(offset, align);
   int64_t file_size = file_->GetSizeSimple();
   HashRecord rec(file_, offset_width_, align_pow_);
   while (offset < file_size) {

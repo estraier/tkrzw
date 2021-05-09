@@ -172,10 +172,7 @@ Status MemoryMapParallelFileImpl::Open(
   int32_t mprot = PROT_READ;
   if (writable) {
     map_size = std::max(map_size, alloc_init_size_);
-    const int64_t diff = map_size % PAGE_SIZE;
-    if (diff > 0) {
-      map_size += PAGE_SIZE - diff;
-    }
+    map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
     if (ftruncate(fd, map_size) != 0) {
       const Status status = GetErrnoStatus("ftruncate", errno);
@@ -266,10 +263,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   lock_size_.store(0);
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
     const Status status = GetErrnoStatus("mremap", errno);
@@ -376,10 +370,7 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_.load() * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   if (ftruncate(fd_, new_map_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
   }
@@ -740,10 +731,7 @@ Status MemoryMapAtomicFileImpl::Open(
   int32_t mprot = PROT_READ;
   if (writable) {
     map_size = std::max(map_size, alloc_init_size_);
-    const int64_t diff = map_size % PAGE_SIZE;
-    if (diff > 0) {
-      map_size += PAGE_SIZE - diff;
-    }
+    map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
     if (ftruncate(fd, map_size) != 0) {
       const Status status = GetErrnoStatus("ftruncate", errno);
@@ -836,10 +824,7 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   lock_size_ = 0;
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
   if (new_map == MAP_FAILED) {
     const Status status = GetErrnoStatus("mremap", errno);
@@ -947,10 +932,7 @@ Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_ * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   if (ftruncate(fd_, new_map_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
   }

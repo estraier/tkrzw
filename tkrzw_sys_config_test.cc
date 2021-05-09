@@ -36,6 +36,16 @@ TEST(SysConfigTest, HexDump) {
   EXPECT_EQ("61 62\n63 64", tkrzw::HexDumpStr("abcd", 2));
 }
 
+TEST(SysConfigTest, AlignNumber) {
+  EXPECT_EQ(0, tkrzw::AlignNumber(0, 10));
+  EXPECT_EQ(10, tkrzw::AlignNumber(1, 10));
+  EXPECT_EQ(10, tkrzw::AlignNumber(10, 10));
+  EXPECT_EQ(20, tkrzw::AlignNumber(11, 10));
+  EXPECT_EQ(0, tkrzw::AlignNumber(0, 512));
+  EXPECT_EQ(512, tkrzw::AlignNumber(1, 512));
+  EXPECT_EQ(512, tkrzw::AlignNumber(512, 512));
+}
+
 TEST(SysConfigTest, ByteOrders) {
   if (tkrzw::IS_BIG_ENDIAN) {
     EXPECT_EQ(0x1122, tkrzw::HostToNet16(0x1122));

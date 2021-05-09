@@ -1183,10 +1183,7 @@ void HashDBMImpl::SetRecordBase() {
   const int32_t align = std::max(RECORD_BASE_ALIGN, 1 << align_pow_);
   record_base_ = METADATA_SIZE + num_buckets_ * offset_width_ +
       FBP_SECTION_SIZE + RECORD_BASE_HEADER_SIZE;
-  const int32_t diff = record_base_ % align;
-  if (diff > 0) {
-    record_base_ += align - diff;
-  }
+  record_base_ = AlignNumber(record_base_, align);
 }
 
 Status HashDBMImpl::PadFileForDirectIO() {
@@ -1856,10 +1853,7 @@ Status HashDBM::FindRecordBase(
       const int32_t align = std::max(RECORD_BASE_ALIGN, 1 << *align_pow);
       *record_base = METADATA_SIZE + num_buckets * *offset_width +
           FBP_SECTION_SIZE + RECORD_BASE_HEADER_SIZE;
-      const int32_t diff = *record_base % align;
-      if (diff > 0) {
-        *record_base += align - diff;
-      }
+      *record_base = AlignNumber(*record_base, align);
     }
     *last_sync_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
   } else {

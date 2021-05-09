@@ -213,6 +213,14 @@ std::string HexDump(const void* buf, size_t size, int32_t folding = 0);
 std::string HexDumpStr(const std::string_view& str, int32_t folding = 0);
 
 /**
+ * Aligns a number to a multiple of another number.
+ * @param num The number to align.
+ * @param alignment The alignment number.
+ * @return The aligned number.
+ */
+int64_t AlignNumber(int64_t num, int64_t alignment);
+
+/**
  * Normalizes a 16-bit number in the native order into the network byte order.
  * @param num The 16-bit number in the native order.
  * @return The number in the network byte order.
@@ -349,6 +357,14 @@ inline std::string HexDump(const void* buf, size_t size, int32_t folding) {
 
 inline std::string HexDumpStr(const std::string_view& str, int32_t folding) {
   return HexDump(str.data(), str.size(), folding);
+}
+
+inline int64_t AlignNumber(int64_t num, int64_t alignment) {
+  const int64_t diff = num % alignment;
+  if (diff > 0) {
+    num += alignment - diff;
+  }
+  return num;
 }
 
 inline uint16_t HostToNet16(uint16_t num) {

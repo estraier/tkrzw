@@ -257,10 +257,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   }
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
@@ -347,10 +344,7 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_.load() * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   if (PositionalWriteFile(file_handle_, "", 1, new_map_size - 1) != 1) {
     return GetSysErrorStatus("WriteFile", GetLastError());
   }
@@ -811,10 +805,7 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   }
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
   if (status != Status::SUCCESS) {
     map_handle_ = nullptr;
@@ -901,10 +892,7 @@ Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_ * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
-  const int64_t diff = new_map_size % PAGE_SIZE;
-  if (diff > 0) {
-    new_map_size += PAGE_SIZE - diff;
-  }
+  new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
   if (PositionalWriteFile(file_handle_, "", 1, new_map_size - 1) != 1) {
     return GetSysErrorStatus("WriteFile", GetLastError());
   }
