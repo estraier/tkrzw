@@ -1044,7 +1044,29 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
     const std::string& key = tkrzw::ToString(i * i);
     const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
     EXPECT_EQ(value, dbm->GetSimple(key, ""));
+    if (i % 3 == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key));
+      EXPECT_EQ("", dbm->GetSimple(key, ""));
+    }
   }
+  EXPECT_EQ(14, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    if (i % 3 == 0) {
+      EXPECT_EQ("", dbm->GetSimple(key, ""));
+    } else {
+      EXPECT_EQ(value, dbm->GetSimple(key, ""));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value, true));
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(20, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 

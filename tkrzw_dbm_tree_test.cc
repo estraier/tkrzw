@@ -59,6 +59,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMRebuildStaticTestAll(tkrzw::TreeDBM* dbm);
   void TreeDBMRebuildRandomTest(tkrzw::TreeDBM* dbm);
   void TreeDBMRestoreTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm);
 };
 
 void TreeDBMTest::TreeDBMEmptyDatabaseTest(tkrzw::TreeDBM* dbm) {
@@ -738,6 +739,99 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
   }
 }
 
+void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::TreeDBM::TuningParameters tuning_params;
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 3;
+  tuning_params.cache_buckets = true;
+  tuning_params.direct_io = true;
+  tuning_params.max_page_size = 1;
+  tuning_params.max_branches = 2;
+  tuning_params.max_cached_pages = 1;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
+  }
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, false, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 1; i <= 10; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 11; i <= 20; i++) {
+    const std::string& expr = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
+  }
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value, true));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 3;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+    if (i % 3 == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key));
+      EXPECT_EQ("", dbm->GetSimple(key, ""));
+    }
+  }
+  EXPECT_EQ(14, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));
+  for (int32_t i = 1; i <= 20; i++) {
+    const std::string& key = tkrzw::ToString(i * i);
+    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
+    if (i % 3 == 0) {
+      EXPECT_EQ("", dbm->GetSimple(key, ""));
+    } else {
+      EXPECT_EQ(value, dbm->GetSimple(key, ""));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value, true));
+    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+  }
+  EXPECT_EQ(20, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(TreeDBMTest, EmptyDatabase) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMEmptyDatabaseTest(&dbm);
@@ -827,6 +921,11 @@ TEST_F(TreeDBMTest, RebuildRandom) {
 TEST_F(TreeDBMTest, Restore) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMRestoreTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, DirectIO) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::PositionalParallelFile>());
+  TreeDBMDirectIOTest(&dbm);
 }
 
 // END OF FILE
