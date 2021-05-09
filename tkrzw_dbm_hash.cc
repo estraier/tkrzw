@@ -1193,16 +1193,10 @@ Status HashDBMImpl::PadFileForDirectIO() {
   }
   const int64_t file_size = file_->GetSizeSimple();
   const int64_t block_size = pos_file->GetBlockSize();
-
-  std::cout << "BLC:" << block_size << std::endl;
-
   const int64_t size_rem = file_size % block_size;
   if (size_rem == 0) {
     return Status::SUCCESS;
   }
-
-  std::cout << "PAD:" << file_size << " : " << size_rem << std::endl;
-
   HashRecord rec(file_.get(), offset_width_, align_pow_);
   int64_t ideal_whole_size = block_size - size_rem;
   while (true) {
@@ -1212,11 +1206,6 @@ Status HashDBMImpl::PadFileForDirectIO() {
     }
     ideal_whole_size += block_size;
   }
-
-  std::cout << "PPP:" << rec.GetWholeSize() << std::endl;
-  std::cout << "END:" << file_size + rec.GetWholeSize() << std::endl;
-  std::cout << "REM:" << (file_size + rec.GetWholeSize()) % block_size << std::endl;
-
   return rec.Write(file_size, nullptr);;
 }
 
@@ -1225,14 +1214,15 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
   if (pos_file != nullptr && pos_file->IsDirectIO()) {
     const int64_t file_size = tkrzw::GetFileSize(path);
     const int64_t block_size = pos_file->GetBlockSize();
-
+    /*
+    // TODO: Delete me
     std::cout << "DIRECT: fs=" << file_size
               << " bs=" << block_size
               << " rem=" << (file_size % block_size)
               << " w=" << writable
               << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
               << std::endl;
-
+    */
     if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
       return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
     }

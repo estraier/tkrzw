@@ -181,6 +181,7 @@ Status PositionalParallelFileImpl::Close() {
   Status status(Status::SUCCESS);
 
   // Truncates the file.
+  bool retruncate = false;
   if (writable_) {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
@@ -188,8 +189,7 @@ Status PositionalParallelFileImpl::Close() {
     if (file_size_.load() % block_size_ == 0) {
       status |= TruncateFile(file_handle_, file_size_.load());
     } else {
-      // TODO: Check the alignment restriction.
-      status |= TruncateFile(file_handle_, file_size_.load());
+      retruncate = true;
     }
   }
 
@@ -212,6 +212,11 @@ Status PositionalParallelFileImpl::Close() {
   // Close the file.
   if (!CloseHandle(file_handle_)) {
     status |= GetSysErrorStatus("CloseHandle", GetLastError());
+  }
+
+  // Retruncate the file externally.
+  if (retruncate) {
+    status |= TruncateFileExternally(path_, file_size_.load());
   }
 
   // Updates the internal data.
@@ -744,6 +749,7 @@ Status PositionalAtomicFileImpl::Close() {
   Status status(Status::SUCCESS);
 
   // Truncates the file.
+  bool retruncate = false;
   if (writable_) {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
@@ -751,8 +757,7 @@ Status PositionalAtomicFileImpl::Close() {
     if (file_size_ % block_size_ == 0) {
       status |= TruncateFile(file_handle_, file_size_);
     } else {
-      // TODO: check the alignment restriction.
-      status |= TruncateFile(file_handle_, file_size_);
+      retruncate = true;
     }
   }
 
@@ -775,6 +780,11 @@ Status PositionalAtomicFileImpl::Close() {
   // Close the file.
   if (!CloseHandle(file_handle_)) {
     status |= GetSysErrorStatus("CloseHandle", GetLastError());
+  }
+
+  // Retruncate the file externally.
+  if (retruncate) {
+    status |= TruncateFileExternally(path_, file_size_);
   }
 
   // Updates the internal data.

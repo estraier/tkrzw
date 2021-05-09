@@ -96,6 +96,28 @@ inline Status TruncateFile(HANDLE file_handle, int64_t length) {
 }
 
 /**
+ * Truncates a file externally.
+ * @param path The path of the file to truncate.
+ * @param length The new length of the file.
+ * @return The result status.
+ */
+inline Status TruncateFileExternally(const std::string& path, int64_t length) {
+  const DWORD amode = GENERIC_WRITE;;
+  const DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+  const DWORD cmode = OPEN_EXISTING;
+  const DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+  HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
+  if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
+    return GetSysErrorStatus("CreateFile", GetLastError());
+  }
+  Status status = TruncateFile(file_handle, length);
+  if (!CloseHandle(file_handle)) {
+    status |= GetSysErrorStatus("CloseHandle", GetLastError());
+  }
+  return status;
+}
+
+/**
  * Remaps a memory map.
  * @param file_handle The handle of the data file.
  * @param map_size The new size of the mapping.
