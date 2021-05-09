@@ -989,7 +989,6 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 3;
   tuning_params.cache_buckets = true;
-  tuning_params.direct_io = true;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   for (int32_t i = 1; i <= 10; i++) {
@@ -1157,7 +1156,10 @@ TEST_F(HashDBMTest, Restore) {
 }
 
 TEST_F(HashDBMTest, DirectIO) {
-  tkrzw::HashDBM dbm(std::make_unique<tkrzw::PositionalParallelFile>());
+  auto file = std::make_unique<tkrzw::PositionalParallelFile>();
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
+  tkrzw::HashDBM dbm(std::move(file));
   HashDBMDirectIOTest(&dbm);
 }
 

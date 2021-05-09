@@ -36,7 +36,7 @@ CLFLAGS = /nologo \
   /D_TKRZW_LIBEXECDIR="R\"($(LIBEXECDIR))\"" \
   /D_TKRZW_APPINC="R\"(/I \"$(INCLUDEDIR)\")\"" \
   /D_TKRZW_APPLIBS="R\"(/libpath:\"$(LIBDIR)\" tkrzw.lib)\"" \
-  /O2 /EHsc /W3 /wd4244 /wd4267 /wd4334 /wd4351 /wd4800 /MT
+  /O2 /EHsc /W3 /wd4244 /wd4267 /wd4334 /MT
 LIBFLAGS = /nologo \
   /libpath:"$(VCLIBPATH)" /libpath:"$(UMLIBPATH)" /libpath:"$(UCRTLIBPATH)"
 LINKFLAGS = /nologo \

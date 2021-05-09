@@ -748,7 +748,6 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 3;
   tuning_params.cache_buckets = true;
-  tuning_params.direct_io = true;
   tuning_params.max_page_size = 1;
   tuning_params.max_branches = 2;
   tuning_params.max_cached_pages = 1;
@@ -924,7 +923,10 @@ TEST_F(TreeDBMTest, Restore) {
 }
 
 TEST_F(TreeDBMTest, DirectIO) {
-  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::PositionalParallelFile>());
+  auto file = std::make_unique<tkrzw::PositionalParallelFile>();
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
+  tkrzw::TreeDBM dbm(std::move(file));
   TreeDBMDirectIOTest(&dbm);
 }
 

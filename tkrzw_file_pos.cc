@@ -172,7 +172,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   // Updates the internal data.
   fd_ = fd;
   head_buffer_ = nullptr;
-  head_buffer_size_.store(0);
+  head_buffer_size_ = 0;
   path_ = path;
   file_size_.store(file_size);
   trunc_size_.store(trunc_size);
@@ -191,7 +191,7 @@ Status PositionalParallelFileImpl::Close() {
   // Truncates the file.
   if (writable_) {
     if (head_buffer_ != nullptr) {
-      status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
+      status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     }
     if (file_size_.load() % block_size_ == 0) {
       if (ftruncate(fd_, file_size_.load()) != 0) {
@@ -231,7 +231,7 @@ Status PositionalParallelFileImpl::Close() {
   // Updates the internal data.
   fd_ = -1;
   head_buffer_ = nullptr;
-  head_buffer_size_.store(0);
+  head_buffer_size_ = 0;
   path_.clear();
   file_size_.store(0);
   trunc_size_.store(0);
@@ -329,7 +329,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
+    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_.store(file_size_.load());
   if (trunc_size_.load() % block_size_ == 0) {
@@ -361,11 +361,11 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_.load());
+    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     xfreealigned(head_buffer_);
   }
   if (size < 1) {
-    head_buffer_size_.store(0);
+    head_buffer_size_ = 0;
     head_buffer_ = nullptr;
     return status;
   }
@@ -373,10 +373,10 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
   if (diff > 0) {
     size += block_size_ - diff;
   }
-  head_buffer_size_.store(size);
-  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_.load()));
-  std::memset(head_buffer_, 0, head_buffer_size_.load());
-  const int64_t read_size = std::min<int64_t>(head_buffer_size_.load(), file_size_.load());
+  head_buffer_size_ = size;
+  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
+  std::memset(head_buffer_, 0, head_buffer_size_);
+  const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_.load());
   status |= PReadSequence(fd_, 0, head_buffer_, read_size);
   return status;
 }
@@ -456,11 +456,11 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
   if (static_cast<int64_t>(off + size) > file_size_.load()) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
-  if (off < head_buffer_size_.load()) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
+  if (off < head_buffer_size_) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
     std::memcpy(buf, head_buffer_ + off, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_.load();
+    off = head_buffer_size_;
     size -= prefix_size;
   }
   if (size < 1) {
@@ -497,11 +497,11 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
 }
 
 Status PositionalParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_t size) {
-  if (off < head_buffer_size_.load()) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
+  if (off < head_buffer_size_) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
     std::memcpy(head_buffer_ + off, buf, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_.load();
+    off = head_buffer_size_;
     size -= prefix_size;
   }
   if (size < 1) {
@@ -895,7 +895,7 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
   const int64_t diff = new_trunc_size % alignment;
   if (diff > 0) {
-    new_trunc_size += PAGE_SIZE - diff;
+    new_trunc_size += alignment - diff;
   }
   if (ftruncate(fd_, new_trunc_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
@@ -1026,7 +1026,7 @@ Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
   const int64_t diff = new_trunc_size % alignment;
   if (diff > 0) {
-    new_trunc_size += PAGE_SIZE - diff;
+    new_trunc_size += alignment - diff;
   }
   if (ftruncate(fd_, new_trunc_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);

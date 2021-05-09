@@ -56,7 +56,7 @@ void* xmallocaligned(size_t alignment, size_t size) {
   return ptr;
 #elif defined(_SYS_WINDOWS_)
   assert(alignment > 0);
-  void* ptr = _aligned_malloc(alignment, size);
+  void* ptr = _aligned_malloc(size, alignment);
   if (ptr == nullptr) {
     throw std::bad_alloc();
   }

@@ -32,12 +32,6 @@
 
 namespace tkrzw {
 
-inline void SetDirectAccessToOpenFlag(int32_t* oflags) {
-#if defined(_SYS_LINUX_)
-  *oflags |= O_DIRECT;
-#endif
-}
-
 class PositionalParallelFileImpl final {
  public:
   PositionalParallelFileImpl();
@@ -65,7 +59,7 @@ class PositionalParallelFileImpl final {
 
   HANDLE file_handle_;
   char* head_buffer_;
-  std::atomic_int64_t head_buffer_size_;
+  int64_t head_buffer_size_;
   std::string path_;
   std::atomic_int64_t file_size_;
   std::atomic_int64_t trunc_size_;
@@ -113,6 +107,12 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
         cmode = CREATE_ALWAYS;
       }
     }
+  }
+  if (access_options_ & PositionalFile::ACCESS_DIRECT) {
+    flags |= FILE_FLAG_NO_BUFFERING;
+  }
+  if (access_options_ & PositionalFile::ACCESS_SYNC) {
+    flags |= FILE_FLAG_WRITE_THROUGH;
   }
   HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
   if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
@@ -167,7 +167,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   // Updates the internal data.
   file_handle_ = file_handle;
   head_buffer_ = nullptr;
-  head_buffer_size_.store(0);
+  head_buffer_size_ = 0;
   path_ = path;
   file_size_.store(file_size);
   trunc_size_.store(trunc_size);
@@ -186,7 +186,7 @@ Status PositionalParallelFileImpl::Close() {
   // Truncates the file.
   if (writable_) {
     if (head_buffer_ != nullptr) {
-      status |= PWriteSequence(fd_.load(), 0, head_buffer_, head_buffer_size_.load());
+      status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
     if (file_size_.load() % block_size_ == 0) {
       status |= TruncateFile(file_handle_, file_size_.load());
@@ -220,7 +220,7 @@ Status PositionalParallelFileImpl::Close() {
   // Updates the internal data.
   file_handle_ = nullptr;
   head_buffer_ = nullptr;
-  head_buffer_size_.store(0);
+  head_buffer_size_ = 0;
   path_.clear();
   file_size_.store(0);
   trunc_size_.store(0);
@@ -319,7 +319,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_.load(), 0, head_buffer_, head_buffer_size_.load());
+    status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_.store(file_size_.load());
   if (trunc_size_.load() % block_size_ == 0) {
@@ -328,8 +328,8 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
     // TODO: Check the alignment restriction.
     status |= TruncateFile(file_handle_, trunc_size_.load());
   }
-  if (hard && fsync(fd_.load()) != 0) {
-    status |= GetErrnoStatus("fsync", errno);
+  if (hard && !FlushFileBuffers(file_handle_)) {
+    status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }
   return status;
 }
@@ -348,11 +348,11 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_.load(), 0, head_buffer_, head_buffer_size_.load());
+    status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     xfreealigned(head_buffer_);
   }
   if (size < 1) {
-    head_buffer_size_.store(0);
+    head_buffer_size_ = 0;
     head_buffer_ = nullptr;
     return status;
   }
@@ -360,11 +360,11 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
   if (diff > 0) {
     size += block_size_ - diff;
   }
-  head_buffer_size_.store(size);
-  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_.load()));
-  std::memset(head_buffer_, 0, head_buffer_size_.load());
-  const int64_t read_size = std::min<int64_t>(head_buffer_size_.load(), file_size_.load());
-  status |= PReadSequence(fd_.load(), 0, head_buffer_, read_size);
+  head_buffer_size_ = size;
+  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
+  std::memset(head_buffer_, 0, head_buffer_size_);
+  const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_.load());
+  status |= PReadSequence(file_handle_, 0, head_buffer_, read_size);
   return status;
 }
 
@@ -432,9 +432,21 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (diff > 0) {
     new_trunc_size += alignment - diff;
   }
-  if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
-    return GetSysErrorStatus("WriteFile", GetLastError());
+
+  // TODO: FIX ME
+  if (block_size_ == 1 && false) {
+    if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
+      return GetSysErrorStatus("WriteFile", GetLastError());
+    }
+  } else {
+    const Status status = TruncateFile(file_handle_, new_trunc_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
   }
+
+
+  
   trunc_size_.store(new_trunc_size);
   return Status(Status::SUCCESS);
 }
@@ -443,18 +455,18 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
   if (static_cast<int64_t>(off + size) > file_size_.load()) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
-  if (off < head_buffer_size_.load()) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
+  if (off < head_buffer_size_) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
     std::memcpy(buf, head_buffer_ + off, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_.load();
+    off = head_buffer_size_;
     size -= prefix_size;
   }
   if (size < 1) {
     return Status(Status::SUCCESS);
   }
   if (block_size_ == 1) {
-    return PReadSequence(fd_.load(), off, buf, size);
+    return PReadSequence(file_handle_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -469,14 +481,14 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
     const int64_t mod_end = end_position + end_len;
     const int64_t mod_len = mod_end - mod_off;
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, mod_len));
-    status |= PReadSequence(fd_.load(), mod_off, aligned, mod_len);
+    status |= PReadSequence(file_handle_, mod_off, aligned, mod_len);
     std::memcpy(buf, aligned + off_rem, size);
     xfreealigned(aligned);
   } else if (reinterpret_cast<intptr_t>(buf) % block_size_ == 0) {
-    status |= PReadSequence(fd_.load(), off, buf, size);
+    status |= PReadSequence(file_handle_, off, buf, size);
   } else {
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, size));
-    status |= PReadSequence(fd_.load(), off, aligned, size);
+    status |= PReadSequence(file_handle_, off, aligned, size);
     std::memcpy(buf, aligned, size);
     xfreealigned(aligned);
   }
@@ -484,18 +496,18 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
 }
 
 Status PositionalParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_t size) {
-  if (off < head_buffer_size_.load()) {
-    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_.load() - off);
+  if (off < head_buffer_size_) {
+    const int64_t prefix_size = std::min<int64_t>(size, head_buffer_size_ - off);
     std::memcpy(head_buffer_ + off, buf, prefix_size);
     buf += prefix_size;
-    off = head_buffer_size_.load();
+    off = head_buffer_size_;
     size -= prefix_size;
   }
   if (size < 1) {
     return Status(Status::SUCCESS);
   }
   if (block_size_ == 1) {
-    return PWriteSequence(fd_.load(), off, buf, size);
+    return PWriteSequence(file_handle_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -509,23 +521,23 @@ Status PositionalParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, mod_len));
     char* block = static_cast<char*>(xmallocaligned(block_size_, block_size_));
     if (off_rem > 0) {
-      status |= PReadSequence(fd_.load(), mod_off, block, block_size_);
+      status |= PReadSequence(file_handle_, mod_off, block, block_size_);
       std::memcpy(aligned, block, off_rem);
     }
     std::memcpy(aligned + off_rem, buf, size);
     if (end_len > 0) {
-      status |= PReadSequence(fd_.load(), mod_end - block_size_, block, block_size_);
+      status |= PReadSequence(file_handle_, mod_end - block_size_, block, block_size_);
       std::memcpy(aligned + off_rem + size, block + end_rem, end_len);
     }
-    status |= PWriteSequence(fd_.load(), mod_off, aligned, off_rem + size + end_len);
+    status |= PWriteSequence(file_handle_, mod_off, aligned, off_rem + size + end_len);
     xfreealigned(block);
     xfreealigned(aligned);
   } else if (reinterpret_cast<intptr_t>(buf) % block_size_ == 0) {
-    status |= PWriteSequence(fd_.load(), off, buf, size);
+    status |= PWriteSequence(file_handle_, off, buf, size);
   } else {
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, size));
     std::memcpy(aligned, buf, size);
-    status |= PWriteSequence(fd_.load(), off, aligned, size);
+    status |= PWriteSequence(file_handle_, off, aligned, size);
     xfreealigned(aligned);
   }
   return status;
@@ -762,7 +774,7 @@ Status PositionalAtomicFileImpl::Close() {
   // Truncates the file.
   if (writable_) {
     if (head_buffer_ != nullptr) {
-      status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+      status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
     if (file_size_ % block_size_ == 0) {
       status |= TruncateFile(file_handle_, file_size_);
@@ -794,7 +806,7 @@ Status PositionalAtomicFileImpl::Close() {
   }
 
   // Updates the internal data.
-  file_handle_ = -1;
+  file_handle_ = nullptr;
   head_buffer_ = nullptr;
   head_buffer_size_ = 0;
   path_.clear();
@@ -872,7 +884,7 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
   const int64_t diff = new_trunc_size % alignment;
   if (diff > 0) {
-    new_trunc_size += PAGE_SIZE - diff;
+    new_trunc_size += alignment - diff;
   }
   const Status status = TruncateFile(file_handle_, new_trunc_size);
   if (status != Status::SUCCESS) {
@@ -893,7 +905,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+    status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_ = file_size_;
   if (trunc_size_ % block_size_ == 0) {
@@ -902,8 +914,8 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
     // TODO: check the alignment restriction.
     status |= TruncateFile(file_handle_, trunc_size_);
   }
-  if (hard && fsync(fd_) != 0) {
-    status |= GetErrnoStatus("fsync", errno);
+  if (hard && !FlushFileBuffers(file_handle_)) {
+    status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }
   return status;
 }
@@ -924,7 +936,7 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (head_buffer_ != nullptr) {
-    status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
+    status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     xfreealigned(head_buffer_);
   }
   if (size < 1) {
@@ -940,7 +952,7 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
   head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
   std::memset(head_buffer_, 0, head_buffer_size_);
   const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_);
-  status |= PReadSequence(fd_, 0, head_buffer_, read_size);
+  status |= PReadSequence(file_handle_, 0, head_buffer_, read_size);
   return status;
 }
 
@@ -1001,11 +1013,21 @@ Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
   const int64_t diff = new_trunc_size % alignment;
   if (diff > 0) {
-    new_trunc_size += PAGE_SIZE - diff;
+    new_trunc_size += alignment - diff;
   }
-  if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
-    return GetSysErrorStatus("WriteFile", GetLastError());
+
+  // TODO: FIX ME
+  if (block_size_ == 1 && false) {
+    if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
+      return GetSysErrorStatus("WriteFile", GetLastError());
+    }
+  } else {
+    const Status status = TruncateFile(file_handle_, new_trunc_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
   }
+  
   trunc_size_ = new_trunc_size;
   return Status(Status::SUCCESS);
 }
@@ -1025,7 +1047,7 @@ Status PositionalAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
     return Status(Status::SUCCESS);
   }
   if (block_size_ == 1) {
-    return PReadSequence(fd_, off, buf, size);
+    return PReadSequence(file_handle_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -1040,14 +1062,14 @@ Status PositionalAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
     const int64_t mod_end = end_position + end_len;
     const int64_t mod_len = mod_end - mod_off;
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, mod_len));
-    status |= PReadSequence(fd_, mod_off, aligned, mod_len);
+    status |= PReadSequence(file_handle_, mod_off, aligned, mod_len);
     std::memcpy(buf, aligned + off_rem, size);
     xfreealigned(aligned);
   } else if (reinterpret_cast<intptr_t>(buf) % block_size_ == 0) {
-    status |= PReadSequence(fd_, off, buf, size);
+    status |= PReadSequence(file_handle_, off, buf, size);
   } else {
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, size));
-    status |= PReadSequence(fd_, off, aligned, size);
+    status |= PReadSequence(file_handle_, off, aligned, size);
     std::memcpy(buf, aligned, size);
     xfreealigned(aligned);
   }
@@ -1066,7 +1088,7 @@ Status PositionalAtomicFileImpl::WriteImpl(int64_t off, const char* buf, size_t 
     return Status(Status::SUCCESS);
   }
   if (block_size_ == 1) {
-    return PWriteSequence(fd_, off, buf, size);
+    return PWriteSequence(file_handle_, off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -1080,23 +1102,23 @@ Status PositionalAtomicFileImpl::WriteImpl(int64_t off, const char* buf, size_t 
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, mod_len));
     char* block = static_cast<char*>(xmallocaligned(block_size_, block_size_));
     if (off_rem > 0) {
-      status |= PReadSequence(fd_, mod_off, block, block_size_);
+      status |= PReadSequence(file_handle_, mod_off, block, block_size_);
       std::memcpy(aligned, block, off_rem);
     }
     std::memcpy(aligned + off_rem, buf, size);
     if (end_len > 0) {
-      status |= PReadSequence(fd_, mod_end - block_size_, block, block_size_);
+      status |= PReadSequence(file_handle_, mod_end - block_size_, block, block_size_);
       std::memcpy(aligned + off_rem + size, block + end_rem, end_len);
     }
-    status |= PWriteSequence(fd_, mod_off, aligned, off_rem + size + end_len);
+    status |= PWriteSequence(file_handle_, mod_off, aligned, off_rem + size + end_len);
     xfreealigned(block);
     xfreealigned(aligned);
   } else if (reinterpret_cast<intptr_t>(buf) % block_size_ == 0) {
-    status |= PWriteSequence(fd_, off, buf, size);
+    status |= PWriteSequence(file_handle_, off, buf, size);
   } else {
     char* aligned = static_cast<char*>(xmallocaligned(block_size_, size));
     std::memcpy(aligned, buf, size);
-    status |= PWriteSequence(fd_, off, aligned, size);
+    status |= PWriteSequence(file_handle_, off, aligned, size);
     xfreealigned(aligned);
   }
   return status;
