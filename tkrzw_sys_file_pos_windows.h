@@ -108,12 +108,16 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
       }
     }
   }
+  /*
   if (access_options_ & PositionalFile::ACCESS_DIRECT) {
     flags |= FILE_FLAG_NO_BUFFERING;
   }
   if (access_options_ & PositionalFile::ACCESS_SYNC) {
     flags |= FILE_FLAG_WRITE_THROUGH;
   }
+  */
+
+
   HANDLE file_handle = CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
   if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
     return GetSysErrorStatus("CreateFile", GetLastError());
@@ -433,16 +437,9 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
     new_trunc_size += alignment - diff;
   }
 
-  // TODO: FIX ME
-  if (block_size_ == 1 && false) {
-    if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
-      return GetSysErrorStatus("WriteFile", GetLastError());
-    }
-  } else {
-    const Status status = TruncateFile(file_handle_, new_trunc_size);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
+  // FIX ME
+  if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
+    return GetSysErrorStatus("WriteFile", GetLastError());
   }
 
 
@@ -1017,16 +1014,10 @@ Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   }
 
   // TODO: FIX ME
-  if (block_size_ == 1 && false) {
-    if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
-      return GetSysErrorStatus("WriteFile", GetLastError());
-    }
-  } else {
-    const Status status = TruncateFile(file_handle_, new_trunc_size);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
+  if (PositionalWriteFile(file_handle_, "", 1, new_trunc_size - 1) != 1) {
+    return GetSysErrorStatus("WriteFile", GetLastError());
   }
+
   
   trunc_size_ = new_trunc_size;
   return Status(Status::SUCCESS);
