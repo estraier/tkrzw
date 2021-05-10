@@ -3705,7 +3705,7 @@ tuning_params.cache_buckets = true;
 dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If you the typical record size is less than 256, setting 8 or les is good.  For TreeDBM, the default value 10 is usually suitable.</p>
+<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is good.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  For TreeDBM, the default value 10 is usually suitable.</p>
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 
