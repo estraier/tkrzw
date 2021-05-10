@@ -105,6 +105,186 @@ window.onload = function(){
 
 <p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, you can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
 
+<p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
+
+<p>Tkrzw adopts dependency injection for file implementations.  Bundled implementations support memory mapping I/O, normal read/write I/O, and direct block I/O.  You can inject your own implemenations to support specific data storages and file systems.  Whereas such file implementations use APIs (system calls) of the underlying operating systems, the upper layer for database algorithms doesn't depend on them so that the maximum portability is achieved.  Tkrzw supports any Unix-like systems and Windows.</p>
+
+<p>You can use some bridging interfaces to use Tkrzw in other programming languages than C++.  Currently, Java, Python, and Ruby interfaces are provided.</p>
+
+<p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
+
+<h2 id="download">Download</h2>
+
+<p>You can download source packages in the following directories.</p>
+
+<ul>
+<li><a href="http://dbmx.net/tkrzw/pkg/">C++ source packages</a></li>
+<li><a href="http://dbmx.net/tkrzw/pkg-java/">Java source packages</a></li>
+<li><a href="http://dbmx.net/tkrzw/pkg-python/">Python source packages</a></li>
+<li><a href="http://dbmx.net/tkrzw/pkg-ruby/">Ruby source packages</a></li>
+</ul>
+
+<h2 id="api_documents">API Documents</h2>
+
+<p>The following are API documents for each language.</p>
+
+<ul>
+<li><a href="http://dbmx.net/tkrzw/api/">C++ API documents</a></li>
+<li><a href="http://dbmx.net/tkrzw/api-java/">Java API documents</a></li>
+<li><a href="http://dbmx.net/tkrzw/api-python/">Python API documents</a></li>
+<li><a href="http://dbmx.net/tkrzw/api-ruby/">Ruby API documents</a></li>
+</ul>
+
+<h2 id="installation">Installation</h2>
+
+<p>Tkrzw is implemented based on the C++17 standard and POSIX/Windows API.  On a Unix-like system (Linux, FreeBSD, and Mac OS X), GCC (version 9 or later) is required.  On a Windows system, Visual C++ (2019 or later) is required.</p>
+
+<h3 id="installation_unix">For UNIX</h3>
+
+<p>To build and install the library, usually, you will run the following commands.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-optarch
+$ make
+$ make check
+$ sudo make install
+]]></code></pre>
+
+<p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you want to install the files under "/usr", specify "--prefix=/usr" with the configure script.</p>
+
+<p>By default, the library and related files are installed under "/usr/local".</p>
+
+<pre><code class="language-shell-session"><![CDATA[/usr/local/lib/libtkrzw.a
+/usr/local/lib/libtkrzw.so
+/usr/local/lib/libtkrzw.so.0
+...
+/usr/local/include/tkrzw_lib_common.h
+/usr/local/include/tkrzw_dbm.h
+/usr/local/include/tkrzw_dbm_hash.h
+...
+/usr/local/bin/tkrzw_build_util
+/usr/local/bin/tkrzw_dbm_util
+/usr/local/bin/tkrzw_dbm_perf
+...
+]]></code></pre>
+
+<p>Let's check whether the command utilities work properly.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_build_util --version
+Tkrzw 0.0.1 (library 0.0.1) on SomeOS (any endian)
+$ tkrzw_dbm_util create casket.tkh
+$ tkrzw_dbm_util set casket.tkh Michael Mike
+$ tkrzw_dbm_util set casket.tkh Anne Nancy
+$ tkrzw_dbm_util get casket.tkh Michael
+Mike
+$ tkrzw_dbm_util get casket.tkh Anne
+Nancy
+]]></code></pre>
+
+<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
+
+<pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
+
+int main(int argc, char** argv) {
+  tkrzw::HashDBM dbm;
+  dbm.Open("casket.tkh", true).OrDie();
+  dbm.Set("hello", "world").OrDie();
+  std::cout << dbm.GetSimple("hello") << std::endl;
+  dbm.Close().OrDie();
+  return 0;
+}
+]]></code></pre>
+
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
+  -O2 -Wall helloworld.cc \
+  -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
+]]></code></pre>
+
+<p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ ./tkrzw_build_util config -i
+-I/usr/local/include
+$ ./tkrzw_build_util config -l
+-L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc 
+]]></code></pre>
+
+<p>In some environments, you can also use the "pkg-config" command to list up those flags.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+$ pkg-config --cflags-only-I tkrzw
+-I/usr/local/include
+$ pkg-config --libs tkrzw
+-L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc
+]]></code></pre>
+
+<p>To run the test suite, Google Test is required.  Although testing the library is not necessary for most users, you can do so just in case.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ make test
+$ make testrun
+]]></code></pre>
+
+<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
+
+<h3 id="installation_unix">For Windows</h3>
+
+<p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.</p>
+
+<pre><code class="language-shell-session"><![CDATA[VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
+SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
+VCINCPATH = $(VCPATH)\include
+VCLIBPATH = $(VCPATH)\lib\x64
+UMLIBPATH = $(SDKPATH)\um\x64
+UCRTLIBPATH = $(SDKPATH)\ucrt\x64
+]]></code></pre>
+
+<p>Open "x86 Native Tools Command Prompt for VS 2009" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile
+> nmake -f VCMakefile check 
+]]></code></pre>
+
+<p>To install the library, open another command prompt of VC++ as Administrator and run the following command.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile install
+]]></code></pre>
+
+<p>By default, the library and related files are installed under "C:\Program Files\tkrzw".  You can change it by editing VCMakefile before installation.</p>
+
+<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
+
+<pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
+
+int main(int argc, char** argv) {
+  tkrzw::HashDBM dbm;
+  dbm.Open("casket.tkh", true).OrDie();
+  dbm.Set("hello", "world").OrDie();
+  std::cout << dbm.GetSimple("hello") << std::endl;
+  dbm.Close().OrDie();
+  return 0;
+}
+]]></code></pre>
+
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "/std:c++17" is necessary if the default C++ version of your compiler is older than C++17.</p>
+
+<pre><code class="language-shell-session"><![CDATA[> cl /std:c++17 /Zc:__cplusplus \
+  /I "C:\Program Files (x86)\tkrzw\include" \
+  /O2 /EHsc /W3 /MT helloworld.cc tkrzw.lib \
+  /link /libpath:"C:\Program Files (x86)\tkrzw\lib"
+]]></code></pre>
+
+<p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
+
+<pre><code class="language-shell-session"><![CDATA[> tkrzw_build_util config -i
+/I "C:\Program Files\tkrzw\include"
+> tkrzw_build_util config -l
+/libpath:"C:\Program Files\tkrzw\lib" tkrzw.lib
+]]></code></pre>
+
+<p>By default, the compiler flag "/MT" is specified to link to the multithread, static version of the run-time library.  You can change it to "/MD" link to the dynamic run-time library.  You can also make a DLL for TKRZW by the linker option "/LD".</p>
+
+<h2 id="performance">Performance</h2>
+
 <p>Each database class has specific traits.  It is important to select the best one or combine some of them for the use case.</p>
 
 <table>
@@ -509,182 +689,6 @@ window.onload = function(){
 </table>
 
 <p>In general, if you want a key-value storage with the highest performance, choosing the file hash database is recommended.  If you need ordered access of records, choosing the file tree database is recommended.  If you need scalability of ordered databases, choosing the file skip database is recommended.  If you need extreme performance, the on-memory hash database and the on-memory tree database are useful although they require another way to save/load records.  If you want a cache system with deletion of LRU records, the cache database is useful.</p>
-
-<p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
-
-<p>You can use some bridging interfaces to use Tkrzw in other programming languages than C++.  Currently, Java, Python, and Ruby interfaces are provided.</p>
-
-<p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
-
-<h2 id="download">Download</h2>
-
-<p>You can download source packages in the following directories.</p>
-
-<ul>
-<li><a href="http://dbmx.net/tkrzw/pkg/">C++ source packages</a></li>
-<li><a href="http://dbmx.net/tkrzw/pkg-java/">Java source packages</a></li>
-<li><a href="http://dbmx.net/tkrzw/pkg-python/">Python source packages</a></li>
-<li><a href="http://dbmx.net/tkrzw/pkg-ruby/">Ruby source packages</a></li>
-</ul>
-
-<h2 id="api_documents">API Documents</h2>
-
-<p>The following are API documents for each language.</p>
-
-<ul>
-<li><a href="http://dbmx.net/tkrzw/api/">C++ API documents</a></li>
-<li><a href="http://dbmx.net/tkrzw/api-java/">Java API documents</a></li>
-<li><a href="http://dbmx.net/tkrzw/api-python/">Python API documents</a></li>
-<li><a href="http://dbmx.net/tkrzw/api-ruby/">Ruby API documents</a></li>
-</ul>
-
-<h2 id="installation">Installation</h2>
-
-<p>Tkrzw is implemented based on the C++17 standard and POSIX/Win32 API.  On a Unix-like system (Linux, Mac OS X), GCC (version 9 or later) is required.  On a Windows system, Visual C++ (2019 or later) is required.</p>
-
-<h3 id="installation_unix">For UNIX</h3>
-
-<p>To build and install the library, usually, you will run the following commands.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-optarch
-$ make
-$ make check
-$ sudo make install
-]]></code></pre>
-
-<p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you want to install the files under "/usr", specify "--prefix=/usr" with the configure script.</p>
-
-<p>By default, the library and related files are installed under "/usr/local".</p>
-
-<pre><code class="language-shell-session"><![CDATA[/usr/local/lib/libtkrzw.a
-/usr/local/lib/libtkrzw.so
-/usr/local/lib/libtkrzw.so.0
-...
-/usr/local/include/tkrzw_lib_common.h
-/usr/local/include/tkrzw_dbm.h
-/usr/local/include/tkrzw_dbm_hash.h
-...
-/usr/local/bin/tkrzw_build_util
-/usr/local/bin/tkrzw_dbm_util
-/usr/local/bin/tkrzw_dbm_perf
-...
-]]></code></pre>
-
-<p>Let's check whether the command utilities work properly.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_build_util --version
-Tkrzw 0.0.1 (library 0.0.1) on SomeOS (any endian)
-$ tkrzw_dbm_util create casket.tkh
-$ tkrzw_dbm_util set casket.tkh Michael Mike
-$ tkrzw_dbm_util set casket.tkh Anne Nancy
-$ tkrzw_dbm_util get casket.tkh Michael
-Mike
-$ tkrzw_dbm_util get casket.tkh Anne
-Nancy
-]]></code></pre>
-
-<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
-
-<pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
-
-int main(int argc, char** argv) {
-  tkrzw::HashDBM dbm;
-  dbm.Open("casket.tkh", true).OrDie();
-  dbm.Set("hello", "world").OrDie();
-  std::cout << dbm.GetSimple("hello") << std::endl;
-  dbm.Close().OrDie();
-  return 0;
-}
-]]></code></pre>
-
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
-  -O2 -Wall helloworld.cc \
-  -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
-]]></code></pre>
-
-<p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ ./tkrzw_build_util config -i
--I/usr/local/include
-$ ./tkrzw_build_util config -l
--L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc 
-]]></code></pre>
-
-<p>In some environments, you can also use the "pkg-config" command to list up those flags.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
-$ pkg-config --cflags-only-I tkrzw
--I/usr/local/include
-$ pkg-config --libs tkrzw
--L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc
-]]></code></pre>
-
-<p>To run the test suite, Google Test is required.  Although testing the library is not necessary for most users, you can do so just in case.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ make test
-$ make testrun
-]]></code></pre>
-
-<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
-
-<h3 id="installation_unix">For Windows</h3>
-
-<p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.</p>
-
-<pre><code class="language-shell-session"><![CDATA[VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
-SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
-VCINCPATH = $(VCPATH)\include
-VCLIBPATH = $(VCPATH)\lib\x64
-UMLIBPATH = $(SDKPATH)\um\x64
-UCRTLIBPATH = $(SDKPATH)\ucrt\x64
-]]></code></pre>
-
-<p>Open "x86 Native Tools Command Prompt for VS 2009" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
-
-<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile
-> nmake -f VCMakefile check 
-]]></code></pre>
-
-<p>To install the library, open another command prompt of VC++ as Administrator and run the following command.</p>
-
-<pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile install
-]]></code></pre>
-
-<p>By default, the library and related files are installed under "C:\Program Files\tkrzw".  You can change it by editing VCMakefile before installation.</p>
-
-<p>Read <a href="api/">the C++ API documents</a> for usage of the library.  Then, let's build a sample program.  Make a file of the following C++ code and save it as "helloworld.cc".</p>
-
-<pre><code class="language-shell-session"><![CDATA[#include "tkrzw_dbm_hash.h"
-
-int main(int argc, char** argv) {
-  tkrzw::HashDBM dbm;
-  dbm.Open("casket.tkh", true).OrDie();
-  dbm.Set("hello", "world").OrDie();
-  std::cout << dbm.GetSimple("hello") << std::endl;
-  dbm.Close().OrDie();
-  return 0;
-}
-]]></code></pre>
-
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "/std:c++17" is necessary if the default C++ version of your compiler is older than C++17.</p>
-
-<pre><code class="language-shell-session"><![CDATA[> cl /std:c++17 /Zc:__cplusplus \
-  /I "C:\Program Files (x86)\tkrzw\include" \
-  /O2 /EHsc /W3 /MT helloworld.cc tkrzw.lib \
-  /link /libpath:"C:\Program Files (x86)\tkrzw\lib"
-]]></code></pre>
-
-<p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
-
-<pre><code class="language-shell-session"><![CDATA[> tkrzw_build_util config -i
-/I "C:\Program Files\tkrzw\include"
-> tkrzw_build_util config -l
-/libpath:"C:\Program Files\tkrzw\lib" tkrzw.lib
-]]></code></pre>
-
-<p>By default, the compiler flag "/MT" is specified to link to the multithread, static version of the run-time library.  You can change it to "/MD" link to the dynamic run-time library.  You can also make a DLL for TKRZW by the linker option "/LD".</p>
 
 <h2 id="hashdbm_overview">HashDBM: The File Hash Database</h2>
 
@@ -3681,9 +3685,31 @@ dbm.Open("casket.tkh", true);
 
 <p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.</p>
 
+<h3 id="tips_direct_io">Direct I/O</h3>
+
+<p>Linux and Windows support direct I/O, whereby input and output from/to the storage device are done without using the cache of the underlying file system.  Direct I/O is enabled when a file is opened with O_DIRECT flag on Linux and FILE_FLAG_NO_BUFFERING flag on Windows.  In that case, I/O operations with the file must be in the block I/O style, where every data sequence is aligned by at least 512-byte block.  Let's say, you want to update just one byte of a file, you must read one block of 512 bytes from the device and make a buffer.  Then, you update the one byteand write back the buffer to the device.</p>
+
+<p>Usually, such cumbersome jobs are done by the file system, which uses so-called "page cache" mechanism.  Multiple operations against the same page of 4096 bytes are reflected on a cached buffer, which is written back to the storage device periodically.  Using page cache is effective to improve performance in most cases.  However, page cache uses memory.  If your file is larger than the available memory size and there's no locality in your access pattern, the cache hit rate is low, which just wastes memory space and CPU time.  In that case, using direct I/O to suppress page caching is useful.  Though each operation of direct I/O is much slower than cahced I/O in normal situations, it is the best practice for managing huge databases.</p>
+
+<p>You should condier using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
+
+<p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile and set the block size 512.  You also set direct I/O enabled by the option of the SetAccessStrategy method.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+HashDBM dbm(std::move(file));
+
+HashDBM::TuningParameters tuning_params;
+tuning_params.align_pow = 9;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
+
+<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If you the typical record size is less than 256, setting 8 or les is good.  For TreeDBM, the default value 10 is usually suitable.</p>
+
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 
-<p>Performance tests described in the overview section can be done by the following commands.</p>
+<p>Performance tests described in the performance section can be done by the following commands.</p>
 
 <pre><code class="language-shell-session"><![CDATA[# Sequential access tests by one thread.
 $ tkrzw_dbm_perf sequence --dbm hash --path casket.tkh --iter 1000000

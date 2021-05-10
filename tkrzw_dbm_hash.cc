@@ -536,12 +536,14 @@ Status HashDBMImpl::Rebuild(
     const std::string opaque = opaque_;
     CancelIterators();
     auto tmp_file = file_->MakeFile();
+    file_->CopyProperties(tmp_file.get());
     status = tmp_file->Open(tmp_path, true);
     if (status != Status::SUCCESS) {
       CleanUp();
       return status;
     }
     fbp_.Clear();
+    status |= file_->DisablePathOperations();
     if (IS_POSIX) {
       status |= tmp_file->Rename(path_);
       status |= file_->Close();
@@ -1214,7 +1216,7 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
   if (pos_file != nullptr && pos_file->IsDirectIO()) {
     const int64_t file_size = tkrzw::GetFileSize(path);
     const int64_t block_size = pos_file->GetBlockSize();
-    /*
+
     // TODO: Delete me
     std::cout << "DIRECT: fs=" << file_size
               << " bs=" << block_size
@@ -1222,7 +1224,7 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
               << " w=" << writable
               << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
               << std::endl;
-    */
+
     if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
       return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
     }

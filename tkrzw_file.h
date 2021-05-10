@@ -228,6 +228,13 @@ class File {
   virtual Status Rename(const std::string& new_path) = 0;
 
   /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  virtual Status DisablePathOperations() = 0;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return True if operations are done by memory mapping, or false if not.
    */

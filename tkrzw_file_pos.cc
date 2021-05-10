@@ -57,6 +57,7 @@ class PositionalParallelFileImpl final {
   Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -190,14 +191,8 @@ Status PositionalParallelFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     }
-    if (file_size_.load() % block_size_ == 0) {
-      if (ftruncate(fd_, file_size_.load()) != 0) {
-        status |= GetErrnoStatus("ftruncate", errno);
-      }
-    } else {
-      if (truncate(path_.c_str(), file_size_.load()) != 0) {
-        status |= GetErrnoStatus("truncate", errno);
-      }
+    if (ftruncate(fd_, file_size_.load()) != 0) {
+      status |= GetErrnoStatus("ftruncate", errno);
     }
   }
 
@@ -325,14 +320,8 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_.store(file_size_.load());
-  if (trunc_size_.load() % block_size_ == 0) {
-    if (ftruncate(fd_, trunc_size_.load()) != 0) {
-      status |= GetErrnoStatus("ftruncate", errno);
-    }
-  } else {
-    if (truncate(path_.c_str(), trunc_size_.load()) != 0) {
-      status |= GetErrnoStatus("truncate", errno);
-    }
+  if (ftruncate(fd_, trunc_size_.load()) != 0) {
+    status |= GetErrnoStatus("ftruncate", errno);
   }
   if (hard && fsync(fd_) != 0) {
     status |= GetErrnoStatus("fsync", errno);
@@ -401,6 +390,9 @@ Status PositionalParallelFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   *path = path_;
   return Status(Status::SUCCESS);
 }
@@ -409,11 +401,22 @@ Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status PositionalParallelFileImpl::DisablePathOperations() {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 int64_t PositionalParallelFileImpl::GetBlockSize() {
@@ -612,6 +615,10 @@ Status PositionalParallelFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
 }
 
+Status PositionalParallelFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
+}
+
 int64_t PositionalParallelFile::GetBlockSize() const {
   return impl_->GetBlockSize();
 }
@@ -638,6 +645,7 @@ class PositionalAtomicFileImpl final {
   Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -773,14 +781,8 @@ Status PositionalAtomicFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     }
-    if (file_size_ % block_size_ == 0) {
-      if (ftruncate(fd_, file_size_) != 0) {
-        status |= GetErrnoStatus("ftruncate", errno);
-      }
-    } else {
-      if (truncate(path_.c_str(), file_size_) != 0) {
-        status |= GetErrnoStatus("truncate", errno);
-      }
+    if (ftruncate(fd_, file_size_) != 0) {
+      status |= GetErrnoStatus("ftruncate", errno);
     }
   }
 
@@ -902,14 +904,8 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_ = file_size_;
-  if (trunc_size_ % block_size_ == 0) {
-    if (ftruncate(fd_, trunc_size_) != 0) {
-      status |= GetErrnoStatus("ftruncate", errno);
-    }
-  } else {
-    if (truncate(path_.c_str(), trunc_size_) != 0) {
-      status |= GetErrnoStatus("truncate", errno);
-    }
+  if (ftruncate(fd_, trunc_size_) != 0) {
+    status |= GetErrnoStatus("ftruncate", errno);
   }
   if (hard && fsync(fd_) != 0) {
     status |= GetErrnoStatus("fsync", errno);
@@ -984,6 +980,9 @@ Status PositionalAtomicFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   *path = path_;
   return Status(Status::SUCCESS);
 }
@@ -993,11 +992,23 @@ Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status PositionalAtomicFileImpl::DisablePathOperations() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 int64_t PositionalAtomicFileImpl::GetBlockSize() {
@@ -1192,6 +1203,10 @@ Status PositionalAtomicFile::GetPath(std::string* path) {
 
 Status PositionalAtomicFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status PositionalAtomicFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 int64_t PositionalAtomicFile::GetBlockSize() const {

@@ -158,6 +158,13 @@ class StdFile final : public File {
   Status Rename(const std::string& new_path) override;
 
   /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  Status DisablePathOperations() override;
+
+  /**
    * Lock this object.
    * @return The file size for a open file or -1 for an unopen file.
    * @details Unlock must be done by the caller.

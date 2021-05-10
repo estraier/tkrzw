@@ -231,6 +231,13 @@ class PositionalParallelFile final : public PositionalFile {
   Status Rename(const std::string& new_path) override;
 
   /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  Status DisablePathOperations() override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
@@ -422,6 +429,13 @@ class PositionalAtomicFile final : public PositionalFile {
    * @return The result status.
    */
   Status Rename(const std::string& new_path) override;
+
+  /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  Status DisablePathOperations() override;
 
   /**
    * Checks whether operations are done by memory mapping.

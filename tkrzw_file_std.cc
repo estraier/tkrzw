@@ -39,6 +39,7 @@ class StdFileImpl final {
   Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
   int64_t Lock();
   int64_t Unlock();
   Status ReadInCriticalSection(int64_t off, void* buf, size_t size);
@@ -193,6 +194,9 @@ Status StdFileImpl::GetPath(std::string* path) {
   if (file_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   *path = path_;
   return Status(Status::SUCCESS);
 }
@@ -202,8 +206,8 @@ Status StdFileImpl::Rename(const std::string& new_path) {
   if (file_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
-  if (!writable_) {
-    return Status(Status::PRECONDITION_ERROR, "not writable file");
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
   }
   const std::string old_path = path_;
   const bool writable = writable_;
@@ -218,6 +222,15 @@ Status StdFileImpl::Rename(const std::string& new_path) {
     return status;
   }
   return OpenImpl(new_path, writable, options);
+}
+
+Status StdFileImpl::DisablePathOperations() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 int64_t StdFileImpl::Lock() {
@@ -468,6 +481,10 @@ Status StdFile::GetPath(std::string* path) {
 
 Status StdFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status StdFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 int64_t StdFile::Lock() {

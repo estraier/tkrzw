@@ -45,8 +45,10 @@ class MemoryMapParallelFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -314,9 +316,16 @@ Status MemoryMapParallelFileImpl::SetAllocationStrategy(int64_t init_size, doubl
   return Status(Status::SUCCESS);
 }
 
+Status MemoryMapParallelFileImpl::CopyProperties(File* file) {
+  return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+}
+
 Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
   }
   *path = path_;
   return Status(Status::SUCCESS);
@@ -326,11 +335,22 @@ Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status MemoryMapParallelFileImpl::DisablePathOperations() {
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
@@ -542,6 +562,11 @@ Status MemoryMapParallelFile::SetAllocationStrategy(int64_t init_size, double in
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status MemoryMapParallelFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status MemoryMapParallelFile::LockMemory(size_t size) {
   assert(size <= MAX_MEMORY_SIZE);
   return Status(Status::SUCCESS);
@@ -554,6 +579,10 @@ Status MemoryMapParallelFile::GetPath(std::string* path) {
 
 Status MemoryMapParallelFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status MemoryMapParallelFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 MemoryMapParallelFile::Zone::Zone(
@@ -589,8 +618,10 @@ class MemoryMapAtomicFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -864,10 +895,18 @@ Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double 
   return Status(Status::SUCCESS);
 }
 
+Status MemoryMapAtomicFileImpl::CopyProperties(File* file) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+}
+
 Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
   }
   *path = path_;
   return Status(Status::SUCCESS);
@@ -878,11 +917,23 @@ Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status MemoryMapAtomicFileImpl::DisablePathOperations() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
@@ -1075,6 +1126,11 @@ Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status MemoryMapAtomicFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status MemoryMapAtomicFile::LockMemory(size_t size) {
   assert(size <= MAX_MEMORY_SIZE);
   return Status(Status::SUCCESS);
@@ -1087,6 +1143,10 @@ Status MemoryMapAtomicFile::GetPath(std::string* path) {
 
 Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status MemoryMapAtomicFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 MemoryMapAtomicFile::Zone::Zone(

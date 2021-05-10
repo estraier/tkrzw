@@ -99,7 +99,12 @@ Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double i
 }
 
 Status PositionalParallelFile::CopyProperties(File* file) {
-  return impl_->file.CopyProperties(file);
+  Status status(Status::SUCCESS);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(impl_->block_size_, impl_->access_options_);
+  }
+  return status;
 }
 
 Status PositionalParallelFile::GetPath(std::string* path) {
@@ -109,6 +114,10 @@ Status PositionalParallelFile::GetPath(std::string* path) {
 
 Status PositionalParallelFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
+}
+
+Status PositionalParallelFile::DisablePathOperations() {
+  return impl_->file.DisablePathOperations();
 }
 
 int64_t PositionalParallelFile::GetBlockSize() const {
@@ -186,7 +195,12 @@ Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc
 }
 
 Status PositionalAtomicFile::CopyProperties(File* file) {
-  return impl_->file.CopyProperties(file);
+  Status status(Status::SUCCESS);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(impl_->block_size_, impl_->access_options_);
+  }
+  return status;
 }
 
 Status PositionalAtomicFile::GetPath(std::string* path) {
@@ -196,6 +210,10 @@ Status PositionalAtomicFile::GetPath(std::string* path) {
 
 Status PositionalAtomicFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
+}
+
+Status PositionalAtomicFile::DisablePathOperations() {
+  return impl_->file.DisablePathOperations();
 }
 
 int64_t PositionalAtomicFile::GetBlockSize() const {

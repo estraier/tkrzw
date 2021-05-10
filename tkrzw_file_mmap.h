@@ -265,6 +265,13 @@ class MemoryMapParallelFile final : public MemoryMapFile {
   Status Rename(const std::string& new_path) override;
 
   /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  Status DisablePathOperations() override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always true.  This is fast, but the file size cannot exceed the virtual memory.
    */
@@ -512,6 +519,13 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * @return The result status.
    */
   Status Rename(const std::string& new_path) override;
+
+  /**
+   * Disables operations related to the path.
+   * @return The result status.
+   * @details This should be called if the file is overwritten by external operations.
+   */
+  Status DisablePathOperations() override;
 
   /**
    * Checks whether operations are done by memory mapping.

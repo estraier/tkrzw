@@ -66,6 +66,7 @@ class MemoryMapParallelFileImpl final {
   Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -346,6 +347,9 @@ Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   *path = path_;
   return Status(Status::SUCCESS);
 }
@@ -354,11 +358,22 @@ Status MemoryMapParallelFileImpl::Rename(const std::string& new_path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status MemoryMapParallelFileImpl::DisablePathOperations() {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
@@ -597,6 +612,10 @@ Status MemoryMapParallelFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
 }
 
+Status MemoryMapParallelFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
+}
+
 MemoryMapParallelFile::Zone::Zone(
     MemoryMapParallelFileImpl* file_impl, bool writable, int64_t off, size_t size,
     Status* status) {
@@ -634,6 +653,7 @@ class MemoryMapAtomicFileImpl final {
   Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -906,6 +926,9 @@ Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   *path = path_;
   return Status(Status::SUCCESS);
 }
@@ -915,11 +938,23 @@ Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status MemoryMapAtomicFileImpl::DisablePathOperations() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
@@ -1153,6 +1188,10 @@ Status MemoryMapAtomicFile::GetPath(std::string* path) {
 
 Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status MemoryMapAtomicFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 MemoryMapAtomicFile::Zone::Zone(

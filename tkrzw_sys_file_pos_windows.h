@@ -47,8 +47,10 @@ class PositionalParallelFileImpl final {
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -215,7 +217,7 @@ Status PositionalParallelFileImpl::Close() {
   }
 
   // Retruncate the file externally.
-  if (retruncate) {
+  if (retruncate && !path_.empty()) {
     status |= TruncateFileExternally(path_, file_size_.load());
   }
 
@@ -380,9 +382,21 @@ Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, doub
   return Status(Status::SUCCESS);
 }
 
+Status PositionalParallelFileImpl::CopyProperties(File* file) {
+  Status status = file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(block_size_, access_options_);
+  }
+  return status;
+}
+
 Status PositionalParallelFileImpl::GetPath(std::string* path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
   }
   *path = path_;
   return Status(Status::SUCCESS);
@@ -392,11 +406,22 @@ Status PositionalParallelFileImpl::Rename(const std::string& new_path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status PositionalParallelFileImpl::DisablePathOperations() {
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 int64_t PositionalParallelFileImpl::GetBlockSize() {
@@ -587,6 +612,11 @@ Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double i
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status PositionalParallelFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status PositionalParallelFile::GetPath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetPath(path);
@@ -594,6 +624,10 @@ Status PositionalParallelFile::GetPath(std::string* path) {
 
 Status PositionalParallelFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status PositionalParallelFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 int64_t PositionalParallelFile::GetBlockSize() const {
@@ -619,8 +653,10 @@ class PositionalAtomicFileImpl final {
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
+  Status DisablePathOperations();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -783,7 +819,7 @@ Status PositionalAtomicFileImpl::Close() {
   }
 
   // Retruncate the file externally.
-  if (retruncate) {
+  if (retruncate && !path_.empty()) {
     status |= TruncateFileExternally(path_, file_size_);
   }
 
@@ -950,10 +986,23 @@ Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double
   return Status(Status::SUCCESS);
 }
 
+Status PositionalAtomicFileImpl::CopyProperties(File* file) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  Status status = file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(block_size_, access_options_);
+  }
+  return status;
+}
+
 Status PositionalAtomicFileImpl::GetPath(std::string* path) {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
   }
   *path = path_;
   return Status(Status::SUCCESS);
@@ -964,11 +1013,23 @@ Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (path_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "disabled path operatione");
+  }
   Status status = RenameFile(path_, new_path);
   if (status == Status::SUCCESS) {
     path_ = new_path;
   }
   return status;
+}
+
+Status PositionalAtomicFileImpl::DisablePathOperations() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  path_.clear();
+  return Status(Status::SUCCESS);
 }
 
 int64_t PositionalAtomicFileImpl::GetBlockSize() {
@@ -1157,6 +1218,11 @@ Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status PositionalAtomicFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status PositionalAtomicFile::GetPath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetPath(path);
@@ -1164,6 +1230,10 @@ Status PositionalAtomicFile::GetPath(std::string* path) {
 
 Status PositionalAtomicFile::Rename(const std::string& new_path) {
   return impl_->Rename(new_path);
+}
+
+Status PositionalAtomicFile::DisablePathOperations() {
+  return impl_->DisablePathOperations();
 }
 
 int64_t PositionalAtomicFile::GetBlockSize() const {

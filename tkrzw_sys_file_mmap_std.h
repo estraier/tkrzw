@@ -128,6 +128,10 @@ Status MemoryMapParallelFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
 }
 
+Status MemoryMapParallelFile::DisablePathOperations() {
+  return impl_->file.DisablePathOperations();
+}
+
 MemoryMapParallelFile::Zone::Zone(
     MemoryMapParallelFileImpl* fileimpl, bool writable, int64_t off, size_t size, Status* status) {
   const int64_t file_size = fileimpl->file.Lock();
@@ -269,6 +273,10 @@ Status MemoryMapAtomicFile::GetPath(std::string* path) {
 
 Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
+}
+
+Status MemoryMapAtomicFile::DisablePathOperations() {
+  return impl_->file.DisablePathOperations();
 }
 
 MemoryMapAtomicFile::Zone::Zone(

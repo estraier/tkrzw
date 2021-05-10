@@ -415,6 +415,10 @@ void CommonFileTest::RenameTest(tkrzw::File* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append("abc", 3));
   EXPECT_EQ(8, file->GetSizeSimple());
   EXPECT_EQ("abc", file->ReadSimple(5, 3));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->DisablePathOperations());
+  std::string found_path;
+  EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, file->GetPath(&found_path));
+  EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, file->Rename(file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 

@@ -118,6 +118,13 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(16, buf, 12));
   EXPECT_EQ("XXXXXXXXXXXX", std::string_view(buf, 12));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(28,  tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(58, "ABCD", 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(58, buf, 4));
+  EXPECT_EQ("ABCD", std::string_view(buf, 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(62,  tkrzw::GetFileSize(file_path));
 }
 
 template <class FILEIMPL>
