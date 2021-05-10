@@ -41,6 +41,7 @@ class CommonFileTest : public Test {
 void CommonFileTest::EmptyFileTest(tkrzw::File* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 1.2));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
   int64_t file_size = -1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->GetSize(&file_size));
@@ -62,6 +63,9 @@ void CommonFileTest::EmptyFileTest(tkrzw::File* file) {
   EXPECT_EQ(0, tkrzw::GetFileSize(file_path));
   auto tmp_file = file->MakeFile();
   EXPECT_EQ(typeid(*file), typeid(*tmp_file));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->CopyProperties(tmp_file.get()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
 }
 
 void CommonFileTest::SimpleReadTest(tkrzw::File* file) {

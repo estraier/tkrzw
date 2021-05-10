@@ -210,6 +210,13 @@ class PositionalParallelFile final : public PositionalFile {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
   /**
+   * Copies internal properties to another file object.
+   * @param file The other file object.
+   * @return The result status.
+   */
+  Status CopyProperties(File* file) override;
+
+  /**
    * Gets the path of the file.
    * @param path The pointer to a string object to store the path.
    * @return The result status.
@@ -394,6 +401,13 @@ class PositionalAtomicFile final : public PositionalFile {
    * must be called before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
+
+  /**
+   * Copies internal properties to another file object.
+   * @param file The other file object.
+   * @return The result status.
+   */
+  Status CopyProperties(File* file) override;
 
   /**
    * Gets the path of the file.

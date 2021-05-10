@@ -62,6 +62,7 @@ class MemoryMapParallelFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
@@ -322,6 +323,10 @@ Status MemoryMapParallelFileImpl::SetAllocationStrategy(int64_t init_size, doubl
   return Status(Status::SUCCESS);
 }
 
+Status MemoryMapParallelFileImpl::CopyProperties(File* file) {
+  return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+}
+
 Status MemoryMapParallelFileImpl::LockMemory(size_t size) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -573,6 +578,11 @@ Status MemoryMapParallelFile::SetAllocationStrategy(int64_t init_size, double in
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status MemoryMapParallelFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status MemoryMapParallelFile::LockMemory(size_t size) {
   assert(size <= MAX_MEMORY_SIZE);
   return impl_->LockMemory(size);
@@ -620,6 +630,7 @@ class MemoryMapAtomicFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
@@ -885,6 +896,11 @@ Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double 
   return Status(Status::SUCCESS);
 }
 
+Status MemoryMapAtomicFileImpl::CopyProperties(File* file) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+}
+
 Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   if (fd_ < 0) {
@@ -1118,6 +1134,11 @@ Status MemoryMapAtomicFile::GetSize(int64_t* size) {
 Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   assert(init_size > 0 && inc_factor > 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status MemoryMapAtomicFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
 }
 
 Status MemoryMapAtomicFile::LockMemory(size_t size) {

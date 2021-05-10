@@ -236,6 +236,13 @@ class MemoryMapParallelFile final : public MemoryMapFile {
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
   /**
+   * Copies internal properties to another file object.
+   * @param file The other file object.
+   * @return The result status.
+   */
+  Status CopyProperties(File* file) override;
+
+  /**
    * Locks the memory of the beginning region of the file, not to be swapped out.
    * @param size The size of the beginning region to lock.
    * @return The result status.
@@ -476,6 +483,13 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * must be called before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
+
+  /**
+   * Copies internal properties to another file object.
+   * @param file The other file object.
+   * @return The result status.
+   */
+  Status CopyProperties(File* file) override;
 
   /**
    * Locks the memory of the beginning region of the file, not to be swapped out.

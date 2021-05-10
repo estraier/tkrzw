@@ -47,6 +47,7 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             file->SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
   EXPECT_EQ(8, file->GetBlockSize());
+  EXPECT_FALSE(file->IsDirectIO());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
   EXPECT_EQ(8, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(6));
@@ -136,6 +137,8 @@ void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             file->SetAccessStrategy(block_size, tkrzw::PositionalFile::ACCESS_DIRECT));
+  EXPECT_EQ(block_size, file->GetBlockSize());
+  EXPECT_TRUE(file->IsDirectIO());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetHeadBuffer(head_buffer_size));
   int64_t pos = 0;
@@ -171,9 +174,19 @@ void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
               tkrzw::StrLowerCase(std::string_view(read_buf, record_size)));
     pos += record_size;
   }
+  const int64_t final_file_size = file->GetSizeSimple();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(final_file_size, tkrzw::GetFileSize(file_path));
   tkrzw::xfreealigned(read_buf);
   tkrzw::xfreealigned(write_buf);
+  auto tmp_file = file->MakeFile();
+  auto* pos_file = dynamic_cast<tkrzw::PositionalFile*>(tmp_file.get());
+  EXPECT_NE(nullptr, pos_file);
+  EXPECT_EQ(1, pos_file->GetBlockSize());
+  EXPECT_FALSE(pos_file->IsDirectIO());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->CopyProperties(tmp_file.get()));
+  EXPECT_TRUE(pos_file->IsDirectIO());
+  EXPECT_EQ(block_size, pos_file->GetBlockSize());
 }
 
 class PositionalParallelFileTest : public PositionalFileTest<tkrzw::PositionalParallelFile> {};

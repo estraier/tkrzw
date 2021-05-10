@@ -111,6 +111,10 @@ Status MemoryMapParallelFile::SetAllocationStrategy(int64_t init_size, double in
   return impl_->file.SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status MemoryMapParallelFile::CopyProperties(File* file) {
+  return impl_->file.CopyProperties(file);
+}
+
 Status MemoryMapParallelFile::LockMemory(size_t size) {
   return Status(Status::SUCCESS);
 }
@@ -248,6 +252,10 @@ Status MemoryMapAtomicFile::GetSize(int64_t* size) {
 
 Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   return impl_->file.SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status MemoryMapAtomicFile::CopyProperties(File* file) {
+  return impl_->file.CopyProperties(file);
 }
 
 Status MemoryMapAtomicFile::LockMemory(size_t size) {

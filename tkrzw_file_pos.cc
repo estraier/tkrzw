@@ -54,6 +54,7 @@ class PositionalParallelFileImpl final {
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   int64_t GetBlockSize();
@@ -387,6 +388,15 @@ Status PositionalParallelFileImpl::SetAllocationStrategy(int64_t init_size, doub
   return Status(Status::SUCCESS);
 }
 
+Status PositionalParallelFileImpl::CopyProperties(File* file) {
+  Status status = file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(block_size_, access_options_);
+  }
+  return status;
+}
+
 Status PositionalParallelFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -588,6 +598,11 @@ Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double i
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
+Status PositionalParallelFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
+}
+
 Status PositionalParallelFile::GetPath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetPath(path);
@@ -620,6 +635,7 @@ class PositionalAtomicFileImpl final {
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   int64_t GetBlockSize();
@@ -953,6 +969,16 @@ Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double
   return Status(Status::SUCCESS);
 }
 
+Status PositionalAtomicFileImpl::CopyProperties(File* file) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  Status status = file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
+  if (pos_file != nullptr) {
+    status |= pos_file->SetAccessStrategy(block_size_, access_options_);
+  }
+  return status;
+}
+
 Status PositionalAtomicFileImpl::GetPath(std::string* path) {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   if (fd_ < 0) {
@@ -1152,6 +1178,11 @@ Status PositionalAtomicFile::SetAccessStrategy(int64_t block_size, int32_t optio
 Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   assert(init_size > 0 && inc_factor > 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status PositionalAtomicFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
 }
 
 Status PositionalAtomicFile::GetPath(std::string* path) {

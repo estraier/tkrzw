@@ -198,6 +198,13 @@ class File {
   virtual Status SetAllocationStrategy(int64_t init_size, double inc_factor) = 0;
 
   /**
+   * Copies internal properties to another file object.
+   * @param file The other file object.
+   * @return The result status.
+   */
+  virtual Status CopyProperties(File* file) = 0;
+
+  /**
    * Gets the path of the file.
    * @param path The pointer to a string object to store the path.
    * @return The result status.

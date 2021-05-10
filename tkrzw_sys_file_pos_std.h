@@ -35,6 +35,8 @@ namespace tkrzw {
 class PositionalParallelFileImpl final {
  public:
   StdFile file;
+  int64_t block_size_ = 1;
+  int32_t access_options_ = 0;
 };
 
 PositionalParallelFile::PositionalParallelFile() {
@@ -82,8 +84,22 @@ Status PositionalParallelFile::GetSize(int64_t* size) {
   return impl_->file.GetSize(size);
 }
 
+Status PositionalParallelFile::SetHeadBuffer(int64_t size) {
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalParallelFile::SetAccessStrategy(int64_t block_size, int32_t options) {
+  impl_->block_size_ = block_size;
+  impl_->access_options_ = options;
+  return Status(Status::SUCCESS);
+}
+
 Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   return impl_->file.SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status PositionalParallelFile::CopyProperties(File* file) {
+  return impl_->file.CopyProperties(file);
 }
 
 Status PositionalParallelFile::GetPath(std::string* path) {
@@ -95,9 +111,19 @@ Status PositionalParallelFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
 }
 
+int64_t PositionalParallelFile::GetBlockSize() const {
+  return impl_->block_size_;
+}
+
+bool PositionalParallelFile::IsDirectIO() const {
+  return impl_->access_options_ & PositionalFile::ACCESS_DIRECT;
+}
+
 class PositionalAtomicFileImpl final {
  public:
   StdFile file;
+  int64_t block_size_ = 1;
+  int32_t access_options_ = 0;
 };
 
 PositionalAtomicFile::PositionalAtomicFile() {
@@ -145,8 +171,22 @@ Status PositionalAtomicFile::GetSize(int64_t* size) {
   return impl_->file.GetSize(size);
 }
 
+Status PositionalAtomicFile::SetHeadBuffer(int64_t size) {
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalAtomicFile::SetAccessStrategy(int64_t block_size, int32_t options) {
+  impl_->block_size_ = block_size;
+  impl_->access_options_ = options;
+  return Status(Status::SUCCESS);
+}
+
 Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   return impl_->file.SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status PositionalAtomicFile::CopyProperties(File* file) {
+  return impl_->file.CopyProperties(file);
 }
 
 Status PositionalAtomicFile::GetPath(std::string* path) {
@@ -156,6 +196,14 @@ Status PositionalAtomicFile::GetPath(std::string* path) {
 
 Status PositionalAtomicFile::Rename(const std::string& new_path) {
   return impl_->file.Rename(new_path);
+}
+
+int64_t PositionalAtomicFile::GetBlockSize() const {
+  return impl_->block_size_;
+}
+
+bool PositionalAtomicFile::IsDirectIO() const {
+  return impl_->access_options_ & PositionalFile::ACCESS_DIRECT;
 }
 
 }  // namespace tkrzw

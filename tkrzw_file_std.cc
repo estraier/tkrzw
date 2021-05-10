@@ -36,6 +36,7 @@ class StdFileImpl final {
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
+  Status CopyProperties(File* file);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   int64_t Lock();
@@ -180,6 +181,10 @@ Status StdFileImpl::GetSize(int64_t* size) {
 }
 
 Status StdFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
+  return Status(Status::SUCCESS);
+}
+
+Status StdFileImpl::CopyProperties(File* file) {
   return Status(Status::SUCCESS);
 }
 
@@ -449,6 +454,11 @@ Status StdFile::GetSize(int64_t* size) {
 Status StdFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
   assert(init_size > 0 && inc_factor > 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
+}
+
+Status StdFile::CopyProperties(File* file) {
+  assert(file != nullptr);
+  return impl_->CopyProperties(file);
 }
 
 Status StdFile::GetPath(std::string* path) {
