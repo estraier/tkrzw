@@ -49,6 +49,7 @@ class SkipDBMTest : public CommonDBMTest {
   void SkipDBMProcessTest(tkrzw::SkipDBM* dbm);
   void SkipDBMRestoreTest(tkrzw::SkipDBM* dbm);
   void SkipDBMMergeTest(tkrzw::SkipDBM* dbm);
+  void SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm);
 };
 
 void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
@@ -678,6 +679,73 @@ void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
+void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  //const std::string file_path = tmp_dir.MakeUniquePath();
+
+  const std::string file_path = "casket";
+
+
+  tkrzw::SkipDBM::TuningParameters tuning_params;
+  tuning_params.step_unit = 2;
+  tuning_params.max_level = 5;
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string& expr = tkrzw::ToString(i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(100, dbm->CountSimple());
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string& expr = tkrzw::ToString(i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
+  EXPECT_EQ(100, dbm->CountSimple());
+  for (int32_t i = 101; i <= 200; i++) {
+    const std::string& expr = tkrzw::ToString(i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, true));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(200, dbm->CountSimple());
+  for (int32_t i = 1; i <= 200; i++) {
+    const std::string& expr = tkrzw::ToString(i);
+    EXPECT_EQ(expr, dbm->GetSimple(expr));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+
+
+
+  /*
+   * NULL CODE RECOVERY
+  
+  const int64_t file_size = tkrzw::GetFileSize(file_path);
+
+  std::cout << file_size << std::endl;
+  
+  EXPECT_GE(file_size, 0);
+
+  const int64_t trunc_size = tkrzw::AlignNumber(file_size, 8192);
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(trunc_size));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  EXPECT_EQ(trunc_size, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, false));
+  EXPECT_EQ("100", dbm->GetSimple("100", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
+  EXPECT_EQ("200", dbm->GetSimple("200", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("japan", "tokyo", false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ("tokyo", dbm->GetSimple("japan", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  */
+}
+
 TEST_F(SkipDBMTest, EmptyDatabase) {
   tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   SkipDBMEmptyDatabaseTest(&dbm);
@@ -726,6 +794,16 @@ TEST_F(SkipDBMTest, Restore) {
 TEST_F(SkipDBMTest, Merge) {
   tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   SkipDBMMergeTest(&dbm);
+}
+
+TEST_F(SkipDBMTest, DirectIO) {
+  auto file = std::make_unique<tkrzw::PositionalParallelFile>();
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DEFAULT));
+
+  tkrzw::SkipDBM dbm(std::move(file));
+  SkipDBMDirectIOTest(&dbm);
 }
 
 // END OF FILE

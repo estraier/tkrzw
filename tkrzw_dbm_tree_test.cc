@@ -829,6 +829,27 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   }
   EXPECT_EQ(20, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  const int64_t file_size = tkrzw::GetFileSize(file_path);
+  EXPECT_GE(file_size, 0);
+  EXPECT_EQ(0, file_size % 512);
+
+  /*
+   * NULL CODE RECOVERY
+  const int64_t trunc_size = tkrzw::AlignNumber(file_size, 8192);
+  tkrzw::PositionalParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(trunc_size));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  EXPECT_EQ(trunc_size, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, false));
+  EXPECT_EQ("6859", dbm->GetSimple("361", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
+  EXPECT_EQ("20", dbm->GetSimple("400", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("japan", "tokyo", false));
+  EXPECT_EQ("tokyo", dbm->GetSimple("japan", ""));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  */
 }
 
 TEST_F(TreeDBMTest, EmptyDatabase) {

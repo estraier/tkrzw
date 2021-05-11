@@ -319,7 +319,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
-  trunc_size_.store(file_size_.load());
+  trunc_size_.store(AlignNumber(file_size_.load(), block_size_));
   if (ftruncate(fd_, trunc_size_.load()) != 0) {
     status |= GetErrnoStatus("ftruncate", errno);
   }
@@ -903,7 +903,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
-  trunc_size_ = file_size_;
+  trunc_size_ = AlignNumber(file_size_, block_size_);
   if (ftruncate(fd_, trunc_size_) != 0) {
     status |= GetErrnoStatus("ftruncate", errno);
   }

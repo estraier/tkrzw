@@ -1,4 +1,11 @@
-2021-04-xx  Mikio Hirabayashi  <hirarin@gmail.com>
+2021-04-12  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.16
+	- Library version: 1.6.0
+
+	- Support direct I/O on SkipDBM.
+
+2021-04-11  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.15
 	- Library version: 1.5.0

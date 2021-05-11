@@ -52,6 +52,7 @@ constexpr int64_t MIN_SORT_MEM_SIZE = 1LL << 10;
 constexpr int64_t MAX_SORT_MEM_SIZE = 8LL << 30;
 constexpr int32_t MIN_MAX_CACHED_RECORDS = 1;
 constexpr int32_t MAX_MAX_CACHED_RECORDS = 1 << 24;
+constexpr int64_t MINIMUM_DIO_BLOCK_SIZE = 512;
 const char* REBUILD_FILE_SUFFIX = ".tmp.rebuild";
 const char* SORTER_FILE_SUFFIX = ".tmp.sorter";
 const char* SORTED_FILE_SUFFIX = ".tmp.sorted";
@@ -102,6 +103,8 @@ class SkipDBMImpl final {
   void CancelIterators();
   Status SaveMetadata(bool finish);
   Status LoadMetadata();
+  Status CheckFileBeforeOpen(File* file, const std::string& path, bool writable);
+  Status PadFileForDirectIO();
   Status PrepareStorage();
   Status FinishStorage(SkipDBM::ReducerType reducer);
   Status DiscardStorage();
@@ -217,7 +220,11 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     max_cached_records_ = std::min(std::max(
         tuning_params.max_cached_records, MIN_MAX_CACHED_RECORDS), MAX_MAX_CACHED_RECORDS);
   }
-  Status status = file_->Open(norm_path, writable, options);
+  Status status = CheckFileBeforeOpen(file_.get(), path, writable);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  status = file_->Open(norm_path, writable, options);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -948,6 +955,50 @@ Status SkipDBMImpl::LoadMetadata() {
     return Status(Status::BROKEN_DATA_ERROR, "invalid file size");
   }
   return Status(Status::SUCCESS);
+}
+
+Status SkipDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, bool writable) {
+  auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+  if (pos_file != nullptr && pos_file->IsDirectIO()) {
+    const int64_t file_size = tkrzw::GetFileSize(path);
+    const int64_t block_size = pos_file->GetBlockSize();
+
+    // TODO: Delete me
+    std::cout << "DIRECT: fs=" << file_size
+              << " bs=" << block_size
+              << " rem=" << (file_size % block_size)
+              << " w=" << writable
+              << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
+              << std::endl;
+
+    if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
+      return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
+    }
+    if (!writable && file_size > 0 && file_size % block_size != 0) {
+      return Status(Status::INFEASIBLE_ERROR, "The file size not aligned to the block size");
+    }
+  }
+  return Status(Status::SUCCESS);;
+}
+
+Status SkipDBMImpl::PadFileForDirectIO() {
+  auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
+  if (pos_file == nullptr || !pos_file->IsDirectIO()) {
+    return Status::SUCCESS;
+  }
+  const int64_t file_size = file_->GetSizeSimple();
+  const int64_t block_size = pos_file->GetBlockSize();
+  const int64_t size_rem = file_size % block_size;
+  if (size_rem == 0) {
+    return Status::SUCCESS;
+  }
+
+  // TODO: Delete me
+  std::cout << "PAD: fs=" << file_size
+            << " bs=" << block_size
+            << " rem=" << size_rem << std::endl;
+
+  return Status::SUCCESS;
 }
 
 Status SkipDBMImpl::PrepareStorage() {

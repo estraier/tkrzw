@@ -1005,6 +1005,8 @@ int main(int argc, char** argv) {
 
 <p>The 1008 bytes before the record header section is the free block pool section.  It contains pairs of an offset and a size of each free block.  The offset is a big-endian integer of the offset width.  The size is a big-endian integer of 4 bytes.  The maximum number of pairs is determined as 1008 / (W + 4).  Given the offset width 4, the maximum number is 126.</p>
 
+<p>As long as the meta data for the file size indicates the actual content size, padding data of null codes can be appended at the end of the file.  This is useful to align the file size to the requirement of direct I/O.</p>
+
 <h2 id="treedbm_overview">TreeDBM: The File Tree Database</h2>
 
 <p>The file tree database stores key-value structure in a single file.  It uses a multiway balanced tree structure called B+ tree.  Therefore, given the number of records N, the average time complexity of data retrieval is O(log N).  Because records are ordered by the key, range searches including forward matching search are supported.</p>
@@ -1635,6 +1637,8 @@ int main(int argc, char** argv) {
 <p>The offsets of the forward records are composed of big-endian integers whose number is the same as the level of the record.  The level is determined by how many times the index of the record can be divided by the step unit without a remainder.  Given the step unit S and the index C, the destination of the first level link is the record whose index is C + S^1.  The destination of the second level link is the record whose index is C + S^2.</p>
 
 <p>The key size and the value size are represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16,383 takes 2 bytes. A value between 16,384 and 2,097,151 takes 3 bytes.  A value between 268,435,456 and 34,359,738,367 takes 4 bytes.</p>
+
+<p>As long as the meta data for the file size indicates the actual content size, padding data of null codes can be appended at the end of the file.  This is useful to align the file size to the requirement of direct I/O.</p>
 
 <h2 id="tinydbm_overview">TinyDBM: The On-memory Hash Database</h2>
 

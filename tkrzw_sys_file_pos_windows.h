@@ -321,13 +321,8 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
-  trunc_size_.store(file_size_.load());
-  if (trunc_size_.load() % block_size_ == 0) {
-    status |= TruncateFile(file_handle_, trunc_size_.load());
-  } else {
-    // TODO: Check the alignment restriction.
-    status |= TruncateFile(file_handle_, trunc_size_.load());
-  }
+  trunc_size_.store(AlignNumber(file_size_.load(), block_size_));
+  status |= TruncateFile(file_handle_, trunc_size_.load());
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }
@@ -921,13 +916,8 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
-  trunc_size_ = file_size_;
-  if (trunc_size_ % block_size_ == 0) {
-    status |= TruncateFile(file_handle_, trunc_size_);
-  } else {
-    // TODO: check the alignment restriction.
-    status |= TruncateFile(file_handle_, trunc_size_);
-  }
+  trunc_size_ = AlignNumber(file_size_, block_size_);
+  status |= TruncateFile(file_handle_, trunc_size_);
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }

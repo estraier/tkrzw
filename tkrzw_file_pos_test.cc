@@ -125,6 +125,16 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
   EXPECT_EQ("ABCD", std::string_view(buf, 4));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
   EXPECT_EQ(62,  tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(5, "ABCDEFGHIJ", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(false));
+  const int64_t file_size = file->GetSizeSimple();
+  const int64_t block_size = file->GetBlockSize();
+  EXPECT_TRUE(file_size == 10 || tkrzw::AlignNumber(10, block_size) == block_size);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(5, buf, 5));
+  EXPECT_EQ("ABCDE", std::string_view(buf, 5));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
 template <class FILEIMPL>

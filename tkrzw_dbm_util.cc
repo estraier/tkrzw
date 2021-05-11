@@ -161,24 +161,30 @@ std::unique_ptr<DBM> MakeDBMOrDie(
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
+  auto file = MakeFileOrDie(file_impl, 0, 0);
+
+  // TODO: modify me.
+  //SetAccessStrategyOrDie(file.get(), 512, true, false);
+
+
   const std::string dbm_impl_mod = GetDBMImplName(dbm_impl, file_path);
   std::unique_ptr<DBM> dbm;
   if (dbm_impl_mod == "hash") {
-    dbm = std::make_unique<HashDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<HashDBM>(std::move(file));
   } else if (dbm_impl_mod == "tree") {
-    dbm = std::make_unique<TreeDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<TreeDBM>(std::move(file));
   } else if (dbm_impl_mod == "skip") {
-    dbm = std::make_unique<SkipDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<SkipDBM>(std::move(file));
   } else if (dbm_impl_mod == "tiny") {
-    dbm = std::make_unique<TinyDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<TinyDBM>(std::move(file));
   } else if (dbm_impl_mod == "baby") {
-    dbm = std::make_unique<BabyDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<BabyDBM>(std::move(file));
   } else if (dbm_impl_mod == "cache") {
-    dbm = std::make_unique<CacheDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<CacheDBM>(std::move(file));
   } else if (dbm_impl_mod == "stdhash") {
-    dbm = std::make_unique<StdHashDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<StdHashDBM>(std::move(file));
   } else if (dbm_impl_mod == "stdtree") {
-    dbm = std::make_unique<StdTreeDBM>(MakeFileOrDie(file_impl, 0, 0));
+    dbm = std::make_unique<StdTreeDBM>(std::move(file));
   } else if (dbm_impl_mod == "poly") {
     dbm = std::make_unique<PolyDBM>();
   } else if (dbm_impl_mod == "shard") {
