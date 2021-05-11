@@ -59,6 +59,7 @@ class MemoryMapParallelFileImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Truncate(int64_t size);
+  Status TruncateFakely(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
@@ -278,6 +279,14 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   map_size_.store(new_map_size);
   if (ftruncate(fd_, new_map_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
+  }
+  file_size_.store(size);
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapParallelFileImpl::TruncateFakely(int64_t size) {
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   file_size_.store(size);
   return Status(Status::SUCCESS);
@@ -579,6 +588,11 @@ Status MemoryMapParallelFile::Truncate(int64_t size) {
   return impl_->Truncate(size);
 }
 
+Status MemoryMapParallelFile::TruncateFakely(int64_t size) {
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->TruncateFakely(size);
+}
+
 Status MemoryMapParallelFile::Synchronize(bool hard) {
   return impl_->Synchronize(hard);
 }
@@ -646,6 +660,7 @@ class MemoryMapAtomicFileImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Truncate(int64_t size);
+  Status TruncateFakely(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
@@ -868,6 +883,15 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   map_size_ = new_map_size;
   if (ftruncate(fd_, new_map_size) != 0) {
     return GetErrnoStatus("ftruncate", errno);
+  }
+  file_size_ = size;
+  return Status(Status::SUCCESS);
+}
+
+Status MemoryMapAtomicFileImpl::TruncateFakely(int64_t size) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (fd_ < 0) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   file_size_ = size;
   return Status(Status::SUCCESS);
@@ -1155,6 +1179,11 @@ Status MemoryMapAtomicFile::Expand(size_t inc_size, int64_t* old_size) {
 Status MemoryMapAtomicFile::Truncate(int64_t size) {
   assert(size >= 0 && size <= MAX_MEMORY_SIZE);
   return impl_->Truncate(size);
+}
+
+Status MemoryMapAtomicFile::TruncateFakely(int64_t size) {
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->TruncateFakely(size);
 }
 
 Status MemoryMapAtomicFile::Synchronize(bool hard) {

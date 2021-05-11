@@ -33,6 +33,7 @@ class StdFileImpl final {
   Status Append(const void* buf, size_t size, int64_t* off);
   Status Expand(size_t inc_size, int64_t* old_size);
   Status Truncate(int64_t size);
+  Status TruncateFakely(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
@@ -162,6 +163,15 @@ Status StdFileImpl::Truncate(int64_t size) {
   }
   std::filesystem::resize_file(old_path, size);
   return OpenImpl(old_path, true, options);
+}
+
+Status StdFileImpl::TruncateFakely(int64_t size) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (file_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  file_size_ = size;
+  return Status(Status::SUCCESS);
 }
 
 Status StdFileImpl::Synchronize(bool hard) {
@@ -323,7 +333,10 @@ Status StdFileImpl::CloseImpl() {
   file_->clear();
   file_->close();
   if (!file_->good()) {
-    status.Set(Status::SYSTEM_ERROR, "close failed");
+    status |= Status(Status::SYSTEM_ERROR, "close failed");
+  }
+  if (writable_ && !path_.empty() && PathIsFile(path_)) {
+    std::filesystem::resize_file(path_, file_size_);
   }
   file_.reset(nullptr);
   path_.clear();
@@ -453,6 +466,11 @@ Status StdFile::Expand(size_t inc_size, int64_t* old_size) {
 Status StdFile::Truncate(int64_t size) {
   assert(size >= 0 && size <= MAX_MEMORY_SIZE);
   return impl_->Truncate(size);
+}
+
+Status StdFile::TruncateFakely(int64_t size) {
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->TruncateFakely(size);
 }
 
 Status StdFile::Synchronize(bool hard) {

@@ -58,6 +58,11 @@ TEST_F(StdFileTest, ReallocWrite) {
   ReallocWriteTest(&file);
 }
 
+TEST_F(StdFileTest, Truncate) {
+  tkrzw::StdFile file;
+  TruncateTest(&file);
+}
+
 TEST_F(StdFileTest, ImplicitClose) {
   tkrzw::StdFile file;
   ImplicitCloseTest(&file);

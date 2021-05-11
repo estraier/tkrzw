@@ -681,11 +681,7 @@ void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
 
 void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
-  //const std::string file_path = tmp_dir.MakeUniquePath();
-
-  const std::string file_path = "casket";
-
-
+  const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::SkipDBM::TuningParameters tuning_params;
   tuning_params.step_unit = 2;
   tuning_params.max_level = 5;
@@ -716,18 +712,8 @@ void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
     EXPECT_EQ(expr, dbm->GetSimple(expr));
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-
-
-
-  /*
-   * NULL CODE RECOVERY
-  
   const int64_t file_size = tkrzw::GetFileSize(file_path);
-
-  std::cout << file_size << std::endl;
-  
   EXPECT_GE(file_size, 0);
-
   const int64_t trunc_size = tkrzw::AlignNumber(file_size, 8192);
   tkrzw::PositionalParallelFile file;
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
@@ -743,7 +729,6 @@ void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   EXPECT_EQ("tokyo", dbm->GetSimple("japan", ""));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  */
 }
 
 TEST_F(SkipDBMTest, EmptyDatabase) {

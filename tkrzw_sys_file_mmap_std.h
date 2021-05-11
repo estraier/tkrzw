@@ -99,6 +99,10 @@ Status MemoryMapParallelFile::Truncate(int64_t size) {
   return impl_->file.Truncate(size);
 }
 
+Status MemoryMapParallelFile::TruncateFakely(int64_t size) {
+  return impl_->file.TruncateFakely(size);
+}
+
 Status MemoryMapParallelFile::Synchronize(bool hard) {
   return impl_->file.Synchronize(hard);
 }
@@ -244,6 +248,10 @@ Status MemoryMapAtomicFile::Expand(size_t inc_size, int64_t* old_size) {
 
 Status MemoryMapAtomicFile::Truncate(int64_t size) {
   return impl_->file.Truncate(size);
+}
+
+Status MemoryMapAtomicFile::TruncateFakely(int64_t size) {
+  return impl_->file.TruncateFakely(size);
 }
 
 Status MemoryMapAtomicFile::Synchronize(bool hard) {

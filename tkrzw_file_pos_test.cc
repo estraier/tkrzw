@@ -255,6 +255,11 @@ TEST_F(PositionalParallelFileTest, ReallocWriteBlock) {
   ReallocWriteTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, Truncate) {
+  tkrzw::PositionalParallelFile file;
+  TruncateTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, ImplicitClose) {
   tkrzw::PositionalParallelFile file;
   ImplicitCloseTest(&file);
@@ -361,6 +366,11 @@ TEST_F(PositionalAtomicFileTest, ReallocWriteBlock) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             file.SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
   ReallocWriteTest(&file);
+}
+
+TEST_F(PositionalAtomicFileTest, Truncate) {
+  tkrzw::PositionalAtomicFile file;
+  TruncateTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, ImplicitClose) {

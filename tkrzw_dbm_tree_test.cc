@@ -832,9 +832,6 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   const int64_t file_size = tkrzw::GetFileSize(file_path);
   EXPECT_GE(file_size, 0);
   EXPECT_EQ(0, file_size % 512);
-
-  /*
-   * NULL CODE RECOVERY
   const int64_t trunc_size = tkrzw::AlignNumber(file_size, 8192);
   tkrzw::PositionalParallelFile file;
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
@@ -849,7 +846,6 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("japan", "tokyo", false));
   EXPECT_EQ("tokyo", dbm->GetSimple("japan", ""));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  */
 }
 
 TEST_F(TreeDBMTest, EmptyDatabase) {

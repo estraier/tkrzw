@@ -246,8 +246,38 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     return status;
   }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
-  if (file_size_ != file_->GetSizeSimple()) {
-    healthy = false;
+  const int64_t actual_file_size = file_->GetSizeSimple();
+  if (file_size_ != actual_file_size) {
+    if (file_size_ > actual_file_size) {
+      healthy = false;
+    } else {
+      std::cout << "RECOVER: est=" << file_size_ << " act=" << actual_file_size
+                << " w=" << writable
+                << std::endl;
+    
+      const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
+      char* buf = new char[remainder];
+      status = file_->Read(file_size_, buf, remainder);
+      if (status != Status::SUCCESS) {
+        delete[] buf;
+        return status;
+      }
+      bool only_zeros = true;
+      for (int i = 0; i < remainder; i++) {
+        if (buf[i] != 0) {
+          only_zeros = false;
+        }
+      }
+      delete[] buf;
+      if (only_zeros) {
+        status = writable ? file_->Truncate(file_size_) : file_->TruncateFakely(file_size_);
+        if (status != Status::SUCCESS) {
+          healthy = false;
+        }
+      } else {
+        healthy = false;
+      }
+    }
   }
   path_ = norm_path;
   if (writable) {
@@ -646,6 +676,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
     CleanUp();
     return status;
   }
+  status |= file_->DisablePathOperations();
   if (IS_POSIX) {
     status |= rebuild_file->Rename(path_);
     status |= file_->Close();
@@ -1032,6 +1063,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   if (reducer == nullptr && sorted_file_ != nullptr &&
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
       !record_sorter_->IsUpdated()) {
+    file_->DisablePathOperations();
     if (!IS_POSIX) {
       file_->Close();
     }

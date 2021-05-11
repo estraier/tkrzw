@@ -208,6 +208,15 @@ class MemoryMapParallelFile final : public MemoryMapFile {
   Status Truncate(int64_t size) override;
 
   /**
+   * Truncate the file fakely.
+   * @param size The new size of the file.
+   * @return The result status.
+   * @details This doesn't modify the actual file but modifies the internal length parameter,
+   * which affects behavior of Close, Synchronize, Append, Expand, and GetSize.
+   */
+  Status TruncateFakely(int64_t size) override;
+
+  /**
    * Synchronizes the content of the file to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
@@ -462,6 +471,15 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * @return The result status.
    */
   Status Truncate(int64_t size) override;
+
+  /**
+   * Truncate the file fakely.
+   * @param size The new size of the file.
+   * @return The result status.
+   * @details This doesn't modify the actual file but modifies the internal length parameter,
+   * which affects behavior of Close, Synchronize, Append, Expand, and GetSize.
+   */
+  Status TruncateFakely(int64_t size) override;
 
   /**
    * Synchronizes the content of the file to the file system.

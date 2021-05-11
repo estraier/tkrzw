@@ -133,6 +133,11 @@ TEST_F(MemoryMapParallelFileTest, ReallocWrite) {
   ReallocWriteTest(&file);
 }
 
+TEST_F(MemoryMapParallelFileTest, Truncate) {
+  tkrzw::MemoryMapParallelFile file;
+  TruncateTest(&file);
+}
+
 TEST_F(MemoryMapParallelFileTest, ImplicitClose) {
   tkrzw::MemoryMapParallelFile file;
   ImplicitCloseTest(&file);
@@ -204,6 +209,11 @@ TEST_F(MemoryMapAtomicFileTest, SimpleWrite) {
 TEST_F(MemoryMapAtomicFileTest, ReallocWrite) {
   tkrzw::MemoryMapAtomicFile file;
   ReallocWriteTest(&file);
+}
+
+TEST_F(MemoryMapAtomicFileTest, Truncate) {
+  tkrzw::MemoryMapAtomicFile file;
+  TruncateTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, ImplicitClose) {

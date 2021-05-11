@@ -157,8 +157,19 @@ class File {
    * Truncates the file.
    * @param size The new size of the file.
    * @return The result status.
+   * @details If the file is shrunk, data after the new file end is discarded.  If the file is
+   * expanded, null codes are filled after the old file end.
    */
   virtual Status Truncate(int64_t size) = 0;
+
+  /**
+   * Truncate the file fakely.
+   * @param size The new size of the file.
+   * @return The result status.
+   * @details This doesn't modify the actual file but modifies the internal length parameter,
+   * which affects behavior of Close, Synchronize, Append, Expand, and GetSize.
+   */
+  virtual Status TruncateFakely(int64_t size) = 0;
 
   /**
    * Synchronizes the content of the file to the file system.

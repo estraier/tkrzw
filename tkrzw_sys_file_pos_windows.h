@@ -42,6 +42,7 @@ class PositionalParallelFileImpl final {
   Status Write(int64_t off, const void* buf, size_t size);
   Status Append(const void* buf, size_t size, int64_t* off);
   Status Truncate(int64_t size);
+  Status TruncateFakely(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetHeadBuffer(int64_t size);
@@ -307,6 +308,14 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   }
   file_size_.store(size);
   trunc_size_.store(new_trunc_size);
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalParallelFileImpl::TruncateFakely(int64_t size) {
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  file_size_.store(size);
   return Status(Status::SUCCESS);
 }
 
@@ -584,6 +593,11 @@ Status PositionalParallelFile::Truncate(int64_t size) {
   return impl_->Truncate(size);
 }
 
+Status PositionalParallelFile::TruncateFakely(int64_t size) {
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->TruncateFakely(size);
+}
+
 Status PositionalParallelFile::Synchronize(bool hard) {
   return impl_->Synchronize(hard);
 }
@@ -643,6 +657,7 @@ class PositionalAtomicFileImpl final {
   Status Write(int64_t off, const void* buf, size_t size);
   Status Append(const void* buf, size_t size, int64_t* off);
   Status Truncate(int64_t size);
+  Status TruncateFakely(int64_t size);
   Status Synchronize(bool hard);
   Status GetSize(int64_t* size);
   Status SetHeadBuffer(int64_t size);
@@ -901,6 +916,15 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   }
   file_size_ = size;
   trunc_size_ = new_trunc_size;
+  return Status(Status::SUCCESS);
+}
+
+Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (file_handle_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  file_size_ = size;
   return Status(Status::SUCCESS);
 }
 
@@ -1183,6 +1207,11 @@ Status PositionalAtomicFile::Expand(size_t inc_size, int64_t* old_size) {
 Status PositionalAtomicFile::Truncate(int64_t size) {
   assert(size >= 0 && size <= MAX_MEMORY_SIZE);
   return impl_->Truncate(size);
+}
+
+Status PositionalAtomicFile::TruncateFakely(int64_t size) {
+  assert(size >= 0 && size <= MAX_MEMORY_SIZE);
+  return impl_->TruncateFakely(size);
 }
 
 Status PositionalAtomicFile::Synchronize(bool hard) {
