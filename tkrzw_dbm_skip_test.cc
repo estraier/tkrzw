@@ -783,10 +783,8 @@ TEST_F(SkipDBMTest, Merge) {
 
 TEST_F(SkipDBMTest, DirectIO) {
   auto file = std::make_unique<tkrzw::PositionalParallelFile>();
-
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DEFAULT));
-
+            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
   tkrzw::SkipDBM dbm(std::move(file));
   SkipDBMDirectIOTest(&dbm);
 }
