@@ -25,7 +25,6 @@ const char* const LIBRARY_VERSION = _TKRZW_LIB_VERSION;;
 const char* const OS_NAME = _TKRZW_OSNAME;
 const bool IS_POSIX = _IS_POSIX;
 const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
-
 constexpr int32_t EDQUOT = 10001;
 
 #else
@@ -47,7 +46,7 @@ const Status& Status::OrDie() const {
 }
 
 void* xmallocaligned(size_t alignment, size_t size) {
-#if defined(_SYS_POSIX_)
+#if defined(_SYS_LINUX_)
   assert(alignment > 0);
   void* ptr = std::aligned_alloc(alignment, size);
   if (ptr == nullptr) {
@@ -72,7 +71,7 @@ void* xmallocaligned(size_t alignment, size_t size) {
 }
 
 void xfreealigned(void* ptr) {
-#if defined(_SYS_POSIX_)
+#if defined(_SYS_LINUX_)
   assert(ptr != nullptr);
   std::free(ptr);
 #elif defined(_SYS_WINDOWS_)
