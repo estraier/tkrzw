@@ -2190,6 +2190,8 @@ then
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
   MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
+  MYFILEPERFDIRECTIOFLAGS="--direct_io"
+  MYDBMPERFDIRECTIOFLAGS="--direct_io"
   enables="$enables (debug)"
 fi
 
