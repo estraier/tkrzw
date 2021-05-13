@@ -758,15 +758,19 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr, false));
   }
   for (int32_t i = 1; i <= 10; i++) {
-    const std::string& expr = tkrzw::ToString(i * i);
-    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+    const std::string& key = tkrzw::ToString(i * i);
+    std::string value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+    EXPECT_EQ(key, value);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, false, tkrzw::File::OPEN_DEFAULT, tuning_params));
   for (int32_t i = 1; i <= 10; i++) {
-    const std::string& expr = tkrzw::ToString(i * i);
-    EXPECT_EQ(expr, dbm->GetSimple(expr, ""));
+    const std::string& key = tkrzw::ToString(i * i);
+    std::string value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+    EXPECT_EQ(key, value);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -783,8 +787,9 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   for (int32_t i = 1; i <= 20; i++) {
     const std::string& key = tkrzw::ToString(i * i);
-    const std::string& value = tkrzw::ToString(i % 2 == 0 ? i : i * i * i);
-    EXPECT_EQ(value, dbm->GetSimple(key, ""));
+    std::string value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+    EXPECT_EQ(tkrzw::ToString(i % 2 == 0 ? i : i * i * i), value);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
