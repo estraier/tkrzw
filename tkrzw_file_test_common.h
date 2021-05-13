@@ -183,7 +183,7 @@ void CommonFileTest::TruncateTest(tkrzw::File* file) {
   EXPECT_EQ(1978, file->GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(65536));
   EXPECT_EQ(65536, file->GetSizeSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());  
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
 void CommonFileTest::ImplicitCloseTest(tkrzw::File* file) {

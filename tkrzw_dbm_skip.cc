@@ -254,7 +254,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
       std::cout << "RECOVER: est=" << file_size_ << " act=" << actual_file_size
                 << " w=" << writable
                 << std::endl;
-    
+
       const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
       char* buf = new char[remainder];
       status = file_->Read(file_size_, buf, remainder);
