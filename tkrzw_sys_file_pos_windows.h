@@ -800,11 +800,11 @@ Status PositionalAtomicFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
-    int64_t trunc_size = file_size_.load();
+    int64_t trunc_size = file_size_;
     trunc_size = AlignNumber(trunc_size, block_size_);
-    status |= TruncateFile(file_handle_, file_size_.load());
+    status |= TruncateFile(file_handle_, file_size_);
     retruncate =
-        !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
+        !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_ != trunc_size;
   }
 
   // Unlocks the file.
