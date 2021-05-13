@@ -83,7 +83,7 @@ inline Status GetSysErrorStatus(std::string_view call_name, int32_t error_code) 
  * @param length The new length of the file.
  * @return The result status.
  */
-inline Status TruncateFile(HANDLE file_handle, int64_t length) {
+inline Status TruncateFileInternally(HANDLE file_handle, int64_t length) {
   LARGE_INTEGER li;
   li.QuadPart = length;
   if (!SetFilePointerEx(file_handle, li, nullptr, FILE_BEGIN)) {
@@ -110,7 +110,7 @@ inline Status TruncateFileExternally(const std::string& path, int64_t length) {
   if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
     return GetSysErrorStatus("CreateFile", GetLastError());
   }
-  Status status = TruncateFile(file_handle, length);
+  Status status = TruncateFileInternally(file_handle, length);
   if (!CloseHandle(file_handle)) {
     status |= GetSysErrorStatus("CloseHandle", GetLastError());
   }

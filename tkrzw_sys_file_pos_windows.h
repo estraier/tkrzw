@@ -157,7 +157,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   if (writable) {
     trunc_size = std::max(trunc_size, alloc_init_size_);
     trunc_size = AlignNumber(trunc_size, PAGE_SIZE);
-    const Status status = TruncateFile(file_handle, trunc_size);
+    const Status status = TruncateFileInternally(file_handle, trunc_size);
     if (status != Status::SUCCESS) {
       CloseHandle(file_handle);
       return status;
@@ -193,7 +193,7 @@ Status PositionalParallelFileImpl::Close() {
     }
     int64_t trunc_size = file_size_.load();
     trunc_size = AlignNumber(trunc_size, block_size_);
-    status |= TruncateFile(file_handle_, trunc_size);
+    status |= TruncateFileInternally(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
   }
@@ -304,7 +304,7 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  const Status status = TruncateFile(file_handle_, new_trunc_size);
+  const Status status = TruncateFileInternally(file_handle_, new_trunc_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -333,7 +333,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_.store(AlignNumber(file_size_.load(), block_size_));
-  status |= TruncateFile(file_handle_, trunc_size_.load());
+  status |= TruncateFileInternally(file_handle_, trunc_size_.load());
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }
@@ -487,7 +487,7 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
     const int64_t mod_off = off - off_rem;
     int64_t end_len = end_rem > 0 ? block_size_ - end_rem : 0;
     const int64_t alloc_size = trunc_size_.load();
-    if (end_position + end_len > alloc_size)) {
+    if (end_position + end_len > alloc_size) {
       end_len = alloc_size - end_position;
     }
     const int64_t mod_end = end_position + end_len;
@@ -770,7 +770,7 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
   if (writable) {
     trunc_size = std::max(trunc_size, alloc_init_size_);
     trunc_size = AlignNumber(trunc_size, PAGE_SIZE);
-    const Status status = TruncateFile(file_handle, trunc_size);
+    const Status status = TruncateFileInternally(file_handle, trunc_size);
     if (status != Status::SUCCESS) {
       CloseHandle(file_handle);
       return status;
@@ -807,7 +807,7 @@ Status PositionalAtomicFileImpl::Close() {
     }
     int64_t trunc_size = file_size_;
     trunc_size = AlignNumber(trunc_size, block_size_);
-    status |= TruncateFile(file_handle_, trunc_size);
+    status |= TruncateFileInternally(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_ != trunc_size;
   }
@@ -915,7 +915,7 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_trunc_size += alignment - diff;
   }
-  const Status status = TruncateFile(file_handle_, new_trunc_size);
+  const Status status = TruncateFileInternally(file_handle_, new_trunc_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -946,7 +946,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_ = AlignNumber(file_size_, block_size_);
-  status |= TruncateFile(file_handle_, trunc_size_);
+  status |= TruncateFileInternally(file_handle_, trunc_size_);
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
   }

@@ -320,13 +320,32 @@ std::string ReadFileSimple(const std::string& path, std::string_view default_val
 }
 
 Status TruncateFile(const std::string& path, int64_t size) {
+#if defined(_SYS_WINDOWS_)
+  assert(size >= 0);
+  HANDLE file_handle = CreateFile(path.c_str(), GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+  if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
+    return Status(Status::SYSTEM_ERROR, "CreateFile failed");
+  }
+  Status status(Status::SUCCESS);
+  LARGE_INTEGER li;
+  li.QuadPart = size;
+  if (!SetFilePointerEx(file_handle, li, nullptr, FILE_BEGIN)) {
+    status |= Status(Status::SYSTEM_ERROR, "SetFilePointerEx failed");
+  } else if (!SetEndOfFile(file_handle)) {
+    status |= Status(Status::SYSTEM_ERROR, "SetEndOfFile failed");
+  }
+  if (!CloseHandle(file_handle)) {
+    status |= Status(Status::SYSTEM_ERROR, "CloseHandle failed");
+  }
+  return status;
+#else
   assert(size >= 0);
   if (truncate(path.c_str(), size) != 0) {
     return GetErrnoStatus("truncate", errno);
   }
   return Status(Status::SUCCESS);
+#endif
 }
-
 
 Status RemoveFile(const std::string& path) {
   if (unlink(path.c_str()) != 0) {

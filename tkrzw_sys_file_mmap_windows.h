@@ -219,7 +219,7 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Truncates the file.
   if (writable_) {
-    status |= TruncateFile(file_handle_, file_size_.load());
+    status |= TruncateFileInternally(file_handle_, file_size_.load());
   }
 
   // Unlocks the file.
@@ -270,7 +270,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
     return status;
   }
   map_size_.store(new_map_size);
-  status = TruncateFile(file_handle_, new_map_size);
+  status = TruncateFileInternally(file_handle_, new_map_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -296,7 +296,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   map_size_.store(file_size_.load());
-  status |= TruncateFile(file_handle_, map_size_.load());
+  status |= TruncateFileInternally(file_handle_, map_size_.load());
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_.load())) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
@@ -809,7 +809,7 @@ Status MemoryMapAtomicFileImpl::Close() {
 
   // Truncates the file.
   if (writable_) {
-    status |= TruncateFile(file_handle_, file_size_);
+    status |= TruncateFileInternally(file_handle_, file_size_);
   }
 
   // Unlocks the file.
@@ -861,7 +861,7 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
     return status;
   }
   map_size_ = new_map_size;
-  status = TruncateFile(file_handle_, new_map_size);
+  status = TruncateFileInternally(file_handle_, new_map_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -888,7 +888,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard) {
   }
   Status status(Status::SUCCESS);
   map_size_ = file_size_;
-  status |= TruncateFile(file_handle_, map_size_);
+  status |= TruncateFileInternally(file_handle_, map_size_);
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_)) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());

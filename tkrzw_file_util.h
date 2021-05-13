@@ -170,6 +170,7 @@ std::string ReadFileSimple(const std::string& path, std::string_view default_val
 /**
  * Truncates a file.
  * @param path The path of the file to truncate.
+ * @param size The new size of the file.
  * @return The result status.
  */
 Status TruncateFile(const std::string& path, int64_t size);

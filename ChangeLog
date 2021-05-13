@@ -6,6 +6,7 @@
 	- Support direct I/O on SkipDBM.
 	- Add PositionalFile::ACCESS_PADDING which aligns the file size for direct I/O.
 	- Add logic to open database files which has padding bytes at the end of the file.
+	- Fix compilation error no Mac OS due to aligned_alloc.
 	- Abolish using std::filesystem package to support GCC 7 or earlier.
 	- Omit test cases by default to support systems which don't support direct I/O.
 
