@@ -166,7 +166,15 @@ TEST(FileUtilTest, FileOperations) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RenameFile(file_path, new_file_path));
   EXPECT_FALSE(tkrzw::PathIsFile(file_path));
   EXPECT_EQ("old", tkrzw::ReadFileSimple(new_file_path));
+  EXPECT_EQ(3, tkrzw::GetFileSize(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(new_file_path, 100));
+  EXPECT_EQ(100, tkrzw::GetFileSize(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(new_file_path, 0));
+  EXPECT_EQ(0, tkrzw::GetFileSize(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(new_file_path, 10));
+  EXPECT_EQ(10, tkrzw::GetFileSize(new_file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(new_file_path));
+  EXPECT_EQ(-1, tkrzw::GetFileSize(new_file_path));
 }
 
 TEST(FileUtilTest, CopyFileData) {

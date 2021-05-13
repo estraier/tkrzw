@@ -144,7 +144,7 @@ bool PathIsDirectory(const std::string& path);
 std::string GetPathToTemporaryDirectory();
 
 /**
- * Write a file with a content.
+ * Writes a file with a content.
  * @param path The path of the file to write.
  * @param content The content.
  * @return The result status.
@@ -152,7 +152,7 @@ std::string GetPathToTemporaryDirectory();
 Status WriteFile(const std::string& path, std::string_view content);
 
 /**
- * Read the content from a file.
+ * Reads the content from a file.
  * @param path The path of the file to make.
  * @param content The pointer to a string object to contain the content.
  * @return The result status.
@@ -160,12 +160,19 @@ Status WriteFile(const std::string& path, std::string_view content);
 Status ReadFile(const std::string& path, std::string* content);
 
 /**
- * Read the content from a file, in a simple way.
+ * Reads the content from a file, in a simple way.
  * @param path The path of the file to make.
  * @param default_value The value to be returned on failure.
  * @return The content of the file on success, or the default value on failure.
  */
 std::string ReadFileSimple(const std::string& path, std::string_view default_value = "");
+
+/**
+ * Truncates a file.
+ * @param path The path of the file to truncate.
+ * @return The result status.
+ */
+Status TruncateFile(const std::string& path, int64_t size);
 
 /**
  * Removes a file.

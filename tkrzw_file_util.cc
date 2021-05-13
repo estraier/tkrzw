@@ -319,6 +319,15 @@ std::string ReadFileSimple(const std::string& path, std::string_view default_val
   return ReadFile(path, &content) == Status::SUCCESS ? content : std::string(default_value);
 }
 
+Status TruncateFile(const std::string& path, int64_t size) {
+  assert(size >= 0);
+  if (truncate(path.c_str(), size) != 0) {
+    return GetErrnoStatus("truncate", errno);
+  }
+  return Status(Status::SUCCESS);
+}
+
+
 Status RemoveFile(const std::string& path) {
   if (unlink(path.c_str()) != 0) {
     return GetErrnoStatus("unlink", errno);

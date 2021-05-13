@@ -217,6 +217,21 @@ void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->CopyProperties(tmp_file.get()));
   EXPECT_TRUE(pos_file->IsDirectIO());
   EXPECT_EQ(block_size, pos_file->GetBlockSize());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAccessStrategy(
+      512, tkrzw::PositionalFile::ACCESS_DIRECT | tkrzw::PositionalFile::ACCESS_PADDING));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(510, "0123", 4));
+  EXPECT_EQ(514, file->GetSizeSimple());
+  char buf[256];
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(510, buf, 4));
+  EXPECT_EQ("0123", std::string_view(buf, 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(1024, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(514));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(510, buf, 4));
+  EXPECT_EQ("0123", std::string_view(buf, 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
 class PositionalParallelFileTest : public PositionalFileTest<tkrzw::PositionalParallelFile> {};

@@ -162,6 +162,8 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
       CloseHandle(file_handle);
       return status;
     }
+  } else {
+    trunc_size = file_size;
   }
 
   // Updates the internal data.
@@ -484,8 +486,9 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
   if (off_rem > 0 || end_rem > 0) {
     const int64_t mod_off = off - off_rem;
     int64_t end_len = end_rem > 0 ? block_size_ - end_rem : 0;
-    if (!writable_ && end_position + end_len > file_size_.load()) {
-      end_len = file_size_.load() - end_position;
+    const int64_t alloc_size = trunc_size_.load();
+    if (end_position + end_len > alloc_size)) {
+      end_len = alloc_size - end_position;
     }
     const int64_t mod_end = end_position + end_len;
     const int64_t mod_len = mod_end - mod_off;
@@ -772,6 +775,8 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
       CloseHandle(file_handle);
       return status;
     }
+  } else {
+    trunc_size = file_size;
   }
 
   // Updates the internal data.
@@ -1100,8 +1105,8 @@ Status PositionalAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   if (off_rem > 0 || end_rem > 0) {
     const int64_t mod_off = off - off_rem;
     int64_t end_len = end_rem > 0 ? block_size_ - end_rem : 0;
-    if (!writable_ && end_position + end_len > file_size_) {
-      end_len = file_size_ - end_position;
+    if (end_position + end_len > trunc_size_) {
+      end_len = trunc_size_ - end_position;
     }
     const int64_t mod_end = end_position + end_len;
     const int64_t mod_len = mod_end - mod_off;
