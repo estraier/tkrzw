@@ -189,11 +189,11 @@ Status PositionalParallelFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
-    if (file_size_.load() % block_size_ == 0) {
-      status |= TruncateFile(file_handle_, file_size_.load());
-    } else {
-      retruncate = true;
-    }
+    int64_t trunc_size = file_size_.load();
+    trunc_size = AlignNumber(trunc_size, block_size_);
+    status |= TruncateFile(file_handle_, file_size_.load());
+    retruncate =
+        !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
   }
 
   // Unlocks the file.
@@ -800,11 +800,11 @@ Status PositionalAtomicFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
-    if (file_size_ % block_size_ == 0) {
-      status |= TruncateFile(file_handle_, file_size_);
-    } else {
-      retruncate = true;
-    }
+    int64_t trunc_size = file_size_.load();
+    trunc_size = AlignNumber(trunc_size, block_size_);
+    status |= TruncateFile(file_handle_, file_size_.load());
+    retruncate =
+        !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
   }
 
   // Unlocks the file.

@@ -45,6 +45,8 @@ class PositionalFile : public File {
     ACCESS_DIRECT = 1 << 0,
     /** To synchronize the update operation through the device. */
     ACCESS_SYNC = 1 << 1,
+    /** To fill padding bytes for alignment when closing the file. */
+    ACCESS_PADDING = 1 << 2,
   };
 
   /**

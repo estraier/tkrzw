@@ -192,7 +192,11 @@ Status PositionalParallelFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     }
-    if (ftruncate(fd_, file_size_.load()) != 0) {
+    int64_t trunc_size = file_size_.load();
+    if (access_options_ & PositionalFile::ACCESS_PADDING) {
+      trunc_size = AlignNumber(trunc_size, block_size_);
+    }
+    if (ftruncate(fd_, trunc_size) != 0) {
       status |= GetErrnoStatus("ftruncate", errno);
     }
   }
@@ -796,7 +800,11 @@ Status PositionalAtomicFileImpl::Close() {
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
     }
-    if (ftruncate(fd_, file_size_) != 0) {
+    int64_t trunc_size = file_size_;
+    if (access_options_ & PositionalFile::ACCESS_PADDING) {
+      trunc_size = AlignNumber(trunc_size, block_size_);
+    }
+    if (ftruncate(fd_, trunc_size) != 0) {
       status |= GetErrnoStatus("ftruncate", errno);
     }
   }

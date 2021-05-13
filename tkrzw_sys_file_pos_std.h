@@ -35,6 +35,7 @@ namespace tkrzw {
 class PositionalParallelFileImpl final {
  public:
   StdFile file;
+  bool writable_ = false;
   int64_t block_size_ = 1;
   int32_t access_options_ = 0;
 };
@@ -49,11 +50,20 @@ PositionalParallelFile::~PositionalParallelFile() {
 
 Status PositionalParallelFile::Open(
     const std::string& path, bool writable, int32_t options) {
+  impl_->writable_ = writable;
   return impl_->file.Open(path, writable, options);
 }
 
 Status PositionalParallelFile::Close() {
-  return impl_->file.Close();
+  Status status(Status::SUCCESS);
+  if (impl_->writable_ && impl_->block_size_ > 1 && (impl_->access_options_ & ACCESS_PADDING)) {
+    const int64_t file_size = impl_->file.GetSizeSimple();
+    if (file_size >= 0 && file_size % impl_->block_size_ != 0) {
+      status |= impl_->file.Truncate(AlignNumber(file_size, impl_->block_size_));
+    }
+  }
+  status |= impl_->file.Close();
+  return status;
 }
 
 Status PositionalParallelFile::Read(int64_t off, void* buf, size_t size) {
@@ -135,6 +145,7 @@ bool PositionalParallelFile::IsDirectIO() const {
 class PositionalAtomicFileImpl final {
  public:
   StdFile file;
+  bool writable_ = false;
   int64_t block_size_ = 1;
   int32_t access_options_ = 0;
 };
@@ -149,11 +160,20 @@ PositionalAtomicFile::~PositionalAtomicFile() {
 
 Status PositionalAtomicFile::Open(
     const std::string& path, bool writable, int32_t options) {
+  impl_->writable_ = writable;
   return impl_->file.Open(path, writable, options);
 }
 
 Status PositionalAtomicFile::Close() {
-  return impl_->file.Close();
+  Status status(Status::SUCCESS);
+  if (impl_->writable_ && impl_->block_size_ > 1 && (impl_->access_options_ & ACCESS_PADDING)) {
+    const int64_t file_size = impl_->file.GetSizeSimple();
+    if (file_size >= 0 && file_size % impl_->block_size_ != 0) {
+      status |= impl_->file.Truncate(AlignNumber(file_size, impl_->block_size_));
+    }
+  }
+  status |= impl_->file.Close();
+  return status;
 }
 
 Status PositionalAtomicFile::Read(int64_t off, void* buf, size_t size) {
