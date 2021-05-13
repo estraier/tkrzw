@@ -161,8 +161,9 @@ Status StdFileImpl::Truncate(int64_t size) {
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::filesystem::resize_file(old_path, size);
-  return OpenImpl(old_path, true, options);
+  status |= TruncateFile(old_path, size);
+  status |= OpenImpl(old_path, true, options);
+  return status;
 }
 
 Status StdFileImpl::TruncateFakely(int64_t size) {
@@ -336,7 +337,7 @@ Status StdFileImpl::CloseImpl() {
     status |= Status(Status::SYSTEM_ERROR, "close failed");
   }
   if (writable_ && !path_.empty() && PathIsFile(path_)) {
-    std::filesystem::resize_file(path_, file_size_);
+    status |= TruncateFile(path_, file_size_);
   }
   file_.reset(nullptr);
   path_.clear();
