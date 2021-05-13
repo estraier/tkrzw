@@ -191,7 +191,7 @@ Status PositionalParallelFileImpl::Close() {
     }
     int64_t trunc_size = file_size_.load();
     trunc_size = AlignNumber(trunc_size, block_size_);
-    status |= TruncateFile(file_handle_, file_size_.load());
+    status |= TruncateFile(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
   }
@@ -802,7 +802,7 @@ Status PositionalAtomicFileImpl::Close() {
     }
     int64_t trunc_size = file_size_;
     trunc_size = AlignNumber(trunc_size, block_size_);
-    status |= TruncateFile(file_handle_, file_size_);
+    status |= TruncateFile(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_ != trunc_size;
   }
