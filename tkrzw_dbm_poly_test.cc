@@ -53,6 +53,9 @@ TEST_F(PolyDBMTest, BasicTest) {
     {"HashDBM", "casket.tkh",
      {{"file", "mmap-atom"}, {"update_mode", "update_appending"}, {"offset_width", "3"},
       {"align_pow", "1"}, {"num_buckets", "50"}, {"lock_mem_buckets", "true"}}, {}, {}},
+    {"HashDBM", "casket.tkh",
+     {{"file", "pos-para"}, {"block_size", "512"}, {"access_options", "direct:padding"},
+      {"num_buckets", "100"}, {"cache_buckets", "true"}}, {}, {}},
     {"TreeDBM", "casket",
      {{"dbm", "tree"}, {"file", "pos-para"}, {"key_comparator", "decimal"}},
      {}, {{"max_page_size", "512"}}},
@@ -167,8 +170,9 @@ TEST_F(PolyDBMTest, BasicTest) {
       EXPECT_TRUE(dbm.IsHealthy());
       EXPECT_EQ(40, dbm.CountSimple());
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
-      if (config.class_name == "HashDBM" || config.class_name == "TreeDBM" ||
-          config.class_name == "SkipDBM") {
+      if ((config.class_name == "HashDBM" || config.class_name == "TreeDBM" ||
+           config.class_name == "SkipDBM") &&
+          !tkrzw::CheckMap(config.open_params, "block_size")) {
         const std::string restore_path = tmp_dir.MakeUniquePath("restore-", config.path);
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::PolyDBM::RestoreDatabase(
             path, restore_path, config.class_name, -1));

@@ -251,10 +251,6 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     if (file_size_ > actual_file_size) {
       healthy = false;
     } else {
-      std::cout << "RECOVER: est=" << file_size_ << " act=" << actual_file_size
-                << " w=" << writable
-                << std::endl;
-
       const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
       char* buf = new char[remainder];
       status = file_->Read(file_size_, buf, remainder);
@@ -993,15 +989,6 @@ Status SkipDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
   if (pos_file != nullptr && pos_file->IsDirectIO()) {
     const int64_t file_size = tkrzw::GetFileSize(path);
     const int64_t block_size = pos_file->GetBlockSize();
-
-    // TODO: Delete me
-    std::cout << "DIRECT: fs=" << file_size
-              << " bs=" << block_size
-              << " rem=" << (file_size % block_size)
-              << " w=" << writable
-              << " t=" << (!writable && file_size > 0 && file_size % block_size != 0)
-              << std::endl;
-
     if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
       return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
     }
@@ -1023,12 +1010,6 @@ Status SkipDBMImpl::PadFileForDirectIO() {
   if (size_rem == 0) {
     return Status::SUCCESS;
   }
-
-  // TODO: Delete me
-  std::cout << "PAD: fs=" << file_size
-            << " bs=" << block_size
-            << " rem=" << size_rem << std::endl;
-
   return Status::SUCCESS;
 }
 

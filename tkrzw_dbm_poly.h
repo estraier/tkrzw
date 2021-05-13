@@ -311,7 +311,7 @@ class PolyDBM final : public ParamDBM {
    * parameters are supported.
    *   - block_size (int): The block size to which all blocks should be aligned.
    *   - access_options (str): Values separated by colon.  "direct" for direct I/O.  "sync" for
-   *     synchrnizing I/O.
+   *     synchrnizing I/O, "padding" for file size alignment by padding.
    */
   Status OpenAdvanced(const std::string& path, bool writable,
                       int32_t options = File::OPEN_DEFAULT,
