@@ -3691,11 +3691,11 @@ dbm.Open("casket.tkh", true);
 
 <h3 id="tips_direct_io">Direct I/O</h3>
 
-<p>Linux and Windows support direct I/O, whereby input and output from/to the storage device are done without using the cache of the underlying file system.  Direct I/O is enabled when a file is opened with O_DIRECT flag on Linux and FILE_FLAG_NO_BUFFERING flag on Windows.  In that case, I/O operations with the file must be in the block I/O style, where every data sequence is aligned by at least 512-byte block.  Let's say, you want to update just one byte of a file, you must read one block of 512 bytes from the device and make a buffer.  Then, you update the one byte and write back the buffer to the device.</p>
+<p>Linux and Windows support direct I/O, whereby input and output from/to the storage device are done without using the cache of the underlying file system.  Direct I/O is enabled when a file is opened with O_DIRECT flag on Linux and FILE_FLAG_NO_BUFFERING flag on Windows.  In that case, I/O operations with the file must be in the block I/O style, where every data sequence is aligned by at least 512-byte block.  Let's say, you want to update just one byte of a file, you must read one block of 512 bytes from the device to a buffer.  Then, you update the one byte and write back the buffer to the device.</p>
 
 <p>Usually, such cumbersome jobs are done by the file system, which uses so-called "page cache" mechanism.  Multiple operations against the same page of 4096 bytes are reflected on a cached buffer, which is written back to the storage device periodically.  Using page cache is effective to improve performance in most cases.  However, page cache uses memory.  If your file is larger than the available memory size and there's no locality in your access pattern, the cache hit rate is low, which just wastes memory space and CPU time.  In that case, using direct I/O to suppress page caching is useful.  Though each operation of direct I/O is much slower than cahced I/O in normal situations, it is the best practice for managing huge databases.</p>
 
-<p>You should condier using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
+<p>You should consider using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
 
 <p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile.  You call SetAccessStrategy method to set the block size 512 and enable ACCESS_DIRECT option.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
 
@@ -3721,7 +3721,7 @@ tuning_params.cache_buckets = true;
 dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You'll write code like the following.</p>
+<p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You should enable "cache_buckets" for performance.  Therefore, you'll write code like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
 file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
@@ -3731,6 +3731,9 @@ TreeDBM::TuningParameters tuning_params;
 tuning_params.cache_buckets = true;
 dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
+
+<p>You don't have to tune the block size 512 for tuning purposes.  If the underlying device driver accepts 512-byte alignment, it's OK.  Meanwhile, you should tune the "align_pow" for performance.  If you use TreeDBM, tuning "max_page_size" is also important.</p>
+
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 
