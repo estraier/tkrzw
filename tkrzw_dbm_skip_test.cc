@@ -685,7 +685,6 @@ void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
   tkrzw::SkipDBM::TuningParameters tuning_params;
   tuning_params.step_unit = 2;
   tuning_params.max_level = 5;
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   for (int32_t i = 1; i <= 100; i++) {

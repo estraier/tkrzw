@@ -119,7 +119,6 @@ class HashDBMImpl final {
   Status LoadMetadata();
   void SetRecordBase();
   Status CheckFileBeforeOpen(File* file, const std::string& path, bool writable);
-  Status PadFileForDirectIO();
   Status TuneFileAfterOpen();
   Status InitializeBuckets();
   Status SaveFBP();
@@ -251,9 +250,6 @@ Status HashDBMImpl::Close() {
   }
   CancelIterators();
   Status status(Status::SUCCESS);
-  if (writable_) {
-    status |= PadFileForDirectIO();
-  }
   status |= CloseImpl();
   status |= file_->Close();
   path_.clear();
@@ -601,9 +597,9 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   if (!healthy_) {
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
-  Status status = PadFileForDirectIO();
   file_size_ = file_->GetSizeSimple();
   mod_time_ = GetWallTime() * 1000000;
+  Status status(Status::SUCCESS);
   status |= SaveMetadata(true);
   status |= file_->Synchronize(hard);
   if (proc != nullptr) {
@@ -1240,29 +1236,6 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
     }
   }
   return Status(Status::SUCCESS);;
-}
-
-Status HashDBMImpl::PadFileForDirectIO() {
-  auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
-  if (pos_file == nullptr || !pos_file->IsDirectIO()) {
-    return Status::SUCCESS;
-  }
-  const int64_t file_size = file_->GetSizeSimple();
-  const int64_t block_size = pos_file->GetBlockSize();
-  const int64_t size_rem = file_size % block_size;
-  if (size_rem == 0) {
-    return Status::SUCCESS;
-  }
-  HashRecord rec(file_.get(), offset_width_, align_pow_);
-  int64_t ideal_whole_size = block_size - size_rem;
-  while (true) {
-    rec.SetData(HashRecord::OP_VOID, ideal_whole_size, "", 0, "", 0, 0);
-    if (rec.GetWholeSize() == ideal_whole_size) {
-      break;
-    }
-    ideal_whole_size += block_size;
-  }
-  return rec.Write(file_size, nullptr);;
 }
 
 Status HashDBMImpl::TuneFileAfterOpen() {

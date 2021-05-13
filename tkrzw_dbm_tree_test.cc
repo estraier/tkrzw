@@ -946,8 +946,8 @@ TEST_F(TreeDBMTest, Restore) {
 
 TEST_F(TreeDBMTest, DirectIO) {
   auto file = std::make_unique<tkrzw::PositionalParallelFile>();
-  EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAccessStrategy(
+      512, tkrzw::PositionalFile::ACCESS_DIRECT | tkrzw::PositionalFile::ACCESS_PADDING));
   tkrzw::TreeDBM dbm(std::move(file));
   TreeDBMDirectIOTest(&dbm);
 }

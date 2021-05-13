@@ -3697,7 +3697,7 @@ dbm.Open("casket.tkh", true);
 
 <p>You should condier using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
 
-<p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile and set the block size 512.  You also set direct I/O enabled by the option of the SetAccessStrategy method.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
+<p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile.  You call SetAccessStrategy method to set the block size 512 and enable ACCESS_DIRECT option.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
 file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
@@ -3709,7 +3709,28 @@ tuning_params.cache_buckets = true;
 dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is good.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  For TreeDBM, the default value 10 is usually suitable.</p>
+<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is reasonable.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  Moreover, adding ACCESS_PADDING to ACCESS_DIRECT is necessary to make the file size aligned to the block size.  Thefore, for small records, you'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalAtomicFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT | PositionalFile::ACCESS_PADDING);
+HashDBM dbm(std::move(file));
+
+HashDBM::TuningParameters tuning_params;
+tuning_params.align_pow = 8;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
+
+<p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+TreeDBM dbm(std::move(file));
+
+TreeDBM::TuningParameters tuning_params;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 

@@ -1181,8 +1181,8 @@ TEST_F(HashDBMTest, Restore) {
 
 TEST_F(HashDBMTest, DirectIO) {
   auto file = std::make_unique<tkrzw::PositionalParallelFile>();
-  EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAccessStrategy(
+      512, tkrzw::PositionalFile::ACCESS_DIRECT | tkrzw::PositionalFile::ACCESS_PADDING));
   tkrzw::HashDBM dbm(std::move(file));
   HashDBMDirectIOTest(&dbm);
 }

@@ -4,6 +4,10 @@
 	- Library version: 1.6.0
 
 	- Support direct I/O on SkipDBM.
+	- Add PositionalFile::ACCESS_PADDING which aligns the file size for direct I/O.
+	- Add logic to open database files which has padding bytes at the end of the file.
+	- Abolish using std::filesystem package to support GCC 7 or earlier.
+	- Omit test cases by default to support systems which don't support direct I/O.
 
 2021-04-11  Mikio Hirabayashi  <hirarin@gmail.com>
 
@@ -12,9 +16,7 @@
 
 	- Add features to do direct IO on Linux.
 	- Positional access file classes support block IO and head caching.
-
 	- Fix a bug in tkrzw_file_test_common.h where Synchronize shouldn't be called.
-
 	- Rebuild method keeps space allocation strategy and other properties of the file.
 
 2021-04-06  Mikio Hirabayashi  <hirarin@gmail.com>
