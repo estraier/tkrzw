@@ -53,6 +53,14 @@ static void PrintUsageAndDie() {
     " mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
   P("  --no_wait : Fails if the file is locked by another process.\n");
   P("  --no_lock : Omits file locking.\n");
+  P("  --alloc_init num : The initial allocation size. (default: %lld)\n",
+    File::DEFAULT_ALLOC_INIT_SIZE);
+  P("  --alloc_inc num : The allocation increment factor. (default: %.1f)\n",
+    File::DEFAULT_ALLOC_INC_FACTOR);
+  P("  --block_size num : The block size of the positional access file. (default: 1)\n");
+  P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
+  P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
+  P("  --padding : Enables padding at the end of the file.\n");
   P("\n");
   P("Options for the create subcommand:\n");
   P("  --truncate : Truncates an existing database file.\n");
@@ -157,16 +165,13 @@ std::string GetDBMImplName(const std::string& dbm_impl, const std::string& file_
 // Makes a DBM object or die.
 std::unique_ptr<DBM> MakeDBMOrDie(
     const std::string& dbm_impl, const std::string& file_impl,
-    const std::string& file_path) {
+    const std::string& file_path, int32_t alloc_init_size, double alloc_increment,
+    int64_t block_size, bool is_direct_io, bool is_sync_io, bool is_padding) {
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  auto file = MakeFileOrDie(file_impl, 0, 0);
-
-  // TODO: modify me.
-  //SetAccessStrategyOrDie(file.get(), 512, true, false);
-
-
+  auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
+  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io, is_padding);
   const std::string dbm_impl_mod = GetDBMImplName(dbm_impl, file_path);
   std::unique_ptr<DBM> dbm;
   if (dbm_impl_mod == "hash") {
@@ -306,7 +311,6 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
   }
   if (typeid(*dbm) == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
-    int32_t open_options = File::OPEN_DEFAULT;
     tkrzw::SkipDBM::TuningParameters tuning_params;
     tuning_params.offset_width = offset_width;
     tuning_params.step_unit = step_unit;
@@ -427,6 +431,8 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
 static int32_t ProcessCreate(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--in_place", 0}, {"--append", 0},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--comparator", 1},
@@ -444,6 +450,12 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_in_place = CheckMap(cmd_args, "--in_place");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
@@ -459,7 +471,9 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, true, true, with_truncate, with_no_wait, with_no_lock,
                is_in_place, is_append, offset_width, align_pow, num_buckets,
                max_page_size, max_branches, cmp_name,
@@ -477,6 +491,8 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
 static int32_t ProcessInspect(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -489,10 +505,18 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm = MakeDBMOrDie(
+      dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+      block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -517,6 +541,8 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
 static int32_t ProcessGet(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -530,10 +556,18 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -560,6 +594,8 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
 static int32_t ProcessSet(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 3}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--no_overwrite", 0}, {"--reducer", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -575,12 +611,20 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -614,6 +658,8 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
 static int32_t ProcessRemove(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -627,10 +673,18 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -655,6 +709,8 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
 static int32_t ProcessList(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--jump", 1}, {"--items", 1}, {"--escape", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -669,13 +725,21 @@ static int32_t ProcessList(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const std::string jump_pattern = GetStringArgument(cmd_args, "--jump", 0, "");
   const int64_t num_items = GetIntegerArgument(cmd_args, "--items", 0, INT64MAX);
   const bool with_escape = CheckMap(cmd_args, "--escape");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -748,6 +812,8 @@ static int32_t ProcessList(int32_t argc, const char** args) {
 static int32_t ProcessRebuild(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--in_place", 0}, {"--append", 0},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--max_page_size", 1}, {"--max_branches", 1},
@@ -765,6 +831,12 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_in_place = CheckMap(cmd_args, "--in_place");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
@@ -779,7 +851,9 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                max_page_size, max_branches, "",
@@ -868,6 +942,8 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
 static int32_t ProcessMerge(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--reducer", 1},
     {"--params", 1},
   };
@@ -882,6 +958,12 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (dest_path.empty()) {
@@ -895,7 +977,9 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
     }
     src_paths.emplace_back(src_path);
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, dest_path);
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, dest_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), dest_path, true, true, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -954,6 +1038,8 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
 static int32_t ProcessExport(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--tsv", 0}, {"--escape", 0}, {"--keys", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -968,6 +1054,12 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const bool keys_only = CheckMap(cmd_args, "--keys");
@@ -990,7 +1082,9 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     EPrintL("The record file is not empty");
     return 1;
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm = MakeDBMOrDie(
+      dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+      block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",
@@ -1043,6 +1137,8 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
 static int32_t ProcessImport(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--params", 1},
     {"--tsv", 0}, {"--escape", 0},
@@ -1059,6 +1155,12 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const int64_t sort_mem_size = GetIntegerArgument(cmd_args, "--sort_mem_size", 0, -1);
   const bool insert_in_order = CheckMap(cmd_args, "--insert_in_order");
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
@@ -1079,7 +1181,9 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     EPrintL("Open failed: ", status);
     return 1;
   }
-  std::unique_ptr<DBM> dbm = MakeDBMOrDie(dbm_impl, file_impl, file_path);
+  std::unique_ptr<DBM> dbm = MakeDBMOrDie(
+      dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+      block_size, is_direct_io, is_sync_io, is_padding);
   if (!OpenDBM(dbm.get(), file_path, true, true, false, with_no_wait, with_no_lock,
                false, false, -1, -1, -1,
                -1, -1, "",

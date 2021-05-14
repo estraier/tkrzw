@@ -251,8 +251,10 @@ std::unique_ptr<File> MakeFileOrDie(
  * @param block_size The block size to which all records should be aligned.
  * @param is_direct_io If true, the direct I/O access option is set.
  * @param is_sync_io If true, the synchronous I/O access option is set.
+ * @param is_padding If true, the padding access option is set.
  */
-void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct_io, bool is_sync_io);
+void SetAccessStrategyOrDie(File* file, int64_t block_size,
+                            bool is_direct_io, bool is_sync_io, bool is_padding);
 
 /**
  * Locks the memory of the beginning region or die.

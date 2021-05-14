@@ -43,6 +43,7 @@ static void PrintUsageAndDie() {
   P("  --head_buffer num : The head buffer size of the positional access file. (default: 0)\n");
   P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
   P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
+  P("  --padding : Enables padding at the end of the file.\n");  
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random : Uses random offsets rather than pre-defined ones.\n");
@@ -58,7 +59,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
-    {"--block_size", 1}, {"--head_buffer", 1}, {"--direct_io", 0}, {"--sync_io", 0},
+    {"--block_size", 1}, {"--head_buffer", 1},
+    {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--random", 0}, {"--append", 0}, {"--write_only", 0}, {"--read_only", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -81,12 +83,13 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer", 0, 0);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_random = CheckMap(cmd_args, "--random");
   const bool is_append = CheckMap(cmd_args, "--append");
   const bool is_write_only = CheckMap(cmd_args, "--write_only");
   const bool is_read_only = CheckMap(cmd_args, "--read_only");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
-  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io);
+  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io, is_padding);
   if (path.empty()) {
     Die("The file path must be specified");
   }
@@ -253,7 +256,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
-    {"--block_size", 1}, {"--head_buffer", 1}, {"--direct_io", 0}, {"--sync_io", 0},
+    {"--block_size", 1}, {"--head_buffer", 1},
+    {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -275,8 +279,9 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer", 0, 0);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
-  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io);
+  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io, is_padding);
   if (path.empty()) {
     Die("The file path must be specified");
   }

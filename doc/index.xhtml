@@ -2576,6 +2576,12 @@ int main(int argc, char** argv) {
 <dd><code>--file <var>impl</var></code> : The name of a file implementation: std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)</dd>
 <dd><code>--no_wait</code> : Fails if the file is locked by another process.</dd>
 <dd><code>--no_lock</code> : Omits file locking.</dd>
+<dd><code>--alloc_init <var>num</var></code> : The initial allocation size. (default: 1048576)</dd>
+<dd><code>--alloc_inc <var>num</var></code> : The allocation increment factor. (default: 2.0)</dd>
+<dd><code>--block_size <var>num</var></code> : The block size of the positional access file. (default: 1)</dd>
+<dd><code>--direct_io</code> : Enables the direct I/O option of the positional access file.</dd>
+<dd><code>--sync_io</code> : Enables the synchronous I/O option of the positional access file.</dd>
+<dd><code>--padding</code> : Enables padding at the end of the file.</dd>
 <dt>Options for the create subcommand:</dt>
 <dd><code>--truncate</code> : Truncates an existing database file.</dd>
 <dt>Options for the set subcommand:</dt>
@@ -2679,6 +2685,7 @@ applet  A small application.
 <dd><code>--block_size <var>num</var></code> : The block size of the positional access file. (default: 1)</dd>
 <dd><code>--direct_io</code> : Enables the direct I/O option of the positional access file.</dd>
 <dd><code>--sync_io</code> : Enables the synchronous I/O option of the positional access file.</dd>
+<dd><code>--padding</code> : Enables padding at the end of the file.</dd>
 <dt>Options for the sequence subcommand:</dt>
 <dd><code>--random_key</code> : Uses random keys rather than sequential ones.</dd>
 <dd><code>--random_value</code> : Uses random length values rather than fixed ones.</dd>

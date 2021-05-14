@@ -211,7 +211,7 @@ check-file-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file pos-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-para \
-	  --iter 5000 --threads 4 --size 512 --block_size 512 $(FILEPERFDIRECTIOFLAGS) casket
+	  --iter 5000 --threads 4 --size 512 --block_size 512 $(FILEPERFDIRECTIOFLAGS) --padding casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-para \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-para \
@@ -227,7 +227,7 @@ check-file-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf wicked --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-atom \
-	  --iter 5000 --threads 4 --size 512 --block_size 512 $(FILEPERFDIRECTIOFLAGS) casket
+	  --iter 5000 --threads 4 --size 512 --block_size 512 $(FILEPERFDIRECTIOFLAGS) --padding casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-atom \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_perf sequence --file pos-atom \
@@ -264,10 +264,10 @@ check-hashdbm-perf :
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFMEMLOCKFLAGS) \
 	  --append --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file pos-para --path casket.tkh \
-	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
 	  --iter 5000 --threads 1 --size 100 --buckets 100000 --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file pos-atom --path casket.tkh \
-	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
 	  --iter 5000 --threads 2 --size 100 --buckets 100000 --iterator --clear --rebuild
 
 check-hashdbm-util :
@@ -297,6 +297,24 @@ check-hashdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm hash casket-new.tkh casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm hash --file pos-para \
+	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
+	  --truncate casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm hash --file pos-para \
+	  --no_wait --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding \
+	  casket.tkh tokyo shinjuku
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm hash --file pos-para \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm hash --file pos-para \
+	  --block_size 8192 --padding casket.tkh saitama tokorozawa
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm hash --file pos-para \
+	  --block_size 8192 --padding casket.tkh kanagawa yokohama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash --file pos-para \
+	  --block_size 8192 --padding casket.tkh saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util remove --dbm hash --file pos-para \
+	  --block_size 8192 --padding casket.tkh saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm hash --file pos-para \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkh
 
 check-treedbm-perf :
 	rm -Rf casket*
@@ -333,11 +351,11 @@ check-treedbm-perf :
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --append --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm tree --file pos-para --path casket.tkt \
-	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
 	  --iter 80000 --threads 1 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm tree --file pos-para --path casket.tkt \
-	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --align_pow 9 \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --iterator --clear --rebuild
 
@@ -368,6 +386,24 @@ check-treedbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm tree casket-new.tkt casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm tree --file pos-atom \
+	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
+	  --truncate casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm tree --file pos-atom \
+	  --no_wait --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding \
+	  casket.tkt tokyo shinjuku
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm tree --file pos-atom \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm tree --file pos-atom \
+	  --block_size 8192 --padding casket.tkt saitama tokorozawa
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm tree --file pos-atom \
+	  --block_size 8192 --padding casket.tkt kanagawa yokohama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree --file pos-atom \
+	  --block_size 8192 --padding casket.tkt saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util remove --dbm tree --file pos-atom \
+	  --block_size 8192 --padding casket.tkt saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm tree --file pos-atom \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkt
 
 check-skipdbm-perf :
 	rm -Rf casket*
@@ -409,6 +445,24 @@ check-skipdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm skip --reducer last casket-new.tks casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm skip --file pos-atom \
+	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
+	  --truncate casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm skip --file pos-atom \
+	  --no_wait --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding \
+	  casket.tks tokyo shinjuku
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm skip --file pos-atom \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm skip --file pos-atom \
+	  --block_size 8192 --padding casket.tks saitama tokorozawa
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm skip --file pos-atom \
+	  --block_size 8192 --padding casket.tks kanagawa yokohama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip --file pos-atom \
+	  --block_size 8192 --padding casket.tks saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util remove --dbm skip --file pos-atom \
+	  --block_size 8192 --padding casket.tks saitama
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm skip --file pos-atom \
+	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tks
 
 check-tinydbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm tiny \

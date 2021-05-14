@@ -52,6 +52,7 @@ static void PrintUsageAndDie() {
   P("  --block_size num : The block size of the positional access file. (default: 1)\n");
   P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
   P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
+  P("  --padding : Enables padding at the end of the file.\n");
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -144,7 +145,7 @@ static void PrintUsageAndDie() {
 std::unique_ptr<DBM> MakeDBMOrDie(
     const std::string& dbm_impl, const std::string& file_impl,
     const std::string& file_path, int32_t alloc_init_size, double alloc_increment,
-    int64_t block_size, bool is_direct_io, bool is_sync_io,
+    int64_t block_size, bool is_direct_io, bool is_sync_io, bool is_padding,
     int64_t num_buckets, int64_t cap_rec_num, int64_t cap_mem_size) {
   std::string dbm_impl_mod = dbm_impl;
   if (dbm_impl == "auto") {
@@ -170,7 +171,7 @@ std::unique_ptr<DBM> MakeDBMOrDie(
     }
   }
   auto file = MakeFileOrDie(file_impl, alloc_init_size, alloc_increment);
-  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io);
+  SetAccessStrategyOrDie(file.get(), block_size, is_direct_io, is_sync_io, is_padding);
   std::unique_ptr<DBM> dbm;
   if (dbm_impl_mod == "hash") {
     if (file_path.empty()) {
@@ -474,7 +475,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
-    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
@@ -507,6 +508,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
@@ -538,7 +540,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
-                   block_size, is_direct_io, is_sync_io,
+                   block_size, is_direct_io, is_sync_io, is_padding,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
@@ -746,7 +748,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1}, {"--rebuild", 0}, {"--sleep", 1},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
-    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
@@ -779,6 +781,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
@@ -810,7 +813,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
-                   block_size, is_direct_io, is_sync_io,
+                   block_size, is_direct_io, is_sync_io, is_padding,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
@@ -934,7 +937,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
-    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0},
+    {"--block_size", 1}, {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
@@ -966,6 +969,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_append = CheckMap(cmd_args, "--append");
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
@@ -997,7 +1001,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
-                   block_size, is_direct_io, is_sync_io,
+                   block_size, is_direct_io, is_sync_io, is_padding,
                    num_buckets, cap_rec_num, cap_mem_size);
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);

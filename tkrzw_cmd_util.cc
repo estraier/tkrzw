@@ -262,7 +262,8 @@ std::unique_ptr<File> MakeFileOrDie(
   return file;
 }
 
-void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct_io, bool is_sync_io) {
+void SetAccessStrategyOrDie(File* file, int64_t block_size,
+                            bool is_direct_io, bool is_sync_io, bool is_padding) {
   auto* pos_file = dynamic_cast<PositionalFile*>(file);;
   if (pos_file != nullptr) {
     int32_t options = PositionalFile::ACCESS_DEFAULT;
@@ -271,6 +272,9 @@ void SetAccessStrategyOrDie(File* file, int64_t block_size, bool is_direct_io, b
     }
     if (is_sync_io) {
       options |= PositionalFile::ACCESS_SYNC;
+    }
+    if (is_padding) {
+      options |= PositionalFile::ACCESS_PADDING;
     }
     pos_file->SetAccessStrategy(block_size, options).OrDie();
   }
