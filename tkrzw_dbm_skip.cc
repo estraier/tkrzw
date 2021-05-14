@@ -1500,7 +1500,7 @@ void SkipDBMIteratorImpl::ClearPosition() {
   record_size_ = 0;
 }
 
-const std::string SkipDBM::REMOVING_VALUE("\x00\xDE\xAD\x02\x11", 5);
+const std::string SkipDBM::REMOVING_VALUE("\xDE\xAD\x00\x19\x78\x02\x11", 7);
 
 SkipDBM::SkipDBM() {
   impl_ = new SkipDBMImpl(std::make_unique<MemoryMapParallelFile>());
