@@ -1,4 +1,4 @@
-2021-04-14  Mikio Hirabayashi  <hirarin@gmail.com>
+2021-05-14  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.17
 	- Library version: 1.7.0
@@ -6,7 +6,7 @@
 	- PolyDBM supports padding option for direct I/O.
 	- Remove debug messages inside the library.
 
-2021-04-12  Mikio Hirabayashi  <hirarin@gmail.com>
+2021-05-12  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.16
 	- Library version: 1.6.0
@@ -18,7 +18,7 @@
 	- Abolish using std::filesystem package to support GCC 7 or earlier.
 	- Omit test cases by default to support systems which don't support direct I/O.
 
-2021-04-11  Mikio Hirabayashi  <hirarin@gmail.com>
+2021-05-11  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.15
 	- Library version: 1.5.0
@@ -28,7 +28,7 @@
 	- Fix a bug in tkrzw_file_test_common.h where Synchronize shouldn't be called.
 	- Rebuild method keeps space allocation strategy and other properties of the file.
 
-2021-04-06  Mikio Hirabayashi  <hirarin@gmail.com>
+2021-05-06  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.14
 	- Library version: 1.4.0
