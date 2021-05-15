@@ -25,6 +25,7 @@
 #include <cstring>
 
 #include "tkrzw_lib_common.h"
+#include "tkrzw_thread_util.h"
 
 namespace tkrzw {
 
@@ -863,7 +864,7 @@ class AtomicSet final {
  private:
   std::set<VALUETYPE> set_;
   std::atomic_bool empty_;
-  std::mutex mutex_;
+  SpinLock mutex_;
 };
 
 /**
@@ -1653,27 +1654,27 @@ inline AtomicSet<VALUETYPE>::AtomicSet() : set_(), empty_(true), mutex_() {}
 
 template <typename VALUETYPE>
 bool AtomicSet<VALUETYPE>::Check(const VALUETYPE& data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   return set_.find(data) != set_.end();
 }
 
 template <typename VALUETYPE>
 inline bool AtomicSet<VALUETYPE>::Insert(const VALUETYPE& data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   empty_.store(false);
   return set_.emplace(data).second;
 }
 
 template <typename VALUETYPE>
 inline bool AtomicSet<VALUETYPE>::Insert(VALUETYPE&& data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   empty_.store(false);
   return set_.emplace(data).second;
 }
 
 template <typename VALUETYPE>
 bool AtomicSet<VALUETYPE>::Remove(const VALUETYPE& data) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   if (set_.erase(data) == 0) {
     return false;
   }
@@ -1690,7 +1691,7 @@ inline bool AtomicSet<VALUETYPE>::IsEmpty() const {
 
 template <typename VALUETYPE>
 inline VALUETYPE AtomicSet<VALUETYPE>::Pop() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   if (set_.empty()) {
     return VALUETYPE();
   }
@@ -1705,7 +1706,7 @@ inline VALUETYPE AtomicSet<VALUETYPE>::Pop() {
 
 template <typename VALUETYPE>
 inline void AtomicSet<VALUETYPE>::Clear() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinLock> lock(mutex_);
   set_.clear();
   empty_.store(true);
 }
