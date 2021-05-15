@@ -4,6 +4,7 @@
 	- Library version: 1.7.0
 
 	- PolyDBM supports padding option for direct I/O.
+	- SkipDBM keeps file properties across Synchronize and Rebuild.
 	- Remove debug messages inside the library.
 
 2021-05-12  Mikio Hirabayashi  <hirarin@gmail.com>
