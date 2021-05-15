@@ -43,7 +43,7 @@ static void PrintUsageAndDie() {
   P("  --head_buffer num : The head buffer size of the positional access file. (default: 0)\n");
   P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
   P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
-  P("  --padding : Enables padding at the end of the file.\n");  
+  P("  --padding : Enables padding at the end of the file.\n");
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random : Uses random offsets rather than pre-defined ones.\n");

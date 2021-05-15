@@ -667,6 +667,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   }
   CancelIterators();
   auto rebuild_file = file_->MakeFile();
+  file_->CopyProperties(rebuild_file.get());
   status = rebuild_file->Open(rebuild_path, true);
   if (status != Status::SUCCESS) {
     CleanUp();
@@ -690,7 +691,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   status |= PrepareStorage();
   cache_ = std::make_unique<SkipRecordCache>(
       file_.get(), offset_width_, step_unit_, max_level_, max_cached_records_, num_records_);
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 Status SkipDBMImpl::ShouldBeRebuilt(bool* tobe) {
@@ -1062,6 +1063,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
       }
       swap_file = std::move(file_);
       file_ = swap_file->MakeFile();
+      swap_file->CopyProperties(file_.get());
       status = file_->Open(path_, true, File::OPEN_TRUNCATE);
       if (status != Status::SUCCESS) {
         swap_file->Rename(path_);
