@@ -36,6 +36,33 @@ TEST(ThreadUtilTest, GetWallTimeAndSleep) {
   EXPECT_GT(end_time, start_time);
 }
 
+TEST(ThreadUtilTest, SpinLock) {
+  constexpr int32_t num_threads = 5;
+  constexpr int32_t num_iterations = 500000;
+  tkrzw::SpinLock mutex;
+  int64_t count = 0;
+  auto func = [&]() {
+                for (int32_t i = 0; i < num_iterations; i++) {
+                  mutex.lock();
+                  volatile int64_t my_count = count;
+                  my_count += 1;
+                  if (i % 100 == 0) {
+                    std::this_thread::yield();
+                  }
+                  count = my_count;
+                  mutex.unlock();
+                }
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(func));
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(num_threads * num_iterations, count);
+}
+
 TEST(ThreadUtilTest, SlottedMutex) {
   constexpr int32_t num_threads = 5;
   constexpr int32_t num_iterations = 20000;

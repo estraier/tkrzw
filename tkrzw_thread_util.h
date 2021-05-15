@@ -39,6 +39,37 @@ double GetWallTime();
 void Sleep(double sec);
 
 /**
+ * Spin lock mutex.
+ */
+class SpinLock final {
+ public:
+  /**
+   * Constructor.
+   */
+  SpinLock() : lock_(ATOMIC_FLAG_INIT) {}
+      
+  /**
+   * Gets exclusive ownership of the lock.
+   */
+  void lock() {
+    while (lock_.test_and_set(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+  }
+
+  /**
+   * Releases exclusive ownership of the lock.
+   */
+  void unlock() {
+    lock_.clear(std::memory_order_release);
+  }
+
+ private:
+  /** Atomic flat of locked state. */
+  std::atomic_flag lock_;
+};
+
+/**
  * Slotted shared mutex.
  */
 class SlottedMutex final {
