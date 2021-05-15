@@ -47,7 +47,7 @@ class SpinLock final {
    * Constructor.
    */
   SpinLock() : lock_(ATOMIC_FLAG_INIT) {}
-      
+
   /**
    * Gets exclusive ownership of the lock.
    */

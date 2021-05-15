@@ -353,7 +353,7 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetOpaqueMetadata("0123456789"));
   EXPECT_FALSE(dbm->IsUpdated());
   int64_t eff_data_size = 0;
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::ToString(i * i);
     const std::string value = tkrzw::ToString(i);
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
@@ -366,7 +366,7 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
   EXPECT_TRUE(dbm->IsHealthy());
   EXPECT_FALSE(dbm->IsUpdated());
   EXPECT_EQ(num_records, dbm->CountSimple());
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d", i);
     const std::string value = tkrzw::ToString(i) + ":first";
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
@@ -382,7 +382,7 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
   tuning_params.insert_in_order = false;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d", i);
     const std::string value = tkrzw::ToString(i) + ":second";
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
@@ -398,25 +398,25 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(eff_data_size, dbm->GetEffectiveDataSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ShouldBeRebuilt(&tobe));
   EXPECT_FALSE(tobe);
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%d", i * i);
     const std::string value = tkrzw::ToString(i);
     EXPECT_EQ(value, dbm->GetSimple(key));
   }
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d", i);
     const std::string value = tkrzw::ToString(i) + ":third";
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
     eff_data_size += key.size() + value.size();
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d", i);
     const std::string value = tkrzw::ToString(i) + ":first";
     EXPECT_EQ(value, dbm->GetSimple(key));
   }
   auto iter = dbm->MakeIterator();
-  for (int i = 0; i < num_records; i++) {
+  for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d", i);
     EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Jump(key));
     int32_t iter_count = 0;

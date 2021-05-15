@@ -1055,7 +1055,7 @@ Status HashDBMImpl::OpenImpl(bool writable) {
         return status;
       }
       bool only_zeros = true;
-      for (int i = 0; i < remainder; i++) {
+      for (int32_t i = 0; i < remainder; i++) {
         if (buf[i] != 0) {
           only_zeros = false;
         }
