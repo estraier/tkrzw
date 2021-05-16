@@ -132,13 +132,19 @@ check-file-perf :
 	tkrzw_file_perf.exe wicked --file pos-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file pos-para \
-	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io --padding casket
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io \
+	  --padding casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io \
+	  --pagecache --padding casket
 	tkrzw_file_perf.exe sequence --file pos-para \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
 	tkrzw_file_perf.exe sequence --file pos-para \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --append casket
 	tkrzw_file_perf.exe wicked --file pos-para \
 	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer 8192 casket
+	tkrzw_file_perf.exe wicked --file pos-para \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --pagecache --head_buffer 8192 casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
@@ -148,13 +154,19 @@ check-file-perf :
 	tkrzw_file_perf.exe wicked --file pos-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
-	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io --padding casket
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io \
+	  --padding casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 5000 --threads 4 --size 512 --block_size 512 --direct_io \
+	  --pagecache --padding casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --random casket
 	tkrzw_file_perf.exe sequence --file pos-atom \
 	  --iter 50000 --threads 5 --size 5 --block_size 32 --head_buffer 1000 --append casket
 	tkrzw_file_perf.exe wicked --file pos-atom \
 	  --iter 50000 --threads 5 --size 128 --block_size 128 --head_buffer 8192 casket
+	tkrzw_file_perf.exe wicked --file pos-atom \
+	  --iter 50000 --threads 5 --size 128 --block_size 128 --pagecache --head_buffer 8192 casket
 
 check-hashdbm-perf :
 	-del casket* /F /Q > NUL: 2>&1
