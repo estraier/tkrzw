@@ -284,12 +284,10 @@ TEST(FileUtilTest, PageCache) {
   for (int32_t i = 0; i < file_size; i++) {
     file_buffer[i] = '0' + i % 10;
   }
-  tkrzw::SpinLock file_mutex;
   auto read_func = [&](int64_t off, void* buf, size_t size) {
                      if (size + off > file_size) {
                        return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
                      }
-                     std::lock_guard<tkrzw::SpinLock> lock(file_mutex);
                      std::memcpy(buf, file_buffer + off, size);
                      return tkrzw::Status(tkrzw::Status::SUCCESS);
                    };
@@ -297,7 +295,6 @@ TEST(FileUtilTest, PageCache) {
                       if (size + off > file_size) {
                         return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
                       }
-                      std::lock_guard<tkrzw::SpinLock> lock(file_mutex);
                       std::memcpy(file_buffer + off, buf, size);
                       return tkrzw::Status(tkrzw::Status::SUCCESS);
                     };
@@ -306,6 +303,7 @@ TEST(FileUtilTest, PageCache) {
   char buf[256];
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 5));
   EXPECT_EQ("01234", std::string_view(buf, 5));
+  EXPECT_EQ(0, cache.GetRegionSize());
   cache.Clear();
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(5, buf, 5));
   EXPECT_EQ("56789", std::string_view(buf, 5));
@@ -316,11 +314,14 @@ TEST(FileUtilTest, PageCache) {
   EXPECT_EQ("01234567890123456789", std::string_view(buf, 20));
   cache.Clear();
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "ABCDE", 5));
+  EXPECT_EQ(5, cache.GetRegionSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 10));
   EXPECT_EQ("ABCDE56789", std::string_view(buf, 10));
+  EXPECT_EQ(5, cache.GetRegionSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(5, "FGHIJ", 5));
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 10));
   EXPECT_EQ("ABCDEFGHIJ", std::string_view(buf, 10));
+  EXPECT_EQ(10, cache.GetRegionSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(8, "XXXX", 4));
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(18, "YYYY", 4));
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 25));
@@ -328,6 +329,7 @@ TEST(FileUtilTest, PageCache) {
   EXPECT_EQ("0123456789012345678901234", std::string_view(file_buffer, 25));
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());
   EXPECT_EQ("ABCDEFGHXXXX234567YYYY234", std::string_view(file_buffer, 25));
+  EXPECT_EQ(22, cache.GetRegionSize());
   cache.Clear();
   EXPECT_EQ(0, cache.GetRegionSize());
   for (int32_t i = 0; i < file_size; i++) {
@@ -354,17 +356,11 @@ TEST(FileUtilTest, PageCache) {
                       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, cache.Read(off, buf, size));
                     } else {
                       EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(off, buf, size));
-                      
-                      std::cout << "off=" << off
-                                << " size=" << size
-                                << " data=" << std::string_view(buf, size) << std::endl;
-
                       for (int32_t j = 0; j < size; j++) {
                         const int32_t est_number = '0' + (off + j) % 10;
                         const int32_t est_alpha = 'a' + (off + j) % 10;
                         EXPECT_TRUE(buf[j] == est_number || buf[j] == est_alpha);
                       }
-
                     }
                   }
                 }

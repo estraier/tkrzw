@@ -14,6 +14,7 @@
 #ifndef _TKRZW_FILE_UTIL_H
 #define _TKRZW_FILE_UTIL_H
 
+#include <list>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -283,42 +284,109 @@ class TemporaryDirectory {
  */
 class PageCache final {
  public:
+  /**
+   * Type of callback function to read a clean buffer from the file.
+   */
   typedef std::function<Status(int64_t off, void* buf, size_t size)> ReadType;
+
+  /**
+   * Type of callback function to write a dirty buffer to the file.
+   */
   typedef std::function<Status(int64_t off, const void* buf, size_t size)> WriteType;
 
+  /**
+   * Constructor.
+   * @param page_size The page size of the I/O operation.
+   * @param capacity The capacity of the cache in bytes.
+   * @param read_func The callback function to read a clean buffer from the file.
+   * @param write_func The callback function to write a dirty buffer to the file.
+   */
   PageCache(int64_t page_size, int64_t capacity, ReadType read_func, WriteType write_func);
 
+  /**
+   * Destructor.
+   */
   ~PageCache();
 
+  /**
+   * Reads data.
+   * @param off The offset of a source region.
+   * @param buf The pointer to the destination buffer.
+   * @param size The size of the data to be read.
+   * @return The result status.
+   */
   Status Read(int64_t off, void* buf, size_t size);
 
+  /**
+   * Writes data.
+   * @param off The offset of the destination region.
+   * @param buf The pointer to the source buffer.
+   * @param size The size of the data to be written.
+   * @return The result status.
+   */
   Status Write(int64_t off, const void* buf, size_t size);
 
+  /**
+   * Flushes all dirty buffers to the file.
+   * @return The result status.
+   */
   Status Flush();
 
+  /**
+   * Clear all data.
+   * @details Dirty buffers are not written back.
+   */
   void Clear();
 
+  /**
+   * Gets the region size recognized by writing.
+   * @return The region size recognized by writing.
+   */
   int64_t GetRegionSize();
 
  private:
+  /**
+   * Page buffer.
+   */
   struct Page {
+    /** Data buffer aligned to the page size. */
     char* buf;
+    /** The offset in the file. */
     int64_t off;
+    /** The size of data. */
     int64_t size;
+    /** Whether the buffer should be written back. */
     bool dirty;
   };
-  Status PreparePage(int64_t off, int64_t size, Page** page);
-  Status ReduceCache();
-  Status ReadPage(int64_t off, char* buf, int64_t size);
-  Status WritePage(int64_t off, const char* buf, int64_t size);
+  
+  /**
+   * Slot for concurrency.
+   */
+  struct Slot {
+    /** Pages in the slot. */
+    std::list<Page> pages;
+    /** Mutex for consistency. */
+    std::mutex mutex;
+  };
 
+  /** Prepareas the page for the given offset. */
+  Status PreparePage(Slot* slot, int64_t off, int64_t size, Page** page);
+  /** Reduce pages by discarding excessive ones. */
+  Status ReduceCache(Slot* slot);
+  /** The number of slots for cuncurrency. */
+  static constexpr int32_t NUM_SLOTS = 16;
+  /** The page size for I/O operations. */
   int64_t page_size_;
+  /** The capacity of the cache in bytes. */
   int64_t capacity_;
+  /** The reading callback. */
   ReadType read_func_;
+  /** The writing callback. */
   WriteType write_func_;
-  std::vector<Page> pages_;
+  /** The slots for cuncurrency. */
+  Slot slots_[NUM_SLOTS];
+  /** The region size. */
   std::atomic_int64_t region_size_;
-  SpinLock mutex_;
 };
 
 /**
