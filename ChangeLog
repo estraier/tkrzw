@@ -3,7 +3,8 @@
 	- Release: 0.9.17
 	- Library version: 1.7.0
 
-	- PolyDBM supports padding option for direct I/O.
+	- Add the page cache system to improve direct I/O performance.
+	- PolyDBM supports padding and pagecache options for direct I/O.
 	- SkipDBM keeps file properties across Synchronize and Rebuild.
 	- Remove debug messages inside the library.
 

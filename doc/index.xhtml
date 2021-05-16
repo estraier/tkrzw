@@ -137,7 +137,7 @@ window.onload = function(){
 
 <h2 id="installation">Installation</h2>
 
-<p>Tkrzw is implemented based on the C++17 standard and POSIX/Windows API.  On a Unix-like system (Linux, FreeBSD, and Mac OS X), GCC (version 9 or later) is required.  On a Windows system, Visual C++ (2019 or later) is required.</p>
+<p>Tkrzw is implemented based on the C++17 standard and POSIX/Windows API.  On a Unix-like system (Linux, FreeBSD, and Mac OS X), GCC (version 7.3 or later) is required.  On a Windows system, Visual C++ (2019 or later) is required.</p>
 
 <h3 id="installation_unix">For UNIX</h3>
 
@@ -241,7 +241,7 @@ UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 <p>Open "x86 Native Tools Command Prompt for VS 2009" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
 
 <pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile
-> nmake -f VCMakefile check 
+> nmake -f VCMakefile check
 ]]></code></pre>
 
 <p>To install the library, open another command prompt of VC++ as Administrator and run the following command.</p>
@@ -3718,10 +3718,11 @@ tuning_params.cache_buckets = true;
 dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is reasonable.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  Moreover, adding ACCESS_PADDING to ACCESS_DIRECT is necessary to make the file size aligned to the block size.  Thefore, for small records, you'll write code like the following.</p>
+<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is reasonable.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  Moreover, adding ACCESS_PADDING to ACCESS_DIRECT is necessary to make the file size aligned to the block size.  Adding ACCESS_PAGECACHE is optional but good for performance.  Therefore, you'll write code like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalAtomicFile>();
-file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT | PositionalFile::ACCESS_PADDING);
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT |
+   PositionalFile::ACCESS_PADDING | PositionalFile::ACCESS_PAGECACHE);
 HashDBM dbm(std::move(file));
 
 HashDBM::TuningParameters tuning_params;
@@ -3733,7 +3734,7 @@ dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 <p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You should enable "cache_buckets" for performance.  Therefore, you'll write code like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
-file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT | PositionalFile::ACCESS_PADDING);
 TreeDBM dbm(std::move(file));
 
 TreeDBM::TuningParameters tuning_params;
@@ -3743,6 +3744,15 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <p>You don't have to tune the block size 512 for tuning purposes.  If the underlying device driver accepts 512-byte alignment, it's OK.  Meanwhile, you should tune the "align_pow" for performance.  If you use TreeDBM, tuning "max_page_size" is also important.</p>
 
+<p>Whereas using direct I/O avoids tainting the file system cache, using a small page cache system in the process can improve performance of some cases.  In general, locality is low with a large database.  However, there's some locality in the following cases.</p>
+
+<ul>
+<li>You use the same query often or repeatedly regardless of the database type.  Then, exactly the same blocks are accessed.</li>
+<li>You add/update small records in HashDBM.  Then, the block at the end of the file is updated repeatedly.</li>
+<li>You use SkipDBM.  The same or adjacent blocks are read repeatedly at the last steps of a search operation.</li>
+</ul>
+
+<p>If you add PositionalFile::ACCESS_PAGECACHE to the access strategy options, the page cache system in process is enabled.  It manages "pages" on memory.  Each page is associated with one or multiple blocks of the file.  The last 64 pages which have been accessed recently are kept on memory.  Reading data from cached blocks causes no operation of the storage device.  Writing data to cached blocks marks them as "dirty", which are written back when being removed from the cache.  If you use direct I/O on HashDBM and SkipDBM, enabling the page cache in process is usually beneficial.  If you use TreeDBM, you shouldn't enable the page cache in process because B+ tree nodes work as the cache.</p>
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 

@@ -13,13 +13,25 @@ Contents of the directory tree are below.
   ./              - source code
   ./example/      - sample code for tutorial
 
-To build the library, GCC 7.3 or later version is required.
-Then, run these commands.
+Tkrzw is available on UNIX-like systems (Linux, Mac OS, Solaris etc)
+and Windows.
+
+On Unix-like systems, GCC 7.3 or later version is required to build
+the library.  GNU make and other standard tools are also required.
+Then, run these commands.  The files are installed under "/usr/local".
 
   ./configure
   make
   make check
   sudo make install
+
+On Windows, Visual Studio 2019 and its C++ components are required.
+Open the "x86 Native Tools Command Prompt" and then run the following
+commands.  The files are installed under "C:\Program Files\tkrzw".
+
+  nmake -f VCMakefile
+  nmake -f VCMakefile check
+  nmake -f VCMakefile install    (run this as Administrator)
 
 Thanks.
 
