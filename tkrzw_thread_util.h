@@ -46,7 +46,13 @@ class SpinLock final {
   /**
    * Constructor.
    */
-  SpinLock() : lock_(ATOMIC_FLAG_INIT) {}
+  SpinLock() {}
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit SpinLock(const SpinLock& rhs) = delete;
+  SpinLock& operator =(const SpinLock& rhs) = delete;
 
   /**
    * Gets exclusive ownership of the lock.
@@ -66,7 +72,7 @@ class SpinLock final {
 
  private:
   /** Atomic flat of locked state. */
-  std::atomic_flag lock_;
+  std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
 
 /**
@@ -84,6 +90,12 @@ class SlottedMutex final {
    * Destructor.
    */
   ~SlottedMutex();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit SlottedMutex(const SlottedMutex& rhs) = delete;
+  SlottedMutex& operator =(const SlottedMutex& rhs) = delete;
 
   /**
    * Gets the number of the slots.
@@ -160,6 +172,12 @@ class ScopedSlottedLock final {
    */
   ~ScopedSlottedLock();
 
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit ScopedSlottedLock(const ScopedSlottedLock& rhs) = delete;
+  ScopedSlottedLock& operator =(const ScopedSlottedLock& rhs) = delete;
+
  private:
   /** The slotted mutex. */
   SlottedMutex& mutex_;
@@ -188,6 +206,12 @@ public:
    * Destructor.
    */
   ~HashMutex();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit HashMutex(const HashMutex& rhs) = delete;
+  HashMutex& operator =(const HashMutex& rhs) = delete;
 
   /**
    * Gets the number of the slots.
@@ -320,6 +344,12 @@ class ScopedHashLock final {
    * Destructor.
    */
   ~ScopedHashLock();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit ScopedHashLock(const ScopedHashLock& rhs) = delete;
+  ScopedHashLock& operator =(const ScopedHashLock& rhs) = delete;
 
   /**
    * Gets the index of the bucket.
