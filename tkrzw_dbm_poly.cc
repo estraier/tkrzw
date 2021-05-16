@@ -153,6 +153,9 @@ std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* param
       if (norm_expr == "padding") {
         options |= PositionalFile::ACCESS_PADDING;
       }
+      if (norm_expr == "pagecache") {
+        options |= PositionalFile::ACCESS_PAGECACHE;
+      }
     }
     pos_file->SetAccessStrategy(block_size, options);
     params->erase("block_size");

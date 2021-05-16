@@ -41,12 +41,14 @@ class PositionalFile : public File {
   enum AccessOption : int32_t {
     /** The default behavior. */
     ACCESS_DEFAULT = 0,
-    /** To access the data block directry without caching. */
+    /** To access the data block directry without caching of the file system. */
     ACCESS_DIRECT = 1 << 0,
     /** To synchronize the update operation through the device. */
     ACCESS_SYNC = 1 << 1,
     /** To fill padding bytes for alignment when closing the file. */
     ACCESS_PADDING = 1 << 2,
+    /** To use the mini page cache in the process to improve performance. */
+    ACCESS_PAGECACHE = 1 << 3,
   };
 
   /**

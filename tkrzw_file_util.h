@@ -284,6 +284,9 @@ class TemporaryDirectory {
  */
 class PageCache final {
  public:
+  /** The number of slots for cuncurrency. */
+  static constexpr int32_t NUM_SLOTS = 16;
+
   /**
    * Type of callback function to read a clean buffer from the file.
    */
@@ -339,10 +342,16 @@ class PageCache final {
   void Clear();
 
   /**
-   * Gets the region size recognized by writing.
-   * @return The region size recognized by writing.
+   * Gets the region size used for reading.
+   * @return The region size used for reading.
    */
   int64_t GetRegionSize();
+
+  /**
+   * Sets the region size used for reading.
+   * @param size The region size used for reading.
+   */
+  void SetRegionSize(int64_t size);
 
  private:
   /**
@@ -373,8 +382,6 @@ class PageCache final {
   Status PreparePage(Slot* slot, int64_t off, int64_t size, Page** page);
   /** Reduce pages by discarding excessive ones. */
   Status ReduceCache(Slot* slot);
-  /** The number of slots for cuncurrency. */
-  static constexpr int32_t NUM_SLOTS = 16;
   /** The page size for I/O operations. */
   int64_t page_size_;
   /** The capacity of the cache in bytes. */

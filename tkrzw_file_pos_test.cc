@@ -33,19 +33,22 @@ int main(int argc, char** argv) {
 template <class FILEIMPL>
 class PositionalFileTest : public CommonFileTest {
  protected:
-  void BlockIOTest(FILEIMPL* file);
-  void DirectIOTest(FILEIMPL* file);
+  void BlockIOTest(FILEIMPL* file, bool with_pagecache);
+  void DirectIOTest(FILEIMPL* file, bool with_pagecache);
 };
 
 template <class FILEIMPL>
-void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
+void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file, bool with_pagecache) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
   EXPECT_EQ(1, file->GetBlockSize());
-  EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(8, tkrzw::PositionalFile::ACCESS_DEFAULT));
+  int32_t access_options = tkrzw::PositionalFile::ACCESS_DEFAULT;
+  if (with_pagecache) {
+    access_options |= tkrzw::PositionalFile::ACCESS_PAGECACHE;
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAccessStrategy(8, access_options));
   EXPECT_EQ(8, file->GetBlockSize());
   EXPECT_FALSE(file->IsDirectIO());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
@@ -151,7 +154,7 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file) {
 }
 
 template <class FILEIMPL>
-void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
+void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file, bool with_pagecache) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   constexpr int64_t block_size = 512;
@@ -165,8 +168,11 @@ void PositionalFileTest<FILEIMPL>::DirectIOTest(FILEIMPL* file) {
   std::uniform_int_distribution<int32_t> append_dist(0, 1);
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::WriteFile(file_path, "012345678901234567890123456789"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(block_size, tkrzw::PositionalFile::ACCESS_DIRECT));
+  int32_t access_options = tkrzw::PositionalFile::ACCESS_DIRECT;
+  if (with_pagecache) {
+    access_options |= tkrzw::PositionalFile::ACCESS_PAGECACHE;
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAccessStrategy(block_size, access_options));
   EXPECT_EQ(block_size, file->GetBlockSize());
   EXPECT_TRUE(file->IsDirectIO());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
@@ -339,12 +345,22 @@ TEST_F(PositionalParallelFileTest, Rename) {
 
 TEST_F(PositionalParallelFileTest, BlockIO) {
   tkrzw::PositionalParallelFile file;
-  BlockIOTest(&file);
+  BlockIOTest(&file, false);
+}
+
+TEST_F(PositionalParallelFileTest, BlockIOPage) {
+  tkrzw::PositionalParallelFile file;
+  BlockIOTest(&file, true);
 }
 
 TEST_F(PositionalParallelFileTest, DirectIO) {
   tkrzw::PositionalParallelFile file;
-  DirectIOTest(&file);
+  DirectIOTest(&file, false);
+}
+
+TEST_F(PositionalParallelFileTest, DirectIOPage) {
+  tkrzw::PositionalParallelFile file;
+  DirectIOTest(&file, true);
 }
 
 class PositionalAtomicFileTest : public PositionalFileTest<tkrzw::PositionalAtomicFile> {};
@@ -452,12 +468,22 @@ TEST_F(PositionalAtomicFileTest, Rename) {
 
 TEST_F(PositionalAtomicFileTest, BlockIO) {
   tkrzw::PositionalAtomicFile file;
-  BlockIOTest(&file);
+  BlockIOTest(&file, false);
+}
+
+TEST_F(PositionalAtomicFileTest, BlockIOPage) {
+  tkrzw::PositionalAtomicFile file;
+  BlockIOTest(&file, true);
 }
 
 TEST_F(PositionalAtomicFileTest, DirectIO) {
   tkrzw::PositionalAtomicFile file;
-  DirectIOTest(&file);
+  DirectIOTest(&file, false);
+}
+
+TEST_F(PositionalAtomicFileTest, DirectIOPage) {
+  tkrzw::PositionalAtomicFile file;
+  DirectIOTest(&file, true);
 }
 
 // END OF FILE

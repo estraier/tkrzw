@@ -252,9 +252,11 @@ std::unique_ptr<File> MakeFileOrDie(
  * @param is_direct_io If true, the direct I/O access option is set.
  * @param is_sync_io If true, the synchronous I/O access option is set.
  * @param is_padding If true, the padding access option is set.
+ * @param is_pagecache If true, the mini page cache option is set.
  */
 void SetAccessStrategyOrDie(File* file, int64_t block_size,
-                            bool is_direct_io, bool is_sync_io, bool is_padding);
+                            bool is_direct_io, bool is_sync_io, bool is_padding,
+                            bool is_pagecache);
 
 /**
  * Locks the memory of the beginning region or die.

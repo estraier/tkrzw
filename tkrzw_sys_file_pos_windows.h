@@ -152,7 +152,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
     return Status(Status::INFEASIBLE_ERROR, "too large file");
   }
 
-  // Truncates the file.
+  // Finishes and truncates the file.
   int64_t trunc_size = file_size;
   if (writable) {
     trunc_size = std::max(trunc_size, alloc_init_size_);
@@ -185,7 +185,7 @@ Status PositionalParallelFileImpl::Close() {
   }
   Status status(Status::SUCCESS);
 
-  // Truncates the file.
+  // Finishes and truncates the file.
   bool retruncate = false;
   if (writable_) {
     if (head_buffer_ != nullptr) {
@@ -301,16 +301,19 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
+  Status status(Status::SUCCESS);
+
+  // cache flush.
+  
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  const Status status = TruncateFileInternally(file_handle_, new_trunc_size);
-  if (status != Status::SUCCESS) {
-    return status;
+  status |= TruncateFileInternally(file_handle_, new_trunc_size);
+  if (status == Status::SUCCESS) {
+    file_size_.store(size);
+    trunc_size_.store(new_trunc_size);
   }
-  file_size_.store(size);
-  trunc_size_.store(new_trunc_size);
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 Status PositionalParallelFileImpl::TruncateFakely(int64_t size) {
@@ -908,6 +911,10 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
+  Status status(Status::SUCCESS);
+
+  // Flush cache
+  
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
@@ -915,13 +922,12 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   if (diff > 0) {
     new_trunc_size += alignment - diff;
   }
-  const Status status = TruncateFileInternally(file_handle_, new_trunc_size);
-  if (status != Status::SUCCESS) {
-    return status;
+  status |= TruncateFileInternally(file_handle_, new_trunc_size);
+  if (status == Status::SUCCESS) {
+    file_size_ = size;
+    trunc_size_ = new_trunc_size;
   }
-  file_size_ = size;
-  trunc_size_ = new_trunc_size;
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {

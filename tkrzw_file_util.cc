@@ -634,9 +634,11 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
     const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
     auto& slot = slots_[slot_index];
     const int64_t data_size = std::min<int64_t>(size, page_size_);
+    const int64_t proc_size =
+        std::max(data_size, std::min(region_size_.load() - off, page_size_));
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, off, data_size, &page);
+    Status status = PreparePage(&slot, off, proc_size, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -680,9 +682,11 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
     auto& slot = slots_[slot_index];
     const int64_t data_size = std::min<int64_t>(size, page_size_);
+    const int64_t proc_size =
+        std::max(data_size, std::min(region_size_.load() - off, page_size_));
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, off, data_size, &page);
+    Status status = PreparePage(&slot, off, proc_size, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -696,8 +700,12 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
       return status;
     }    
   }
-  if (off > region_size_.load()) {
-    region_size_.store(off);
+  while (true) {
+    int64_t region_size = region_size_.load();
+    if (off <= region_size) break;
+    if (region_size_.compare_exchange_weak(region_size, off)) {
+      break;
+    }
   }
   return Status(Status::SUCCESS);
 }
@@ -729,6 +737,10 @@ void PageCache::Clear() {
 
 int64_t PageCache::GetRegionSize() {
   return region_size_.load();
+}
+
+void PageCache::SetRegionSize(int64_t size) {
+  return region_size_.store(size);
 }
 
 Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, Page** result) {
