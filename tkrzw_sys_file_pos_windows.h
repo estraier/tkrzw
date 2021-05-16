@@ -72,6 +72,7 @@ class PositionalParallelFileImpl final {
   int32_t access_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
+  std::unique_ptr<PageCache> page_cache_;
   std::mutex mutex_;
 };
 
@@ -80,7 +81,8 @@ PositionalParallelFileImpl::PositionalParallelFileImpl()
       file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
       block_size_(1), access_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
+      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR),
+      page_cache_(nullptr), mutex_() {}
 
 PositionalParallelFileImpl::~PositionalParallelFileImpl() {
   if (file_handle_ != nullptr) {
@@ -176,6 +178,21 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   writable_ = writable;
   open_options_ = options;
 
+  // Builds the page cache.
+  if (access_options_ & PositionalFile::ACCESS_PAGECACHE) {
+    const int64_t capacity = block_size_ * PageCache::NUM_SLOTS * 4;
+    auto reader = [&](int64_t off, void* buf, size_t size) {
+                    return PReadSequence(file_handle_, off, buf, size);
+                  };
+    auto writer = [&](int64_t off, const void* buf, size_t size) {
+                    return PWriteSequence(file_handle_, off, buf, size);
+                  };
+    page_cache_ = std::make_unique<PageCache>(block_size_, capacity, reader, writer);
+    page_cache_->SetRegionSize(trunc_size);
+  } else {
+    page_cache_.reset(nullptr);
+  }
+
   return Status(Status::SUCCESS);
 }
 
@@ -188,6 +205,9 @@ Status PositionalParallelFileImpl::Close() {
   // Finishes and truncates the file.
   bool retruncate = false;
   if (writable_) {
+    if (page_cache_ != nullptr) {
+      status |= page_cache_->Flush();
+    }
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
@@ -233,6 +253,7 @@ Status PositionalParallelFileImpl::Close() {
   trunc_size_.store(0);
   writable_ = false;
   open_options_ = 0;
+  page_cache_.reset(nullptr);
 
   return status;
 }
@@ -302,9 +323,10 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   Status status(Status::SUCCESS);
-
-  // cache flush.
-  
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
@@ -312,6 +334,9 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   if (status == Status::SUCCESS) {
     file_size_.store(size);
     trunc_size_.store(new_trunc_size);
+  }
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_.load());
   }
   return status;
 }
@@ -332,6 +357,10 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   Status status(Status::SUCCESS);
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
@@ -339,6 +368,9 @@ Status PositionalParallelFileImpl::Synchronize(bool hard) {
   status |= TruncateFileInternally(file_handle_, trunc_size_.load());
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+  }
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_.load());
   }
   return status;
 }
@@ -356,6 +388,10 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status(Status::SUCCESS);
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     xfreealigned(head_buffer_);
@@ -462,6 +498,9 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   }
   xfreealigned(aligned);
   trunc_size_.store(new_trunc_size);
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_.load());
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -481,6 +520,9 @@ Status PositionalParallelFileImpl::ReadImpl(int64_t off, char* buf, size_t size)
   }
   if (block_size_ == 1) {
     return PReadSequence(file_handle_, off, buf, size);
+  }
+  if (page_cache_ != nullptr) {
+    return page_cache_->Read(off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -523,6 +565,9 @@ Status PositionalParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_
   }
   if (block_size_ == 1) {
     return PWriteSequence(file_handle_, off, buf, size);
+  }
+  if (page_cache_ != nullptr) {
+    return page_cache_->Write(off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -693,6 +738,7 @@ class PositionalAtomicFileImpl final {
   int32_t access_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
+  std::unique_ptr<PageCache> page_cache_;
   std::shared_timed_mutex mutex_;
 };
 
@@ -701,7 +747,8 @@ PositionalAtomicFileImpl::PositionalAtomicFileImpl()
       file_size_(0), trunc_size_(0), writable_(false), open_options_(0),
       block_size_(1), access_options_(0),
       alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
-      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
+      alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR),
+      page_cache_(nullptr), mutex_() {}
 
 PositionalAtomicFileImpl::~PositionalAtomicFileImpl() {
   if (file_handle_ != nullptr) {
@@ -792,6 +839,21 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
   writable_ = writable;
   open_options_ = options;
 
+  // Builds the page cache.
+  if (access_options_ & PositionalFile::ACCESS_PAGECACHE) {
+    const int64_t capacity = block_size_ * PageCache::NUM_SLOTS * 4;
+    auto reader = [&](int64_t off, void* buf, size_t size) {
+                    return PReadSequence(file_handle_, off, buf, size);
+                  };
+    auto writer = [&](int64_t off, const void* buf, size_t size) {
+                    return PWriteSequence(file_handle_, off, buf, size);
+                  };
+    page_cache_ = std::make_unique<PageCache>(block_size_, capacity, reader, writer);
+    page_cache_->SetRegionSize(trunc_size);
+  } else {
+    page_cache_.reset(nullptr);
+  }
+
   return Status(Status::SUCCESS);
 }
 
@@ -805,6 +867,9 @@ Status PositionalAtomicFileImpl::Close() {
   // Truncates the file.
   bool retruncate = false;
   if (writable_) {
+    if (page_cache_ != nullptr) {
+      status |= page_cache_->Flush();
+    }
     if (head_buffer_ != nullptr) {
       status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     }
@@ -850,6 +915,7 @@ Status PositionalAtomicFileImpl::Close() {
   trunc_size_ = 0;
   writable_ = false;
   open_options_ = 0;
+  page_cache_.reset(nullptr);
 
   return status;
 }
@@ -912,9 +978,10 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   Status status(Status::SUCCESS);
-
-  // Flush cache
-  
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   const int64_t alignment = std::max<int64_t>(PAGE_SIZE, block_size_);
@@ -926,6 +993,9 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   if (status == Status::SUCCESS) {
     file_size_ = size;
     trunc_size_ = new_trunc_size;
+  }
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_);
   }
   return status;
 }
@@ -948,6 +1018,10 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   Status status(Status::SUCCESS);
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
   }
@@ -955,6 +1029,9 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard) {
   status |= TruncateFileInternally(file_handle_, trunc_size_);
   if (hard && !FlushFileBuffers(file_handle_)) {
     status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+  }
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_);
   }
   return status;
 }
@@ -974,6 +1051,10 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
   Status status(Status::SUCCESS);
+  if (page_cache_ != nullptr) {
+    status |= page_cache_->Flush();
+    page_cache_->Clear();
+  }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
     xfreealigned(head_buffer_);
@@ -1084,6 +1165,9 @@ Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   }
   xfreealigned(aligned);
   trunc_size_ = new_trunc_size;
+  if (page_cache_ != nullptr) {
+    page_cache_->SetRegionSize(trunc_size_);
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -1103,6 +1187,9 @@ Status PositionalAtomicFileImpl::ReadImpl(int64_t off, char* buf, size_t size) {
   }
   if (block_size_ == 1) {
     return PReadSequence(file_handle_, off, buf, size);
+  }
+  if (page_cache_ != nullptr) {
+    return page_cache_->Read(off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
@@ -1144,6 +1231,9 @@ Status PositionalAtomicFileImpl::WriteImpl(int64_t off, const char* buf, size_t 
   }
   if (block_size_ == 1) {
     return PWriteSequence(file_handle_, off, buf, size);
+  }
+  if (page_cache_ != nullptr) {
+    return page_cache_->Write(off, buf, size);
   }
   const int64_t end_position = off + size;
   Status status(Status::SUCCESS);
