@@ -23,6 +23,7 @@
 
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_thread_util.h"
 
 namespace tkrzw {
 
@@ -275,6 +276,49 @@ class TemporaryDirectory {
   std::string tmp_dir_path_;
   /** The creation status. */
   Status creation_status_;
+};
+
+/**
+ * Page cache for buffering I/O operations.
+ */
+class PageCache final {
+ public:
+  typedef std::function<Status(int64_t off, void* buf, size_t size)> ReadType;
+  typedef std::function<Status(int64_t off, const void* buf, size_t size)> WriteType;
+
+  PageCache(int64_t page_size, int64_t capacity, ReadType read_func, WriteType write_func);
+
+  ~PageCache();
+
+  Status Read(int64_t off, void* buf, size_t size);
+
+  Status Write(int64_t off, const void* buf, size_t size);
+
+  Status Flush();
+
+  void Clear();
+
+  int64_t GetRegionSize();
+
+ private:
+  struct Page {
+    char* buf;
+    int64_t off;
+    int64_t size;
+    bool dirty;
+  };
+  Status PreparePage(int64_t off, int64_t size, Page** page);
+  Status ReduceCache();
+  Status ReadPage(int64_t off, char* buf, int64_t size);
+  Status WritePage(int64_t off, const char* buf, int64_t size);
+
+  int64_t page_size_;
+  int64_t capacity_;
+  ReadType read_func_;
+  WriteType write_func_;
+  std::vector<Page> pages_;
+  std::atomic_int64_t region_size_;
+  SpinLock mutex_;
 };
 
 /**

@@ -18,6 +18,7 @@
 
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_thread_util.h"
 
 using namespace testing;
 
@@ -274,6 +275,111 @@ TEST(FileUtilTest, TemporaryDirectory) {
   }
   EXPECT_TRUE(tkrzw::PathIsDirectory(tmp_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveDirectory(tmp_path, true));
+}
+
+TEST(FileUtilTest, PageCache) {
+  constexpr int64_t num_threads = 4;
+  constexpr int64_t file_size = 8192;
+  char file_buffer[file_size];
+  for (int32_t i = 0; i < file_size; i++) {
+    file_buffer[i] = '0' + i % 10;
+  }
+  tkrzw::SpinLock file_mutex;
+  auto read_func = [&](int64_t off, void* buf, size_t size) {
+                     if (size + off > file_size) {
+                       return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
+                     }
+                     std::lock_guard<tkrzw::SpinLock> lock(file_mutex);
+                     std::memcpy(buf, file_buffer + off, size);
+                     return tkrzw::Status(tkrzw::Status::SUCCESS);
+                   };
+  auto write_func = [&](int64_t off, const void* buf, size_t size) {
+                      if (size + off > file_size) {
+                        return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
+                      }
+                      std::lock_guard<tkrzw::SpinLock> lock(file_mutex);
+                      std::memcpy(file_buffer + off, buf, size);
+                      return tkrzw::Status(tkrzw::Status::SUCCESS);
+                    };
+  tkrzw::PageCache cache(10, 2048, read_func, write_func);
+  EXPECT_EQ(0, cache.GetRegionSize());
+  char buf[256];
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 5));
+  EXPECT_EQ("01234", std::string_view(buf, 5));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(5, buf, 5));
+  EXPECT_EQ("56789", std::string_view(buf, 5));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(5, buf, 10));
+  EXPECT_EQ("5678901234", std::string_view(buf, 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 20));
+  EXPECT_EQ("01234567890123456789", std::string_view(buf, 20));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "ABCDE", 5));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 10));
+  EXPECT_EQ("ABCDE56789", std::string_view(buf, 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(5, "FGHIJ", 5));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 10));
+  EXPECT_EQ("ABCDEFGHIJ", std::string_view(buf, 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(8, "XXXX", 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(18, "YYYY", 4));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 25));
+  EXPECT_EQ("ABCDEFGHXXXX234567YYYY234", std::string_view(buf, 25));
+  EXPECT_EQ("0123456789012345678901234", std::string_view(file_buffer, 25));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());
+  EXPECT_EQ("ABCDEFGHXXXX234567YYYY234", std::string_view(file_buffer, 25));
+  cache.Clear();
+  EXPECT_EQ(0, cache.GetRegionSize());
+  for (int32_t i = 0; i < file_size; i++) {
+    file_buffer[i] = '0' + i % 10;
+  }
+  auto task = [&](int32_t id) {
+                std::mt19937 mt(id);
+                std::uniform_int_distribution<int32_t> dist(0, tkrzw::INT32MAX);
+                char buf[256];
+                for (int32_t i = 0; i < 1000; i++) {
+                  const int64_t off = dist(mt) % file_size;
+                  const int64_t size = dist(mt) % 30;
+                  if (dist(mt) % 2 == 0) {
+                    for (int32_t j = 0; j < size; j++) {
+                      buf[j] = 'a' + (off+ j) % 10;
+                    }
+                    if (off + size > file_size) {
+                      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, cache.Write(off, buf, size));
+                    } else {
+                      EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(off, buf, size));
+                    }
+                  } else {
+                    if (off + size > file_size) {
+                      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, cache.Read(off, buf, size));
+                    } else {
+                      EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(off, buf, size));
+                      
+                      std::cout << "off=" << off
+                                << " size=" << size
+                                << " data=" << std::string_view(buf, size) << std::endl;
+
+                      for (int32_t j = 0; j < size; j++) {
+                        const int32_t est_number = '0' + (off + j) % 10;
+                        const int32_t est_alpha = 'a' + (off + j) % 10;
+                        EXPECT_TRUE(buf[j] == est_number || buf[j] == est_alpha);
+                      }
+
+                    }
+                  }
+                }
+              };
+  task(0);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());
+  std::vector<std::thread> threads;
+  std::vector<std::unordered_map<std::string, std::string>> maps(num_threads);
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task, i));
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());  
 }
 
 // END OF FILE

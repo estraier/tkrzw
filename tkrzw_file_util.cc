@@ -591,6 +591,185 @@ Status TemporaryDirectory::CleanUp() const {
   return status;
 }
 
+PageCache::PageCache(
+    int64_t page_size, int64_t capacity, ReadType read_func, WriteType write_func) :
+    page_size_(page_size), capacity_(capacity), read_func_(read_func), write_func_(write_func),
+    pages_(), region_size_(0), mutex_() {}
+
+PageCache::~PageCache() {
+  for (auto& page : pages_) {
+    xfreealigned(page.buf);
+  }
+}
+
+Status PageCache::Read(int64_t off, void* buf, size_t size) {
+  std::lock_guard<SpinLock> lock(mutex_);
+  char *wp = static_cast<char*>(buf);
+  const int64_t off_rem = off % page_size_;
+  if (off_rem != 0) {
+    const int64_t page_off = off - off_rem;
+    Page* page = nullptr;
+    const Status status = PreparePage(page_off, page_size_, &page);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
+    std::memcpy(wp, page->buf + off_rem, data_size);
+    wp += data_size;
+    off += data_size;
+    size -= data_size;
+  }
+  while (size > 0) {
+    const int64_t data_size = std::min<int64_t>(size, page_size_);
+    Page* page = nullptr;
+    const Status status = PreparePage(off, data_size, &page);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    std::memcpy(wp, page->buf, data_size);
+    wp += data_size;
+    off += data_size;
+    size -= data_size;
+  }
+  return ReduceCache();
+}
+
+Status PageCache::Write(int64_t off, const void* buf, size_t size) {
+  std::lock_guard<SpinLock> lock(mutex_);
+  const char *rp = static_cast<const char*>(buf);
+  const int64_t off_rem = off % page_size_;
+  if (off_rem != 0) {
+    const int64_t page_off = off - off_rem;
+    Page* page = nullptr;
+    const Status status = PreparePage(page_off, page_size_, &page);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
+    std::memcpy(page->buf + off_rem, rp, data_size);
+    page->dirty = true;
+    rp += data_size;
+    off += data_size;
+    size -= data_size;
+  }
+  while (size > 0) {
+    const int64_t data_size = std::min<int64_t>(size, page_size_);
+    Page* page = nullptr;
+    const Status status = PreparePage(off, data_size, &page);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    std::memcpy(page->buf, rp, data_size);
+    page->dirty = true;
+    rp += data_size;
+    off += data_size;
+    size -= data_size;
+  }
+  if (off > region_size_.load()) {
+    region_size_.store(off);
+  }
+  return ReduceCache();
+}
+
+Status PageCache::Flush() {
+  std::lock_guard<SpinLock> lock(mutex_);
+  Status status(Status::SUCCESS);
+  for (auto& page : pages_) {
+    if (page.dirty) {
+      status |= WritePage(page.off, page.buf, page.size);
+      page.dirty = false;
+    }
+  }
+  return status;
+}
+
+void PageCache::Clear() {
+  std::lock_guard<SpinLock> lock(mutex_);
+  for (auto& page : pages_) {
+    xfreealigned(page.buf);
+  }
+  pages_.clear();
+  region_size_.store(0);
+}
+
+int64_t PageCache::GetRegionSize() {
+  return region_size_.load();
+}
+
+Status PageCache::PreparePage(int64_t off, int64_t size, Page** result) {
+  Page* page = nullptr;
+  for (auto& candidate : pages_) {
+    if (candidate.off == off) {
+      page = &candidate;
+      break;
+    }
+  }
+  if (page == nullptr) {
+    char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
+    const Status status = ReadPage(off, buf, size);
+    if (status != Status::SUCCESS) {
+      xfreealigned(buf);
+      return status;
+    }
+    pages_.emplace_back(Page({buf, off, size, false}));
+    *result = &pages_.back();
+  } else if (page->size < size) {
+    std::cout << "SHORT:" << page->size << " req=" << size << std::endl;
+    char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
+    const Status status = ReadPage(off, buf, size);
+    if (status != Status::SUCCESS) {
+      xfreealigned(buf);
+      return status;
+    }
+    if (page->dirty) {
+      std::memcpy(buf, page->buf, page->size);
+    }
+    xfreealigned(page->buf);
+    page->buf = buf;
+    page->size = size;
+    *result = page;
+  } else {
+    *result = page;
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status PageCache::ReduceCache() {
+  const int64_t usage = pages_.size() * page_size_;
+  if (usage <= capacity_) {
+    return Status(Status::SUCCESS);
+  }
+  const int64_t num_excessives =
+      std::min<int64_t>((usage - capacity_) / page_size_, pages_.size());
+  if (num_excessives < 1) {
+    return Status(Status::SUCCESS);
+  }
+  Status status(Status::SUCCESS);
+  for (int32_t i = 0; i < num_excessives; i++) {
+    auto& page = pages_[i];
+    if (page.dirty) {
+      status |= WritePage(page.off, page.buf, page.size);
+    }
+    xfreealigned(page.buf);
+  }
+  pages_.erase(pages_.begin(), pages_.begin() + num_excessives);
+  return Status(Status::SUCCESS);
+}
+
+Status PageCache::ReadPage(int64_t off, char* buf, int64_t size) {
+  //mutex_.unlock();
+  const Status status = read_func_(off, buf, size);
+  //mutex_.lock();
+  return status;
+}
+
+Status PageCache::WritePage(int64_t off, const char* buf, int64_t size) {
+  //mutex_.unlock();
+  const Status status = write_func_(off, buf, size);
+  //mutex_.lock();
+  return status;
+}
+
 FileReader::FileReader(File* file) : file_(file), offset_(0), data_size_(0), index_(0) {}
 
 Status FileReader::ReadLine(std::string* str, size_t max_size) {
