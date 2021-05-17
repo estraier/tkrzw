@@ -281,7 +281,8 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.lock_mem_buckets = false;
+    tuning_params.lock_mem_buckets = -1;
+    tuning_params.cache_buckets = -1;
     const Status status = hash_dbm->OpenAdvanced(path, writable, open_options, tuning_params);
     if (status != Status::SUCCESS) {
       EPrintL("OpenAdvanced failed: ", status);
@@ -299,7 +300,8 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.lock_mem_buckets = false;
+    tuning_params.lock_mem_buckets = -1;
+    tuning_params.cache_buckets = -1;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     if (!cmp_name.empty()) {
@@ -377,7 +379,8 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.lock_mem_buckets = false;
+    tuning_params.lock_mem_buckets = -1;
+    tuning_params.cache_buckets = -1;
     const Status status = hash_dbm->RebuildAdvanced(tuning_params, restore);
     if (status != Status::SUCCESS) {
       EPrintL("RebuildAdvanced failed: ", status);
@@ -395,7 +398,8 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.lock_mem_buckets = false;
+    tuning_params.lock_mem_buckets = -1;
+    tuning_params.cache_buckets = -1;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     const Status status = tree_dbm->RebuildAdvanced(tuning_params);

@@ -519,8 +519,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
-  const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
-  const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
+  const int32_t lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets") ? 1 : 0;
+  const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -794,8 +794,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
-  const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
-  const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
+  const int32_t lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets") ? 1 : 0;
+  const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -984,8 +984,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
-  const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
-  const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
+  const int32_t lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets") ? 1 : 0;
+  const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -1252,8 +1252,8 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
-  const bool lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets");
-  const bool cache_buckets = CheckMap(cmd_args, "--cache_buckets");
+  const int32_t lock_mem_buckets = CheckMap(cmd_args, "--lock_mem_buckets") ? 1 : 0;
+  const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);

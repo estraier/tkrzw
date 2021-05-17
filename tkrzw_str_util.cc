@@ -419,6 +419,17 @@ bool StrToBool(std::string_view str, bool defval) {
   return defval;
 }
 
+int64_t StrToIntOrBool(std::string_view str, int64_t defval) {
+  const std::string& lower = StrLowerCase(StrStripSpace(str));
+  if (lower == "true" || lower == "t" || lower == "yes" || lower == "y" || lower == "1") {
+    return 1;
+  }
+  if (lower == "false" || lower == "f" || lower == "no" || lower == "n" || lower == "0") {
+    return 0;
+  }
+  return StrToInt(str, defval);
+}
+
 void SPrintF(std::string* dest, const char* format, ...) {
   assert(dest != nullptr && format != nullptr);
   va_list ap;

@@ -237,8 +237,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   if (tuning_params.fbp_capacity >= 0) {
     fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
   }
-  lock_mem_buckets_ = tuning_params.lock_mem_buckets;
-  cache_buckets_ = tuning_params.cache_buckets;
+  lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
+  cache_buckets_ = tuning_params.cache_buckets > 0;
   Status status = CheckFileBeforeOpen(file_.get(), path, writable);
   if (status != Status::SUCCESS) {
     return status;
@@ -564,8 +564,12 @@ Status HashDBMImpl::Rebuild(
     if (tuning_params.fbp_capacity >= 0) {
       fbp_.SetCapacity(tuning_params.fbp_capacity);
     }
-    lock_mem_buckets_ = tuning_params.lock_mem_buckets;
-    cache_buckets_ = tuning_params.cache_buckets;
+    if (tuning_params.lock_mem_buckets >= 0) {
+      lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
+    }
+    if (tuning_params.cache_buckets >= 0) {
+      cache_buckets_ = tuning_params.cache_buckets > 0;
+    }
     status |= OpenImpl(true);
     db_type_ = db_type;
     opaque_ = opaque;
@@ -1105,12 +1109,14 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
 Status HashDBMImpl::TuneFileAfterOpen() {
   Status status(Status::SUCCESS);
   if (lock_mem_buckets_) {
+    std::cout << "LOCK" << std::endl;
     auto* mem_file = dynamic_cast<MemoryMapFile*>(file_.get());
     if (mem_file != nullptr) {
       status |= mem_file->LockMemory(record_base_);
     }
   }
   if (cache_buckets_) {
+    std::cout << "CACHE" << std::endl;
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
       status |= pos_file->SetHeadBuffer(record_base_);

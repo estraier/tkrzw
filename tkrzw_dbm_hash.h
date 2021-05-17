@@ -211,18 +211,19 @@ class HashDBM final : public DBM {
     int32_t fbp_capacity = -1;
     /**
      * Whether to lock the memory for the hash buckets.
-     * @details If true and the underlying file class supports memory mapping, the memory region
-     * of the hash buckets is locked in order not to be swapped out.  As this parameter is not
-     * saved as a metadata of the database, it should be set each time when opening the database.
+     * @details If positive and the underlying file class supports memory mapping, the memory
+     * region of the hash buckets is locked in order not to be swapped out.  As this parameter
+     * is not saved as a metadata of the database, it should be set each time when opening the
+     * database.
      */
-    bool lock_mem_buckets = false;
+    int32_t lock_mem_buckets = -1;
     /**
      * Whether to cache the hash buckets on memory.
-     * @details If true and the underlying file class supports caching, the file region of the
-     * hash buckets is cached in order to improve performance.  As this parameter is not
+     * @details If positive and the underlying file class supports caching, the file region of
+     * the hash buckets is cached in order to improve performance.  As this parameter is not
      * saved as a metadata of the database, it should be set each time when opening the database.
      */
-    bool cache_buckets = false;
+    int32_t cache_buckets = -1;
 
     /**
      * Constructor

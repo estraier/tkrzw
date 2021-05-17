@@ -74,12 +74,20 @@ uint64_t StrToIntBigEndian(std::string_view str);
 double StrToDouble(std::string_view str, double defval = 0.0);
 
 /**
- * Converts a boolean string to a real number.
+ * Converts a boolean string to a boolean value.
  * @param str The decimal string.
  * @param defval The default value to be returned on failure.
  * @return The converted boolean value.
  */
 bool StrToBool(std::string_view str, bool defval = false);
+
+/**
+ * Converts a decimal or boolean string to an integer or boolean value.
+ * @param str The decimal string.
+ * @param defval The default value to be returned on failure.
+ * @return The converted integer.
+ */
+int64_t StrToIntOrBool(std::string_view str, int64_t defval = 0);
 
 /**
  * Appends a formatted string at the end of a string.

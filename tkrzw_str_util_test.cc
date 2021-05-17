@@ -148,6 +148,17 @@ TEST(StrUtilTest, StrToBool) {
   EXPECT_FALSE(tkrzw::StrToBool(" 0 ", true));
 }
 
+TEST(StrUtilTest, StrToIntOrBool) {
+  EXPECT_EQ(-1, tkrzw::StrToIntOrBool("", -1));
+  EXPECT_EQ(1, tkrzw::StrToIntOrBool("true", -1));
+  EXPECT_EQ(1, tkrzw::StrToIntOrBool(" yes ", -1));
+  EXPECT_EQ(0, tkrzw::StrToIntOrBool("false", -1));
+  EXPECT_EQ(0, tkrzw::StrToIntOrBool("NO", -1));
+  EXPECT_EQ(100, tkrzw::StrToIntOrBool("100", -1));
+  EXPECT_EQ(-99, tkrzw::StrToIntOrBool("-99", -1));
+  EXPECT_EQ(0, tkrzw::StrToIntOrBool("0000", -1));
+}
+
 TEST(StrUtilTest, SPrintF) {
   EXPECT_EQ("", tkrzw::SPrintF(""));
   EXPECT_EQ("a", tkrzw::SPrintF("a"));

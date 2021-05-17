@@ -3,6 +3,7 @@
 	- Release: 0.9.17
 	- Library version: 1.7.0
 
+	- "lock_mem_buckets" and "cache_buckets" parameters become integers.
 	- Add the page cache system to improve direct I/O performance.
 	- PolyDBM supports padding and pagecache options for direct I/O.
 	- SkipDBM keeps file properties across Synchronize and Rebuild.
