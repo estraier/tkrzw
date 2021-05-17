@@ -334,7 +334,7 @@ TEST(FileUtilTest, PageCache) {
   cache.SetRegionSize(105);
   EXPECT_EQ(105, cache.GetRegionSize());
 
-  
+
   cache.Clear();
   EXPECT_EQ(0, cache.GetRegionSize());
   for (int32_t i = 0; i < file_size; i++) {
@@ -380,7 +380,7 @@ TEST(FileUtilTest, PageCache) {
   for (auto& thread : threads) {
     thread.join();
   }
-  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());  
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());
 }
 
 // END OF FILE

@@ -107,8 +107,14 @@ class HashDBMImpl final {
   Status ImportFromFileForward(
       const std::string& path, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
+  Status ImportFromFileForward(
+      File* file, bool skip_broken_records,
+      int64_t record_base, int64_t end_offset);
   Status ImportFromFileBackward(
       const std::string& path, bool skip_broken_records,
+      int64_t record_base, int64_t end_offset);
+  Status ImportFromFileBackward(
+      File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
 
  private:
@@ -128,6 +134,13 @@ class HashDBMImpl final {
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
   Status SetBucketValue(int64_t bucket_index, int64_t value);
   Status ReadNextBucketRecords(HashDBMIteratorImpl* iter);
+  Status ImportFromFileForwardImpl(
+      File* file, bool skip_broken_records,
+      int64_t record_base, int64_t end_offset);
+  Status ImportFromFileBackwardImpl(
+      File* file, bool skip_broken_records,
+      int64_t record_base, int64_t end_offset,
+      const std::string& offset_path, const std::string& dead_path);
 
   bool open_;
   bool writable_;
@@ -481,9 +494,9 @@ Status HashDBMImpl::Rebuild(
     end_offset = file_->GetSizeSimple();
   }
   if (in_place) {
-    status = tmp_dbm.ImportFromFileForward(path_, skip_broken_records, -1, end_offset);
+    status = tmp_dbm.ImportFromFileForward(file_.get(), skip_broken_records, -1, end_offset);
   } else {
-    status = tmp_dbm.ImportFromFileBackward(path_, skip_broken_records, -1, end_offset);
+    status = tmp_dbm.ImportFromFileBackward(file_.get(), skip_broken_records, -1, end_offset);
   }
   if (status != Status::SUCCESS) {
     CleanUp();
@@ -498,7 +511,7 @@ Status HashDBMImpl::Rebuild(
     if (begin_offset >= end_offset - REBUILD_BLOCKING_ALLOWANCE) {
       break;
     }
-    status = tmp_dbm.ImportFromFileForward(path_, false, begin_offset, end_offset);
+    status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
     if (status != Status::SUCCESS) {
       CleanUp();
       return status;
@@ -509,7 +522,7 @@ Status HashDBMImpl::Rebuild(
     ScopedHashLock record_lock(record_mutex_, true);
     end_offset = file_->GetSizeSimple();
     if (begin_offset < end_offset) {
-      status = tmp_dbm.ImportFromFileForward(path_, false, begin_offset, end_offset);
+      status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
       if (status != Status::SUCCESS) {
         CleanUp();
         return status;
@@ -804,57 +817,27 @@ Status HashDBMImpl::ImportFromFileForward(
   if (status != Status::SUCCESS) {
     return status;
   }
-  int64_t tmp_record_base = 0;
-  int32_t offset_width = 0;
-  int32_t align_pow = 0;
-  int64_t last_sync_size = 0;
-  status = HashDBM::FindRecordBase(
-      file.get(), &record_base, &offset_width, &align_pow, &last_sync_size);
-  if (status != Status::SUCCESS) {
-    file->Close();
-    return status;
-  }
-  if (record_base < 0) {
-    record_base = tmp_record_base;
-  }
-  if (end_offset == 0) {
-    if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
-      file->Close();
-      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
+  status |= ImportFromFileForwardImpl(file.get(), skip_broken_records, record_base, end_offset);
+  status |= file->Close();
+  return status;
+}
+
+Status HashDBMImpl::ImportFromFileForward(
+    File* file, bool skip_broken_records,
+    int64_t record_base, int64_t end_offset) {
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
-    end_offset = last_sync_size;
-  }
-  Status import_status(Status::SUCCESS);
-  class Importer final : public DBM::RecordProcessor {
-   public:
-    Importer(HashDBMImpl* impl, Status* status) : impl_(impl), status_(status) {}
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      Status set_status(Status::SUCCESS);
-      DBM::RecordProcessorSet setter(&set_status, value, true, nullptr);
-      *status_ = impl_->Process(key, &setter, true);
-      *status_ |= set_status;
-      return NOOP;
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
     }
-    std::string_view ProcessEmpty(std::string_view key) override {
-      Status remove_status(Status::SUCCESS);
-      DBM::RecordProcessorRemove remover(&remove_status, nullptr);
-      *status_ = impl_->Process(key, &remover, true);
-      *status_ |= remove_status;
-      return NOOP;
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
     }
-   private:
-    HashDBMImpl* impl_;
-    Status* status_;
-  } importer(this, &import_status);
-  status = HashRecord::ReplayOperations(
-      file.get(), &importer, record_base, offset_width, align_pow,
-      skip_broken_records, end_offset);
-  if (status != Status::SUCCESS) {
-    file->Close();
-    return status;
   }
-  import_status |= file->Close();
-  return import_status;
+  return ImportFromFileForwardImpl(file, skip_broken_records, record_base, end_offset);
 }
 
 Status HashDBMImpl::ImportFromFileBackward(
@@ -880,138 +863,32 @@ Status HashDBMImpl::ImportFromFileBackward(
   if (status != Status::SUCCESS) {
     return status;
   }
-  int64_t tmp_record_base = 0;
-  int32_t offset_width = 0;
-  int32_t align_pow = 0;
-  int64_t last_sync_size = 0;
-  status = HashDBM::FindRecordBase(
-      file.get(), &record_base, &offset_width, &align_pow, &last_sync_size);
-  if (status != Status::SUCCESS) {
-    file->Close();
-    return status;
-  }
-  if (record_base < 0) {
-    record_base = tmp_record_base;
-  }
-  if (end_offset == 0) {
-    if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
-      file->Close();
-      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
-    }
-    end_offset = last_sync_size;
-  }
-  auto offset_file = file_->MakeFile();
-  HashDBM dead_dbm;
-  auto CleanUp = [&]() {
-    dead_dbm.Close();
-    RemoveFile(dead_path);
-    offset_file->Close();
-    RemoveFile(offset_path);
-  };
-  status = offset_file->Open(offset_path, true, File::OPEN_TRUNCATE);
-  if (status != Status::SUCCESS) {
-    CleanUp();
-    return status;
-  }
-  status = HashRecord::ExtractOffsets(
-      file.get(), offset_file.get(), record_base, offset_width, align_pow,
-      skip_broken_records, end_offset);
-  if (status != Status::SUCCESS) {
-    CleanUp();
-    return status;
-  }
-  const int64_t num_offsets = offset_file->GetSizeSimple() / offset_width_;
-  const int64_t dead_num_buckets = std::min(num_offsets, num_buckets_);
-  HashDBM::TuningParameters dead_tuning_params;
-  dead_tuning_params.offset_width = offset_width;
-  dead_tuning_params.align_pow = 0;
-  dead_tuning_params.num_buckets = dead_num_buckets;
-  status = dead_dbm.OpenAdvanced(dead_path, true, File::OPEN_TRUNCATE, dead_tuning_params);
-  OffsetReader reader(offset_file.get(), offset_width, align_pow, true);
-  HashRecord rec(file.get(), offset_width, align_pow);
-  while (true) {
-    int64_t offset = 0;
-    status = reader.ReadOffset(&offset);
-    if (status != Status::SUCCESS) {
-      if (status != Status::NOT_FOUND_ERROR) {
-        CleanUp();
-        return status;
-      }
-      break;
-    }
-    status = rec.ReadMetadataKey(offset);
-    if (status != Status::SUCCESS) {
-      CleanUp();
-      return status;
-    }
-    std::string_view key = rec.GetKey();
-    switch (rec.GetOperationType()) {
-      case HashRecord::OP_SET: {
-        std::string_view value = rec.GetValue();
-        if (value.data() == nullptr) {
-          status = rec.ReadBody();
-          if (status != Status::SUCCESS) {
-            CleanUp();
-            return status;
-          }
-          value = rec.GetValue();
-        }
-        bool removed = false;
-        status = dead_dbm.Get(key, nullptr);
-        if (status == Status::SUCCESS) {
-          removed = true;
-        } else if (status != Status::NOT_FOUND_ERROR) {
-          CleanUp();
-          return status;
-        }
-        if (!removed) {
-          Status set_status(Status::SUCCESS);
-          DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
-          status = Process(key, &setter, true);
-          if (status != Status::SUCCESS) {
-            CleanUp();
-            return status;
-          }
-          if (set_status != Status::SUCCESS && set_status != Status::DUPLICATION_ERROR) {
-            return set_status;
-          }
-        }
-        break;
-      }
-      case HashRecord::OP_REMOVE: {
-        bool setted = false;
-        Status get_status(Status::SUCCESS);
-        DBM::RecordProcessorGet getter(&get_status, nullptr);
-        status = Process(key, &getter, true);
-        if (status != Status::SUCCESS) {
-          CleanUp();
-          return status;
-        }
-        if (get_status == Status::SUCCESS) {
-          setted = true;
-        } else if (get_status != Status::NOT_FOUND_ERROR) {
-          CleanUp();
-          return get_status;
-        }
-        if (!setted) {
-          status = dead_dbm.Set(key, "", false);
-          if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
-            CleanUp();
-            return status;
-          }
-        }
-        break;
-      }
-      default: {
-        return Status(Status::BROKEN_DATA_ERROR, "void data is read");
-      }
-    }
-  }
-  status = dead_dbm.Close();
-  status |= RemoveFile(dead_path);
-  status |= offset_file->Close();
-  status |= RemoveFile(offset_path);
+  status = ImportFromFileBackwardImpl(
+      file.get(), skip_broken_records, record_base, end_offset, offset_path, dead_path);
+  status |= file->Close();
   return status;
+}
+
+Status HashDBMImpl::ImportFromFileBackward(
+    File* file, bool skip_broken_records,
+    int64_t record_base, int64_t end_offset) {
+  std::string offset_path, dead_path;
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    offset_path = path_ + ".tmp.offset";
+    dead_path = path_ + ".tmp.dead";
+  }
+  return ImportFromFileBackwardImpl(file, skip_broken_records, record_base, end_offset,
+                                    offset_path, dead_path);
 }
 
 Status HashDBMImpl::OpenImpl(bool writable) {
@@ -1534,6 +1411,190 @@ Status HashDBMImpl::ReadNextBucketRecords(HashDBMIteratorImpl* iter) {
   return Status(Status::NOT_FOUND_ERROR);
 }
 
+Status HashDBMImpl::ImportFromFileForwardImpl(
+    File* file, bool skip_broken_records,
+    int64_t record_base, int64_t end_offset) {
+  int64_t tmp_record_base = 0;
+  int32_t offset_width = 0;
+  int32_t align_pow = 0;
+  int64_t last_sync_size = 0;
+  Status status = HashDBM::FindRecordBase(
+      file, &record_base, &offset_width, &align_pow, &last_sync_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (record_base < 0) {
+    record_base = tmp_record_base;
+  }
+  if (end_offset == 0) {
+    if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
+      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
+    }
+    end_offset = last_sync_size;
+  }
+  Status import_status(Status::SUCCESS);
+  class Importer final : public DBM::RecordProcessor {
+   public:
+    Importer(HashDBMImpl* impl, Status* status) : impl_(impl), status_(status) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      Status set_status(Status::SUCCESS);
+      DBM::RecordProcessorSet setter(&set_status, value, true, nullptr);
+      *status_ = impl_->Process(key, &setter, true);
+      *status_ |= set_status;
+      return NOOP;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      Status remove_status(Status::SUCCESS);
+      DBM::RecordProcessorRemove remover(&remove_status, nullptr);
+      *status_ = impl_->Process(key, &remover, true);
+      *status_ |= remove_status;
+      return NOOP;
+    }
+   private:
+    HashDBMImpl* impl_;
+    Status* status_;
+  } importer(this, &import_status);
+  return HashRecord::ReplayOperations(
+      file, &importer, record_base, offset_width, align_pow,
+      skip_broken_records, end_offset);
+}
+
+Status HashDBMImpl::ImportFromFileBackwardImpl(
+    File* file, bool skip_broken_records,
+    int64_t record_base, int64_t end_offset,
+    const std::string& offset_path, const std::string& dead_path) {
+   int64_t tmp_record_base = 0;
+  int32_t offset_width = 0;
+  int32_t align_pow = 0;
+  int64_t last_sync_size = 0;
+  Status status = HashDBM::FindRecordBase(
+      file, &record_base, &offset_width, &align_pow, &last_sync_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (record_base < 0) {
+    record_base = tmp_record_base;
+  }
+  if (end_offset == 0) {
+    if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
+      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
+    }
+    end_offset = last_sync_size;
+  }
+  auto offset_file = file_->MakeFile();
+  HashDBM dead_dbm;
+  auto CleanUp = [&]() {
+    dead_dbm.Close();
+    RemoveFile(dead_path);
+    offset_file->Close();
+    RemoveFile(offset_path);
+  };
+  status = offset_file->Open(offset_path, true, File::OPEN_TRUNCATE);
+  if (status != Status::SUCCESS) {
+    CleanUp();
+    return status;
+  }
+  status = HashRecord::ExtractOffsets(
+      file, offset_file.get(), record_base, offset_width, align_pow,
+      skip_broken_records, end_offset);
+  if (status != Status::SUCCESS) {
+    CleanUp();
+    return status;
+  }
+  const int64_t num_offsets = offset_file->GetSizeSimple() / offset_width_;
+  const int64_t dead_num_buckets = std::min(num_offsets, num_buckets_);
+  HashDBM::TuningParameters dead_tuning_params;
+  dead_tuning_params.offset_width = offset_width;
+  dead_tuning_params.align_pow = 0;
+  dead_tuning_params.num_buckets = dead_num_buckets;
+  status = dead_dbm.OpenAdvanced(dead_path, true, File::OPEN_TRUNCATE, dead_tuning_params);
+  OffsetReader reader(offset_file.get(), offset_width, align_pow, true);
+  HashRecord rec(file, offset_width, align_pow);
+  while (true) {
+    int64_t offset = 0;
+    status = reader.ReadOffset(&offset);
+    if (status != Status::SUCCESS) {
+      if (status != Status::NOT_FOUND_ERROR) {
+        CleanUp();
+        return status;
+      }
+      break;
+    }
+    status = rec.ReadMetadataKey(offset);
+    if (status != Status::SUCCESS) {
+      CleanUp();
+      return status;
+    }
+    std::string_view key = rec.GetKey();
+    switch (rec.GetOperationType()) {
+      case HashRecord::OP_SET: {
+        std::string_view value = rec.GetValue();
+        if (value.data() == nullptr) {
+          status = rec.ReadBody();
+          if (status != Status::SUCCESS) {
+            CleanUp();
+            return status;
+          }
+          value = rec.GetValue();
+        }
+        bool removed = false;
+        status = dead_dbm.Get(key, nullptr);
+        if (status == Status::SUCCESS) {
+          removed = true;
+        } else if (status != Status::NOT_FOUND_ERROR) {
+          CleanUp();
+          return status;
+        }
+        if (!removed) {
+          Status set_status(Status::SUCCESS);
+          DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
+          status = Process(key, &setter, true);
+          if (status != Status::SUCCESS) {
+            CleanUp();
+            return status;
+          }
+          if (set_status != Status::SUCCESS && set_status != Status::DUPLICATION_ERROR) {
+            return set_status;
+          }
+        }
+        break;
+      }
+      case HashRecord::OP_REMOVE: {
+        bool setted = false;
+        Status get_status(Status::SUCCESS);
+        DBM::RecordProcessorGet getter(&get_status, nullptr);
+        status = Process(key, &getter, true);
+        if (status != Status::SUCCESS) {
+          CleanUp();
+          return status;
+        }
+        if (get_status == Status::SUCCESS) {
+          setted = true;
+        } else if (get_status != Status::NOT_FOUND_ERROR) {
+          CleanUp();
+          return get_status;
+        }
+        if (!setted) {
+          status = dead_dbm.Set(key, "", false);
+          if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
+            CleanUp();
+            return status;
+          }
+        }
+        break;
+      }
+      default: {
+        return Status(Status::BROKEN_DATA_ERROR, "void data is read");
+      }
+    }
+  }
+  status = dead_dbm.Close();
+  status |= RemoveFile(dead_path);
+  status |= offset_file->Close();
+  status |= RemoveFile(offset_path);
+  return status;
+}
+
 HashDBMIteratorImpl::HashDBMIteratorImpl(HashDBMImpl* dbm)
     : dbm_(dbm), bucket_index_(-1), keys_() {
   std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
@@ -1786,9 +1847,21 @@ Status HashDBM::ImportFromFileForward(
   return impl_->ImportFromFileForward(path, skip_broken_records, record_base, end_offset);
 }
 
+Status HashDBM::ImportFromFileForward(
+    File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
+  assert(file != nullptr);
+  return impl_->ImportFromFileForward(file, skip_broken_records, record_base, end_offset);
+}
+
 Status HashDBM::ImportFromFileBackward(
     const std::string& path, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
   return impl_->ImportFromFileBackward(path, skip_broken_records, record_base, end_offset);
+}
+
+Status HashDBM::ImportFromFileBackward(
+    File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
+  assert(file != nullptr);
+  return impl_->ImportFromFileForward(file, skip_broken_records, record_base, end_offset);
 }
 
 HashDBM::Iterator::Iterator(HashDBMImpl* dbm_impl) {

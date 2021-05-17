@@ -519,6 +519,21 @@ class HashDBM final : public DBM {
 
   /**
    * Imports records from another hash database file, in a forward manner.
+   * @param file A file object of the other hash database file.
+   * @param skip_broken_records If true, the operation continues even if there are broken records
+   * which can be skipped.
+   * @param record_base The beginning offset of records to read.  Negative means the beginning
+   * of the record section.
+   * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
+   * 0 means the size when the database is synched or closed properly.
+   * @return The result status.
+   * @details Precondition: The database is opened.
+   */
+  Status ImportFromFileForward(
+      File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset);
+
+  /**
+   * Imports records from another hash database file, in a forward manner.
    * @param path A path of the other hash database file.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
@@ -532,6 +547,21 @@ class HashDBM final : public DBM {
   Status ImportFromFileForward(
       const std::string& path, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
+
+  /**
+   * Imports records from another hash database file, in a backward manner.
+   * @param file A file object of the other hash database file.
+   * @param skip_broken_records If true, the operation continues even if there are broken records
+   * which can be skipped.
+   * @param record_base The beginning offset of records to read.  Negative means the beginning
+   * of the record section.
+   * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
+   * 0 means the size when the database is synched or closed properly.
+   * @return The result status.
+   * @details Precondition: The database is opened.
+   */
+  Status ImportFromFileBackward(
+      File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset);
 
   /**
    * Imports records from another hash database file, in a backward manner.

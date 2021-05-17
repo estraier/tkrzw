@@ -367,7 +367,7 @@ class PageCache final {
     /** Whether the buffer should be written back. */
     bool dirty;
   };
-  
+
   /**
    * Slot for concurrency.
    */

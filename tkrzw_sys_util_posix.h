@@ -41,11 +41,6 @@ inline Status PReadSequence(int32_t fd, int64_t off, void* buf, size_t size) {
   while (size > 0) {
     const int32_t rsiz = pread(fd, wp, size, off);
     if (rsiz < 0) {
-
-      std::cout << "FD=" << fd << " off=" << off
-                << " buf=" << intptr_t(buf) % 512
-                << " size=" << size << std::endl;
-      
       return GetErrnoStatus("pread", errno);
     }
     if (rsiz == 0) {

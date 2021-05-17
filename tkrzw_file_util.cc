@@ -628,7 +628,7 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
-    }    
+    }
   }
   while (size > 0) {
     const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
@@ -649,7 +649,7 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
-    }    
+    }
   }
   return Status(Status::SUCCESS);
 }
@@ -676,7 +676,7 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
-    }    
+    }
   }
   while (size > 0) {
     const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
@@ -698,7 +698,7 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
-    }    
+    }
   }
   while (true) {
     int64_t region_size = region_size_.load();

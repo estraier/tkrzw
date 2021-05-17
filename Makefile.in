@@ -281,6 +281,9 @@ check-hashdbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file pos-atom --path casket.tkh \
 	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
 	  --iter 5000 --threads 2 --size 100 --buckets 100000 --iterator --clear --rebuild
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file pos-atom --path casket.tkh \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --pagecache \
+	  --iter 10000 --threads 4 --size 100 --buckets 100000 --iterator --clear --rebuild
 
 check-hashdbm-util :
 	rm -Rf casket*
@@ -367,7 +370,7 @@ check-treedbm-perf :
 	  --iter 80000 --threads 1 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm tree --file pos-para --path casket.tkt \
-	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --align_pow 9 \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --pagecache --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --iterator --clear --rebuild
 
@@ -421,6 +424,9 @@ check-skipdbm-perf :
 	rm -Rf casket*
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm skip --file mmap-para --path casket.tks \
 	  --iter 20000 --threads 5 --size 8 --step_unit 4 --max_level 10
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm skip --file mmap-atom --path casket.tks \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --pagecache \
+	  --iter 20000 --threads 5 --size 8 --step_unit 4 --max_level 10
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm skip --file mmap-para --path casket.tks \
 	  --iter 20000 --threads 5 --size 8 --step_unit 2 --max_level 20 --random_key --random_value
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm skip --file pos-para --path casket.tks \
@@ -428,6 +434,9 @@ check-skipdbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm skip --file pos-para --path casket.tks \
 	  --iter 20000 --threads 5 --size 8 --step_unit 3 --max_level 13
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm skip --file pos-para --path casket.tks \
+	  --iter 20000 --threads 5 --size 8 --step_unit 5 --max_level 9
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm skip --file pos-atom --path casket.tks \
+	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding --pagecache \
 	  --iter 20000 --threads 5 --size 8 --step_unit 5 --max_level 9
 
 check-skipdbm-util :
