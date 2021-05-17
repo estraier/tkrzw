@@ -1109,14 +1109,12 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
 Status HashDBMImpl::TuneFileAfterOpen() {
   Status status(Status::SUCCESS);
   if (lock_mem_buckets_) {
-    std::cout << "LOCK" << std::endl;
     auto* mem_file = dynamic_cast<MemoryMapFile*>(file_.get());
     if (mem_file != nullptr) {
       status |= mem_file->LockMemory(record_base_);
     }
   }
   if (cache_buckets_) {
-    std::cout << "CACHE" << std::endl;
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
       status |= pos_file->SetHeadBuffer(record_base_);
