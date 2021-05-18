@@ -379,7 +379,7 @@ class PageCache final {
   };
 
   /** Prepareas the page for the given offset. */
-  Status PreparePage(Slot* slot, int64_t off, int64_t size, Page** page);
+  Status PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** page);
   /** Reduce pages by discarding excessive ones. */
   Status ReduceCache(Slot* slot);
   /** The page size for I/O operations. */

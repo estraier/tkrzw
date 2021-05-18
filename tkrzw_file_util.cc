@@ -617,7 +617,7 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
     const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, page_off, page_size_, &page);
+    Status status = PreparePage(&slot, page_off, page_size_, true, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -638,7 +638,7 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
         std::max(data_size, std::min(region_size_.load() - off, page_size_));
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, off, proc_size, &page);
+    Status status = PreparePage(&slot, off, proc_size, true, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -664,7 +664,7 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, page_off, page_size_, &page);
+    Status status = PreparePage(&slot, page_off, page_size_, true, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -686,7 +686,8 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
         std::max(data_size, std::min(region_size_.load() - off, page_size_));
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, off, proc_size, &page);
+    const bool do_load = proc_size == page_size_;
+    Status status = PreparePage(&slot, off, proc_size, do_load, &page);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -742,7 +743,7 @@ void PageCache::SetRegionSize(int64_t size) {
   return region_size_.store(size);
 }
 
-Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, Page** result) {
+Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** result) {
   Page* page = nullptr;
   for (auto& candidate : slot->pages) {
     if (candidate.off == off) {
@@ -752,22 +753,26 @@ Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, Page** resu
   }
   if (page == nullptr) {
     char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
-    const Status status = read_func_(off, buf, size);
-    if (status != Status::SUCCESS) {
-      xfreealigned(buf);
-      return status;
+    if (do_load) {
+      const Status status = read_func_(off, buf, size);
+      if (status != Status::SUCCESS) {
+        xfreealigned(buf);
+        return status;
+      }
     }
     slot->pages.emplace_back(Page({buf, off, size, false}));
     *result = &slot->pages.back();
   } else if (page->size < size) {
     char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
-    const Status status = read_func_(off, buf, size);
-    if (status != Status::SUCCESS) {
-      xfreealigned(buf);
-      return status;
-    }
-    if (page->dirty) {
-      std::memcpy(buf, page->buf, page->size);
+    if (do_load) {
+      const Status status = read_func_(off, buf, size);
+      if (status != Status::SUCCESS) {
+        xfreealigned(buf);
+        return status;
+      }
+      if (page->dirty) {
+        std::memcpy(buf, page->buf, page->size);
+      }
     }
     xfreealigned(page->buf);
     page->buf = buf;

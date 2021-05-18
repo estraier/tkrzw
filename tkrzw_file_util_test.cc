@@ -280,25 +280,26 @@ TEST(FileUtilTest, TemporaryDirectory) {
 TEST(FileUtilTest, PageCache) {
   constexpr int64_t num_threads = 4;
   constexpr int64_t file_size = 8192;
-  char file_buffer[file_size];
+  constexpr int64_t block_size = 10;
+  char file_buffer[file_size + block_size];
   for (int32_t i = 0; i < file_size; i++) {
     file_buffer[i] = '0' + i % 10;
   }
+  const int64_t padded_size = tkrzw::AlignNumber(file_size, block_size);
+  for (int32_t i = file_size; i < padded_size; i++) {
+    file_buffer[i] = 'X';
+  }
   auto read_func = [&](int64_t off, void* buf, size_t size) {
-                     if (size + off > file_size) {
-                       return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
-                     }
+                     EXPECT_LE(off + size, padded_size);
                      std::memcpy(buf, file_buffer + off, size);
                      return tkrzw::Status(tkrzw::Status::SUCCESS);
                    };
   auto write_func = [&](int64_t off, const void* buf, size_t size) {
-                      if (size + off > file_size) {
-                        return tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR);
-                      }
+                      EXPECT_LE(off + size, padded_size);
                       std::memcpy(file_buffer + off, buf, size);
                       return tkrzw::Status(tkrzw::Status::SUCCESS);
                     };
-  tkrzw::PageCache cache(10, 2048, read_func, write_func);
+  tkrzw::PageCache cache(block_size, 2048, read_func, write_func);
   EXPECT_EQ(0, cache.GetRegionSize());
   char buf[256];
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 5));
@@ -330,13 +331,10 @@ TEST(FileUtilTest, PageCache) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush());
   EXPECT_EQ("ABCDEFGHXXXX234567YYYY234", std::string_view(file_buffer, 25));
   EXPECT_EQ(22, cache.GetRegionSize());
-
   cache.SetRegionSize(105);
   EXPECT_EQ(105, cache.GetRegionSize());
-
-
   cache.Clear();
-  EXPECT_EQ(0, cache.GetRegionSize());
+  EXPECT_EQ(105, cache.GetRegionSize());
   for (int32_t i = 0; i < file_size; i++) {
     file_buffer[i] = '0' + i % 10;
   }
@@ -346,26 +344,18 @@ TEST(FileUtilTest, PageCache) {
                 char buf[256];
                 for (int32_t i = 0; i < 1000; i++) {
                   const int64_t off = dist(mt) % file_size;
-                  const int64_t size = dist(mt) % 30;
+                  const int64_t size = std::min<int64_t>(dist(mt) % 30, file_size - off);
                   if (dist(mt) % 2 == 0) {
                     for (int32_t j = 0; j < size; j++) {
                       buf[j] = 'a' + (off+ j) % 10;
                     }
-                    if (off + size > file_size) {
-                      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, cache.Write(off, buf, size));
-                    } else {
-                      EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(off, buf, size));
-                    }
+                    EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(off, buf, size));
                   } else {
-                    if (off + size > file_size) {
-                      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, cache.Read(off, buf, size));
-                    } else {
-                      EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(off, buf, size));
-                      for (int32_t j = 0; j < size; j++) {
-                        const int32_t est_number = '0' + (off + j) % 10;
-                        const int32_t est_alpha = 'a' + (off + j) % 10;
-                        EXPECT_TRUE(buf[j] == est_number || buf[j] == est_alpha);
-                      }
+                    EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(off, buf, size));
+                    for (int32_t j = 0; j < size; j++) {
+                      const int32_t est_number = '0' + (off + j) % 10;
+                      const int32_t est_alpha = 'a' + (off + j) % 10;
+                      EXPECT_TRUE(buf[j] == est_number || buf[j] == est_alpha);
                     }
                   }
                 }
