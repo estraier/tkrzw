@@ -39,6 +39,7 @@ static void PrintUsageAndDie() {
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --size num : The size of each record value. (default: 8)\n");
   P("  --threads num : The number of threads. (default: 1)\n");
+  P("  --random_seed num : The random seed or negative for real RNG. (default: 0)\n");
   P("  --verbose : Prints verbose reports.\n");
   P("  --path path : The path of the file to write or read.\n");
   P("  --file impl : The name of a file implementation:"
@@ -473,7 +474,8 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
 // Processes the sequence subcommand.
 static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--verbose", 0},
+    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
+    {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0},
     {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
@@ -497,6 +499,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t value_size = GetIntegerArgument(cmd_args, "--size", 0, 8);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const bool is_verbose = CheckMap(cmd_args, "--verbose");
   const bool is_random_key = CheckMap(cmd_args, "--random_key");
   const bool is_random_value = CheckMap(cmd_args, "--random_value");
@@ -551,8 +554,9 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto setting_task = [&](int32_t id) {
-    std::mt19937 key_mt(id);
-    std::mt19937 misc_mt(id * 2 + 1);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed);
+    std::mt19937 misc_mt(mt_seed * 2 + 1);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     char* value_buf = new char[value_size];
@@ -621,7 +625,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     PrintL();
   }
   auto getting_task = [&](int32_t id) {
-    std::mt19937 key_mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
@@ -629,7 +634,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
       const Status status = dbm->Get(key);
-      if (status != Status::SUCCESS) {
+      if (status != Status::SUCCESS &&
+          !(is_random_key && random_seed < 0 && status == Status::NOT_FOUND_ERROR)) {
         EPrintL("Get failed: ", status);
         has_error = true;
         break;
@@ -679,7 +685,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     PrintL();
   }
   auto removing_task = [&](int32_t id) {
-    std::mt19937 key_mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
@@ -749,7 +756,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
 // Processes the parallel subcommand.
 static int32_t ProcessParallel(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--verbose", 0},
+    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
+    {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1}, {"--rebuild", 0}, {"--sleep", 1},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
@@ -772,6 +780,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t value_size = GetIntegerArgument(cmd_args, "--size", 0, 8);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const bool is_verbose = CheckMap(cmd_args, "--verbose");
   const bool is_random_key = CheckMap(cmd_args, "--random_key");
   const bool is_random_value = CheckMap(cmd_args, "--random_value");
@@ -827,7 +836,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   std::atomic_int32_t master_id(0);
   auto task = [&](int32_t id) {
-    std::mt19937 mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 mt(mt_seed);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
@@ -940,7 +950,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
 // Processes the wicked subcommand.
 static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--verbose", 0},
+    {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
+    {"--random_seed", 1}, {"--verbose", 0},
     {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
@@ -963,6 +974,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t value_size = GetIntegerArgument(cmd_args, "--size", 0, 8);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const bool is_verbose = CheckMap(cmd_args, "--verbose");
   const bool with_iterator = CheckMap(cmd_args, "--iterator");
   const bool with_sync = CheckMap(cmd_args, "--sync");
@@ -1016,8 +1028,9 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto task = [&](int32_t id) {
-    std::mt19937 key_mt(id);
-    std::mt19937 misc_mt(id * 2 + 1);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed);
+    std::mt19937 misc_mt(mt_seed * 2 + 1);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
@@ -1228,7 +1241,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
 // Processes the index subcommand.
 static int32_t ProcessIndex(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 0}, {"--type", 1}, {"--iter", 1}, {"--threads", 1},
+    {"", 0}, {"--type", 1}, {"--iter", 1}, {"--threads", 1},{"--random_seed", 1},
     {"--random_key", 0}, {"--random_value", 0},
     {"--path", 1},
     {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
@@ -1244,6 +1257,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const std::string type = GetStringArgument(cmd_args, "--type", 0, "file");
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const bool is_random_key = CheckMap(cmd_args, "--random_key");
   const bool is_random_value = CheckMap(cmd_args, "--random_value");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
@@ -1389,8 +1403,9 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto task = [&](std::function<void(int64_t, int64_t)> op, int32_t id) {
-    std::mt19937 key_mt(id);
-    std::mt19937 value_mt(id * 2 + 1);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed);
+    std::mt19937 value_mt(mt_seed * 2 + 1);
     std::uniform_int_distribution<int32_t> num_dist(0, num_iterations * num_threads - 1);
     bool midline = false;
     for (int32_t i = 0; i < num_iterations; i++) {

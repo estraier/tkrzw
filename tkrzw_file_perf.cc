@@ -33,6 +33,7 @@ static void PrintUsageAndDie() {
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --size num : The size of each record. (default: 100)\n");
   P("  --threads num : The number of threads. (default: 1)\n");
+  P("  --random_seed num : The random seed or nagative for real RNG. (default: 0)\n");
   P("  --alloc_init num : The initial allocation size. (default: %lld)\n",
     File::DEFAULT_ALLOC_INIT_SIZE);
   P("  --alloc_inc num : The allocation increment factor. (default: %.1f)\n",
@@ -58,7 +59,7 @@ static void PrintUsageAndDie() {
 // Processes the sequence subcommand.
 static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
+    {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--random_seed", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
     {"--block_size", 1}, {"--head_buffer", 1},
     {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -75,6 +76,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t record_size = GetIntegerArgument(cmd_args, "--size", 0, 100);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const int32_t alloc_init_size = GetIntegerArgument(
       cmd_args, "--alloc_init", 0, File::DEFAULT_ALLOC_INIT_SIZE);
   const double alloc_increment = GetDoubleArgument(
@@ -110,7 +112,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto writing_task = [&](int32_t id) {
-    std::mt19937 mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 mt(mt_seed);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     char* write_buf = new char[record_size];
     std::memset(write_buf, '0' + id, record_size);
@@ -186,7 +189,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     PrintL();
   }
   auto reading_task = [&](int32_t id) {
-    std::mt19937 mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 mt(mt_seed);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     char* read_buf = new char[record_size];
     bool midline = false;
@@ -198,7 +202,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
         off = (static_cast<int64_t>(i) * num_threads + id) * record_size;
       }
       const Status status = file->Read(off, read_buf, record_size);
-      if (status != Status::SUCCESS) {
+      if (status != Status::SUCCESS && !(is_random && status == Status::INFEASIBLE_ERROR)) {
         PrintL("Read failed: ", status);
         has_error = true;
         break;
@@ -257,7 +261,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
 // Processes the wicked subcommand.
 static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
+    {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--random_seed", 1},
     {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
     {"--block_size", 1}, {"--head_buffer", 1},
     {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -273,6 +277,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t record_size = GetIntegerArgument(cmd_args, "--size", 0, 100);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t random_seed = GetIntegerArgument(cmd_args, "--random_seed", 0, 0);
   const int32_t alloc_init_size = GetIntegerArgument(
       cmd_args, "--alloc_init", 0, File::DEFAULT_ALLOC_INIT_SIZE);
   const double alloc_increment = GetDoubleArgument(
@@ -305,7 +310,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   std::mutex file_mutex;
   auto task = [&](int32_t id) {
-    std::mt19937 mt(id);
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 mt(mt_seed);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
     char* write_buf = new char[record_size];
