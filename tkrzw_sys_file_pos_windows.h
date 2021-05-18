@@ -588,7 +588,10 @@ Status PositionalParallelFileImpl::WriteImpl(int64_t off, const char* buf, size_
     }
     std::memcpy(aligned + off_rem, buf, size);
     if (end_len > 0) {
-      status |= PReadSequence(file_handle_, mod_end - block_size_, block, block_size_);
+      const int64_t mod_end_off = mod_end - block_size_;
+      if (off_rem == 0 || mod_end_off != mod_off) {
+        status |= PReadSequence(file_handle_, mod_end_off, block, block_size_);
+      }
       std::memcpy(aligned + off_rem + size, block + end_rem, end_len);
     }
     status |= PWriteSequence(file_handle_, mod_off, aligned, off_rem + size + end_len);
@@ -1256,7 +1259,10 @@ Status PositionalAtomicFileImpl::WriteImpl(int64_t off, const char* buf, size_t 
     }
     std::memcpy(aligned + off_rem, buf, size);
     if (end_len > 0) {
-      status |= PReadSequence(file_handle_, mod_end - block_size_, block, block_size_);
+      const int64_t mod_end_off = mod_end - block_size_;
+      if (off_rem == 0 || mod_end_off != mod_off) {
+        status |= PReadSequence(file_handle_, mod_end_off, block, block_size_);
+      }
       std::memcpy(aligned + off_rem + size, block + end_rem, end_len);
     }
     status |= PWriteSequence(file_handle_, mod_off, aligned, off_rem + size + end_len);
