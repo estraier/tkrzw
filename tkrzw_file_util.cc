@@ -732,7 +732,6 @@ void PageCache::Clear() {
     }
     slot.pages.clear();
   }
-  region_size_.store(0);
 }
 
 int64_t PageCache::GetRegionSize() {

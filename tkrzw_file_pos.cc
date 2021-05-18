@@ -395,7 +395,9 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
+    if (writable_) {
+      status |= page_cache_->Flush();
+    }
     page_cache_->Clear();
   }
   if (head_buffer_ != nullptr) {
@@ -1053,7 +1055,9 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
+    if (writable_) {
+      status |= page_cache_->Flush();
+    }
     page_cache_->Clear();
   }
   if (head_buffer_ != nullptr) {
