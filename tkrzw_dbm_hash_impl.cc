@@ -20,10 +20,12 @@
 namespace tkrzw {
 
 HashRecord::HashRecord(File* file, int32_t offset_width, int32_t align_pow)
-    : file_(file), offset_width_(offset_width), align_pow_(align_pow), body_buf_(nullptr) {}
+    : file_(file), offset_width_(offset_width), align_pow_(align_pow),
+      ext_meta_buf_(nullptr), body_buf_(nullptr) {}
 
 HashRecord::~HashRecord() {
   delete[] body_buf_;
+  delete[] ext_meta_buf_;
 }
 
 HashRecord::OperationType HashRecord::GetOperationType() const {
@@ -49,18 +51,30 @@ int32_t HashRecord::GetWholeSize() const {
 Status HashRecord::ReadMetadataKey(int64_t offset) {
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
   int64_t record_size = file_->GetSizeSimple() - offset;
-  if (record_size > READ_BUFFER_SIZE) {
-    record_size = READ_BUFFER_SIZE;
-  } else {
-    if (record_size < min_record_size) {
-      return Status(Status::BROKEN_DATA_ERROR, "too short record data");
+  char* read_buf = meta_buf_;
+  if (record_size > META_DEFAULT_READ_SIZE) {
+    const int32_t align = 1 << align_pow_;
+    if (align > META_DEFAULT_READ_SIZE) {
+      if (align > META_BUFFER_SIZE) {
+        if (ext_meta_buf_ == nullptr) {
+          ext_meta_buf_ = new char[align];
+        }
+        record_size = std::min<int64_t>(record_size, align);
+        read_buf = ext_meta_buf_;
+      } else {
+        record_size = std::min<int64_t>(record_size, META_BUFFER_SIZE);
+      }
+    } else {
+      record_size = std::min<int64_t>(record_size, META_DEFAULT_READ_SIZE);
     }
+  } else if (record_size < min_record_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too short record data");
   }
-  Status status = file_->Read(offset, buffer_, record_size);
+  Status status = file_->Read(offset, read_buf, record_size);
   if (status != Status::SUCCESS) {
     return status;
   }
-  const char* rp = buffer_;
+  const char* rp = read_buf;
   if (*(uint8_t*)rp == RECORD_MAGIC_VOID) {
     type_ = OP_VOID;
   } else if (*(uint8_t*)rp == RECORD_MAGIC_SET) {
@@ -99,7 +113,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset) {
   padding_size_ = ReadFixNum(rp, 1);
   rp++;
   record_size--;
-  header_size_ = rp - buffer_;
+  header_size_ = rp - read_buf;
   whole_size_ = padding_size_ < PADDING_SIZE_MAGIC ?
                                 header_size_ + key_size_ + value_size_ + padding_size_ : 0;
   key_ptr_ = nullptr;

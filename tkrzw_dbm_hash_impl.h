@@ -185,8 +185,10 @@ class HashRecord final {
       bool skip_broken_records, int64_t end_offset);
 
  private:
-  /** The size of the stack buffer to read the record. */
-  static constexpr int32_t READ_BUFFER_SIZE = 48;
+  /** The size of the stack buffer to read the meta data. */
+  static constexpr int32_t META_BUFFER_SIZE = 512;
+  /** The default size to read the meta data. */
+  static constexpr int32_t META_DEFAULT_READ_SIZE = 48;
   /** The size of the stack buffer to write the record. */
   static constexpr int32_t WRITE_BUFFER_SIZE = 4096;
   /** The magic number at the top of the void record. */
@@ -205,8 +207,10 @@ class HashRecord final {
   int32_t offset_width_;
   /** The alignment power. */
   int32_t align_pow_;
-  /** The stack buffer with the consant size. */
-  char buffer_[READ_BUFFER_SIZE];
+  /** The stack buffer to read the meta data. */
+  char meta_buf_[META_BUFFER_SIZE];
+  /** The extended buffer to read the meta data. */
+  char* ext_meta_buf_;
   /** The type of operation. */
   OperationType type_;
   /** The whole size of the record. */
