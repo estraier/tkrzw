@@ -4,6 +4,7 @@
 	- Library version: 1.8.0
 
 	- Fix a bug of cache_buffer on read-only direct I/O mode.
+	- Performance of writing page cachees is improved.
 
 2021-05-14  Mikio Hirabayashi  <hirarin@gmail.com>
 

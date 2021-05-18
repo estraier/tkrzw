@@ -686,7 +686,7 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
         std::max(data_size, std::min(region_size_.load() - off, page_size_));
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    const bool do_load = proc_size == page_size_;
+    const bool do_load = proc_size != data_size;
     Status status = PreparePage(&slot, off, proc_size, do_load, &page);
     if (status != Status::SUCCESS) {
       return status;
