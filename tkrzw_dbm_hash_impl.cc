@@ -62,7 +62,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset) {
         record_size = std::min<int64_t>(record_size, align);
         read_buf = ext_meta_buf_;
       } else {
-        record_size = std::min<int64_t>(record_size, META_BUFFER_SIZE);
+        record_size = std::min<int64_t>(record_size, align);
       }
     } else {
       record_size = std::min<int64_t>(record_size, META_DEFAULT_READ_SIZE);
