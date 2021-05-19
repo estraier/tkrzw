@@ -55,14 +55,12 @@ Status HashRecord::ReadMetadataKey(int64_t offset) {
   if (record_size > META_DEFAULT_READ_SIZE) {
     const int32_t align = 1 << align_pow_;
     if (align > META_DEFAULT_READ_SIZE) {
-      if (align > META_BUFFER_SIZE) {
+      record_size = std::min<int64_t>(record_size, align);
+      if (record_size > META_BUFFER_SIZE) {
         if (ext_meta_buf_ == nullptr) {
-          ext_meta_buf_ = new char[align];
+          ext_meta_buf_ = new char[record_size];
         }
-        record_size = std::min<int64_t>(record_size, align);
         read_buf = ext_meta_buf_;
-      } else {
-        record_size = std::min<int64_t>(record_size, align);
       }
     } else {
       record_size = std::min<int64_t>(record_size, META_DEFAULT_READ_SIZE);
