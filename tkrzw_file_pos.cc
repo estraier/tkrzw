@@ -184,14 +184,13 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
 
   // Builds the page cache.
   if (access_options_ & PositionalFile::ACCESS_PAGECACHE) {
-    const int64_t capacity = block_size_ * PageCache::NUM_SLOTS * 4;
     auto reader = [&](int64_t off, void* buf, size_t size) {
                     return PReadSequence(fd_, off, buf, size);
                   };
     auto writer = [&](int64_t off, const void* buf, size_t size) {
                     return PWriteSequence(fd_, off, buf, size);
                   };
-    page_cache_ = std::make_unique<PageCache>(block_size_, capacity, reader, writer);
+    page_cache_ = std::make_unique<PageCache>(block_size_, 256, reader, writer);
     page_cache_->SetRegionSize(trunc_size);
   } else {
     page_cache_.reset(nullptr);
@@ -849,14 +848,13 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
 
   // Builds the page cache.
   if (access_options_ & PositionalFile::ACCESS_PAGECACHE) {
-    const int64_t capacity = block_size_ * PageCache::NUM_SLOTS * 4;
     auto reader = [&](int64_t off, void* buf, size_t size) {
                     return PReadSequence(fd_, off, buf, size);
                   };
     auto writer = [&](int64_t off, const void* buf, size_t size) {
                     return PWriteSequence(fd_, off, buf, size);
                   };
-    page_cache_ = std::make_unique<PageCache>(block_size_, capacity, reader, writer);
+    page_cache_ = std::make_unique<PageCache>(block_size_, 256, reader, writer);
     page_cache_->SetRegionSize(trunc_size);
   } else {
     page_cache_.reset(nullptr);

@@ -299,7 +299,7 @@ TEST(FileUtilTest, PageCache) {
                       std::memcpy(file_buffer + off, buf, size);
                       return tkrzw::Status(tkrzw::Status::SUCCESS);
                     };
-  tkrzw::PageCache cache(block_size, 2048, read_func, write_func);
+  tkrzw::PageCache cache(block_size, 200, read_func, write_func);
   EXPECT_EQ(0, cache.GetRegionSize());
   char buf[256];
   EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Read(0, buf, 5));

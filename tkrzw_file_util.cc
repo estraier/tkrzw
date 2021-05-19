@@ -593,17 +593,26 @@ Status TemporaryDirectory::CleanUp() const {
 
 PageCache::PageCache(
     int64_t page_size, int64_t capacity, ReadType read_func, WriteType write_func) :
-    page_size_(page_size), capacity_(capacity), read_func_(read_func), write_func_(write_func),
-    slots_(), region_size_(0) {}
+    page_size_(page_size), read_func_(read_func), write_func_(write_func),
+    slot_capacity_(std::max<int64_t>(capacity / NUM_SLOTS, 1)),
+    slots_(), region_size_(0) {
+  for (auto& slot : slots_) {
+    slot.pages = new LinkedHashMap<int64_t, Page>(slot_capacity_ * 4 + 1);
+  }
+}
 
 PageCache::~PageCache() {
   for (auto& slot : slots_) {
-    for (auto& page : slot.pages) {
+    auto& pages = *slot.pages;
+    for (auto it = pages.begin(); it != pages.end(); ++it) {
+      const int64_t off = it->key;
+      Page& page = it->value;
       if (page.dirty) {
-        write_func_(page.off, page.buf, page.size);
+        write_func_(off, page.buf, page.size);
       }
       xfreealigned(page.buf);
     }
+    delete slot.pages;
   }
 }
 
@@ -715,9 +724,12 @@ Status PageCache::Flush() {
   Status status(Status::SUCCESS);
   for (auto& slot : slots_) {
     std::lock_guard lock(slot.mutex);
-    for (auto& page : slot.pages) {
+    auto& pages = *slot.pages;
+    for (auto it = pages.begin(); it != pages.end(); ++it) {
+      const int64_t off = it->key;
+      Page& page = it->value;
       if (page.dirty) {
-        status |= write_func_(page.off, page.buf, page.size);
+        status |= write_func_(off, page.buf, page.size);
         page.dirty = false;
       }
     }
@@ -728,10 +740,12 @@ Status PageCache::Flush() {
 void PageCache::Clear() {
   for (auto& slot : slots_) {
     std::lock_guard lock(slot.mutex);
-    for (auto& page : slot.pages) {
+    auto& pages = *slot.pages;
+    for (auto it = pages.begin(); it != pages.end(); ++it) {
+      Page& page = it->value;
       xfreealigned(page.buf);
     }
-    slot.pages.clear();
+    pages.clear();
   }
 }
 
@@ -744,14 +758,9 @@ void PageCache::SetRegionSize(int64_t size) {
 }
 
 Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** result) {
-  Page* page = nullptr;
-  for (auto& candidate : slot->pages) {
-    if (candidate.off == off) {
-      page = &candidate;
-      break;
-    }
-  }
-  if (page == nullptr) {
+  auto& pages = *slot->pages;
+  auto *rec = pages.Get(off, LinkedHashMap<int64_t, Page>::MOVE_LAST);
+  if (rec == nullptr) {
     char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
     if (do_load) {
       const Status status = read_func_(off, buf, size);
@@ -760,47 +769,47 @@ Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, bool do_loa
         return status;
       }
     }
-    slot->pages.emplace_back(Page({buf, off, size, false}));
-    *result = &slot->pages.back();
-  } else if (page->size < size) {
-    char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
-    if (do_load) {
-      const Status status = read_func_(off, buf, size);
-      if (status != Status::SUCCESS) {
-        xfreealigned(buf);
-        return status;
-      }
-      if (page->dirty) {
-        std::memcpy(buf, page->buf, page->size);
-      }
-    }
-    xfreealigned(page->buf);
-    page->buf = buf;
-    page->size = size;
-    *result = page;
+    *result = &pages.Set(off, Page({buf, size, false}))->value;
   } else {
+    Page* page = &rec->value;
+    if (page->size < size) {
+      char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
+      if (do_load) {
+        const Status status = read_func_(off, buf, size);
+        if (status != Status::SUCCESS) {
+          xfreealigned(buf);
+          return status;
+        }
+        if (page->dirty) {
+          std::memcpy(buf, page->buf, page->size);
+        }
+      }
+      xfreealigned(page->buf);
+      page->buf = buf;
+      page->size = size;
+      *result = page;
+    }
     *result = page;
   }
   return Status(Status::SUCCESS);
 }
 
 Status PageCache::ReduceCache(Slot* slot) {
-  const int64_t slot_max_pages = std::max<int64_t>(capacity_ / page_size_ / NUM_SLOTS, 1);
-  if (static_cast<int64_t>(slot->pages.size()) <= slot_max_pages) {
-    return Status(Status::SUCCESS);
-  }
-  int32_t num_excessives = slot->pages.size() - slot_max_pages;
   Status status(Status::SUCCESS);
-  auto page = slot->pages.begin();
-  while (page != slot->pages.end() && num_excessives > 0) {
-    if (page->dirty) {
-      status |= write_func_(page->off, page->buf, page->size);
+  auto& pages = *slot->pages;
+  int32_t num_excessives = pages.size() - slot_capacity_;
+  if (num_excessives > 0) {
+    auto& rec = pages.front();
+    const int64_t off = rec.key;
+    auto& page = rec.value;
+    if (page.dirty) {
+      write_func_(off, page.buf, page.size);
     }
-    xfreealigned(page->buf);
-    slot->pages.erase(page++);
+    xfreealigned(page.buf);
+    pages.Remove(rec.key);
     num_excessives--;
   }
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 FileReader::FileReader(File* file) : file_(file), offset_(0), data_size_(0), index_(0) {}

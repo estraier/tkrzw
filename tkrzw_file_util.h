@@ -14,7 +14,6 @@
 #ifndef _TKRZW_FILE_UTIL_H
 #define _TKRZW_FILE_UTIL_H
 
-#include <list>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -22,6 +21,7 @@
 
 #include <cinttypes>
 
+#include "tkrzw_containers.h"
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_thread_util.h"
@@ -300,7 +300,7 @@ class PageCache final {
   /**
    * Constructor.
    * @param page_size The page size of the I/O operation.
-   * @param capacity The capacity of the cache in bytes.
+   * @param capacity The capacity of the cache by the number of pages.
    * @param read_func The callback function to read a clean buffer from the file.
    * @param write_func The callback function to write a dirty buffer to the file.
    */
@@ -360,8 +360,6 @@ class PageCache final {
   struct Page {
     /** Data buffer aligned to the page size. */
     char* buf;
-    /** The offset in the file. */
-    int64_t off;
     /** The size of data. */
     int64_t size;
     /** Whether the buffer should be written back. */
@@ -372,8 +370,8 @@ class PageCache final {
    * Slot for concurrency.
    */
   struct Slot {
-    /** Pages in the slot. */
-    std::list<Page> pages;
+    /** Offsets and pages in the slot. */
+    LinkedHashMap<int64_t, Page>* pages;
     /** Mutex for consistency. */
     std::mutex mutex;
   };
@@ -384,12 +382,12 @@ class PageCache final {
   Status ReduceCache(Slot* slot);
   /** The page size for I/O operations. */
   int64_t page_size_;
-  /** The capacity of the cache in bytes. */
-  int64_t capacity_;
   /** The reading callback. */
   ReadType read_func_;
   /** The writing callback. */
   WriteType write_func_;
+  /** The maxmum number of pages in each slot. */
+  int64_t slot_capacity_;
   /** The slots for cuncurrency. */
   Slot slots_[NUM_SLOTS];
   /** The region size. */
