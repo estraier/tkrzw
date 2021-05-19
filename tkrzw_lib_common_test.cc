@@ -26,78 +26,6 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(LibCommonTest, Status) {
-  tkrzw::Status s1;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, s1.GetCode());
-  EXPECT_EQ("", s1.GetMessage());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, s1);
-  EXPECT_EQ(s1, tkrzw::Status::SUCCESS);
-  EXPECT_EQ("SUCCESS", static_cast<std::string>(s1));
-  EXPECT_TRUE(s1.IsOK());
-  tkrzw::Status s2(s1);
-  EXPECT_EQ(s1, s2);
-  s2.Set(tkrzw::Status::UNKNOWN_ERROR, "hello");
-  EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, s2.GetCode());
-  EXPECT_EQ("hello", s2.GetMessage());
-  EXPECT_NE(s1, s2);
-  EXPECT_NE(s2, s1);
-  EXPECT_FALSE(s2.IsOK());
-  tkrzw::Status s3;
-  s3 = s2;
-  EXPECT_EQ(s3, s2);
-  s3 = s3 = s3;
-  EXPECT_EQ(s3, s2);
-  tkrzw::Status s4(std::move(s3));
-  EXPECT_EQ(s4, s2);
-  tkrzw::Status s5;
-  s5 = std::move(s4);
-  EXPECT_EQ(s4, s2);
-  std::vector<tkrzw::Status> statuses;
-  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_FOUND_ERROR, "not found 2"));
-  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_FOUND_ERROR, "not found 1"));
-  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_IMPLEMENTED_ERROR, "not implemented"));
-  statuses.emplace_back(tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "system"));
-  statuses.emplace_back(tkrzw::Status(tkrzw::Status::SUCCESS, "success"));
-  std::sort(statuses.begin(), statuses.end());
-  EXPECT_EQ("SUCCESS: success", std::string(statuses[0]));
-  EXPECT_EQ("SYSTEM_ERROR: system", std::string(statuses[1]));
-  EXPECT_EQ("NOT_IMPLEMENTED_ERROR: not implemented", std::string(statuses[2]));
-  EXPECT_EQ("NOT_FOUND_ERROR: not found 1", std::string(statuses[3]));
-  EXPECT_EQ("NOT_FOUND_ERROR: not found 2", ToString(statuses[4]));
-  tkrzw::Status s6(tkrzw::Status::SUCCESS, "s6");
-  tkrzw::Status s7(tkrzw::Status::SUCCESS, "s7");
-  tkrzw::Status s8(tkrzw::Status::SYSTEM_ERROR, "s8");
-  s6 |= s6;
-  EXPECT_EQ("SUCCESS: s6", std::string(s6));
-  s6 |= s7;
-  EXPECT_EQ("SUCCESS: s6", std::string(s6));
-  s6 |= s8;
-  EXPECT_EQ("SYSTEM_ERROR: s8", std::string(s6));
-}
-
-TEST(LibCommonTest, StatusException) {
-  EXPECT_NO_THROW({
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::Status(tkrzw::Status::SUCCESS).OrDie());
-    });
-  EXPECT_THROW({
-      tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "foo").OrDie();
-    }, tkrzw::StatusException);
-  try {
-    tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "foo").OrDie();
-  } catch (const tkrzw::StatusException& e) {
-    EXPECT_EQ(tkrzw::Status::SYSTEM_ERROR, e.GetStatus());
-    EXPECT_EQ("foo", e.GetStatus().GetMessage());
-    EXPECT_EQ("SYSTEM_ERROR: foo", std::string(e));
-  }
-  try {
-    throw tkrzw::StatusException(tkrzw::Status(tkrzw::Status::UNKNOWN_ERROR, "bar"));
-  } catch (const tkrzw::StatusException& e) {
-    EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, e.GetStatus());
-    EXPECT_EQ("bar", e.GetStatus().GetMessage());
-    EXPECT_EQ("UNKNOWN_ERROR: bar", std::string(e));
-  }
-}
-
 TEST(LibCommonTest, Constants) {
   EXPECT_EQ(-128, tkrzw::INT8MIN);
   EXPECT_EQ(127, tkrzw::INT8MAX);
@@ -275,6 +203,83 @@ TEST(LibCommonTest, MakeRandomDouble) {
   }
   for (const auto& count : div_counts) {
     EXPECT_GT(count, num_iterations / num_brackets / 2);
+  }
+}
+
+TEST(LibCommonTest, Status) {
+  tkrzw::Status s1;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, s1.GetCode());
+  EXPECT_EQ("", s1.GetMessage());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, s1);
+  EXPECT_EQ(s1, tkrzw::Status::SUCCESS);
+  EXPECT_EQ("SUCCESS", static_cast<std::string>(s1));
+  EXPECT_TRUE(s1.IsOK());
+  tkrzw::Status s2(s1);
+  EXPECT_EQ(s1, s2);
+  s2.Set(tkrzw::Status::UNKNOWN_ERROR, "hello");
+  EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, s2.GetCode());
+  EXPECT_EQ("hello", s2.GetMessage());
+  EXPECT_NE(s1, s2);
+  EXPECT_NE(s2, s1);
+  EXPECT_FALSE(s2.IsOK());
+  tkrzw::Status s3;
+  s3 = s2;
+  EXPECT_EQ(s3, s2);
+  s3 = s3 = s3;
+  EXPECT_EQ(s3, s2);
+  tkrzw::Status s4(std::move(s3));
+  EXPECT_EQ(s4, s2);
+  tkrzw::Status s5;
+  s5 = std::move(s4);
+  EXPECT_EQ(s4, s2);
+  std::vector<tkrzw::Status> statuses;
+  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_FOUND_ERROR, "not found 2"));
+  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_FOUND_ERROR, "not found 1"));
+  statuses.emplace_back(tkrzw::Status(tkrzw::Status::NOT_IMPLEMENTED_ERROR, "not implemented"));
+  statuses.emplace_back(tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "system"));
+  statuses.emplace_back(tkrzw::Status(tkrzw::Status::SUCCESS, "success"));
+  std::sort(statuses.begin(), statuses.end());
+  EXPECT_EQ("SUCCESS: success", std::string(statuses[0]));
+  EXPECT_EQ("SYSTEM_ERROR: system", std::string(statuses[1]));
+  EXPECT_EQ("NOT_IMPLEMENTED_ERROR: not implemented", std::string(statuses[2]));
+  EXPECT_EQ("NOT_FOUND_ERROR: not found 1", std::string(statuses[3]));
+  EXPECT_EQ("NOT_FOUND_ERROR: not found 2", ToString(statuses[4]));
+  tkrzw::Status s6(tkrzw::Status::SUCCESS, "s6");
+  tkrzw::Status s7(tkrzw::Status::SUCCESS, "s7");
+  tkrzw::Status s8(tkrzw::Status::SYSTEM_ERROR, "s8");
+  s6 |= s6;
+  EXPECT_EQ("SUCCESS: s6", std::string(s6));
+  s6 |= s7;
+  EXPECT_EQ("SUCCESS: s6", std::string(s6));
+  s6 |= s8;
+  EXPECT_EQ("SYSTEM_ERROR: s8", std::string(s6));
+  s6 |= tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR, "move 1");
+  EXPECT_EQ("SYSTEM_ERROR: s8", std::string(s6));
+  s6.Set(tkrzw::Status::SUCCESS, "ok");
+  s6 |= tkrzw::Status(tkrzw::Status::INFEASIBLE_ERROR, "move 1");
+  EXPECT_EQ("INFEASIBLE_ERROR: move 1", std::string(s6));
+}
+
+TEST(LibCommonTest, StatusException) {
+  EXPECT_NO_THROW({
+      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::Status(tkrzw::Status::SUCCESS).OrDie());
+    });
+  EXPECT_THROW({
+      tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "foo").OrDie();
+    }, tkrzw::StatusException);
+  try {
+    tkrzw::Status(tkrzw::Status::SYSTEM_ERROR, "foo").OrDie();
+  } catch (const tkrzw::StatusException& e) {
+    EXPECT_EQ(tkrzw::Status::SYSTEM_ERROR, e.GetStatus());
+    EXPECT_EQ("foo", e.GetStatus().GetMessage());
+    EXPECT_EQ("SYSTEM_ERROR: foo", std::string(e));
+  }
+  try {
+    throw tkrzw::StatusException(tkrzw::Status(tkrzw::Status::UNKNOWN_ERROR, "bar"));
+  } catch (const tkrzw::StatusException& e) {
+    EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, e.GetStatus());
+    EXPECT_EQ("bar", e.GetStatus().GetMessage());
+    EXPECT_EQ("UNKNOWN_ERROR: bar", std::string(e));
   }
 }
 

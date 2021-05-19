@@ -38,13 +38,6 @@ const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
 
 #endif
 
-const Status& Status::OrDie() const {
-  if (code_ != SUCCESS) {
-    throw StatusException(*this);
-  }
-  return *this;
-}
-
 void* xmallocaligned(size_t alignment, size_t size) {
 #if defined(_SYS_LINUX_)
   assert(alignment > 0);
@@ -168,6 +161,13 @@ double MakeRandomDouble() {
   std::uniform_real_distribution<double> dist(0.0, 1.0);
   std::lock_guard<std::mutex> lock(hidden_random_generator_mutex);
   return dist(hidden_random_generator);
+}
+
+const Status& Status::OrDie() const {
+  if (code_ != SUCCESS) {
+    throw StatusException(*this);
+  }
+  return *this;
 }
 
 Status GetErrnoStatus(const char* call_name, int32_t sys_err_num) {
