@@ -639,6 +639,86 @@ check-index-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf index --type str \
 	  --iter 20000 --threads 5 --random_key --random_value
 
+check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
+
+check-direct-hashdbm :
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file mmap-para \
+	  --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --direct_io --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --direct_io --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --path casket.tkh --file pos-para \
+	  --random_seed -1 --iter 1000000 --cache_buckets --block_size 512 --padding \
+	  --pagecache --rebuild --clear --iterator --threads 2
+
+check-direct-treedbm :
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file mmap-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --direct_io --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --direct_io --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --path casket.tkt --file pos-para \
+    --random_seed -1 --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 \
+	  --cache_buckets --block_size 512 --padding --pagecache \
+	  --rebuild --clear --iterator --threads 2
+
+check-direct-skipdbm :
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file mmap-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --direct_io --padding
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --direct_io \
+	  --padding --pagecache
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --path casket.tks --file pos-para \
+    --random_seed -1 --step_unit 16 --max_level 5 --iter 1000000 \
+	  --block_size 1024 --padding --pagecache --rebuild --clear --iterator --threads 2
+
 test : $(TESTFILES)
 
 testrun :

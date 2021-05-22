@@ -617,94 +617,59 @@ PageCache::~PageCache() {
 }
 
 Status PageCache::Read(int64_t off, void* buf, size_t size) {
+  PageCache::PageRequest requests_buf[PAGE_REQUEST_BUFFER_SIZE];
+  size_t num_requests = 0;
+  PageCache::PageRequest* requests = MakePageRequest(off, size, requests_buf, &num_requests);
+  Status status(Status::SUCCESS);
   char *wp = static_cast<char*>(buf);
-  const int64_t off_rem = off % page_size_;
-  if (off_rem != 0) {
-    const int64_t page_off = off - off_rem;
-    const int32_t slot_index = (page_off / page_size_) % NUM_SLOTS;
+  for (size_t request_index = 0; request_index < num_requests; request_index++) {
+    const auto& request = requests[request_index];
+    const int32_t slot_index = GetSlotIndex(request.offset);
     auto& slot = slots_[slot_index];
-    const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, page_off, page_size_, true, &page);
+    status |= PreparePage(&slot, request.offset, request.data_size, true, &page);
     if (status != Status::SUCCESS) {
-      return status;
+      break;
     }
-    std::memcpy(wp, page->buf + off_rem, data_size);
-    wp += data_size;
-    off += data_size;
-    size -= data_size;
+    std::memcpy(wp, page->buf + request.prefix_size, request.copy_size);
+    page->dirty = true;
+    wp += request.copy_size;
+    off += request.copy_size;
+    size -= request.copy_size;
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  while (size > 0) {
-    const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
-    auto& slot = slots_[slot_index];
-    const int64_t data_size = std::min<int64_t>(size, page_size_);
-    const int64_t proc_size =
-        std::max(data_size, std::min(region_size_.load() - off, page_size_));
-    std::lock_guard<std::mutex> lock(slot.mutex);
-    Page* page = nullptr;
-    Status status = PreparePage(&slot, off, proc_size, true, &page);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    std::memcpy(wp, page->buf, data_size);
-    wp += data_size;
-    off += data_size;
-    size -= data_size;
-    status = ReduceCache(&slot);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
+  if (requests != requests_buf) {
+    delete[] requests;
   }
-  return Status(Status::SUCCESS);
+  return status;
 }
 
 Status PageCache::Write(int64_t off, const void* buf, size_t size) {
+  PageCache::PageRequest requests_buf[PAGE_REQUEST_BUFFER_SIZE];
+  size_t num_requests = 0;
+  PageCache::PageRequest* requests = MakePageRequest(off, size, requests_buf, &num_requests);
+  Status status(Status::SUCCESS);
   const char *rp = static_cast<const char*>(buf);
-  const int64_t off_rem = off % page_size_;
-  if (off_rem != 0) {
-    const int64_t page_off = off - off_rem;
-    const int32_t slot_index = (page_off / page_size_) % NUM_SLOTS;
+  for (size_t request_index = 0; request_index < num_requests; request_index++) {
+    const auto& request = requests[request_index];
+    const int32_t slot_index = GetSlotIndex(request.offset);
     auto& slot = slots_[slot_index];
-    const int64_t data_size = std::min<int64_t>(size, page_size_ - off_rem);
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = nullptr;
-    Status status = PreparePage(&slot, page_off, page_size_, true, &page);
+    const bool do_load = request.copy_size != request.data_size;
+    status |= PreparePage(&slot, request.offset, request.data_size, do_load, &page);
     if (status != Status::SUCCESS) {
-      return status;
+      break;
     }
-    std::memcpy(page->buf + off_rem, rp, data_size);
+    std::memcpy(page->buf + request.prefix_size, rp, request.copy_size);
     page->dirty = true;
-    rp += data_size;
-    off += data_size;
-    size -= data_size;
-    status = ReduceCache(&slot);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-  }
-  while (size > 0) {
-    const int32_t slot_index = (off / page_size_) % NUM_SLOTS;
-    auto& slot = slots_[slot_index];
-    const int64_t data_size = std::min<int64_t>(size, page_size_);
-    const int64_t proc_size =
-        std::max(data_size, std::min(region_size_.load() - off, page_size_));
-    std::lock_guard<std::mutex> lock(slot.mutex);
-    Page* page = nullptr;
-    const bool do_load = proc_size != data_size;
-    Status status = PreparePage(&slot, off, proc_size, do_load, &page);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    std::memcpy(page->buf, rp, data_size);
-    page->dirty = true;
-    rp += data_size;
-    off += data_size;
-    size -= data_size;
+    rp += request.copy_size;
+    off += request.copy_size;
+    size -= request.copy_size;
     status = ReduceCache(&slot);
     if (status != Status::SUCCESS) {
       return status;
@@ -717,7 +682,10 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
       break;
     }
   }
-  return Status(Status::SUCCESS);
+  if (requests != requests_buf) {
+    delete[] requests;
+  }
+  return status;
 }
 
 Status PageCache::Flush() {
@@ -755,6 +723,36 @@ int64_t PageCache::GetRegionSize() {
 
 void PageCache::SetRegionSize(int64_t size) {
   return region_size_.store(size);
+}
+
+PageCache::PageRequest* PageCache::MakePageRequest(
+    int64_t off, int64_t size, PageCache::PageRequest* buf, size_t* num_requests) {
+  assert(off >= 0 && size >= 0 && buf != nullptr && num_requests != nullptr);
+  const size_t num_possible_requests = size / page_size_ + 2;
+  PageRequest* requests = num_possible_requests > PAGE_REQUEST_BUFFER_SIZE ?
+      new PageRequest[num_possible_requests] : buf;
+  const int64_t off_rem = off % page_size_;
+  *num_requests = 0;
+  if (off_rem != 0) {
+    const int64_t page_off = off - off_rem;
+    const int64_t copy_size = std::min<int64_t>(size, page_size_ - off_rem);
+    requests[(*num_requests)++] = PageRequest({page_off, off_rem, page_size_, copy_size});
+    off += copy_size;
+    size -= copy_size;
+  }
+  while (size > 0) {
+    const int64_t copy_size = std::min<int64_t>(size, page_size_);
+    const int64_t data_size =
+        std::max(copy_size, std::min(region_size_.load() - off, page_size_));
+    requests[(*num_requests)++] = PageRequest({off, 0, data_size, copy_size});
+    off += copy_size;
+    size -= copy_size;
+  }
+  return requests;
+}
+
+int32_t PageCache::GetSlotIndex(int64_t off) {
+  return (off / page_size_ / 16) % NUM_SLOTS;
 }
 
 Status PageCache::PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** result) {

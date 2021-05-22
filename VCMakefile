@@ -1,7 +1,7 @@
 # Makefile for Tkrzw for Windows
 
-PKG_VERSION = 0.9.18
-LIB_VERSION = 1.8.0
+PKG_VERSION = 0.9.19
+LIB_VERSION = 1.9.0
 
 VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
@@ -563,6 +563,86 @@ check-index-perf :
 	  --iter 20000 --threads 5 --random_key --random_value
 	tkrzw_dbm_perf.exe index --type str \
 	  --iter 20000 --threads 5 --random_key --random_value
+
+check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
+
+check-direct-hashdbm :
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file mmap-para \
+	  --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --padding --pagecache
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --direct_io --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tkh --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --buckets 2000000 --align_pow 7 --iter 1000000 --cache_buckets --block_size 512 \
+	  --direct_io --padding --pagecache
+	tkrzw_dbm_perf.exe wicked --path casket.tkh --file pos-para \
+	  --random_seed -1 --iter 1000000 --cache_buckets --block_size 512 --padding \
+	  --pagecache --rebuild --clear --iterator --threads 2
+
+check-direct-treedbm :
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file mmap-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --padding --pagecache
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --direct_io --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tkt --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 --cache_buckets \
+	  --block_size 1024 --direct_io --padding --pagecache
+	tkrzw_dbm_perf.exe wicked --path casket.tkt --file pos-para \
+    --random_seed -1 --max_page_size 4060 --max_cached_pages 1000 --iter 1000000 \
+	  --cache_buckets --block_size 512 --padding --pagecache \
+	  --rebuild --clear --iterator --threads 2
+
+check-direct-skipdbm :
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file mmap-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --padding --pagecache
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --direct_io --padding
+	tkrzw_dbm_perf.exe sequence --path casket.tks --file pos-para \
+    --random_seed -1 --random_key --size 100 \
+	  --step_unit 16 --max_level 5 --iter 1000000 --block_size 1024 --direct_io \
+	  --padding --pagecache
+	tkrzw_dbm_perf.exe wicked --path casket.tks --file pos-para \
+    --random_seed -1 --step_unit 16 --max_level 5 --iter 1000000 \
+	  --block_size 1024 --padding --pagecache --rebuild --clear --iterator --threads 2
 
 $(LIBOBJFILES) : $(HEADERFILES) $(IMPLHEADERFILES)
 

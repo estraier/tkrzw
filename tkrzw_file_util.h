@@ -355,6 +355,20 @@ class PageCache final {
 
  private:
   /**
+   * Request for a page.
+   */
+  struct PageRequest {
+    /** The offset of the page. */
+    int64_t offset;
+    /** The prefix size. */
+    int64_t prefix_size;
+    /** The whole size of the page. */
+    int64_t data_size;
+    /** The data size to be copied. */
+    int64_t copy_size;
+  };
+
+  /**
    * Page buffer.
    */
   struct Page {
@@ -376,10 +390,17 @@ class PageCache final {
     std::mutex mutex;
   };
 
+  /** Make page requests for the region. */
+  PageRequest* MakePageRequest(
+      int64_t off, int64_t size, PageRequest* buf, size_t* num_requests);
+  /** Get the slot index of the offset. */
+  int32_t GetSlotIndex(int64_t off);
   /** Prepareas the page for the given offset. */
   Status PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** page);
   /** Reduce pages by discarding excessive ones. */
   Status ReduceCache(Slot* slot);
+  /** The size of the page request buffer. */
+  static constexpr int32_t PAGE_REQUEST_BUFFER_SIZE = 3;
   /** The page size for I/O operations. */
   int64_t page_size_;
   /** The reading callback. */
