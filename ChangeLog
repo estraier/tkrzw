@@ -4,6 +4,7 @@
 	- Library version: 1.9.0
 
 	- Performance of direct I/O is improved.
+	- Add min_read_size to HashDBM::TuningParameters.
 
 2021-05-15  Mikio Hirabayashi  <hirarin@gmail.com>
 

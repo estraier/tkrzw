@@ -162,6 +162,7 @@ class HashDBMImpl final {
   int64_t record_base_;
   IteratorList iterators_;
   FreeBlockPool fbp_;
+  int32_t min_read_size_;
   bool lock_mem_buckets_;
   bool cache_buckets_;
   std::unique_ptr<File> file_;
@@ -197,7 +198,8 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       num_records_(0), eff_data_size_(0), file_size_(0), mod_time_(0),
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
-      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), lock_mem_buckets_(false), cache_buckets_(false),
+      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0),
+      lock_mem_buckets_(false), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
       file_mutex_() {}
@@ -236,6 +238,11 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   }
   if (tuning_params.fbp_capacity >= 0) {
     fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
+  }
+  if (tuning_params.min_read_size > 0) {
+    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
+  } else {
+    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
   }
   lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
   cache_buckets_ = tuning_params.cache_buckets > 0;
@@ -308,7 +315,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     int64_t offset = record_base_;
     HashRecord rec(file_.get(), offset_width_, align_pow_);
     while (offset < end_offset) {
-      Status status = rec.ReadMetadataKey(offset);
+      Status status = rec.ReadMetadataKey(offset, min_read_size_);
       if (status != Status::SUCCESS) {
         return status;
       }
@@ -351,7 +358,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     std::set<std::string> keys, dead_keys;
     while (current_offset > 0) {
       HashRecord rec(file_.get(), offset_width_, align_pow_);
-      status = rec.ReadMetadataKey(current_offset);
+      status = rec.ReadMetadataKey(current_offset, min_read_size_);
       if (status != Status::SUCCESS) {
         return status;
       }
@@ -434,6 +441,9 @@ Status HashDBMImpl::Clear() {
   const int32_t offset_width = offset_width_;
   const int32_t align_pow = align_pow_;
   const int64_t num_buckets = num_buckets_;
+  const int32_t min_read_size = min_read_size_;
+  const bool lock_mem_buckets = lock_mem_buckets_;
+  const bool cache_buckets =cache_buckets_;
   const uint32_t db_type = db_type_;
   const std::string opaque = opaque_;
   CancelIterators();
@@ -443,6 +453,9 @@ Status HashDBMImpl::Clear() {
   offset_width_ = offset_width;
   align_pow_ = align_pow;
   num_buckets_ = num_buckets;
+  min_read_size_ = min_read_size;
+  lock_mem_buckets_ = lock_mem_buckets;
+  cache_buckets_ =cache_buckets;
   db_type_ = db_type;
   opaque_ = opaque;
   status |= OpenImpl(true);
@@ -475,7 +488,12 @@ Status HashDBMImpl::Rebuild(
       tuning_params.align_pow : align_pow_;
   tmp_tuning_params.num_buckets = tuning_params.num_buckets >= 0 ?
       tuning_params.num_buckets : est_num_records * 2 + 1;
-  tmp_tuning_params.cache_buckets = tuning_params.cache_buckets;
+  tmp_tuning_params.fbp_capacity = HashDBM::DEFAULT_FBP_CAPACITY;
+  tmp_tuning_params.min_read_size = tuning_params.min_read_size >= 0 ?
+      tuning_params.min_read_size : min_read_size_;
+  tmp_tuning_params.lock_mem_buckets = 0;
+  tmp_tuning_params.cache_buckets = tuning_params.cache_buckets >= 0 ?
+      tuning_params.cache_buckets : cache_buckets_;
   HashDBM tmp_dbm(file_->MakeFile());
   auto CleanUp = [&]() {
     tmp_dbm.Close();
@@ -563,6 +581,13 @@ Status HashDBMImpl::Rebuild(
     file_ = std::move(tmp_file);
     if (tuning_params.fbp_capacity >= 0) {
       fbp_.SetCapacity(tuning_params.fbp_capacity);
+    }
+    if (tuning_params.min_read_size >= 0) {
+      if (tuning_params.min_read_size > 0) {
+        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
+      } else {
+        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
+      }
     }
     if (tuning_params.lock_mem_buckets >= 0) {
       lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
@@ -997,6 +1022,7 @@ Status HashDBMImpl::CloseImpl() {
   opaque_.clear();
   record_base_ = 0;
   fbp_.Clear();
+  min_read_size_ = 0;
   lock_mem_buckets_ = false;
   cache_buckets_ = false;
   return status;
@@ -1178,7 +1204,7 @@ Status HashDBMImpl::ProcessImpl(
   int64_t parent_offset = 0;
   HashRecord rec(file_.get(), offset_width_, align_pow_);
   while (current_offset > 0) {
-    status = rec.ReadMetadataKey(current_offset);
+    status = rec.ReadMetadataKey(current_offset, min_read_size_);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -1386,7 +1412,7 @@ Status HashDBMImpl::ReadNextBucketRecords(HashDBMIteratorImpl* iter) {
       std::set<std::string> dead_keys;
       while (current_offset > 0) {
         HashRecord rec(file_.get(), offset_width_, align_pow_);
-        status = rec.ReadMetadataKey(current_offset);
+        status = rec.ReadMetadataKey(current_offset, min_read_size_);
         if (status != Status::SUCCESS) {
           return status;
         }
@@ -1459,7 +1485,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     Status* status_;
   } importer(this, &import_status);
   return HashRecord::ReplayOperations(
-      file, &importer, record_base, offset_width, align_pow,
+      file, &importer, record_base, offset_width, align_pow, min_read_size_,
       skip_broken_records, end_offset);
 }
 
@@ -1524,7 +1550,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
       }
       break;
     }
-    status = rec.ReadMetadataKey(offset);
+    status = rec.ReadMetadataKey(offset, min_read_size_);
     if (status != Status::SUCCESS) {
       CleanUp();
       return status;

@@ -46,6 +46,8 @@ class HashDBM final : public DBM {
   static constexpr int64_t DEFAULT_NUM_BUCKETS = 1048583;
   /** The default value of the capacity of the free block pool. */
   static constexpr int32_t DEFAULT_FBP_CAPACITY = 2048;
+  /** The default value of the minimum reading size to read a record. */
+  static constexpr int32_t DEFAULT_MIN_READ_SIZE = 48;
   /** The size of the opaque metadata. */
   static constexpr int32_t OPAQUE_METADATA_SIZE = 64;
 
@@ -209,6 +211,15 @@ class HashDBM final : public DBM {
      * opening the database.
      */
     int32_t fbp_capacity = -1;
+    /**
+     * The minimum reading size to read a record.
+     * @details When a record is read from the file, data of the specified size is read at once.
+     * If the record size including the footprint is larger than the read data size, another
+     * reading operation is done.  -1 means that the larger value of the default value 48 and
+     * the alignemnt size is set.  As this parameter is not saved as a metadata of the database,
+     * it should be set each time when opening the database.
+     */
+    int32_t min_read_size = -1;
     /**
      * Whether to lock the memory for the hash buckets.
      * @details If positive and the underlying file class supports memory mapping, the memory

@@ -386,6 +386,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
       tuning_params.num_buckets : TreeDBM::DEFAULT_NUM_BUCKETS;
   hash_params.fbp_capacity = tuning_params.fbp_capacity >= 0 ?
       tuning_params.fbp_capacity : TreeDBM::DEFAULT_FBP_CAPACITY;
+  hash_params.min_read_size = tuning_params.min_read_size;
   if (tuning_params.max_page_size > 0) {
     max_page_size_ = tuning_params.max_page_size;
   }
@@ -397,6 +398,13 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   }
   if (tuning_params.key_comparator != nullptr) {
     key_comparator_ = tuning_params.key_comparator;
+  }
+  if (hash_params.min_read_size < 1) {
+    hash_params.min_read_size = 1;
+    auto* pos_file = dynamic_cast<const PositionalFile*>(hash_dbm_->GetInternalFile());
+    if (pos_file != nullptr && pos_file->IsDirectIO()) {
+      hash_params.min_read_size = AlignNumber(max_page_size_, 1 << hash_params.align_pow);
+    }
   }
   Status status = hash_dbm_->OpenAdvanced(norm_path, writable, options, hash_params);
   if (status != Status::SUCCESS) {

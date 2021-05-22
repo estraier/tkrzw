@@ -94,11 +94,12 @@ class HashRecord final {
   /**
    * Read the metadata and the key.
    * @param offset The offset of the record.
+   * @param min_read_size The minimum reading size.
    * @return The result status.
    * @details If successful, the key data is always read.  However the value data and the whole
    * size is not always read.  To read them, call ReadBody.
    */
-  Status ReadMetadataKey(int64_t offset);
+  Status ReadMetadataKey(int64_t offset, int32_t min_read_size);
 
   /**
    * Read the body data and fill all the properties.
@@ -142,10 +143,11 @@ class HashRecord final {
   /**
    * Finds the next record offset by heuristics.
    * @param offset The current offset.
+   * @param min_read_size The minimum reading size.
    * @param next_offset The pointer to an integer to store the next offset.
    * @return The result status.
    */
-  Status FindNextOffset(int64_t offset, int64_t* next_offset);
+  Status FindNextOffset(int64_t offset, int32_t min_read_size, int64_t* next_offset);
 
   /**
    * Replays operations applied on a hash database file.
@@ -154,6 +156,7 @@ class HashRecord final {
    * @param record_base The record base offset.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
+   * @param min_read_size The minimum reading size.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
@@ -164,7 +167,7 @@ class HashRecord final {
    */
   static Status ReplayOperations(
       File* file, DBM::RecordProcessor* proc,
-      int64_t record_base, int32_t offset_width, int32_t align_pow,
+      int64_t record_base, int32_t offset_width, int32_t align_pow,int32_t min_read_size,
       bool skip_broken_records, int64_t end_offset);
 
   /**
@@ -187,8 +190,8 @@ class HashRecord final {
  private:
   /** The size of the stack buffer to read the meta data. */
   static constexpr int32_t META_BUFFER_SIZE = 512;
-  /** The default size to read the meta data. */
-  static constexpr int32_t META_DEFAULT_READ_SIZE = 48;
+  /** The minimum size to read the meta data. */
+  static constexpr int32_t META_MIN_READ_SIZE = 48;
   /** The size of the stack buffer to write the record. */
   static constexpr int32_t WRITE_BUFFER_SIZE = 4096;
   /** The magic number at the top of the void record. */
@@ -207,6 +210,8 @@ class HashRecord final {
   int32_t offset_width_;
   /** The alignment power. */
   int32_t align_pow_;
+  /** The minimum reading size. */
+  int32_t min_read_size_;
   /** The stack buffer to read the meta data. */
   char meta_buf_[META_BUFFER_SIZE];
   /** The extended buffer to read the meta data. */

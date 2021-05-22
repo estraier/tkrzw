@@ -177,6 +177,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
   tuning_params->fbp_capacity = StrToInt(SearchMap(*params, "fbp_capacity", "-1"));
+  tuning_params->min_read_size = StrToInt(SearchMap(*params, "min_read_size", "-1"));
   tuning_params->lock_mem_buckets = StrToIntOrBool(SearchMap(*params, "lock_mem_buckets", "-1"));
   tuning_params->cache_buckets = StrToIntOrBool(SearchMap(*params, "cache_buckets", "-1"));
   params->erase("update_mode");
@@ -184,6 +185,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   params->erase("align_pow");
   params->erase("num_buckets");
   params->erase("fbp_capacity");
+  params->erase("min_read_size");
   params->erase("lock_mem_buckets");
   params->erase("cache_buckets");
 }
