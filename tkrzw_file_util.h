@@ -395,8 +395,15 @@ class PageCache final {
       int64_t off, int64_t size, PageRequest* buf, size_t* num_requests);
   /** Get the slot index of the offset. */
   int32_t GetSlotIndex(int64_t off);
+  /** Finds the page for the given offset. */
+  Page* FindPage(Slot* slot, int64_t off);
+  /** Locks all slot of the requests and fill their indices. */
+  int32_t LockSlots(const PageRequest* requests, size_t num_requests, int32_t* slot_indices);
+  /** Unlocks all slots. */
+  void UnlockSlots(int32_t* slot_indices, int32_t num_slots);
   /** Prepareas the page for the given offset. */
-  Status PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load, Page** page);
+  Status PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load,
+                     const char* batch_ptr, Page** page);
   /** Reduce pages by discarding excessive ones. */
   Status ReduceCache(Slot* slot);
   /** The size of the page request buffer. */
