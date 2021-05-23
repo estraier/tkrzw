@@ -851,7 +851,7 @@ PageCache::PageRequest* PageCache::MakePageRequest(
 }
 
 int32_t PageCache::GetSlotIndex(int64_t off) {
-  return (off / page_size_ / 16) % NUM_SLOTS;
+  return (off / page_size_ / 32) % NUM_SLOTS;
 }
 
 PageCache::Page* PageCache::FindPage(Slot* slot, int64_t off) {
