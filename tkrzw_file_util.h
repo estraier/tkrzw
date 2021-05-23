@@ -404,8 +404,10 @@ class PageCache final {
   /** Prepareas the page for the given offset. */
   Status PreparePage(Slot* slot, int64_t off, int64_t size, bool do_load,
                      const char* batch_ptr, Page** page);
-  /** Reduce pages by discarding excessive ones. */
+  /** Reduces pages by discarding excessive ones. */
   Status ReduceCache(Slot* slot);
+  /** Writes a page and its neighbors. */
+  Status WritePages(Slot* slot, int64_t off, Page* page);
   /** The size of the page request buffer. */
   static constexpr int32_t PAGE_REQUEST_BUFFER_SIZE = 3;
   /** The page size for I/O operations. */

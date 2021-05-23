@@ -608,7 +608,7 @@ PageCache::~PageCache() {
       const int64_t off = it->key;
       Page& page = it->value;
       if (page.dirty) {
-        write_func_(off, page.buf, page.size);
+        WritePages(&slot, off, &page);
       }
       xfreealigned(page.buf);
     }
@@ -797,8 +797,7 @@ Status PageCache::Flush() {
       const int64_t off = it->key;
       Page& page = it->value;
       if (page.dirty) {
-        status |= write_func_(off, page.buf, page.size);
-        page.dirty = false;
+        status |= WritePages(&slot, off, &page);
       }
     }
   }
@@ -948,11 +947,79 @@ Status PageCache::ReduceCache(Slot* slot) {
     const int64_t off = rec.key;
     auto& page = rec.value;
     if (page.dirty) {
-      write_func_(off, page.buf, page.size);
+      status |= WritePages(slot, off, &page);
     }
     xfreealigned(page.buf);
     pages.Remove(rec.key);
     num_excessives--;
+  }
+  return status;
+}
+
+Status PageCache::WritePages(Slot* slot, int64_t off, Page* page) {
+  Status status(Status::SUCCESS);
+  auto& pages = *slot->pages;
+  Page* prev_pages[16];
+  int32_t num_prev_pages = 0;
+  int64_t off_begin = off;
+  for (int64_t cur_off = off - page_size_;
+       num_prev_pages < static_cast<int32_t>(std::size(prev_pages)); cur_off -= page_size_) {
+    auto *rec = pages.Get(cur_off);
+    if (rec == nullptr) {
+      break;
+    }
+    Page& prev_page = rec->value;
+    if (!prev_page.dirty || prev_page.size != page_size_) {
+      break;
+    }
+    prev_pages[num_prev_pages++] = &prev_page;
+    off_begin = cur_off;
+  }
+  Page* next_pages[16];
+  int32_t num_next_pages = 0;
+  int64_t off_end = off + page->size;
+  if (page->size == page_size_) {
+    for (int64_t cur_off = off + page_size_;
+         num_next_pages < static_cast<int32_t>(std::size(next_pages)); cur_off += page_size_) {
+      auto *rec = pages.Get(cur_off);
+      if (rec == nullptr) {
+        break;
+      }
+      Page& next_page = rec->value;
+      if (!next_page.dirty) {
+        break;
+      }
+      next_pages[num_next_pages++] = &next_page;
+      off_end = cur_off + next_page.size;
+      if (next_page.size != page_size_) {
+        break;
+      }
+    }
+  }
+  if (num_prev_pages > 0 || num_next_pages > 0) {
+    const int64_t area_size = off_end - off_begin;
+    char* area_buf = static_cast<char*>(xmallocaligned(page_size_, area_size));
+    char* wp = area_buf;
+    for (int32_t i = num_prev_pages - 1; i >= 0; i--) {
+      Page& prev_page = *prev_pages[i];
+      std::memcpy(wp, prev_page.buf, prev_page.size);
+      prev_page.dirty = false;
+      wp += prev_page.size;
+    }
+    std::memcpy(wp, page->buf, page->size);
+    page->dirty = false;
+    wp += page->size;
+    for (int32_t i = 0; i < num_next_pages; i++) {
+      Page& next_page = *next_pages[i];
+      std::memcpy(wp, next_page.buf, next_page.size);
+      next_page.dirty = false;
+      wp += next_page.size;
+    }
+    status |= write_func_(off_begin, area_buf, area_size);
+    xfreealigned(area_buf);
+  } else {
+    page->dirty = false;
+    status |= write_func_(off, page->buf, page->size);
   }
   return status;
 }
