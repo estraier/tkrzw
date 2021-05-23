@@ -3753,7 +3753,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <li>You use SkipDBM.  The same or adjacent blocks are read repeatedly at the last steps of a search operation.</li>
 </ul>
 
-<p>If you add PositionalFile::ACCESS_PAGECACHE to the access strategy options, the page cache system in process is enabled.  It manages "pages" on memory.  Each page is associated with one or multiple blocks of the file.  The last 64 pages which have been accessed recently are kept on memory.  Reading data from cached blocks causes no operation of the storage device.  Writing data to cached blocks marks them as "dirty", which are written back when being removed from the cache.  If you use direct I/O on HashDBM and SkipDBM, enabling the page cache in process is usually beneficial.  If you use TreeDBM, you shouldn't enable the page cache in process because B+ tree nodes work as the cache.</p>
+<p>If you add PositionalFile::ACCESS_PAGECACHE to the access strategy options, the page cache system in process is enabled.  It manages "pages" on memory.  Each page is associated with one or multiple blocks of the file.  The last 256 pages which have been accessed recently are kept on memory.  Reading data from cached blocks causes no operation of the storage device.  Writing data to cached blocks marks them as "dirty", which are written back when being removed from the cache.  If you use direct I/O on HashDBM and SkipDBM, enabling the page cache in process is usually beneficial.  If you use TreeDBM, you shouldn't enable the page cache in process because B+ tree nodes work as a cache system.</p>
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 
