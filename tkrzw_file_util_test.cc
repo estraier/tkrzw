@@ -342,9 +342,9 @@ TEST(FileUtilTest, PageCache) {
                 std::mt19937 mt(id);
                 std::uniform_int_distribution<int32_t> dist(0, tkrzw::INT32MAX);
                 char buf[256];
-                for (int32_t i = 0; i < 1000; i++) {
+                for (int32_t i = 0; i < 2000; i++) {
                   const int64_t off = dist(mt) % file_size;
-                  const int64_t size = std::min<int64_t>(dist(mt) % 30, file_size - off);
+                  const int64_t size = std::min<int64_t>(dist(mt) % 50, file_size - off);
                   if (dist(mt) % 2 == 0) {
                     for (int32_t j = 0; j < size; j++) {
                       buf[j] = 'a' + (off+ j) % 10;

@@ -633,13 +633,12 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
       break;
     }
     std::memcpy(wp, page->buf + request.prefix_size, request.copy_size);
-    page->dirty = true;
     wp += request.copy_size;
     off += request.copy_size;
     size -= request.copy_size;
-    status = ReduceCache(&slot);
+    status |= ReduceCache(&slot);
     if (status != Status::SUCCESS) {
-      return status;
+      break;
     }
   }
   if (requests != requests_buf) {
@@ -670,9 +669,9 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     rp += request.copy_size;
     off += request.copy_size;
     size -= request.copy_size;
-    status = ReduceCache(&slot);
+    status |= ReduceCache(&slot);
     if (status != Status::SUCCESS) {
-      return status;
+      break;
     }
   }
   while (true) {
