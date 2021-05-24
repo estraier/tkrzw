@@ -32,24 +32,23 @@
 
 namespace tkrzw {
 
-#if defined(_SYS_LINUX_)
-
-inline void* tkrzw_mremap(
-    void *old_address, size_t old_size, size_t new_size, int fd) {
-  return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
+inline void AdviseMemoryRandomAccessPattern(void* addr, size_t len) {
+#if defined(_SYS_LINUX_) || defined(_SYS_MACOSX_)
+  posix_madvise(addr, len, POSIX_MADV_RANDOM);
+#endif
 }
 
-#else
-
 inline void* tkrzw_mremap(
     void *old_address, size_t old_size, size_t new_size, int fd) {
+#if defined(_SYS_LINUX_)
+  return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
+#else
   if (munmap(old_address, old_size) != 0) {
     return MAP_FAILED;
   }
   return mmap(0, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-}
-
 #endif
+}
 
 class MemoryMapParallelFileImpl final {
   friend class MemoryMapParallelFileZoneImpl;
@@ -191,6 +190,7 @@ Status MemoryMapParallelFileImpl::Open(
     close(fd);
     return status;
   }
+  AdviseMemoryRandomAccessPattern(map, map_size);
 
   // Updates the internal data.
   fd_ = fd;
@@ -275,6 +275,7 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
     fd_ = -1;
     return status;
   }
+  AdviseMemoryRandomAccessPattern(new_map, new_map_size);
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
   if (ftruncate(fd_, new_map_size) != 0) {
@@ -411,6 +412,7 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
     fd_ = -1;
     return status;
   }
+  AdviseMemoryRandomAccessPattern(new_map, new_map_size);
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
   if (lock_size_.load() > 0 && mlock(map_, lock_size_.load()) != 0) {
@@ -793,6 +795,7 @@ Status MemoryMapAtomicFileImpl::Open(
     close(fd);
     return status;
   }
+  AdviseMemoryRandomAccessPattern(map, map_size);
 
   // Updates the internal data.
   fd_ = fd;

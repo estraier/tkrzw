@@ -39,6 +39,12 @@ inline void SetDirectAccessToOpenFlag(int32_t* oflags) {
 #endif
 }
 
+inline void AdviseFileRandomAccessPattern(int32_t fd) {
+#if defined(_SYS_LINUX_)
+  posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM);
+#endif
+}
+
 class PositionalParallelFileImpl final {
  public:
   PositionalParallelFileImpl();
@@ -123,6 +129,7 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   if (fd < 0) {
     return GetErrnoStatus("open", errno);
   }
+  AdviseFileRandomAccessPattern(fd);
 
   // Locks the file.
   if (!(options & File::OPEN_NO_LOCK)) {
@@ -787,6 +794,7 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
   if (fd < 0) {
     return GetErrnoStatus("open", errno);
   }
+  AdviseFileRandomAccessPattern(fd);
 
   // Locks the file.
   if (!(options & File::OPEN_NO_LOCK)) {
