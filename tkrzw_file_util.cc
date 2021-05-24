@@ -958,7 +958,7 @@ Status PageCache::ReduceCache(Slot* slot) {
   Status status(Status::SUCCESS);
   auto& pages = *slot->pages;
   int32_t num_excessives = pages.size() - slot_capacity_;
-  if (num_excessives > 0) {
+  while (num_excessives > 0) {
     auto& rec = pages.front();
     const int64_t off = rec.key;
     auto& page = rec.value;
