@@ -670,7 +670,7 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
       const int32_t slot_index = GetSlotIndex(request.offset);
       auto& slot = slots_[slot_index];
       Page* page = nullptr;
-      status |= PreparePage(&slot, request.offset, request.data_size, true, arp, &page);
+      status |= PreparePage(&slot, request.offset, request.data_size, false, arp, &page);
       if (status != Status::SUCCESS) {
         break;
       }
@@ -740,10 +740,27 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
         LockSlots(requests + batch_start_index, num_requests - batch_start_index, slot_indices);
     const auto& first_req = requests[batch_start_index];
     const auto& last_req = requests[num_requests - 1];
-    const int64_t area_off = first_req.offset;
-    const int64_t area_size = last_req.offset + last_req.data_size - first_req.offset;
+    int64_t area_off = first_req.offset;
+    int64_t area_size = last_req.offset + last_req.data_size - first_req.offset;
     char* area_buf = static_cast<char*>(xmallocaligned(page_size_, area_size));
-    status |= read_func_(area_off, area_buf, area_size);
+    if (off % page_size_ != 0 || size % page_size_ != 0) {
+      char* awp = area_buf;
+      for (size_t request_index = batch_start_index;
+           request_index < num_requests; request_index++) {
+        const auto& request = requests[request_index];
+        if (request.copy_size == page_size_ &&
+            area_size >= page_size_) {
+          area_off += page_size_;
+          area_size -= page_size_;
+          awp += page_size_;
+        } else {
+          break;
+        }
+      }
+      if (area_size > 0) {
+        status |= read_func_(area_off, awp, area_size);
+      }
+    }
     char* arp = area_buf;
     for (size_t request_index = batch_start_index;
          status == Status::SUCCESS && request_index < num_requests; request_index++) {
@@ -751,8 +768,7 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
       const int32_t slot_index = GetSlotIndex(request.offset);
       auto& slot = slots_[slot_index];
       Page* page = nullptr;
-      const bool do_load = request.copy_size != request.data_size;
-      status |= PreparePage(&slot, request.offset, request.data_size, do_load, arp, &page);
+      status |= PreparePage(&slot, request.offset, request.data_size, false, arp, &page);
       if (status != Status::SUCCESS) {
         break;
       }
@@ -898,35 +914,35 @@ Status PageCache::PreparePage(
   auto *rec = pages.Get(off, LinkedHashMap<int64_t, Page>::MOVE_LAST);
   if (rec == nullptr) {
     char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
-    if (do_load) {
-      if (batch_ptr == nullptr) {
+    if (batch_ptr == nullptr) {
+      if (do_load) {
         const Status status = read_func_(off, buf, size);
         if (status != Status::SUCCESS) {
           xfreealigned(buf);
           return status;
         }
-      } else {
-        std::memcpy(buf, batch_ptr, size);
       }
+    } else {
+      std::memcpy(buf, batch_ptr, size);
     }
     *result = &pages.Set(off, Page({buf, size, false}))->value;
   } else {
     Page* page = &rec->value;
     if (page->size < size) {
       char* buf = static_cast<char*>(xmallocaligned(page_size_, size));
-      if (do_load) {
-        if (batch_ptr == nullptr) {
+      if (batch_ptr == nullptr) {
+        if (do_load) {
           const Status status = read_func_(off, buf, size);
           if (status != Status::SUCCESS) {
             xfreealigned(buf);
             return status;
           }
-        } else {
-          std::memcpy(buf, batch_ptr, size);
         }
-        if (page->dirty) {
-          std::memcpy(buf, page->buf, page->size);
-        }
+      } else {
+        std::memcpy(buf, batch_ptr, size);
+      }
+      if (page->dirty) {
+        std::memcpy(buf, page->buf, page->size);
       }
       xfreealigned(page->buf);
       page->buf = buf;
