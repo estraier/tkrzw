@@ -620,7 +620,8 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
   PageCache::PageRequest requests_buf[PAGE_REQUEST_BUFFER_SIZE];
   size_t num_requests = 0;
   PageCache::PageRequest* requests = MakePageRequest(off, size, requests_buf, &num_requests);
-  char *wp = static_cast<char*>(buf);
+  char* wp = static_cast<char*>(buf);
+  char* wp_end = wp + size;
   size_t batch_start_index = 0;
   for (size_t request_index = 0; request_index < num_requests; request_index++) {
     const auto& request = requests[request_index];
@@ -628,12 +629,28 @@ Status PageCache::Read(int64_t off, void* buf, size_t size) {
     auto& slot = slots_[slot_index];
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = FindPage(&slot, request.offset);
-    if (page != nullptr && page->size >= static_cast<int64_t>(size)) {
+    if (page != nullptr && page->size >= static_cast<int64_t>(request.data_size)) {
       std::memcpy(wp, page->buf + request.prefix_size, request.copy_size);
       wp += request.copy_size;
       off += request.copy_size;
       size -= request.copy_size;
       batch_start_index = request_index + 1;
+    } else {
+      break;
+    }
+  }
+  for (int32_t request_index = static_cast<int32_t>(num_requests) - 1;
+       request_index >= static_cast<int32_t>(batch_start_index + 1); request_index--) {
+    const auto& request = requests[request_index];
+    const int32_t slot_index = GetSlotIndex(request.offset);
+    auto& slot = slots_[slot_index];
+    std::lock_guard<std::mutex> lock(slot.mutex);
+    Page* page = FindPage(&slot, request.offset);
+    if (page != nullptr && page->size >= static_cast<int64_t>(request.data_size)) {
+      std::memcpy(wp_end - request.copy_size, page->buf + request.prefix_size, request.copy_size);
+      wp_end -= request.copy_size;
+      size -= request.copy_size;
+      num_requests = request_index;
     } else {
       break;
     }
@@ -698,7 +715,8 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
   PageCache::PageRequest requests_buf[PAGE_REQUEST_BUFFER_SIZE];
   size_t num_requests = 0;
   PageCache::PageRequest* requests = MakePageRequest(off, size, requests_buf, &num_requests);
-  const char *rp = static_cast<const char*>(buf);
+  const char* rp = static_cast<const char*>(buf);
+  const char* rp_end = rp + size;
   size_t batch_start_index = 0;
   for (size_t request_index = 0; request_index < num_requests; request_index++) {
     const auto& request = requests[request_index];
@@ -706,13 +724,29 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
     auto& slot = slots_[slot_index];
     std::lock_guard<std::mutex> lock(slot.mutex);
     Page* page = FindPage(&slot, request.offset);
-    if (page != nullptr && page->size >= static_cast<int64_t>(size)) {
+    if (page != nullptr && page->size >= static_cast<int64_t>(request.data_size)) {
       std::memcpy(page->buf + request.prefix_size, rp, request.copy_size);
       page->dirty = true;
       rp += request.copy_size;
       off += request.copy_size;
       size -= request.copy_size;
       batch_start_index = request_index + 1;
+    } else {
+      break;
+    }
+  }
+  for (int32_t request_index = static_cast<int32_t>(num_requests) - 1;
+       request_index >= static_cast<int32_t>(batch_start_index + 1); request_index--) {
+    const auto& request = requests[request_index];
+    const int32_t slot_index = GetSlotIndex(request.offset);
+    auto& slot = slots_[slot_index];
+    std::lock_guard<std::mutex> lock(slot.mutex);
+    Page* page = FindPage(&slot, request.offset);
+    if (page != nullptr && page->size >= static_cast<int64_t>(request.data_size)) {
+      std::memcpy(page->buf + request.prefix_size, rp_end - request.copy_size, request.copy_size);
+      rp_end -= request.copy_size;
+      size -= request.copy_size;
+      num_requests = request_index;
     } else {
       break;
     }
