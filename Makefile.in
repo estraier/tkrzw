@@ -783,7 +783,7 @@ DEPS := $(SRCS:%.c=%.d)
 libtkrzw.a : $(LIBOBJFILES)
 	$(AR) $(ARFLAGS) $@ $(LIBOBJFILES)
 
-libtkrzw.so.$(LIBVER).$(LIBREV).0 : $(LIBOBJFILES)
+libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT) : $(LIBOBJFILES)
 	if uname -a | egrep -i 'SunOS' > /dev/null ; \
 	  then \
 	    $(CXX) $(CXXFLAGS) -shared -Wl,-G,-h,libtkrzw.so.$(LIBVER) -o $@ \
@@ -793,23 +793,23 @@ libtkrzw.so.$(LIBVER).$(LIBREV).0 : $(LIBOBJFILES)
 	      $(LIBOBJFILES) $(LDFLAGS) $(LIBS) ; \
 	  fi
 
-libtkrzw.so.$(LIBVER) : libtkrzw.so.$(LIBVER).$(LIBREV).0
-	ln -f -s libtkrzw.so.$(LIBVER).$(LIBREV).0 $@
+libtkrzw.so.$(LIBVER) : libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT)
+	ln -f -s libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT) $@
 
-libtkrzw.so : libtkrzw.so.$(LIBVER).$(LIBREV).0
-	ln -f -s libtkrzw.so.$(LIBVER).$(LIBREV).0 $@
+libtkrzw.so : libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT)
+	ln -f -s libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT) $@
 
-libtkrzw.$(LIBVER).$(LIBREV).0.dylib : $(LIBOBJFILES)
+libtkrzw.$(LIBVER).$(LIBREV).$(LIBFMT).dylib : $(LIBOBJFILES)
 	$(CXX) $(CXXFLAGS) -dynamiclib -o $@ \
 	  -install_name $(LIBDIR)/libtkrzw.$(LIBVER).dylib \
-	  -current_version $(LIBVER).$(LIBREV).0 -compatibility_version $(LIBVER) \
+	  -current_version $(LIBVER).$(LIBREV).$(LIBFMT) -compatibility_version $(LIBVER) \
 	  $(LIBOBJFILES) $(LDFLAGS) $(LIBS)
 
-libtkrzw.$(LIBVER).dylib : libtkrzw.$(LIBVER).$(LIBREV).0.dylib
-	ln -f -s libtkrzw.$(LIBVER).$(LIBREV).0.dylib $@
+libtkrzw.$(LIBVER).dylib : libtkrzw.$(LIBVER).$(LIBREV).$(LIBFMT).dylib
+	ln -f -s libtkrzw.$(LIBVER).$(LIBREV).$(LIBFMT).dylib $@
 
-libtkrzw.dylib : libtkrzw.$(LIBVER).$(LIBREV).0.dylib
-	ln -f -s libtkrzw.$(LIBVER).$(LIBREV).0.dylib $@
+libtkrzw.dylib : libtkrzw.$(LIBVER).$(LIBREV).$(LIBFMT).dylib
+	ln -f -s libtkrzw.$(LIBVER).$(LIBREV).$(LIBFMT).dylib $@
 
 #================================================================
 # Building commands

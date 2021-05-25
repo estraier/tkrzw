@@ -372,10 +372,11 @@ ShardDBM::Iterator::Iterator(std::vector<std::shared_ptr<PolyDBM>>* dbms)
     slots_[i].iter = (*dbms)[i]->MakeIterator().release();
   }
   const auto* dbm = dbms->front()->GetInternalDBM();
-  if (typeid(*dbm) == typeid(TreeDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(TreeDBM)) {
     comp_ = dynamic_cast<const TreeDBM*>(dbm)->GetKeyComparator();
   }
-  if (typeid(*dbm) == typeid(BabyDBM)) {
+  if (dbm_type == typeid(BabyDBM)) {
     comp_ = dynamic_cast<const BabyDBM*>(dbm)->GetKeyComparator();
   }
   if (comp_ == nullptr) {

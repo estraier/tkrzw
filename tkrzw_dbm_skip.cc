@@ -283,8 +283,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
       return status;
     }
   }
-  cache_ = std::make_unique<SkipRecordCache>(
-      file_.get(), offset_width_, step_unit_, max_level_, max_cached_records_, num_records_);
+  cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   open_ = true;
   writable_ = writable;
   healthy_ = healthy;
@@ -568,8 +567,7 @@ Status SkipDBMImpl::Clear() {
   status |= SaveMetadata(false);
   status |= LoadMetadata();
   status |= PrepareStorage();
-  cache_ = std::make_unique<SkipRecordCache>(
-      file_.get(), offset_width_, step_unit_, max_level_, max_cached_records_, num_records_);
+  cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
 }
 
@@ -689,8 +687,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   opaque_ = opaque;
   SaveMetadata(false);
   status |= PrepareStorage();
-  cache_ = std::make_unique<SkipRecordCache>(
-      file_.get(), offset_width_, step_unit_, max_level_, max_cached_records_, num_records_);
+  cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
 }
 
@@ -731,8 +728,7 @@ Status SkipDBMImpl::Synchronize(
   }
   status |= SaveMetadata(false);
   status |= PrepareStorage();
-  cache_ = std::make_unique<SkipRecordCache>(
-      file_.get(), offset_width_, step_unit_, max_level_, max_cached_records_, num_records_);
+  cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
 }
 

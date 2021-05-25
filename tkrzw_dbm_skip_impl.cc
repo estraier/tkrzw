@@ -480,11 +480,8 @@ void SkipRecord::Deserialize(int64_t index, const char* serialized) {
   body_offset_ = offset_ + header_size;
 }
 
-SkipRecordCache::SkipRecordCache(
-    File* file, int32_t offset_width, int32_t step_unit, int32_t max_level,
-    int32_t capacity, int64_t num_records)
-    : file_(file), offset_width_(offset_width), step_unit_(step_unit), max_level_(max_level),
-      size_(0), cache_unit_(0) {
+SkipRecordCache::SkipRecordCache(int32_t step_unit, int32_t capacity, int64_t num_records)
+    : size_(0), cache_unit_(0) {
   cache_unit_ = 1;
   while (num_records / cache_unit_ > capacity) {
     cache_unit_ *= step_unit;

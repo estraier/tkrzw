@@ -1,3 +1,10 @@
+2021-05-25  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.21
+	- Library version: 1.11.0
+
+	- Solve compilation warnings.
+
 2021-05-24  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.20

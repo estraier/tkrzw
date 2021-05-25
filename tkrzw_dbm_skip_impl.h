@@ -235,15 +235,11 @@ class SkipRecordCache {
 public:
   /**
    * Constructor.
-   * @param file The pointer to the file object.
-   * @param offset_width The width of the offset data.
    * @param step_unit The unit of stepping.
-   * @param max_level The maximum level of the skip list.
    * @param capacity The maximum number of records to contain.
    * @param num_records The number of records in the database.
    */
-  SkipRecordCache(File* file, int32_t offset_width, int32_t step_unit, int32_t max_level,
-                  int32_t capacity, int64_t num_records);
+  SkipRecordCache(int32_t step_unit, int32_t capacity, int64_t num_records);
 
   /**
    * Destructor.
@@ -265,14 +261,6 @@ public:
   void Add(const SkipRecord& record);
 
  private:
-  /** The file object, unowned. */
-  File* file_;
-  /** The width of the offset data. */
-  int32_t offset_width_;
-  /** The unit of stepping. */
-  int32_t step_unit_;
-  /** The maximum level of the skip list. */
-  int32_t max_level_;
   /** The size of the cache. */
   int32_t size_;
   /** The unit number of the index. */

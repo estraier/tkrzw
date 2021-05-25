@@ -233,7 +233,8 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
   if (with_no_lock) {
     open_options |= File::OPEN_NO_LOCK;
   }
-  if (typeid(*dbm) == typeid(HashDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
     tuning_params.update_mode =
@@ -251,7 +252,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TreeDBM)) {
+  if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
     tkrzw::TreeDBM::TuningParameters tuning_params;
     tuning_params.update_mode =
@@ -272,7 +273,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     tkrzw::SkipDBM::TuningParameters tuning_params;
     tuning_params.offset_width = offset_width;
@@ -288,9 +289,9 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TinyDBM) || typeid(*dbm) == typeid(BabyDBM) ||
-      typeid(*dbm) == typeid(CacheDBM) ||
-      typeid(*dbm) == typeid(StdHashDBM) || typeid(*dbm) == typeid(StdTreeDBM)) {
+  if (dbm_type == typeid(TinyDBM) || dbm_type == typeid(BabyDBM) ||
+      dbm_type == typeid(CacheDBM) ||
+      dbm_type == typeid(StdHashDBM) || dbm_type == typeid(StdTreeDBM)) {
     if (!file_path.empty()) {
       const Status status = dbm->Open(file_path, writable, open_options);
       if (status != Status::SUCCESS) {
@@ -299,7 +300,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       }
     }
   }
-  if (typeid(*dbm) == typeid(PolyDBM) || typeid(*dbm) == typeid(ShardDBM)) {
+  if (dbm_type == typeid(PolyDBM) || dbm_type == typeid(ShardDBM)) {
     ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
     const std::map<std::string, std::string> tuning_params =
         tkrzw::StrSplitIntoMap(poly_params, ",", "=");
@@ -337,7 +338,8 @@ SkipDBM::ReducerType GetReducerOrDier(const std::string& reducer_name) {
 // Synchronizes a DBM object.
 bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
   bool has_error = false;
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     const Status status = skip_dbm->SynchronizeAdvanced(
         false, nullptr, GetReducerOrDier(reducer_name));
@@ -345,7 +347,7 @@ bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
       EPrintL("SynchronizeAdvanced failed: ", status);
       has_error = true;
     }
-  } else if (typeid(*dbm) == typeid(PolyDBM) || typeid(*dbm) == typeid(ShardDBM)) {
+  } else if (dbm_type == typeid(PolyDBM) || dbm_type == typeid(ShardDBM)) {
     ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
     std::map<std::string, std::string> params;
     if (!reducer_name.empty() && reducer_name != "none") {
@@ -370,7 +372,8 @@ bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
 // Tears down a DBM object.
 bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
   bool has_error = false;
-  if (typeid(*dbm) == typeid(HashDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     const int64_t file_size = hash_dbm->GetFileSizeSimple();
     const int64_t eff_data_size = hash_dbm->GetEffectiveDataSize();
@@ -391,7 +394,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TreeDBM)) {
+  if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
     const int64_t file_size = tree_dbm->GetFileSizeSimple();
     const int64_t eff_data_size = tree_dbm->GetEffectiveDataSize();
@@ -412,7 +415,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     const int64_t file_size = skip_dbm->GetFileSizeSimple();
     const int64_t eff_data_size = skip_dbm->GetEffectiveDataSize();
@@ -424,7 +427,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TinyDBM) || typeid(*dbm) == typeid(StdHashDBM)) {
+  if (dbm_type == typeid(TinyDBM) || dbm_type == typeid(StdHashDBM)) {
     const auto& meta = dbm->Inspect();
     const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
     const int64_t num_buckets = StrToInt(SearchMap(meta_map, "num_buckets", "0"));
@@ -438,7 +441,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       }
     }
   }
-  if (typeid(*dbm) == typeid(CacheDBM)) {
+  if (dbm_type == typeid(CacheDBM)) {
     CacheDBM* cache_dbm = dynamic_cast<CacheDBM*>(dbm);
     const int64_t eff_data_size = cache_dbm->GetEffectiveDataSize();
     const int64_t mem_usage = cache_dbm->GetMemoryUsage();
@@ -451,7 +454,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       }
     }
   }
-  if (typeid(*dbm) == typeid(BabyDBM) || typeid(*dbm) == typeid(StdTreeDBM)) {
+  if (dbm_type == typeid(BabyDBM) || dbm_type == typeid(StdTreeDBM)) {
     if (!file_path.empty()) {
       const Status status = dbm->Close();
       if (status != Status::SUCCESS) {
@@ -460,7 +463,7 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
       }
     }
   }
-  if (typeid(*dbm) == typeid(PolyDBM) || typeid(*dbm) == typeid(ShardDBM)) {
+  if (dbm_type == typeid(PolyDBM) || dbm_type == typeid(ShardDBM)) {
     PrintF("  file_size=%lld\n", dbm->GetFileSizeSimple());
     const Status status = dbm->Close();
     if (status != Status::SUCCESS) {

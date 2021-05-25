@@ -497,7 +497,8 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   std::map<std::string, std::string> mod_params = params;
-  if (typeid(*dbm_) == typeid(HashDBM)) {
+  const auto& dbm_type = typeid(*dbm_);
+  if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm_.get());
     HashDBM::TuningParameters tuning_params;
     SetHashTuningParams(&mod_params, &tuning_params);
@@ -509,7 +510,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     }
     return hash_dbm->RebuildAdvanced(tuning_params, skip_broken_records);
   }
-  if (typeid(*dbm_) == typeid(TreeDBM)) {
+  if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm_.get());
     TreeDBM::TuningParameters tuning_params;
     SetTreeTuningParams(&mod_params, &tuning_params);
@@ -519,7 +520,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     }
     return tree_dbm->RebuildAdvanced(tuning_params);
   }
-  if (typeid(*dbm_) == typeid(SkipDBM)) {
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
     SkipDBM::TuningParameters tuning_params;
     SetSkipTuningParams(&mod_params, &tuning_params);
@@ -529,7 +530,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     }
     return skip_dbm->RebuildAdvanced(tuning_params);
   }
-  if (typeid(*dbm_) == typeid(TinyDBM)) {
+  if (dbm_type == typeid(TinyDBM)) {
     TinyDBM* tiny_dbm = dynamic_cast<TinyDBM*>(dbm_.get());
     const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
@@ -539,7 +540,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     }
     return tiny_dbm->RebuildAdvanced(num_buckets);
   }
-  if (typeid(*dbm_) == typeid(CacheDBM)) {
+  if (dbm_type == typeid(CacheDBM)) {
     CacheDBM* cache_dbm = dynamic_cast<CacheDBM*>(dbm_.get());
     const int64_t cap_rec_num = StrToInt(SearchMap(mod_params, "cap_rec_num", "-1"));
     const int64_t cap_mem_size = StrToInt(SearchMap(mod_params, "cap_mem_size", "-1"));
@@ -571,7 +572,8 @@ Status PolyDBM::SynchronizeAdvanced(
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   std::map<std::string, std::string> mod_params = params;
-  if (typeid(*dbm_) == typeid(SkipDBM)) {
+  const auto& dbm_type = typeid(*dbm_);
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
     const auto& merge_paths = StrSplit(SearchMap(mod_params, "merge", ""), ':', true);
     for (const auto& merge_path : merge_paths) {

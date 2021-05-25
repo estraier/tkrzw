@@ -82,14 +82,11 @@ Status SearchDBM(
     capacity = SIZE_MAX;
   }
   matched->clear();
-  Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, std::string_view pattern,
-             std::vector<std::string>* matched, size_t capacity,
+    Exporter(std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
              bool (*matcher)(std::string_view, std::string_view))
-        : impl_status_(impl_status), pattern_(pattern), matched_(matched),
-          capacity_(capacity), matcher_(matcher) {}
+        : pattern_(pattern), matched_(matched), capacity_(capacity), matcher_(matcher) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (matched_->size() < capacity_ && matcher_(key, pattern_)) {
         matched_->emplace_back(std::string(key));
@@ -97,17 +94,12 @@ Status SearchDBM(
       return NOOP;
     }
    private:
-    Status* impl_status_;
     std::string_view pattern_;
     std::vector<std::string>* matched_;
     size_t capacity_;
     bool (*matcher_)(std::string_view, std::string_view);
-  } exporter(&impl_status, pattern, matched, capacity, matcher);
-  const Status status = dbm->ProcessEach(&exporter, false);
-  if (status != Status::SUCCESS) {
-    return status;
-  }
-  return impl_status;
+  } exporter(pattern, matched, capacity, matcher);
+  return dbm->ProcessEach(&exporter, false);
 }
 
 Status SearchDBMForwardMatch(
@@ -163,13 +155,11 @@ Status SearchDBMRegex(
     capacity = SIZE_MAX;
   }
   matched->clear();
-  Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, std::string_view pattern,
-             std::vector<std::string>* matched, size_t capacity,
+    Exporter(std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
              std::regex* regex, std::wregex* regex_wide)
-        : impl_status_(impl_status), pattern_(pattern), matched_(matched),
+        : pattern_(pattern), matched_(matched),
           capacity_(capacity), regex_(regex), regex_wide_(regex_wide) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (matched_->size() >= capacity_) {
@@ -188,18 +178,13 @@ Status SearchDBMRegex(
       return NOOP;
     }
    private:
-    Status* impl_status_;
     std::string_view pattern_;
     std::vector<std::string>* matched_;
     size_t capacity_;
     std::regex* regex_;
     std::wregex* regex_wide_;
-  } exporter(&impl_status, pattern, matched, capacity, regex.get(), regex_wide.get());
-  const Status status = dbm->ProcessEach(&exporter, false);
-  if (status != Status::SUCCESS) {
-    return status;
-  }
-  return impl_status;
+  } exporter(pattern, matched, capacity, regex.get(), regex_wide.get());
+  return dbm->ProcessEach(&exporter, false);
 }
 
 Status SearchDBMEditDistance(
@@ -213,14 +198,12 @@ Status SearchDBMEditDistance(
   if (utf) {
     pattern_ucs = ConvertUTF8ToUCS4(pattern);
   }
-  Status impl_status(Status::SUCCESS);
   std::vector<std::pair<int32_t, std::string>> heap;
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, std::string_view pattern,
-             std::vector<std::pair<int32_t, std::string>>* heap, size_t capacity,
-             const std::vector<uint32_t>* pattern_ucs)
-        : impl_status_(impl_status), pattern_(pattern), heap_(heap), capacity_(capacity),
+    Exporter(std::string_view pattern, std::vector<std::pair<int32_t, std::string>>* heap,
+             size_t capacity, const std::vector<uint32_t>* pattern_ucs)
+        : pattern_(pattern), heap_(heap), capacity_(capacity),
           pattern_ucs_(pattern_ucs) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       int32_t dist = 0;
@@ -234,12 +217,11 @@ Status SearchDBMEditDistance(
       return NOOP;
     }
    private:
-    Status* impl_status_;
     std::string_view pattern_;
     std::vector<std::pair<int32_t, std::string>>* heap_;
     size_t capacity_;
     const std::vector<uint32_t>* pattern_ucs_;
-  } exporter(&impl_status, pattern, &heap, capacity, utf ? &pattern_ucs : nullptr);
+  } exporter(pattern, &heap, capacity, utf ? &pattern_ucs : nullptr);
   const Status status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
@@ -249,7 +231,7 @@ Status SearchDBMEditDistance(
   for (const auto& rec : heap) {
     matched->emplace_back(rec.second);
   }
-  return impl_status;
+  return Status(Status::SUCCESS);
 }
 
 Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file) {

@@ -270,7 +270,8 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
   if (with_no_lock) {
     open_options |= File::OPEN_NO_LOCK;
   }
-  if (typeid(*dbm) == typeid(HashDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
     if (is_in_place) {
@@ -289,7 +290,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TreeDBM)) {
+  if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
     tkrzw::TreeDBM::TuningParameters tuning_params;
     if (is_in_place) {
@@ -313,7 +314,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     tkrzw::SkipDBM::TuningParameters tuning_params;
     tuning_params.offset_width = offset_width;
@@ -327,16 +328,16 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TinyDBM) || typeid(*dbm) == typeid(BabyDBM) ||
-      typeid(*dbm) == typeid(CacheDBM) ||
-      typeid(*dbm) == typeid(StdHashDBM) || typeid(*dbm) == typeid(StdTreeDBM)) {
+  if (dbm_type == typeid(TinyDBM) || dbm_type == typeid(BabyDBM) ||
+      dbm_type == typeid(CacheDBM) ||
+      dbm_type == typeid(StdHashDBM) || dbm_type == typeid(StdTreeDBM)) {
     const Status status = dbm->Open(path, writable, open_options);
     if (status != Status::SUCCESS) {
       EPrintL("Open failed: ", status);
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(PolyDBM) || typeid(*dbm) == typeid(ShardDBM)) {
+  if (dbm_type == typeid(PolyDBM) || dbm_type == typeid(ShardDBM)) {
     ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
     const std::map<std::string, std::string> tuning_params =
         tkrzw::StrSplitIntoMap(poly_params, ",", "=");
@@ -368,7 +369,8 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
                 int32_t step_unit, int32_t max_level,
                 const std::string& poly_params, bool restore) {
   bool has_error= false;
-  if (typeid(*dbm) == typeid(HashDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
     if (is_in_place) {
@@ -387,7 +389,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(TreeDBM)) {
+  if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
     tkrzw::TreeDBM::TuningParameters tuning_params;
     if (is_in_place) {
@@ -408,7 +410,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     tkrzw::SkipDBM::TuningParameters tuning_params;
     tuning_params.offset_width = offset_width;
@@ -420,7 +422,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       has_error = true;
     }
   }
-  if (typeid(*dbm) == typeid(PolyDBM) || typeid(*dbm) == typeid(ShardDBM)) {
+  if (dbm_type == typeid(PolyDBM) || dbm_type == typeid(ShardDBM)) {
     ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
     const std::map<std::string, std::string> tuning_params =
         tkrzw::StrSplitIntoMap(poly_params, ",", "=");
@@ -653,7 +655,8 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   } else {
     EPrintL("Set failed: ", status);
   }
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
     const Status status = skip_dbm->SynchronizeAdvanced(
         false, nullptr, GetReducerOrDie(reducer_name));
@@ -1010,7 +1013,8 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
     return 1;
   }
   bool has_error = false;
-  if (typeid(*dbm) == typeid(SkipDBM)) {
+  const auto& dbm_type = typeid(*dbm);
+  if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
     Status status(Status::SUCCESS);
     for (const auto& src_path : src_paths) {

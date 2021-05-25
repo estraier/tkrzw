@@ -210,8 +210,6 @@ class HashRecord final {
   int32_t offset_width_;
   /** The alignment power. */
   int32_t align_pow_;
-  /** The minimum reading size. */
-  int32_t min_read_size_;
   /** The stack buffer to read the meta data. */
   char meta_buf_[META_BUFFER_SIZE];
   /** The extended buffer to read the meta data. */
