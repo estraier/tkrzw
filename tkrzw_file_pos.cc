@@ -39,6 +39,12 @@ inline void SetDirectAccessToOpenFlag(int32_t* oflags) {
 #endif
 }
 
+inline void SetDirectAccessToFileDescriptor(int32_t fd) {
+#if defined(_SYS_MACOSX_)
+  std::cout << fcntl(fd, F_NOCACHE, 1) << std::endl;
+#endif
+}
+
 inline void AdviseFileRandomAccessPattern(int32_t fd) {
 #if defined(_SYS_LINUX_)
   posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM);
@@ -128,6 +134,9 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   const int32_t fd = open(path.c_str(), oflags, FILEPERM);
   if (fd < 0) {
     return GetErrnoStatus("open", errno);
+  }
+  if (access_options_ & PositionalFile::ACCESS_DIRECT) {
+    SetDirectAccessToFileDescriptor(fd);
   }
   AdviseFileRandomAccessPattern(fd);
 

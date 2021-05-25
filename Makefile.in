@@ -47,6 +47,7 @@ CPPFLAGS := @MYCPPFLAGS@ \
   -D_TKRZW_PKG_VERSION="\"$(VERSION)\"" -D_TKRZW_LIB_VERSION="\"$(LIBVER).$(LIBREV).$(LIBFMT)\""
 CFLAGS := @MYCFLAGS@
 CXXFLAGS := @MYCXXFLAGS@
+LDSOFLAGS := @MYLDSOFLAGS@
 LDFLAGS := @MYLDFLAGS@
 CMDLDFLAGS := @MYCMDLDFLAGS@
 CMDLIBS := @MYCMDLIBS@
@@ -784,14 +785,7 @@ libtkrzw.a : $(LIBOBJFILES)
 	$(AR) $(ARFLAGS) $@ $(LIBOBJFILES)
 
 libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT) : $(LIBOBJFILES)
-	if uname -a | egrep -i 'SunOS' > /dev/null ; \
-	  then \
-	    $(CXX) $(CXXFLAGS) -shared -Wl,-G,-h,libtkrzw.so.$(LIBVER) -o $@ \
-	      $(LIBOBJFILES) $(LDFLAGS) $(LIBS) ; \
-	  else \
-	    $(CXX) $(CXXFLAGS) -shared -Wl,-soname,libtkrzw.so.$(LIBVER) -o $@ \
-	      $(LIBOBJFILES) $(LDFLAGS) $(LIBS) ; \
-	  fi
+	$(CXX) $(CXXFLAGS) $(LDSOFLAGS) -o $@ $(LIBOBJFILES) $(LDFLAGS) $(LIBS)
 
 libtkrzw.so.$(LIBVER) : libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT)
 	ln -f -s libtkrzw.so.$(LIBVER).$(LIBREV).$(LIBFMT) $@

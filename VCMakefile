@@ -1,7 +1,7 @@
 # Makefile for Tkrzw for Windows
 
 PKG_VERSION = 0.9.20
-LIB_VERSION = 1.10.0
+LIB_VERSION = 1.10.789
 
 VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
