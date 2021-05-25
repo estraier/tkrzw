@@ -189,15 +189,15 @@ TEST(CmdUtilTest, Die) {
 
 TEST(CmdUtilTest, MakeFileOrDie) {
   EXPECT_EQ(typeid(tkrzw::MemoryMapParallelFile),
-            typeid(*tkrzw::MakeFileOrDie("mmap-para", 0, 0)));
+            tkrzw::MakeFileOrDie("mmap-para", 0, 0)->GetType());
   EXPECT_EQ(typeid(tkrzw::MemoryMapParallelFile),
-            typeid(*tkrzw::MakeFileOrDie("mmap-para", 1 << 10, 2)));
+            tkrzw::MakeFileOrDie("mmap-para", 1 << 10, 2)->GetType());
   EXPECT_EQ(typeid(tkrzw::MemoryMapAtomicFile),
-            typeid(*tkrzw::MakeFileOrDie("mmap-atom", 1 << 10, 2)));
+            tkrzw::MakeFileOrDie("mmap-atom", 1 << 10, 2)->GetType());
   EXPECT_EQ(typeid(tkrzw::PositionalParallelFile),
-            typeid(*tkrzw::MakeFileOrDie("pos-para", 1 << 10, 2)));
+            tkrzw::MakeFileOrDie("pos-para", 1 << 10, 2)->GetType());
   EXPECT_EQ(typeid(tkrzw::PositionalAtomicFile),
-            typeid(*tkrzw::MakeFileOrDie("pos-atom", 1 << 10, 2)));
+            tkrzw::MakeFileOrDie("pos-atom", 1 << 10, 2)->GetType());
   EXPECT_THROW({
       tkrzw::MakeFileOrDie("foo", 0, 0);
     }, tkrzw::StatusException);

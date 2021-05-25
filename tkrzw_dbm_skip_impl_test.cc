@@ -84,8 +84,7 @@ TEST(DBMSkipImplTest, SkipRecord) {
           index++;
         }
         EXPECT_EQ(max_index, index);
-        tkrzw::SkipRecordCache cache(
-            &file, offset_width, step_unit, max_level, cache_capacity, index);
+        tkrzw::SkipRecordCache cache(step_unit, cache_capacity, index);
         EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, rec.Search(record_base, &cache, "", false));
         EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, rec.Search(record_base, &cache, "0000", false));
         for (int32_t index = 0; index < max_index; ++index) {
@@ -163,8 +162,7 @@ TEST(DBMSkipImplTest, SkipRecordMulti) {
             index++;
           }
         }
-        tkrzw::SkipRecordCache cache(
-            &file, offset_width, step_unit, max_level, cache_capacity, index);
+        tkrzw::SkipRecordCache cache(step_unit, cache_capacity, index);
         for (int32_t ki = 0; ki < num_keys; ki++) {
           const std::string& key = tkrzw::SPrintF("%08d", ki);
           EXPECT_EQ(tkrzw::Status::SUCCESS, rec.Search(record_base, &cache, key, false));

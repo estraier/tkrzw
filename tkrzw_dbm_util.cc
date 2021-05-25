@@ -270,7 +270,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
   if (with_no_lock) {
     open_options |= File::OPEN_NO_LOCK;
   }
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
@@ -369,7 +369,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
                 int32_t step_unit, int32_t max_level,
                 const std::string& poly_params, bool restore) {
   bool has_error= false;
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
@@ -655,7 +655,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   } else {
     EPrintL("Set failed: ", status);
   }
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
     const Status status = skip_dbm->SynchronizeAdvanced(
@@ -1013,7 +1013,7 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
     return 1;
   }
   bool has_error = false;
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
     Status status(Status::SUCCESS);

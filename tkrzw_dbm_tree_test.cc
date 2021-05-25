@@ -65,6 +65,7 @@ class TreeDBMTest : public CommonDBMTest {
 void TreeDBMTest::TreeDBMEmptyDatabaseTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(typeid(tkrzw::TreeDBM), static_cast<tkrzw::DBM*>(dbm)->GetType());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
   EXPECT_TRUE(dbm->IsHealthy());
   EXPECT_GT(dbm->GetFileSizeSimple(), 0);

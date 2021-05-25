@@ -1132,6 +1132,15 @@ class DBM {
    * @return The new file object.
    */
   virtual std::unique_ptr<DBM> MakeDBM() const = 0;
+
+  /**
+   * Gets the type information of the actual class.
+   * @return The type information of the actual class.
+   */
+  const std::type_info& GetType() const {
+    const auto& entity = *this;
+    return typeid(entity);
+  }
 };
 
 }  // namespace tkrzw

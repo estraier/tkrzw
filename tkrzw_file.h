@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <typeinfo>
 
 #include <cinttypes>
 
@@ -263,6 +264,15 @@ class File {
    * @return The new file object.
    */
   virtual std::unique_ptr<File> MakeFile() const = 0;
+
+  /**
+   * Gets the type information of the actual class.
+   * @return The type information of the actual class.
+   */
+  const std::type_info& GetType() const {
+    const auto& entity = *this;
+    return typeid(entity);
+  }
 };
 
 }  // namespace tkrzw

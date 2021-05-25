@@ -497,7 +497,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   std::map<std::string, std::string> mod_params = params;
-  const auto& dbm_type = typeid(*dbm_);
+  const auto& dbm_type = dbm_->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm_.get());
     HashDBM::TuningParameters tuning_params;
@@ -572,7 +572,7 @@ Status PolyDBM::SynchronizeAdvanced(
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   std::map<std::string, std::string> mod_params = params;
-  const auto& dbm_type = typeid(*dbm_);
+  const auto& dbm_type = dbm_->GetType();
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
     const auto& merge_paths = StrSplit(SearchMap(mod_params, "merge", ""), ':', true);

@@ -970,6 +970,8 @@ int main(int argc, char** argv) {
 
 <p>The bucket section dominates from the offset 128 to an offset determined by the number of buckets and the offset width.  Given the number of buckets M and the offset width W, the end offset is 128 + M * W.  The default value of the number of buckets is 1,048,583.  Then, the bucket section dominates from the offset 128 to 4,194,460.  Each bucket is an integer in big-endian.  If there's no record matching the bucket index, the value is zero.  Otherwise, it indicates the offset of the data of the first record in a linked list of records matching the bucket index.</p>
 
+<p>The hash function is the 64-bit version of MurmurHash 3.  It is applied to the whole key data.  If the number of buckets is less than 2^32, the hash value is folded by taking XOR of the greater 32 bits and the lower 32 bits in the format of (([32,47]&lt;&lt;16)|[48,63]) ^ (([0,15]&lt;&lt;16)|[16,32]).  The bucket index of the key is the ramainder of division of the hash value by the number of buckets.</p>
+
 <p>The record section dominates from an aligned offset after the bucket section to the end of the file.  The start point is equal to or after the figure calculated as 128 + num_buckets * W + 1024 and it is aligned to 4096 and 2^P.  The record section contains multiple record data in sequence.  Each record is serialized in the following format.</p>
 
 <dl>

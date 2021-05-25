@@ -91,7 +91,7 @@ TEST_F(ShardDBMTest, BasicTest) {
     const auto inspect = dbm.Inspect();
     const std::map<std::string, std::string> inspect_map(inspect.begin(), inspect.end());
     EXPECT_EQ(config.class_name, tkrzw::SearchMap(inspect_map, "class", ""));
-    const std::string type_name(typeid(*dbm.GetInternalDBM()).name());
+    const std::string type_name(dbm.GetInternalDBM()->GetType().name());
     EXPECT_NE(std::string::npos, type_name.find(config.class_name));
     EXPECT_TRUE(dbm.IsHealthy());
     for (int32_t i = 1; i <= 100; i++) {

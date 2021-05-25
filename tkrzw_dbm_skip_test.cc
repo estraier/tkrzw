@@ -55,6 +55,7 @@ class SkipDBMTest : public CommonDBMTest {
 void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(typeid(tkrzw::SkipDBM), static_cast<tkrzw::DBM*>(dbm)->GetType());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
   EXPECT_TRUE(dbm->IsOpen());
   EXPECT_TRUE(dbm->IsWritable());

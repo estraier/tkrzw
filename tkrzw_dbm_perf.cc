@@ -233,7 +233,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
   if (with_no_lock) {
     open_options |= File::OPEN_NO_LOCK;
   }
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     tkrzw::HashDBM::TuningParameters tuning_params;
@@ -338,7 +338,7 @@ SkipDBM::ReducerType GetReducerOrDier(const std::string& reducer_name) {
 // Synchronizes a DBM object.
 bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
   bool has_error = false;
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     const Status status = skip_dbm->SynchronizeAdvanced(
@@ -372,7 +372,7 @@ bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
 // Tears down a DBM object.
 bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
   bool has_error = false;
-  const auto& dbm_type = typeid(*dbm);
+  const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     const int64_t file_size = hash_dbm->GetFileSizeSimple();
