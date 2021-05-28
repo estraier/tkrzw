@@ -68,11 +68,25 @@ window.onload = function(){
       "Timid Killers Rubbing Zombie Wax",
       "Teramachi Kyogoku Rokkaku Zezeura Wakamiya",
       "Tonikaku Kawaii Randoseru Zettai Wasurenai",
+      "Triple Kernels Reading Zero Width",
       "Tibetan Kind Rangers Zipping Waffles",
       "Tetsuya Komuro Raving Zone Walker",
     ];
     let text = texts[Math.floor(now.getTime() / 60000) % texts.length];
     elem.firstChild.nodeValue = "Tkrzw: " + text;
+  }
+  if (navigator.language == "ja") {
+    let logo = document.getElementById("logo");
+    if (logo) {
+      while (logo.firstChild) {
+        logo.removeChild(logo.firstChild);
+      }
+      let slides = document.createElement("iframe");
+      slides.src = "https://docs.google.com/presentation/d/e/2PACX-1vTbBrc0VUoT6y-9uSynhP1fNUfkF528Dsg2JBjsk0cDRFzvVOBeUpJa8WzWI2Q1MbeD1fA_FRtwnJgI/embed?start=false&loop=false&delayms=100000";
+      slides.width = 500;
+      slides.height = 320;
+      logo.appendChild(slides);
+    }
   }
 }
 /*]]>*/</script>
@@ -83,7 +97,7 @@ window.onload = function(){
 
 <h1 id="title">Tkrzw: a set of implementations of DBM</h1>
 
-<div class="logo"><img src="ilove-logo.png"/></div>
+<div id="logo" class="logo"><img src="ilove-logo.png"/></div>
 
 <h2 id="overview">Overview</h2>
 
