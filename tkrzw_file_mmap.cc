@@ -39,7 +39,7 @@ inline void AdviseMemoryRandomAccessPattern(void* addr, size_t len) {
 }
 
 inline void* tkrzw_mremap(
-    void *old_address, size_t old_size, size_t new_size, int fd) {
+    void *old_address, size_t old_size, size_t new_size, int32_t fd) {
 #if defined(_SYS_LINUX_)
   return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
 #else
