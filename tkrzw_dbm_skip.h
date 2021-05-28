@@ -239,7 +239,7 @@ class SkipDBM final : public DBM {
    * Constructor with a file object.
    * @param file The file object to handle the data.  The ownership is taken.
    */
-  SkipDBM(std::unique_ptr<File> file);
+  explicit SkipDBM(std::unique_ptr<File> file);
 
   /**
    * Destructor.

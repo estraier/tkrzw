@@ -155,7 +155,7 @@ class CacheDBM final : public DBM {
    * @details If the number of records or the total memory size exceeds the capacity LRU
    * (least resente used) records are removed implicitly.
    */
-  CacheDBM(int64_t cap_rec_num = -1, int64_t cap_mem_size = -1);
+  explicit CacheDBM(int64_t cap_rec_num = -1, int64_t cap_mem_size = -1);
 
   /**
    * Constructor with a file object.
@@ -167,7 +167,7 @@ class CacheDBM final : public DBM {
    * @details If the number of records or the total memory size exceeds the capacity LRU
    * (least resente used) records are removed implicitly.
    */
-  CacheDBM(std::unique_ptr<File> file, int64_t cap_rec_num = -1, int64_t cap_mem_size = -1);
+  explicit CacheDBM(std::unique_ptr<File> file, int64_t cap_rec_num = -1, int64_t cap_mem_size = -1);
 
   /**
    * Destructor.

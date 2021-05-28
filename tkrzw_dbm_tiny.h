@@ -160,7 +160,7 @@ class TinyDBM final : public DBM {
    * @param num_buckets The number of buckets of the hash table.  -1 means that the default
    * value 1048583 is set.
    */
-  TinyDBM(std::unique_ptr<File> file, int64_t num_buckets = -1);
+  explicit TinyDBM(std::unique_ptr<File> file, int64_t num_buckets = -1);
 
   /**
    * Destructor.

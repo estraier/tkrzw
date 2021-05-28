@@ -146,14 +146,15 @@ class BabyDBM final : public DBM {
    * Default constructor.
    * @param key_comparator The comparator of record keys.
    */
-  BabyDBM(KeyComparator key_comparator = LexicalKeyComparator);
+  explicit BabyDBM(KeyComparator key_comparator = LexicalKeyComparator);
 
   /**
    * Constructor with a file object.
    * @param file The file object to handle the data.  The ownership is taken.
    * @param key_comparator The comparator of record keys.
    */
-  BabyDBM(std::unique_ptr<File> file, KeyComparator key_comparator = LexicalKeyComparator);
+  explicit BabyDBM(
+      std::unique_ptr<File> file, KeyComparator key_comparator = LexicalKeyComparator);
 
   /**
    * Destructor.

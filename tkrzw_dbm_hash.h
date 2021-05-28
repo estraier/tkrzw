@@ -252,7 +252,7 @@ class HashDBM final : public DBM {
    * Constructor with a file object.
    * @param file The file object to handle the data.  The ownership is taken.
    */
-  HashDBM(std::unique_ptr<File> file);
+  explicit HashDBM(std::unique_ptr<File> file);
 
   /**
    * Destructor.

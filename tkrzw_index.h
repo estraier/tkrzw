@@ -108,6 +108,24 @@ class FileIndex final {
   };
 
   /**
+   * Default constructor.
+   * @details MemoryMapParallelFile is used to handle the data.
+   */
+  FileIndex() : iterators_(), dbm_() {}
+
+  /**
+   * Constructor with a file object.
+   * @param file The file object to handle the data.  The ownership is taken.
+   */
+  explicit FileIndex(std::unique_ptr<File> file) : iterators_(), dbm_(std::move(file)) {}
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit FileIndex(const FileIndex& rhs) = delete;
+  FileIndex& operator =(const FileIndex& rhs) = delete;
+
+  /**
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
@@ -270,6 +288,12 @@ class MemIndex final {
   explicit MemIndex(KeyComparator key_comparator = PairLexicalKeyComparator);
 
   /**
+   * Copy and assignment are disabled.
+   */
+  explicit MemIndex(const MemIndex& rhs) = delete;
+  MemIndex& operator =(const MemIndex& rhs) = delete;
+
+  /**
    * Checks whether a record exists in the index.
    * @param key The key of the record.
    * @param value The value of the record.
@@ -408,9 +432,20 @@ class StdIndex final {
   };
 
   /**
+   * Default constructor.
+   */
+  StdIndex() {}
+
+  /**
    * Destructor.
    */
   ~StdIndex();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit StdIndex(const StdIndex& rhs) = delete;
+  StdIndex& operator =(const StdIndex& rhs) = delete;
 
   /**
    * Checks whether a record exists in the index.
@@ -559,9 +594,20 @@ class StdIndexStr final {
   };
 
   /**
+   * Default constructor.
+   */
+  StdIndexStr() {}
+
+  /**
    * Destructor.
    */
   ~StdIndexStr();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit StdIndexStr(const StdIndexStr& rhs) = delete;
+  StdIndexStr& operator =(const StdIndexStr& rhs) = delete;
 
   /**
    * Checks whether a record exists in the index.

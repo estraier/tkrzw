@@ -152,7 +152,7 @@ class StdHashDBM final : public DBM {
    * @param num_buckets The number of buckets of the rebuild hash table.  -1 means that the
    * default value 1048583 is set.
    */
-  StdHashDBM(std::unique_ptr<File> file, int64_t num_buckets = -1);
+  explicit StdHashDBM(std::unique_ptr<File> file, int64_t num_buckets = -1);
 
   /**
    * Destructor.
