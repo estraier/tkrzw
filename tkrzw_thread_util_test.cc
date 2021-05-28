@@ -168,7 +168,7 @@ TEST(ThreadUtilTest, SlottedMutex) {
 
 TEST(ThreadUtilTest, HashMutex) {
   constexpr int32_t num_threads = 5;
-  constexpr int32_t num_iterations = 20000;
+  constexpr int32_t num_iterations = 30000;
   constexpr int32_t num_slots = 10;
   constexpr int32_t max_buckets = 100;
   auto hash_func = [](std::string_view data, uint64_t num_buckets) -> uint64_t {
@@ -178,12 +178,13 @@ TEST(ThreadUtilTest, HashMutex) {
   std::vector<uint8_t> values(max_buckets, false);
   auto func = [&](int32_t id) {
     std::mt19937 mt(id);
+    std::uniform_int_distribution<int32_t> writable_dist(0, 3);
     std::uniform_int_distribution<int32_t> rehash_dist(0, num_iterations / 10 - 1);
     std::uniform_int_distribution<int32_t> mode_dist(0, 2);
     std::uniform_int_distribution<int32_t> all_dist(0, mutex.GetNumSlots() * 10 - 1);
-    std::uniform_int_distribution<int32_t> writable_dist(0, 3);
     std::uniform_int_distribution<int32_t> iter_dist(0, 5);
     std::uniform_int_distribution<int32_t> record_dist(0, tkrzw::INT32MAX);
+    std::uniform_int_distribution<int32_t> multi_dist(0, 5);
     std::uniform_int_distribution<int32_t> num_buckets_dist(1, max_buckets);
     for (int32_t i = 0; i < num_iterations; i++) {
       const bool writable = writable_dist(mt) == 0;
@@ -228,6 +229,44 @@ TEST(ThreadUtilTest, HashMutex) {
             } else {
               EXPECT_FALSE(values[bucket_index]);
               std::this_thread::yield();
+              EXPECT_FALSE(values[bucket_index]);
+            }
+          }
+        } else if (multi_dist(mt) == 0) {
+          std::vector<std::string> keys;
+          std::vector<std::string_view> key_views;
+          for (int32_t j = 0; j < 3; j++) {
+            keys.emplace_back(tkrzw::ToString(record_dist(mt)));
+          }
+          for (const auto& key : keys) {
+            key_views.emplace_back(key);
+          }
+          if (writable) {
+            tkrzw::ScopedHashLockMulti lock(mutex, key_views, true);
+            const std::vector<int64_t>& bucket_indices = lock.GetBucketIndices();
+            const std::set<int64_t> uniq_indices(bucket_indices.begin(), bucket_indices.end());
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_FALSE(values[bucket_index]);
+              values[bucket_index] = true;
+            }
+            if (i % 3 != 0) {
+              std::this_thread::yield();
+            }
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_TRUE(values[bucket_index]);
+              values[bucket_index] = false;            
+            }
+          } else {
+            tkrzw::ScopedHashLockMulti lock(mutex, key_views, false);
+            const std::vector<int64_t>& bucket_indices = lock.GetBucketIndices();
+            const std::set<int64_t> uniq_indices(bucket_indices.begin(), bucket_indices.end());
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_FALSE(values[bucket_index]);
+            }
+            if (i % 3 != 0) {
+              std::this_thread::yield();
+            }
+            for (int64_t bucket_index : uniq_indices) {
               EXPECT_FALSE(values[bucket_index]);
             }
           }
@@ -293,6 +332,44 @@ TEST(ThreadUtilTest, HashMutex) {
               EXPECT_FALSE(values[bucket_index]);
               mutex.UnlockOneShared(bucket_index);
             }
+          }
+        } else if (multi_dist(mt) == 0) {
+          std::vector<std::string> keys;
+          std::vector<std::string_view> key_views;
+          for (int32_t j = 0; j < 3; j++) {
+            keys.emplace_back(tkrzw::ToString(record_dist(mt)));
+          }
+          for (const auto& key : keys) {
+            key_views.emplace_back(key);
+          }
+          if (writable) {
+            const std::vector<int64_t> bucket_indices = mutex.LockMulti(key_views);
+            const std::set<int64_t> uniq_indices(bucket_indices.begin(), bucket_indices.end());
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_FALSE(values[bucket_index]);
+              values[bucket_index] = true;
+            }
+            if (i % 3 != 0) {
+              std::this_thread::yield();
+            }
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_TRUE(values[bucket_index]);
+              values[bucket_index] = false;            
+            }
+            mutex.UnlockMulti(bucket_indices);
+          } else {
+            const std::vector<int64_t> bucket_indices = mutex.LockMultiShared(key_views);
+            const std::set<int64_t> uniq_indices(bucket_indices.begin(), bucket_indices.end());
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_FALSE(values[bucket_index]);
+            }
+            if (i % 3 != 0) {
+              std::this_thread::yield();
+            }
+            for (int64_t bucket_index : uniq_indices) {
+              EXPECT_FALSE(values[bucket_index]);
+            }
+            mutex.UnlockMultiShared(bucket_indices);
           }
         } else {
           const std::string& key = tkrzw::ToString(record_dist(mt));

@@ -296,9 +296,35 @@ public:
   void LockAllShared();
 
   /**
-   * Releases exclusive ownership of all slots.
+   * Releases shared ownership of all slots.
    */
   void UnlockAllShared();
+
+  /**
+   * Gets exclusive ownership of slots of multiple buckets.
+   * @param data_list The data list to be set in the hash table.
+   * @return The indices of the buckets which the data list should belong to.
+   */
+  std::vector<int64_t> LockMulti(const std::vector<std::string_view>& data_list);
+
+  /**
+   * Releases exclusive ownership of slots of multiple buckets.
+   * @param bucket_indices The indices of the buckets to unlock.
+   */
+  void UnlockMulti(const std::vector<int64_t>& bucket_indices);
+
+  /**
+   * Gets shared ownership of slots of multiple buckets.
+   * @param data_list The data list to be set in the hash table.
+   * @return The indices of the buckets which the data list should belong to.
+   */
+  std::vector<int64_t> LockMultiShared(const std::vector<std::string_view>& data_list);
+
+  /**
+   * Releases shared ownership of slots of multiple buckets.
+   * @param bucket_indices The indices of the buckets to unlock.
+   */
+  void UnlockMultiShared(const std::vector<int64_t>& bucket_indices);
 
  private:
   /** The number of the slots. */
@@ -364,6 +390,45 @@ class ScopedHashLock final {
   HashMutex& mutex_;
   /** The index of the bucket or -1 for all buckets. */
   int64_t bucket_index_;
+  /** Whether it is an exclusive lock. */
+  bool writable_;
+};
+
+/**
+ * Scoped lock with multiple mutexes for a hash table.
+ */
+class ScopedHashLockMulti final {
+ public:
+  /**
+   * Constructor to lock multiple buckets.
+   * @param mutex A hash mutex.
+   * @param data_list The data list to be set in the hash table.
+   * @param writable True for exclusive lock or false for shared lock.
+   */
+  ScopedHashLockMulti(HashMutex& mutex, std::vector<std::string_view> data_list, bool writable);
+
+  /**
+   * Destructor.
+   */
+  ~ScopedHashLockMulti();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit ScopedHashLockMulti(const ScopedHashLockMulti& rhs) = delete;
+  ScopedHashLockMulti& operator =(const ScopedHashLockMulti& rhs) = delete;
+
+  /**
+   * Gets the indices of the buckets.
+   * @return The indices of the buckets which the data should belong to.
+   */
+  const std::vector<int64_t> GetBucketIndices() const;
+
+ private:
+  /** The slotted mutex. */
+  HashMutex& mutex_;
+  /** The indices of the buckets. */
+  std::vector<int64_t> bucket_indices_;
   /** Whether it is an exclusive lock. */
   bool writable_;
 };

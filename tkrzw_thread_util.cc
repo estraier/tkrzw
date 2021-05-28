@@ -237,6 +237,74 @@ void HashMutex::UnlockAllShared() {
   }
 }
 
+std::vector<int64_t> HashMutex::LockMulti(const std::vector<std::string_view>& data_list) {
+  std::vector<int64_t> bucket_indices;
+  bucket_indices.reserve(data_list.size());
+  slots_[0].lock();
+  const int64_t num_buckets = num_buckets_.load();
+  std::set<int32_t> slot_indices;
+  for (const auto& data : data_list) {
+    const uint64_t bucket_index = hash_func_(data, num_buckets);
+    bucket_indices.emplace_back(bucket_index);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (int64_t slot_index : slot_indices) {
+    if (slot_index != 0) {
+      slots_[slot_index].lock();
+    }
+  }
+  if (slot_indices.find(0) == slot_indices.end()) {
+    slots_[0].unlock();
+  }
+  return bucket_indices;
+}
+
+void HashMutex::UnlockMulti(const std::vector<int64_t>& bucket_indices) {
+  std::set<int32_t> slot_indices;
+  for (int64_t bucket_index : bucket_indices) {
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (auto it = slot_indices.rbegin(); it != slot_indices.rend(); it++) {
+    slots_[*it].unlock();
+  }
+}
+
+std::vector<int64_t> HashMutex::LockMultiShared(const std::vector<std::string_view>& data_list) {
+  std::vector<int64_t> bucket_indices;
+  bucket_indices.reserve(data_list.size());
+  slots_[0].lock_shared();
+  const int64_t num_buckets = num_buckets_.load();
+  std::set<int32_t> slot_indices;
+  for (const auto& data : data_list) {
+    const uint64_t bucket_index = hash_func_(data, num_buckets);
+    bucket_indices.emplace_back(bucket_index);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (int64_t slot_index : slot_indices) {
+    if (slot_index != 0) {
+      slots_[slot_index].lock_shared();
+    }
+  }
+  if (slot_indices.find(0) == slot_indices.end()) {
+    slots_[0].unlock_shared();
+  }
+  return bucket_indices;
+}
+
+void HashMutex::UnlockMultiShared(const std::vector<int64_t>& bucket_indices) {
+  std::set<int32_t> slot_indices;
+  for (int64_t bucket_index : bucket_indices) {
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (auto it = slot_indices.rbegin(); it != slot_indices.rend(); it++) {
+    slots_[*it].unlock_shared();
+  }
+}
+
 ScopedHashLock::ScopedHashLock(HashMutex& mutex, std::string_view data, bool writable)
     : mutex_(mutex), bucket_index_(0), writable_(writable) {
   if (writable_) {
@@ -282,6 +350,28 @@ ScopedHashLock::~ScopedHashLock() {
 
 int64_t ScopedHashLock::GetBucketIndex() const {
   return bucket_index_;
+}
+
+ScopedHashLockMulti::ScopedHashLockMulti(
+    HashMutex& mutex, std::vector<std::string_view> data_list, bool writable)
+    : mutex_(mutex), bucket_indices_(), writable_(writable) {
+  if (writable_) {
+    bucket_indices_ = mutex_.LockMulti(data_list);
+  } else {
+    bucket_indices_ = mutex_.LockMultiShared(data_list);
+  }
+}
+
+ScopedHashLockMulti::~ScopedHashLockMulti() {
+  if (writable_) {
+    mutex_.UnlockMulti(bucket_indices_);
+  } else {
+    mutex_.UnlockMultiShared(bucket_indices_);
+  }
+}
+
+const std::vector<int64_t> ScopedHashLockMulti::GetBucketIndices() const {
+  return bucket_indices_;
 }
 
 }  // namespace tkrzw
