@@ -83,8 +83,11 @@ window.onload = function(){
       }
       let slides = document.createElement("iframe");
       slides.src = "https://docs.google.com/presentation/d/e/2PACX-1vTbBrc0VUoT6y-9uSynhP1fNUfkF528Dsg2JBjsk0cDRFzvVOBeUpJa8WzWI2Q1MbeD1fA_FRtwnJgI/embed?start=false&loop=false&delayms=100000";
-      slides.width = 500;
-      slides.height = 320;
+      slides.width = 600;
+      slides.height = 380;
+      slides.allowFullscreen = true;
+      slides.mozAllowFullscreen = true;
+      slides.webkitAllowFullscreen = true;
       logo.appendChild(slides);
     }
   }
