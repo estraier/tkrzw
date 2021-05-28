@@ -3,8 +3,16 @@
 	- Release: 0.9.21
 	- Library version: 1.11.0
 
+	- Add DBM::RemoveMulti method.
 	- Solve compilation warnings on Mac OS.
 	- Support direct I/O on Mac OS.
+	- Support multi record atomic transaction on HashDBM.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.9
+	- tkrzw-python: 0.1.9
+	- tkrzw-ruby: 0.1.9
+
 
 2021-05-24  Mikio Hirabayashi  <hirarin@gmail.com>
 

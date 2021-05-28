@@ -763,7 +763,7 @@ class DBM {
    * @return A map of retrieved records.  Keys which don't match existing records are ignored.
    */
   virtual std::map<std::string, std::string> GetMulti(
-      const std::initializer_list<std::string>& keys) {
+      const std::initializer_list<std::string_view>& keys) {
     std::map<std::string, std::string> records;
     for (const auto& key : keys) {
       std::string value;
@@ -779,7 +779,8 @@ class DBM {
    * @param keys The keys of records to retrieve.
    * @return A map of retrieved records.  Keys which don't match existing records are ignored.
    */
-  virtual std::map<std::string, std::string> GetMulti(const std::vector<std::string>& keys) {
+  virtual std::map<std::string, std::string> GetMulti(
+      const std::vector<std::string_view>& keys) {
     std::map<std::string, std::string> records;
     for (const auto& key : keys) {
       std::string value;
@@ -821,7 +822,7 @@ class DBM {
    * @return The result status.
    */
   virtual Status SetMulti(
-      const std::initializer_list<std::pair<std::string, std::string>>& records,
+      const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
       bool overwrite = true) {
     for (const auto& record : records) {
       const Status status = Set(record.first, record.second, overwrite);
@@ -841,7 +842,7 @@ class DBM {
    * @return The result status.
    */
   virtual Status SetMulti(
-      const std::map<std::string, std::string>& records, bool overwrite = true) {
+      const std::map<std::string_view, std::string_view>& records, bool overwrite = true) {
     for (const auto& record : records) {
       const Status status = Set(record.first, record.second, overwrite);
       if (status != Status::Status::SUCCESS) {
@@ -856,7 +857,6 @@ class DBM {
    * @param key The key of the record.
    * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
    * it is ignored.
-   * even on the duplication error.
    * @return The result status.
    */
   virtual Status Remove(std::string_view key, std::string* old_value = nullptr) {
@@ -867,6 +867,36 @@ class DBM {
       return status;
     }
     return impl_status;
+  }
+
+  /**
+   * Removes records of keys.
+   * @param keys The keys of records to remove.
+   * @return The result status.
+   */
+  virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
+    for (const auto& key : keys) {
+      const Status status = Remove(key);
+      if (status != Status::Status::SUCCESS) {
+        return status;
+      }
+    }
+    return Status(Status::SUCCESS);
+  }
+
+  /**
+   * Removes records of keys.
+   * @param keys The keys of records to remove.
+   * @return The result status.
+   */
+  virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
+    for (const auto& key : keys) {
+      const Status status = Remove(key);
+      if (status != Status::Status::SUCCESS) {
+        return status;
+      }
+    }
+    return Status(Status::SUCCESS);
   }
 
   /**
