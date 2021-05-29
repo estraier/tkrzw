@@ -57,6 +57,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
   void HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm);
   void HashDBMRestoreTest(tkrzw::HashDBM* dbm);
+  void HashDBMTransactionTest(tkrzw::HashDBM* dbm);
   void HashDBMDirectIOTest(tkrzw::HashDBM* dbm);
 };
 
@@ -981,6 +982,10 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
 }
 
+void HashDBMTest::HashDBMTransactionTest(tkrzw::HashDBM* dbm) {
+  
+}
+
 void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
@@ -1178,6 +1183,11 @@ TEST_F(HashDBMTest, RebuildRandom) {
 TEST_F(HashDBMTest, Restore) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMRestoreTest(&dbm);
+}
+
+TEST_F(HashDBMTest, Transaction) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMTransactionTest(&dbm);
 }
 
 TEST_F(HashDBMTest, DirectIO) {

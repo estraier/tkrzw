@@ -758,23 +758,6 @@ class DBM {
   }
 
   /**
-   * Gets the values of multiple records of keys.
-   * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
-   */
-  virtual std::map<std::string, std::string> GetMulti(
-      const std::initializer_list<std::string_view>& keys) {
-    std::map<std::string, std::string> records;
-    for (const auto& key : keys) {
-      std::string value;
-      if (Get(key, &value) == Status::SUCCESS) {
-        records.emplace(key, value);
-      }
-    }
-    return records;
-  }
-
-  /**
    * Gets the values of multiple records of keys, with a vector.
    * @param keys The keys of records to retrieve.
    * @return A map of retrieved records.  Keys which don't match existing records are ignored.
@@ -789,6 +772,17 @@ class DBM {
       }
     }
     return records;
+  }
+
+  /**
+   * Gets the values of multiple records of keys, with an initializer list.
+   * @param keys The keys of records to retrieve.
+   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   */
+  virtual std::map<std::string, std::string> GetMulti(
+      const std::initializer_list<std::string_view>& keys) {
+    std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
+    return GetMulti(vector_keys);
   }
 
   /**
@@ -814,27 +808,6 @@ class DBM {
   }
 
   /**
-   * Sets multiple records.
-   * @param records The records to store.
-   * @param overwrite Whether to overwrite the existing value if there's a record with the same
-   * key.  If true, the existing value is overwritten by the new value.  If false, the operation
-   * is given up and an error status is returned.
-   * @return The result status.
-   */
-  virtual Status SetMulti(
-      const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
-      bool overwrite = true) {
-    Status status(Status::SUCCESS);
-    for (const auto& record : records) {
-      status |= Set(record.first, record.second, overwrite);
-      if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
-        break;
-      }
-    }
-    return status;
-  }
-
-  /**
    * Sets multiple records, with a map of strings.
    * @param records The records to store.
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
@@ -852,6 +825,25 @@ class DBM {
       }
     }
     return status;
+  }
+
+  /**
+   * Sets multiple records, with an initializer list.
+   * @param records The records to store.
+   * @param overwrite Whether to overwrite the existing value if there's a record with the same
+   * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+   * is given up and an error status is returned.
+   * @return The result status.
+   */
+  virtual Status SetMulti(
+      const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
+      bool overwrite = true) {
+    std::map<std::string_view, std::string_view> map_records;
+    for (const auto& record : records) {
+      map_records.emplace(std::pair(
+          std::string_view(record.first), std::string_view(record.second)));
+    }
+    return SetMulti(map_records, overwrite);
   }
 
   /**
@@ -876,7 +868,7 @@ class DBM {
    * @param keys The keys of records to remove.
    * @return The result status.
    */
-  virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
+  virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
     Status status(Status::SUCCESS);
     for (const auto& key : keys) {
       status |= Remove(key);
@@ -888,19 +880,13 @@ class DBM {
   }
 
   /**
-   * Removes records of keys.
+   * Removes records of keys, with an initializer list.
    * @param keys The keys of records to remove.
    * @return The result status.
    */
-  virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
-    Status status(Status::SUCCESS);
-    for (const auto& key : keys) {
-      status |= Remove(key);
-      if (status != Status::Status::SUCCESS && status != Status::Status::NOT_FOUND_ERROR) {
-        break;
-      }
-    }
-    return status;
+  virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
+    std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
+    return RemoveMulti(vector_keys);
   }
 
   /**

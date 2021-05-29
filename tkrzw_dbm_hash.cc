@@ -80,6 +80,9 @@ class HashDBMImpl final {
   Status Close();
   Status Process(
       std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -293,6 +296,39 @@ Status HashDBMImpl::Process(
   ScopedHashLock record_lock(record_mutex_, key, writable);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   return ProcessImpl(key, bucket_index, proc, writable);
+}
+
+Status HashDBMImpl::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+  }
+  std::vector<std::string_view> keys;
+  keys.reserve(key_proc_pairs.size());
+  for (const auto& pair : key_proc_pairs) {
+    keys.emplace_back(pair.first);
+  }
+  ScopedHashLockMulti record_lock(record_mutex_, keys, writable);
+  const std::vector<int64_t>& bucket_indices = record_lock.GetBucketIndices();
+  for (size_t i = 0; i < key_proc_pairs.size(); i++) {
+    const auto& key_proc = key_proc_pairs[i];
+    const int64_t bucket_index = bucket_indices[i];
+    const Status status = ProcessImpl(key_proc.first, bucket_index, key_proc.second, writable);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  return Status(Status::SUCCESS);
 }
 
 Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
@@ -1764,6 +1800,12 @@ Status HashDBM::Close() {
 Status HashDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->Process(key, proc, writable);
+}
+
+Status HashDBM::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status HashDBM::ProcessEach(RecordProcessor* proc, bool writable) {
