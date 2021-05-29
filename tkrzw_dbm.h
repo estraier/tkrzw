@@ -824,13 +824,14 @@ class DBM {
   virtual Status SetMulti(
       const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
       bool overwrite = true) {
+    Status status(Status::SUCCESS);
     for (const auto& record : records) {
-      const Status status = Set(record.first, record.second, overwrite);
-      if (status != Status::Status::SUCCESS) {
-        return status;
+      status |= Set(record.first, record.second, overwrite);
+      if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
+        break;
       }
     }
-    return Status(Status::SUCCESS);
+    return status;
   }
 
   /**
@@ -843,13 +844,14 @@ class DBM {
    */
   virtual Status SetMulti(
       const std::map<std::string_view, std::string_view>& records, bool overwrite = true) {
+    Status status(Status::SUCCESS);
     for (const auto& record : records) {
-      const Status status = Set(record.first, record.second, overwrite);
-      if (status != Status::Status::SUCCESS) {
-        return status;
+      status |= Set(record.first, record.second, overwrite);
+      if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
+        break;
       }
     }
-    return Status(Status::SUCCESS);
+    return status;
   }
 
   /**
@@ -875,13 +877,14 @@ class DBM {
    * @return The result status.
    */
   virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
+    Status status(Status::SUCCESS);
     for (const auto& key : keys) {
-      const Status status = Remove(key);
-      if (status != Status::Status::SUCCESS) {
-        return status;
+      status |= Remove(key);
+      if (status != Status::Status::SUCCESS && status != Status::Status::NOT_FOUND_ERROR) {
+        break;
       }
     }
-    return Status(Status::SUCCESS);
+    return status;
   }
 
   /**
@@ -890,13 +893,14 @@ class DBM {
    * @return The result status.
    */
   virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
+    Status status(Status::SUCCESS);
     for (const auto& key : keys) {
-      const Status status = Remove(key);
-      if (status != Status::Status::SUCCESS) {
-        return status;
+      status |= Remove(key);
+      if (status != Status::Status::SUCCESS && status != Status::Status::NOT_FOUND_ERROR) {
+        break;
       }
     }
-    return Status(Status::SUCCESS);
+    return status;
   }
 
   /**
