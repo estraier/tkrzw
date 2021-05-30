@@ -254,7 +254,7 @@ TEST(ThreadUtilTest, HashMutex) {
             }
             for (int64_t bucket_index : uniq_indices) {
               EXPECT_TRUE(values[bucket_index]);
-              values[bucket_index] = false;            
+              values[bucket_index] = false;
             }
           } else {
             tkrzw::ScopedHashLockMulti lock(mutex, key_views, false);
@@ -354,7 +354,7 @@ TEST(ThreadUtilTest, HashMutex) {
             }
             for (int64_t bucket_index : uniq_indices) {
               EXPECT_TRUE(values[bucket_index]);
-              values[bucket_index] = false;            
+              values[bucket_index] = false;
             }
             mutex.UnlockMulti(bucket_indices);
           } else {

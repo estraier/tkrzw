@@ -983,7 +983,96 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
 }
 
 void HashDBMTest::HashDBMTransactionTest(tkrzw::HashDBM* dbm) {
-  
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  constexpr int32_t num_threads = 5;
+  constexpr int32_t num_iterations = 10000;
+  constexpr int32_t num_records = 1000;
+  constexpr int64_t init_money = 100;
+  constexpr int64_t transfer_money = 10;
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::HashDBM::TuningParameters tuning_params;
+  tuning_params.num_buckets = 65536;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string& key = tkrzw::ToString(i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, tkrzw::ToString(init_money)));
+  }
+  auto task = [&](int32_t id) {
+    std::mt19937 mt(id);
+    std::uniform_int_distribution<int32_t> key_dist(1, num_records * 1.05);
+    for (int32_t i = 0; i < num_iterations; i++) {
+      const std::string& src_key = tkrzw::ToString(key_dist(mt));
+      const std::string& dest_key = tkrzw::ToString(key_dist(mt));
+      tkrzw::Status tran_status(tkrzw::Status::SUCCESS);
+      std::string current_money_value;
+      auto checker =
+          [&](std::string_view key, std::string_view value) -> std::string_view {
+            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+              tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
+            }
+            return tkrzw::DBM::RecordProcessor::NOOP;
+          };
+      auto withdrawer =
+          [&](std::string_view key, std::string_view value) -> std::string_view {
+            if (tran_status != tkrzw::Status::SUCCESS) {
+              return tkrzw::DBM::RecordProcessor::NOOP;
+            }
+            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+              tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
+              return tkrzw::DBM::RecordProcessor::NOOP;
+            }
+            int64_t current_money = tkrzw::StrToInt(value);
+            if (current_money < transfer_money) {
+              tran_status.Set(tkrzw::Status::INFEASIBLE_ERROR, "no sufficient money");
+              return tkrzw::DBM::RecordProcessor::NOOP;
+            }
+            current_money -= transfer_money;
+            current_money_value = tkrzw::ToString(current_money);
+            return current_money_value;
+          };
+      auto depositer =
+          [&](std::string_view key, std::string_view value) -> std::string_view {
+            if (tran_status != tkrzw::Status::SUCCESS) {
+              return tkrzw::DBM::RecordProcessor::NOOP;
+            }
+            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+              tran_status.Set(tkrzw::Status::APPLICATION_ERROR, "invalid logic");
+              return tkrzw::DBM::RecordProcessor::NOOP;
+            }
+            int64_t current_money = tkrzw::StrToInt(value);
+            current_money += transfer_money;
+            current_money_value = tkrzw::ToString(current_money);
+            return current_money_value;
+          };
+      const std::vector<std::pair<std::string_view, tkrzw::DBM::RecordLambdaType>> procs = {
+        {dest_key, checker},
+        {src_key, withdrawer},
+        {dest_key, depositer},
+      };
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti(procs, true));
+      EXPECT_TRUE(tran_status == tkrzw::Status::SUCCESS ||
+                  tran_status == tkrzw::Status::NOT_FOUND_ERROR ||
+                  tran_status == tkrzw::Status::INFEASIBLE_ERROR);
+    }
+  };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task, i));
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  int64_t total_money = 0;
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string& key = tkrzw::ToString(i);
+    std::string value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+    const int64_t current_money = tkrzw::StrToInt(value);
+    EXPECT_GE(current_money, 0);
+  }
+  EXPECT_GE(init_money * num_records, total_money);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
 void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
