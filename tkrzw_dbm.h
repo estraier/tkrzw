@@ -316,7 +316,7 @@ class DBM {
       if (expected_.data() != nullptr && expected_ == value) {
         return desired_.data() == nullptr ? REMOVE : desired_;
       }
-      status_->Set(Status::DUPLICATION_ERROR);
+      status_->Set(Status::INFEASIBLE_ERROR);
       return NOOP;
     }
 
@@ -324,7 +324,13 @@ class DBM {
      * Processes an empty record space.
      */
     std::string_view ProcessEmpty(std::string_view key) override {
-      status_->Set(Status::NOT_FOUND_ERROR);
+      if (actual_ != nullptr) {
+        *actual_ = "";
+      }
+      if (expected_.data() == nullptr) {
+        return desired_.data() == nullptr ? NOOP : desired_;
+      }
+      status_->Set(Status::INFEASIBLE_ERROR);
       return NOOP;
     }
 
@@ -906,11 +912,11 @@ class DBM {
   /**
    * Compares the value of a record and exchanges if the condition meets.
    * @param key The key of the record.
-   * @param expected The expected value.
+   * @param expected The expected value.  If the data is nullptr, no existing record is expected.
    * @param desired The desired value.  If the data is nullptr, the record is to be removed.
    * @param actual The pointer to a string object to contain the result value.  If it is nullptr,
    * it is ignored.
-   * @return The result status.
+   * @return The result status.  If 
    * @details If the record doesn't exist, NOT_FOUND_ERROR is returned.  If the existing value is
    * different from the expected value, DUPLICATION_ERROR is returned.  Otherwise, the desired
    * value is set.

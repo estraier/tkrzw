@@ -590,14 +590,25 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("foo,bar", dbm->GetSimple("1234"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("1234", "baz"));
   EXPECT_EQ("foo,barbaz", dbm->GetSimple("1234"));
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->CompareExchange("a", "foo", "bar"));
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange("a", "foo", "bar"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("a", "foo"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "foo", "bar"));
   std::string actual;
-  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->CompareExchange("a", "foo", "baz", &actual));
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange("a", "foo", "baz", &actual));
   EXPECT_EQ("bar", actual);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "bar", "qux", &actual));
   EXPECT_EQ("bar", actual);
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            dbm->CompareExchange("z", std::string_view(), "zzz", &actual));
+  EXPECT_EQ("", actual);
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
+            dbm->CompareExchange("z", std::string_view(), "yyy", &actual));
+  EXPECT_EQ("zzz", actual);
+
+
+
+  
   int64_t current = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", -1, &current, -9));
   EXPECT_EQ(-10, current);
