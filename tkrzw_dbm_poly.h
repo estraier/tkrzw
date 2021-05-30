@@ -341,7 +341,7 @@ class PolyDBM final : public ParamDBM {
    * @param key The key of the record.
    * @param value The pointer to a string object to contain the result value.  If it is nullptr,
    * the value data is ignored.
-   * @return The result status.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
   Status Get(std::string_view key, std::string* value = nullptr) override;
 
@@ -354,7 +354,7 @@ class PolyDBM final : public ParamDBM {
    * is given up and an error status is returned.
    * @param old_value The pointer to a string object to contain the old value.  Assignment is done
    * even on the duplication error.  If it is nullptr, it is ignored.
-   * @return The result status.
+   * @return The result status.  If overwriting is abandoned, DUPLICATION_ERROR is returned.
    */
   Status Set(std::string_view key, std::string_view value, bool overwrite = true,
              std::string* old_value = nullptr) override;
@@ -364,7 +364,7 @@ class PolyDBM final : public ParamDBM {
    * @param key The key of the record.
    * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
    * it is ignored.
-   * @return The result status.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
   Status Remove(std::string_view key, std::string* old_value = nullptr) override;
 

@@ -598,17 +598,12 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("bar", actual);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "bar", "qux", &actual));
   EXPECT_EQ("bar", actual);
-
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             dbm->CompareExchange("z", std::string_view(), "zzz", &actual));
   EXPECT_EQ("", actual);
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
             dbm->CompareExchange("z", std::string_view(), "yyy", &actual));
   EXPECT_EQ("zzz", actual);
-
-
-
-  
   int64_t current = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", -1, &current, -9));
   EXPECT_EQ(-10, current);
@@ -693,6 +688,28 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
 }
 
 inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("1", "10"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("2", "20"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("3", "30"));
+  typedef std::vector<std::pair<std::string_view, std::string_view>> kv_list;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      kv_list({{"1", "10"}, {"2", "20"}}), kv_list({{"1", "100"}, {"2", "200"}})));
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
+      kv_list({{"1", "10"}, {"2", "20"}}), kv_list({{"1", "xxx"}, {"2", "yyy"}})));
+  EXPECT_EQ("100", dbm->GetSimple("1"));
+  EXPECT_EQ("200", dbm->GetSimple("2"));
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
+      kv_list({{"1", "100"}, {"2", std::string_view()}}), kv_list({{"1", "xx"}, {"2", "yyy"}})));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      kv_list({{"1", "100"}, {"2", "200"}}), kv_list({{"1", "xx"}, {"2", std::string_view()}})));
+  EXPECT_EQ("xx", dbm->GetSimple("1"));
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("2"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      kv_list({{"1", "xx"}, {"3", "30"}}),
+      kv_list({{"1", std::string_view()}, {"3", std::string_view()}, {"4", "hello"}})));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})));
+  EXPECT_EQ(0, dbm->CountSimple());
   constexpr int32_t num_threads = 5;
   constexpr int32_t num_iterations = 10000;
   constexpr int32_t num_records = 1000;
@@ -758,6 +775,24 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
       EXPECT_TRUE(tran_status == tkrzw::Status::SUCCESS ||
                   tran_status == tkrzw::Status::NOT_FOUND_ERROR ||
                   tran_status == tkrzw::Status::INFEASIBLE_ERROR);
+      std::string src_value, dest_value;
+      if (src_key != dest_key &&
+          dbm->Get(src_key, &src_value) == tkrzw::Status::SUCCESS &&
+          dbm->Get(dest_key, &dest_value) == tkrzw::Status::SUCCESS) {
+        const int64_t src_current_money = tkrzw::StrToInt(src_value);
+        const int64_t dest_current_money = tkrzw::StrToInt(dest_value);
+        if (src_current_money >= transfer_money) {
+          const std::string& src_new_value =
+              tkrzw::ToString(src_current_money - transfer_money);
+          const std::string& dest_new_value =
+              tkrzw::ToString(dest_current_money + transfer_money);
+          const tkrzw::Status status = dbm->CompareExchange(
+              kv_list({{src_key, src_value}, {dest_key, dest_value}}),
+              kv_list({{src_key, src_new_value}, {dest_key, dest_new_value}}));
+          EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
+                      status == tkrzw::Status::INFEASIBLE_ERROR);
+        }
+      }
     }
   };
   std::vector<std::thread> threads;

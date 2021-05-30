@@ -588,7 +588,7 @@ Status TreeDBMImpl::ProcessMulti(
       id_leaf_node->second->mutex.unlock_shared();
     }
   }
-  return AdjustCaches();  
+  return AdjustCaches();
 }
 
 Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {

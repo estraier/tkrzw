@@ -303,8 +303,8 @@ class DBM {
      * nullptr, it is ignored.
      */
     RecordProcessorCompareExchange(Status* status, std::string_view expected,
-                                   std::string_view desired, std::string* actual) :
-        status_(status), expected_(expected), desired_(desired), actual_(actual) {}
+                                   std::string_view desired, std::string* actual)
+        : status_(status), expected_(expected), desired_(desired), actual_(actual) {}
 
     /**
      * Processes an existing record.
@@ -343,6 +343,86 @@ class DBM {
     std::string_view desired_;
     /** Actual value to report. */
     std::string* actual_;
+  };
+
+  /**
+   * Record checker to implement DBM::CompareExchangeMulti.
+   */
+  class RecordCheckerCompareExchangeMulti final : public DBM::RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param noop Whether to do no operation.
+     * @param expected A string of the expected value.
+     */
+    RecordCheckerCompareExchangeMulti(bool* noop, std::string_view expected)
+        : noop_(noop), expected_(expected) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (expected_.data() == nullptr || expected_ != value) {
+        *noop_ = true;
+      }
+      return NOOP;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (expected_.data() != nullptr) {
+        *noop_ = true;
+      }
+      return NOOP;
+    }
+
+   private:
+    /** Whether to do no operation. */
+    bool* noop_;
+    /** The expected value. */
+    std::string_view expected_;
+  };
+
+  /**
+   * Record setter to implement DBM::CompareExchangeMulti.
+   */
+  class RecordSetterCompareExchangeMulti final : public DBM::RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param noop True to do no operation.
+     * @param desired A string of the expected value.
+     */
+    RecordSetterCompareExchangeMulti(bool* noop, std::string_view desired)
+        : noop_(noop), desired_(desired) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (*noop_) {
+        return NOOP;
+      }
+      return desired_.data() == nullptr ? REMOVE : desired_;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (*noop_) {
+        return NOOP;
+      }
+      return desired_.data() == nullptr ? NOOP : desired_;
+    }
+
+   private:
+    /** Whether to do no operation. */
+    bool* noop_;
+    /** The desired value. */
+    std::string_view desired_;
   };
 
   /**
@@ -740,7 +820,7 @@ class DBM {
    * @param key The key of the record.
    * @param value The pointer to a string object to contain the result value.  If it is nullptr,
    * the value data is ignored.
-   * @return The result status.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
   virtual Status Get(std::string_view key, std::string* value = nullptr) {
     Status impl_status(Status::SUCCESS);
@@ -800,7 +880,7 @@ class DBM {
    * is given up and an error status is returned.
    * @param old_value The pointer to a string object to contain the old value.  Assignment is done
    * even on the duplication error.  If it is nullptr, it is ignored.
-   * @return The result status.
+   * @return The result status.  If overwriting is abandoned, DUPLICATION_ERROR is returned.
    */
   virtual Status Set(std::string_view key, std::string_view value, bool overwrite = true,
                      std::string* old_value = nullptr) {
@@ -839,7 +919,8 @@ class DBM {
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
    * is given up and an error status is returned.
-   * @return The result status.
+   * @return The result status.  If there are records avoiding overwriting, DUPLICATION_ERROR
+   * is returned.
    */
   virtual Status SetMulti(
       const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
@@ -857,7 +938,7 @@ class DBM {
    * @param key The key of the record.
    * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
    * it is ignored.
-   * @return The result status.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
   virtual Status Remove(std::string_view key, std::string* old_value = nullptr) {
     Status impl_status(Status::SUCCESS);
@@ -872,7 +953,7 @@ class DBM {
   /**
    * Removes records of keys.
    * @param keys The keys of records to remove.
-   * @return The result status.
+   * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
   virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
     Status status(Status::SUCCESS);
@@ -916,10 +997,7 @@ class DBM {
    * @param desired The desired value.  If the data is nullptr, the record is to be removed.
    * @param actual The pointer to a string object to contain the result value.  If it is nullptr,
    * it is ignored.
-   * @return The result status.  If 
-   * @details If the record doesn't exist, NOT_FOUND_ERROR is returned.  If the existing value is
-   * different from the expected value, DUPLICATION_ERROR is returned.  Otherwise, the desired
-   * value is set.
+   * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
   virtual Status CompareExchange(std::string_view key, std::string_view expected,
                                  std::string_view desired, std::string* actual = nullptr) {
@@ -993,17 +1071,48 @@ class DBM {
   virtual Status ProcessMulti(
       const std::vector<std::pair<std::string_view, RecordLambdaType>>& key_lambda_pairs,
       bool writable) {
+    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
+    key_proc_pairs.reserve(key_lambda_pairs.size());
     std::vector<RecordProcessorLambda> procs;
     procs.reserve(key_lambda_pairs.size());
     for (const auto& key_lambda : key_lambda_pairs) {
       procs.emplace_back(key_lambda.second);
-    }
-    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
-    procs.reserve(key_proc_pairs.size());
-    for (size_t i = 0; i < key_lambda_pairs.size(); i++) {
-      key_proc_pairs.emplace_back(std::make_pair(key_lambda_pairs[i].first, &procs[i]));
+      key_proc_pairs.emplace_back(std::make_pair(key_lambda.first, &procs.back()));
     }
     return ProcessMulti(key_proc_pairs, writable);
+  }
+
+  /**
+   * Compares the values of records and exchanges if the condition meets.
+   * @param expected The record keys and their expected values.  If the data is nullptr, no
+   * existing record is expected.
+   * @param desired The record keys and their desired values.  If the data is nullptr, the record
+   * is to be removed.
+   * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
+   */
+  virtual Status CompareExchange(
+      std::vector<std::pair<std::string_view, std::string_view>> expected,
+      std::vector<std::pair<std::string_view, std::string_view>> desired) {
+    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
+    key_proc_pairs.reserve(expected.size() + desired.size());
+    bool noop = false;
+    std::vector<RecordCheckerCompareExchangeMulti> checkers;
+    checkers.reserve(expected.size());
+    for (const auto& key_value : expected) {
+      checkers.emplace_back(RecordCheckerCompareExchangeMulti(&noop, key_value.second));
+      key_proc_pairs.emplace_back(std::pair(key_value.first, &checkers.back()));
+    }
+    std::vector<RecordSetterCompareExchangeMulti> setters;
+    setters.reserve(desired.size());
+    for (const auto& key_value : desired) {
+      setters.emplace_back(RecordSetterCompareExchangeMulti(&noop, key_value.second));
+      key_proc_pairs.emplace_back(std::pair(key_value.first, &setters.back()));
+    }
+    const Status status = ProcessMulti(key_proc_pairs, true);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    return noop ? Status(Status::INFEASIBLE_ERROR) : Status(Status::SUCCESS);
   }
 
   /**
