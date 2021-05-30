@@ -746,6 +746,12 @@ Status TinyDBM::Append(std::string_view key, std::string_view value, std::string
   return impl_->Append(key, value, delim);
 }
 
+Status TinyDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status TinyDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->ProcessEach(proc, writable);

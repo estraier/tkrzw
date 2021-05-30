@@ -45,6 +45,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMSequenceTest(tkrzw::HashDBM* dbm);
   void HashDBMAppendTest(tkrzw::HashDBM* dbm);
   void HashDBMProcessTest(tkrzw::HashDBM* dbm);
+  void HashDBMProcessMultiTest(tkrzw::HashDBM* dbm);
   void HashDBMProcessEachTest(tkrzw::HashDBM* dbm);
   void HashDBMRandomTestOne(tkrzw::HashDBM* dbm);
   void HashDBMRandomTestThread(tkrzw::HashDBM* dbm);
@@ -57,7 +58,6 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
   void HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm);
   void HashDBMRestoreTest(tkrzw::HashDBM* dbm);
-  void HashDBMTransactionTest(tkrzw::HashDBM* dbm);
   void HashDBMDirectIOTest(tkrzw::HashDBM* dbm);
 };
 
@@ -237,6 +237,33 @@ void HashDBMTest::HashDBMProcessTest(tkrzw::HashDBM* dbm) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           ProcessTest(dbm);
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        }
+      }
+    }
+  }
+}
+
+void HashDBMTest::HashDBMProcessMultiTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  const std::vector<int32_t> offset_widths = {4};
+  const std::vector<int32_t> align_pows = {0};
+  const std::vector<int32_t> nums_buckets = {5000};
+  for (const auto& update_mode : update_modes) {
+    for (const auto& offset_width : offset_widths) {
+      for (const auto& align_pow : align_pows) {
+        for (const auto& num_buckets : nums_buckets) {
+          tkrzw::HashDBM::TuningParameters tuning_params;
+          tuning_params.update_mode = update_mode;
+          tuning_params.offset_width = offset_width;
+          tuning_params.align_pow = align_pow;
+          tuning_params.num_buckets = num_buckets;
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          ProcessMultiTest(dbm);
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
         }
       }
@@ -982,99 +1009,6 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
 }
 
-void HashDBMTest::HashDBMTransactionTest(tkrzw::HashDBM* dbm) {
-  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
-  constexpr int32_t num_threads = 5;
-  constexpr int32_t num_iterations = 10000;
-  constexpr int32_t num_records = 1000;
-  constexpr int64_t init_money = 100;
-  constexpr int64_t transfer_money = 10;
-  const std::string file_path = tmp_dir.MakeUniquePath();
-  tkrzw::HashDBM::TuningParameters tuning_params;
-  tuning_params.num_buckets = 65536;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-  for (int32_t i = 1; i <= num_records; i++) {
-    const std::string& key = tkrzw::ToString(i);
-    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, tkrzw::ToString(init_money)));
-  }
-  auto task = [&](int32_t id) {
-    std::mt19937 mt(id);
-    std::uniform_int_distribution<int32_t> key_dist(1, num_records * 1.05);
-    for (int32_t i = 0; i < num_iterations; i++) {
-      const std::string& src_key = tkrzw::ToString(key_dist(mt));
-      const std::string& dest_key = tkrzw::ToString(key_dist(mt));
-      tkrzw::Status tran_status(tkrzw::Status::SUCCESS);
-      std::string current_money_value;
-      auto checker =
-          [&](std::string_view key, std::string_view value) -> std::string_view {
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
-              tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
-            }
-            return tkrzw::DBM::RecordProcessor::NOOP;
-          };
-      auto withdrawer =
-          [&](std::string_view key, std::string_view value) -> std::string_view {
-            if (tran_status != tkrzw::Status::SUCCESS) {
-              return tkrzw::DBM::RecordProcessor::NOOP;
-            }
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
-              tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
-              return tkrzw::DBM::RecordProcessor::NOOP;
-            }
-            int64_t current_money = tkrzw::StrToInt(value);
-            if (current_money < transfer_money) {
-              tran_status.Set(tkrzw::Status::INFEASIBLE_ERROR, "no sufficient money");
-              return tkrzw::DBM::RecordProcessor::NOOP;
-            }
-            current_money -= transfer_money;
-            current_money_value = tkrzw::ToString(current_money);
-            return current_money_value;
-          };
-      auto depositer =
-          [&](std::string_view key, std::string_view value) -> std::string_view {
-            if (tran_status != tkrzw::Status::SUCCESS) {
-              return tkrzw::DBM::RecordProcessor::NOOP;
-            }
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
-              tran_status.Set(tkrzw::Status::APPLICATION_ERROR, "invalid logic");
-              return tkrzw::DBM::RecordProcessor::NOOP;
-            }
-            int64_t current_money = tkrzw::StrToInt(value);
-            current_money += transfer_money;
-            current_money_value = tkrzw::ToString(current_money);
-            return current_money_value;
-          };
-      const std::vector<std::pair<std::string_view, tkrzw::DBM::RecordLambdaType>> procs = {
-        {dest_key, checker},
-        {src_key, withdrawer},
-        {dest_key, depositer},
-      };
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti(procs, true));
-      EXPECT_TRUE(tran_status == tkrzw::Status::SUCCESS ||
-                  tran_status == tkrzw::Status::NOT_FOUND_ERROR ||
-                  tran_status == tkrzw::Status::INFEASIBLE_ERROR);
-    }
-  };
-  std::vector<std::thread> threads;
-  for (int32_t i = 0; i < num_threads; i++) {
-    threads.emplace_back(std::thread(task, i));
-  }
-  for (auto& thread : threads) {
-    thread.join();
-  }
-  int64_t total_money = 0;
-  for (int32_t i = 1; i <= num_records; i++) {
-    const std::string& key = tkrzw::ToString(i);
-    std::string value;
-    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
-    const int64_t current_money = tkrzw::StrToInt(value);
-    EXPECT_GE(current_money, 0);
-  }
-  EXPECT_GE(init_money * num_records, total_money);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-}
-
 void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
@@ -1223,6 +1157,11 @@ TEST_F(HashDBMTest, Process) {
   HashDBMProcessTest(&dbm);
 }
 
+TEST_F(HashDBMTest, ProcessMulti) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMProcessMultiTest(&dbm);
+}
+
 TEST_F(HashDBMTest, ProcessEach) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMProcessEachTest(&dbm);
@@ -1272,11 +1211,6 @@ TEST_F(HashDBMTest, RebuildRandom) {
 TEST_F(HashDBMTest, Restore) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMRestoreTest(&dbm);
-}
-
-TEST_F(HashDBMTest, Transaction) {
-  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
-  HashDBMTransactionTest(&dbm);
 }
 
 TEST_F(HashDBMTest, DirectIO) {

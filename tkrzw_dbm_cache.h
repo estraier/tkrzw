@@ -211,6 +211,20 @@ class CacheDBM final : public DBM {
   Status Process(std::string_view key, RecordProcessor* proc, bool writable) override;
 
   /**
+   * Processes multiple records with processors.
+   * @param key_proc_pairs Pairs of the keys and their processor objects.
+   * @param writable True if the processors can edit the records.
+   * @return The result status.
+   * @details Precondition: The database is opened.  The writable parameter should be
+   * consistent to the open mode.
+   * @details If the specified record exists, the ProcessFull of the processor is called.
+   * Otherwise, the ProcessEmpty of the processor is called.
+   */
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) override;
+
+  /**
    * Processes each and every record in the database with a processor.
    * @param proc The pointer to the processor object.
    * @param writable True if the processor can edit the record.

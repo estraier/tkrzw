@@ -457,6 +457,12 @@ Status PolyDBM::Append(std::string_view key, std::string_view value, std::string
   return dbm_->Append(key, value, delim);
 }
 
+Status PolyDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status PolyDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   if (dbm_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

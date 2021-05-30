@@ -623,6 +623,12 @@ Status StdHashDBM::Process(std::string_view key, RecordProcessor* proc, bool wri
   return impl_->Process(key, proc, writable);
 }
 
+Status StdHashDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status StdHashDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->ProcessEach(proc, writable);
@@ -759,6 +765,12 @@ Status StdTreeDBM::Close() {
 Status StdTreeDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->Process(key, proc, writable);
+}
+
+Status StdTreeDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
 }
 
 Status StdTreeDBM::ProcessEach(RecordProcessor* proc, bool writable) {

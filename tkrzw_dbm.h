@@ -958,6 +958,49 @@ class DBM {
   }
 
   /**
+   * Processes multiple records with processors.
+   * @param key_proc_pairs Pairs of the keys and their processor objects.
+   * @param writable True if the processors can edit the records.
+   * @return The result status.
+   * @details Precondition: The database is opened.  The writable parameter should be
+   * consistent to the open mode.
+   * @details If the specified record exists, the ProcessFull of the processor is called.
+   * Otherwise, the ProcessEmpty of the processor is called.
+   */
+  virtual Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+      bool writable) = 0;
+
+  /**
+   * Processes multiple records with processors.
+   * @param key_lambda_pairs Pairs of the keys and their lambda functions.  The first parameter of
+   * the lambda functions is the key of the record.  The second parameter is the value of the
+   * existing record.  The return value is a string reference to NOOP, REMOVE, or the new record
+   * value.
+   * @param writable True if the processors can edit the records.
+   * @return The result status.
+   * @details Precondition: The database is opened.  The writable parameter should be
+   * consistent to the open mode.
+   * @details If the specified record exists, the ProcessFull of the processor is called.
+   * Otherwise, the ProcessEmpty of the processor is called.
+   */
+  virtual Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, RecordLambdaType>>& key_lambda_pairs,
+      bool writable) {
+    std::vector<RecordProcessorLambda> procs;
+    procs.reserve(key_lambda_pairs.size());
+    for (const auto& key_lambda : key_lambda_pairs) {
+      procs.emplace_back(key_lambda.second);
+    }
+    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
+    procs.reserve(key_proc_pairs.size());
+    for (size_t i = 0; i < key_lambda_pairs.size(); i++) {
+      key_proc_pairs.emplace_back(std::make_pair(key_lambda_pairs[i].first, &procs[i]));
+    }
+    return ProcessMulti(key_proc_pairs, writable);
+  }
+
+  /**
    * Processes each and every record in the database with a processor.
    * @param proc The pointer to the processor object.
    * @param writable True if the processor can edit the record.

@@ -153,6 +153,12 @@ Status ShardDBM::Append(std::string_view key, std::string_view value, std::strin
   return dbm->Append(key, value, delim);
 }
 
+Status ShardDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status ShardDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

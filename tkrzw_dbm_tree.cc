@@ -112,6 +112,9 @@ class TreeDBMImpl final {
   Status Close();
   Status Process(
       std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -530,6 +533,62 @@ Status TreeDBMImpl::Process(
     ProcessImpl(leaf_node.get(), key, proc, false);
   }
   return AdjustCaches();
+}
+
+Status TreeDBMImpl::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  if (writable && !reorg_ids_.IsEmpty()) {
+    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    const Status status = ReorganizeTree();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+  }
+  std::vector<std::shared_ptr<TreeLeafNode>> leaf_nodes;
+  std::map<int64_t, std::shared_ptr<TreeLeafNode>> id_leaf_nodes;
+  for (const auto& key_proc : key_proc_pairs) {
+    std::shared_ptr<TreeLeafNode> leaf_node;
+    const Status status = SearchTree(key_proc.first, &leaf_node);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    leaf_nodes.emplace_back(leaf_node);
+    id_leaf_nodes.emplace(std::make_pair(leaf_node->id, leaf_node));
+  }
+  for (const auto& id_leaf_node : id_leaf_nodes) {
+    if (writable) {
+      id_leaf_node.second->mutex.lock();
+    } else {
+      id_leaf_node.second->mutex.lock_shared();
+    }
+  }
+  for (size_t i = 0; i < key_proc_pairs.size(); i++) {
+    auto& key_proc = key_proc_pairs[i];
+    auto& leaf_node = leaf_nodes[i];
+    ProcessImpl(leaf_node.get(), key_proc.first, key_proc.second, writable);
+  }
+  for (auto id_leaf_node = id_leaf_nodes.rbegin();
+       id_leaf_node != id_leaf_nodes.rend(); id_leaf_node++) {
+    if (writable) {
+      id_leaf_node->second->mutex.unlock();
+    } else {
+      id_leaf_node->second->mutex.unlock_shared();
+    }
+  }
+  return AdjustCaches();  
 }
 
 Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
@@ -2238,6 +2297,12 @@ Status TreeDBM::Close() {
 Status TreeDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->Process(key, proc, writable);
+}
+
+Status TreeDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status TreeDBM::ProcessEach(RecordProcessor* proc, bool writable) {

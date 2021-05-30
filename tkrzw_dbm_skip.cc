@@ -1546,6 +1546,12 @@ Status SkipDBM::GetByIndex(int64_t index, std::string* key, std::string* value) 
   return impl_->GetByIndex(index, key, value);
 }
 
+Status SkipDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status SkipDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->ProcessEach(proc, writable);

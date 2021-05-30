@@ -943,6 +943,12 @@ Status CacheDBM::Process(std::string_view key, RecordProcessor* proc, bool writa
   return impl_->Process(key, proc, writable);
 }
 
+Status CacheDBM::ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status CacheDBM::ProcessEach(RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
   return impl_->ProcessEach(proc, writable);
