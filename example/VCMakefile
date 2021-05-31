@@ -9,7 +9,7 @@ UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 TKRZWINCPATH = C:\Program Files\tkrzw\include
 TKRZWLIBPATH = C:\Program Files\tkrzw\lib
 
-COMMANDFILES = helloworld.exe accesscounter.exe \
+COMMANDFILES = helloworld.exe accesscounter.exe transfer.exe \
   hashdbm_ex1.exe hashdbm_ex2.exe hashdbm_ex3.exe \
   treedbm_ex1.exe treedbm_ex2.exe treedbm_ex3.exe \
   skipdbm_ex1.exe skipdbm_ex2.exe skipdbm_ex3.exe \
@@ -53,6 +53,9 @@ helloworld.exe : helloworld.obj
 
 accesscounter.exe : accesscounter.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ accesscounter.obj tkrzw.lib
+
+transfer.exe : transfer.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ transfer.obj tkrzw.lib
 
 hashdbm_ex1.exe : hashdbm_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ hashdbm_ex1.obj tkrzw.lib

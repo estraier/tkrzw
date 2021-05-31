@@ -120,7 +120,9 @@ window.onload = function(){
 <li><strong><a href="#index_overview">(File|Mem)Index</a></strong> : Secondary index implementations.</li>
 </ul>
 
-<p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, you can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
+<p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, the database file is opend with the "Open" method and closed with the "Close" method.  You can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
+
+<p>Translactional features are also supported.  If you want to evaluate a record and update it atomically, you use the "Process" method, which takes a key and an arbitrary callback function to operate the record.  If you want to evaluate multiple records and update them atomically, you use the "ProcessMulti" method, which takes keys and arbitrary callback functions to operate the records.  If you want to do long transactions without locking records, the "CompareExchange" method and the "CompareExchangeMulti" method are useful.</p>
 
 <p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
 
@@ -3151,6 +3153,132 @@ if (dbm.Get(key, &value).IsOK()) {
 ]]></code></pre>
 
 <p>The Process method of the iterator class can also take a lambda function.  If you want to modify specific a record in an atomic manner by the record, you'll use DBM::Process.  If you want to modify every record in an atomic manner by the whole database, you'll use DBM::ProcessEach.  If you want to modify all or some records in an atomic manner by the record, you'll use DBM::Iterator::Process.</p>
+
+<h3 id="tips_multi_rec_tx">Multi-record Transaction</h3>
+
+<p>Transactional operations on multiple records can be done with the ProcessMulti method.  It takes multiple record keys and multiple callback functions to operate the records.  As with the Process method, you use lambda functions as callback functions.  All records specified by the keys are locked while all callback functions are executed.  Thus, other threads don't observe transitional states of the transaction.</p>
+
+<p>Let's assume that you manage bank accounts on the hash database.  You transfer 1000 from account A to account B.  This transaction is composed of these operations.</p>
+
+<ol>
+<li>Confirm that the account B exists.</li>
+<li>Evaluate the balance of account A and confirm it not less than 1000.</li>
+<li>Decrease the balance of account A by 1000.</li>
+<li>Increase the balance of account B by 1000.</li>
+</ol>
+
+<p>To keep the consistency as a finantial system, all operations must be done atomically.  You can implement this money transfer function as the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[Status Transfer(DBM* dbm, std::string_view src_key, std::string_view dest_key,
+                int64_t amount) {
+  Status op_status(Status::SUCCESS);
+
+  // Callback to check the destination account.
+  auto check_dest =
+      [&](std::string_view key, std::string_view value) -> std::string_view {
+        if (value.data() == DBM::RecordProcessor::NOOP.data()) {
+          op_status.Set(Status::NOT_FOUND_ERROR, "no such destination account");
+        }
+        return DBM::RecordProcessor::NOOP;
+      };
+
+  // Callback to operate the source account.
+  std::string new_src_value;
+  auto proc_src =
+      [&](std::string_view key, std::string_view value) -> std::string_view {
+        if (!op_status.IsOK()) {
+          return DBM::RecordProcessor::NOOP;
+        }
+        if (value.data() == DBM::RecordProcessor::NOOP.data()) {
+          op_status.Set(Status::NOT_FOUND_ERROR, "no such source account");
+          return DBM::RecordProcessor::NOOP;
+        }
+        const int64_t current_balance = StrToInt(value);
+        if (current_balance < amount) {
+          op_status.Set(Status::INFEASIBLE_ERROR, "insufficient balance");
+          return DBM::RecordProcessor::NOOP;
+        }
+        new_src_value = ToString(current_balance - amount);
+        return new_src_value;
+      };
+
+  // Callback to operate the destination account.
+  std::string new_dest_value;
+  auto proc_dest =
+      [&](std::string_view key, std::string_view value) -> std::string_view {
+        if (!op_status.IsOK()) {
+          return DBM::RecordProcessor::NOOP;
+        }
+        if (value.data() == DBM::RecordProcessor::NOOP.data()) {
+          op_status.Set(Status::APPLICATION_ERROR, "inconsistent transaction");
+          return DBM::RecordProcessor::NOOP;
+        }
+        const int64_t current_balance = StrToInt(value);
+        new_dest_value = ToString(current_balance + amount);
+        return new_dest_value;
+      };
+
+  // Invokes the three callbacks in sequence atomically.
+  const Status status = dbm->ProcessMulti({
+      {dest_key, check_dest},
+      {src_key, proc_src},
+      {dest_key, proc_dest}}, true);
+  if (!status.IsOK()) {
+    return status;
+  }
+  return op_status;
+}
+]]></code></pre>
+
+<p>If your transaction takes time for user's interactin or access to external resources, you shouldn't keep the lock during the operations.  In such long transaction cases, you should use the CompareExchangeMulti method.  It is a wrapper of ProcessMulti to update the record values only if the specified conditions are satisfied.  You check the current balances of the accounts and calculate the desired balances after the transaction.  You set the conditions that the balances are not changed since you check the balances.  CompareExchangeMulti fails if the conditions are not met.  You repeat the transaction until it succeeds.</p>
+
+<pre><code class="language-cpp"><![CDATA[Status TransferByCompareExchange(
+    DBM* dbm, std::string_view src_key, std::string_view dest_key, int64_t amount) {
+  // Repeats the transaction until success or failure is determined.
+  constexpr int32_t max_tries = 100;
+  for (int32_t num_tries = 0; num_tries < max_tries; num_tries++) {
+
+    // Gets balance of the source account.
+    std::string src_value;
+    Status status = dbm->Get(src_key, &src_value);
+    if (!status.IsOK()) {
+      return status;
+    }
+    const int64_t src_balance = StrToInt(src_value);
+    if (src_balance < amount) {
+      return Status(Status::INFEASIBLE_ERROR, "insufficient balance");
+    }
+
+    // Gets balance of the destination account.
+    std::string dest_value;
+    status = dbm->Get(dest_key, &dest_value);
+    if (!status.IsOK()) {
+      return status;
+    }
+    const int64_t dest_balance = StrToInt(dest_value);
+    
+    // Finish transaction atomically if the balances are not modified.
+    const std::vector<std::pair<std::string_view, std::string_view>> expected =
+        {{src_key, src_value}, {dest_key, dest_value}};
+    const std::vector<std::pair<std::string_view, std::string_view>> desired =
+        {{src_key, ToString(src_balance - amount)},
+         {dest_key, ToString(dest_balance + amount)}};
+    status = dbm->CompareExchangeMulti(expected, desired);
+    if (status.IsOK()) {
+      return Status(Status::SUCCESS);
+    }
+    if (status != Status::INFEASIBLE_ERROR) {
+      return status;
+    }
+  }
+
+  return Status(Status::INFEASIBLE_ERROR, "too busy");
+}
+]]></code></pre>
+
+<p>Tkrzw doesn't support rollback features.  Usually, checking the precondition in ProcessMulti or before CompareExchangeMulti makes rollback unnecessary.  Even so, if you want rollback features, you'll record "undo" translaction logs in another database.</p>
+
+<p>ProcessMulti and CompareExchangeMulti assure Atomicity, Consistency, and Isolation of the ACID properties of transaction.  As Tkrzw is a local (in-process) library, Durability can be defined only in a software level.  In other words, whereas crash of the process and crash of the operating system are considered as recoverable insidents, hardware problems are considered unrecoverable insidents.  To assure durability, you use the appending update mode and call the Synchronize method after each transaction.  Then, you record the file size of the database somewhere.  As the database file in the appending update mode is considered a list of REDO logs, you can restore the state at an arbitrary time specified by giving the file size to the RestoreDatabase method.</p>
 
 <h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
 

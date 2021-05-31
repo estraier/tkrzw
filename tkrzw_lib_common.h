@@ -22,6 +22,7 @@
 
 #include <cinttypes>
 #include <cstdlib>
+#include <cstring>
 
 namespace tkrzw {
 
