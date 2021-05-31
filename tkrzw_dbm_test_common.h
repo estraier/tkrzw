@@ -692,22 +692,22 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("2", "20"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("3", "30"));
   typedef std::vector<std::pair<std::string_view, std::string_view>> kv_list;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"1", "10"}, {"2", "20"}}), kv_list({{"1", "100"}, {"2", "200"}})));
-  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchangeMulti(
       kv_list({{"1", "10"}, {"2", "20"}}), kv_list({{"1", "xxx"}, {"2", "yyy"}})));
   EXPECT_EQ("100", dbm->GetSimple("1"));
   EXPECT_EQ("200", dbm->GetSimple("2"));
-  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchangeMulti(
       kv_list({{"1", "100"}, {"2", std::string_view()}}), kv_list({{"1", "xx"}, {"2", "yyy"}})));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"1", "100"}, {"2", "200"}}), kv_list({{"1", "xx"}, {"2", std::string_view()}})));
   EXPECT_EQ("xx", dbm->GetSimple("1"));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("2"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"1", "xx"}, {"3", "30"}}),
       kv_list({{"1", std::string_view()}, {"3", std::string_view()}, {"4", "hello"}})));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})));
   EXPECT_EQ(0, dbm->CountSimple());
   constexpr int32_t num_threads = 5;
@@ -786,7 +786,7 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
               tkrzw::ToString(src_current_money - transfer_money);
           const std::string& dest_new_value =
               tkrzw::ToString(dest_current_money + transfer_money);
-          const tkrzw::Status status = dbm->CompareExchange(
+          const tkrzw::Status status = dbm->CompareExchangeMulti(
               kv_list({{src_key, src_value}, {dest_key, dest_value}}),
               kv_list({{src_key, src_new_value}, {dest_key, dest_new_value}}));
           EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||

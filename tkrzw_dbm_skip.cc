@@ -75,6 +75,9 @@ class SkipDBMImpl final {
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Insert(std::string_view key, std::string_view value);
   Status GetByIndex(int64_t index, std::string* key, std::string* value);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -110,6 +113,7 @@ class SkipDBMImpl final {
   Status DiscardStorage();
   Status UpdateRecord(std::string_view key, std::string_view new_value);
   Status WriteRecord(std::string_view key, std::string_view value, File* file);
+  Status ProcessImpl(std::string_view key, DBM::RecordProcessor* proc, bool writable);
 
   bool open_;
   bool writable_;
@@ -351,25 +355,7 @@ Status SkipDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
     if (!healthy_) {
       return Status(Status::PRECONDITION_ERROR, "not healthy database");
     }
-    SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
-    Status status = rec.Search(METADATA_SIZE, cache_.get(), key, false);
-    std::string_view new_value;
-    if (status == Status::SUCCESS) {
-      std::string_view rec_value = rec.GetValue();
-      if (rec_value.data() == nullptr) {
-        status = rec.ReadBody();
-        if (status != Status::SUCCESS) {
-          return status;
-        }
-        rec_value = rec.GetValue();
-      }
-      new_value = proc->ProcessFull(key, rec_value);
-    } else if (status == Status::NOT_FOUND_ERROR) {
-      new_value = proc->ProcessEmpty(key);
-    } else {
-      return status;
-    }
-    status = UpdateRecord(key, new_value);
+    Status status = ProcessImpl(key, proc, true);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -378,21 +364,8 @@ Status SkipDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
-    SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
-    Status status = rec.Search(METADATA_SIZE, cache_.get(), key, false);
-    if (status == Status::SUCCESS) {
-      std::string_view rec_value = rec.GetValue();
-      if (rec_value.data() == nullptr) {
-        status = rec.ReadBody();
-        if (status != Status::SUCCESS) {
-          return status;
-        }
-        rec_value = rec.GetValue();
-      }
-      proc->ProcessFull(key, rec_value);
-    } else if (status == Status::NOT_FOUND_ERROR) {
-      proc->ProcessEmpty(key);
-    } else {
+    Status status = ProcessImpl(key, proc, false);
+    if (status != Status::SUCCESS) {
       return status;
     }
   }
@@ -436,6 +409,41 @@ Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* val
       rec_value = rec.GetValue();
     }
     *value = rec_value;
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status SkipDBMImpl::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  if (writable) {
+    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    for (const auto& key_proc : key_proc_pairs) {
+      Status status = ProcessImpl(key_proc.first, key_proc.second, true);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+  } else {
+    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    for (const auto& key_proc : key_proc_pairs) {
+      Status status = ProcessImpl(key_proc.first, key_proc.second, false);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
   }
   return Status(Status::SUCCESS);
 }
@@ -1214,6 +1222,34 @@ Status SkipDBMImpl::WriteRecord(std::string_view key, std::string_view value, Fi
   return Status(Status::SUCCESS);
 }
 
+Status SkipDBMImpl::ProcessImpl(std::string_view key, DBM::RecordProcessor* proc, bool writable) {
+  SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
+  Status status = rec.Search(METADATA_SIZE, cache_.get(), key, false);
+  std::string_view new_value;
+  if (status == Status::SUCCESS) {
+    std::string_view rec_value = rec.GetValue();
+    if (rec_value.data() == nullptr) {
+      status = rec.ReadBody();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      rec_value = rec.GetValue();
+    }
+    new_value = proc->ProcessFull(key, rec_value);
+  } else if (status == Status::NOT_FOUND_ERROR) {
+    new_value = proc->ProcessEmpty(key);
+  } else {
+    return status;
+  }
+  if (writable) {
+    status = UpdateRecord(key, new_value);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
 SkipDBMIteratorImpl::SkipDBMIteratorImpl(SkipDBMImpl* dbm)
     : dbm_(dbm), record_offset_(-1), record_index_(-1), record_size_(0) {
   std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
@@ -1549,7 +1585,7 @@ Status SkipDBM::GetByIndex(int64_t index, std::string* key, std::string* value) 
 Status SkipDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status SkipDBM::ProcessEach(RecordProcessor* proc, bool writable) {

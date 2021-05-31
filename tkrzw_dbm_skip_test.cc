@@ -578,11 +578,26 @@ void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
   }
   EXPECT_EQ(26, counter.CountFull());
   EXPECT_EQ(0, counter.CountEmpty());
+  typedef std::vector<std::pair<std::string_view, tkrzw::DBM::RecordProcessor*>> kp_list;
+  CaseChanger upper(true);
+  CaseChanger lower(false);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti(
+      kp_list({{"aaa", &upper}, {"bbb", &upper}, {"xyz", &upper}}), true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SynchronizeAdvanced(
+      false, nullptr, tkrzw::SkipDBM::ReduceToLast));
+  tkrzw::Status status1(tkrzw::Status::SUCCESS), status2(tkrzw::Status::SUCCESS);
+  std::string value1, value2;
+  tkrzw::DBM::RecordProcessorGet getter1(&status1, &value1), getter2(&status2, &value2);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti(
+      kp_list({{"aaa", &getter1}, {"bbb", &getter2}}), false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, status1);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, status2);
+  EXPECT_EQ("AAAAA", value1);
+  EXPECT_EQ("BBBBB", value2);
   Counter counter_each_reader;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessEach(&counter_each_reader, false));
   EXPECT_EQ(26, counter_each_reader.CountFull());
   EXPECT_EQ(2, counter_each_reader.CountEmpty());
-  CaseChanger upper(true);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessEach(&upper, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SynchronizeAdvanced(
       false, nullptr, tkrzw::SkipDBM::ReduceToLast));

@@ -1090,7 +1090,7 @@ class DBM {
    * is to be removed.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
-  virtual Status CompareExchange(
+  virtual Status CompareExchangeMulti(
       std::vector<std::pair<std::string_view, std::string_view>> expected,
       std::vector<std::pair<std::string_view, std::string_view>> desired) {
     std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
