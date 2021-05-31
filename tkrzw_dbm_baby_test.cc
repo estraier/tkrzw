@@ -69,6 +69,11 @@ TEST_F(BabyDBMTest, Process) {
   ProcessTest(&dbm);
 }
 
+TEST_F(BabyDBMTest, ProcessMulti) {
+  tkrzw::BabyDBM dbm;
+  ProcessMultiTest(&dbm);
+}
+
 TEST_F(BabyDBMTest, Random) {
   tkrzw::BabyDBM dbm;
   RandomTest(&dbm, 1);

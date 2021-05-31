@@ -124,6 +124,9 @@ class BabyDBMImpl final {
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Append(std::string_view key, std::string_view value, std::string_view delim);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -423,6 +426,44 @@ Status BabyDBMImpl::Append(std::string_view key, std::string_view value, std::st
   BabyLeafNode* leaf_node = SearchTree(key);
   std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
   AppendImpl(leaf_node, key, value, delim);
+  return Status(Status::SUCCESS);
+}
+
+Status BabyDBMImpl::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  if (!reorg_nodes_.IsEmpty()) {
+    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    ReorganizeTree();
+  }
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::vector<BabyLeafNode*> leaf_nodes;
+  std::set<BabyLeafNode*> uniq_leaf_nodes;
+  for (const auto& key_proc : key_proc_pairs) {
+    BabyLeafNode* leaf_node = SearchTree(key_proc.first);
+    leaf_nodes.emplace_back(leaf_node);
+    uniq_leaf_nodes.emplace(leaf_node);
+  }
+  for (const auto& leaf_node : uniq_leaf_nodes) {
+    if (writable) {
+      leaf_node->mutex.lock();
+    } else {
+      leaf_node->mutex.lock_shared();
+    }
+  }
+  for (size_t i = 0; i < key_proc_pairs.size(); i++) {
+    auto& key_proc = key_proc_pairs[i];
+    auto& leaf_node = leaf_nodes[i];
+    ProcessImpl(leaf_node, key_proc.first, key_proc.second, writable);
+  }
+  for (auto leaf_node = uniq_leaf_nodes.rbegin();
+       leaf_node != uniq_leaf_nodes.rend(); leaf_node++) {
+    if (writable) {
+      (*leaf_node)->mutex.unlock();
+    } else {
+      (*leaf_node)->mutex.unlock_shared();
+    }
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -1337,7 +1378,7 @@ Status BabyDBM::Append(std::string_view key, std::string_view value, std::string
 Status BabyDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status BabyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

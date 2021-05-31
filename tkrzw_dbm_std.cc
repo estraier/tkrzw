@@ -39,6 +39,9 @@ class StdDBMImpl {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -184,6 +187,56 @@ Status StdDBMImpl<STRMAP>::Process(
       proc->ProcessEmpty(key_str);
     } else {
       proc->ProcessFull(key_str, it->second);
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
+template <class STRMAP>
+Status StdDBMImpl<STRMAP>::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  if (writable) {
+    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    for (const auto& key_proc : key_proc_pairs) {
+      const std::string_view key = key_proc.first;
+      DBM::RecordProcessor* proc = key_proc.second;
+      const std::string key_str(key);
+      auto it = map_.find(key_str);
+      if (it == map_.end()) {
+        const std::string_view new_value = proc->ProcessEmpty(key);
+        if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
+            new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
+          map_.emplace(std::move(key_str), new_value);
+        }
+      } else {
+        const std::string_view new_value = proc->ProcessFull(key, it->second);
+        if (new_value.data() == DBM::RecordProcessor::NOOP.data()) {
+        } else if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+          for (auto* iterator : iterators_) {
+            if (iterator->it_ == it) {
+              ++iterator->it_;
+            }
+          }
+          map_.erase(it);
+        } else {
+          it->second = new_value;
+        }
+      }
+    }
+  } else {
+    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    const auto& const_map = map_;
+    for (const auto& key_proc : key_proc_pairs) {
+      const std::string_view key = key_proc.first;
+      DBM::RecordProcessor* proc = key_proc.second;
+      const std::string key_str(key);
+      const auto it = const_map.find(key_str);
+      if (it == const_map.end()) {
+        proc->ProcessEmpty(key_str);
+      } else {
+        proc->ProcessFull(key_str, it->second);
+      }
     }
   }
   return Status(Status::SUCCESS);
@@ -626,7 +679,7 @@ Status StdHashDBM::Process(std::string_view key, RecordProcessor* proc, bool wri
 Status StdHashDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status StdHashDBM::ProcessEach(RecordProcessor* proc, bool writable) {
@@ -770,7 +823,7 @@ Status StdTreeDBM::Process(std::string_view key, RecordProcessor* proc, bool wri
 Status StdTreeDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status StdTreeDBM::ProcessEach(RecordProcessor* proc, bool writable) {

@@ -69,6 +69,11 @@ TEST_F(TinyDBMTest, Process) {
   ProcessTest(&dbm);
 }
 
+TEST_F(TinyDBMTest, ProcessMulti) {
+  tkrzw::TinyDBM dbm(5000);
+  ProcessMultiTest(&dbm);
+}
+
 TEST_F(TinyDBMTest, Random) {
   tkrzw::TinyDBM dbm(10000);
   RandomTest(&dbm, 1);

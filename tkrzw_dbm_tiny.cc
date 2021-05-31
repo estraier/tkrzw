@@ -53,6 +53,9 @@ class TinyDBMImpl final {
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Append(std::string_view key, std::string_view value, std::string_view delim);
+  Status ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+      bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -271,6 +274,25 @@ Status TinyDBMImpl::Append(std::string_view key, std::string_view value, std::st
   ScopedHashLock record_lock(record_mutex_, key, true);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   AppendImpl(key, bucket_index, value, delim);
+  return Status(Status::SUCCESS);
+}
+
+Status TinyDBMImpl::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::vector<std::string_view> keys;
+  keys.reserve(key_proc_pairs.size());
+  for (const auto& pair : key_proc_pairs) {
+    keys.emplace_back(pair.first);
+  }
+  ScopedHashLockMulti record_lock(record_mutex_, keys, writable);
+  const std::vector<int64_t>& bucket_indices = record_lock.GetBucketIndices();
+  for (size_t i = 0; i < key_proc_pairs.size(); i++) {
+    const auto& key_proc = key_proc_pairs[i];
+    const int64_t bucket_index = bucket_indices[i];
+    ProcessImpl(key_proc.first, bucket_index, key_proc.second, writable);
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -749,7 +771,7 @@ Status TinyDBM::Append(std::string_view key, std::string_view value, std::string
 Status TinyDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status TinyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

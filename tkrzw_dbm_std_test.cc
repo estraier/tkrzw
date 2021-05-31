@@ -69,6 +69,11 @@ TEST_F(StdHashDBMTest, Process) {
   ProcessTest(&dbm);
 }
 
+TEST_F(StdHashDBMTest, ProcessMulti) {
+  tkrzw::StdHashDBM dbm(5000);
+  ProcessMultiTest(&dbm);
+}
+
 TEST_F(StdHashDBMTest, ProcessEach) {
   tkrzw::StdHashDBM dbm(1000);
   ProcessEachTest(&dbm);
@@ -131,6 +136,11 @@ TEST_F(StdTreeDBMTest, Append) {
 TEST_F(StdTreeDBMTest, Process) {
   tkrzw::StdTreeDBM dbm;
   ProcessTest(&dbm);
+}
+
+TEST_F(StdTreeDBMTest, ProcessMulti) {
+  tkrzw::StdTreeDBM dbm;
+  ProcessMultiTest(&dbm);
 }
 
 TEST_F(StdTreeDBMTest, ProcessEach) {
