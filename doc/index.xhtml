@@ -3256,13 +3256,16 @@ if (dbm.Get(key, &value).IsOK()) {
       return status;
     }
     const int64_t dest_balance = StrToInt(dest_value);
+
+    // Generate new values for the new balances.
+    const std::string src_new_value = ToString(src_balance - amount);
+    const std::string dest_new_value = ToString(dest_balance + amount);
     
     // Finish transaction atomically if the balances are not modified.
     const std::vector<std::pair<std::string_view, std::string_view>> expected =
         {{src_key, src_value}, {dest_key, dest_value}};
     const std::vector<std::pair<std::string_view, std::string_view>> desired =
-        {{src_key, ToString(src_balance - amount)},
-         {dest_key, ToString(dest_balance + amount)}};
+        {{src_key, src_new_value}, {dest_key, dest_new_value}};
     status = dbm->CompareExchangeMulti(expected, desired);
     if (status.IsOK()) {
       return Status(Status::SUCCESS);

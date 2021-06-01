@@ -570,7 +570,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     char* value_buf = new char[value_size];
     std::memset(value_buf, '0' + id % 10, value_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
       std::string_view value(value_buf, is_random_value ? value_size_dist(misc_mt) : value_size);
@@ -638,7 +638,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
       const Status status = dbm->Get(key);
@@ -698,7 +698,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
       const Status status = dbm->Remove(key);
@@ -853,7 +853,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     char* value_buf = new char[value_size];
     std::memset(value_buf, '0' + id % 10, value_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       int32_t key_num = is_random_key ? key_num_dist(mt) : i * num_threads + id;
       if (num_keys > 0) {
         key_num %= num_keys;
@@ -1047,7 +1047,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     char* value_buf = new char[value_size];
     std::memset(value_buf, '0' + id % 10, value_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = key_num_dist(key_mt);
       const std::string& key = SPrintF("%08d", key_num);
       std::string_view value(value_buf, value_size_dist(misc_mt));

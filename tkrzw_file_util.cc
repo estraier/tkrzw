@@ -778,10 +778,6 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
       rp += request.copy_size;
       off += request.copy_size;
       size -= request.copy_size;
-      status |= ReduceCache(&slot);
-      if (status != Status::SUCCESS) {
-        break;
-      }
     }
     for (int32_t i = 0; status == Status::SUCCESS && i < num_slots; ++i) {
       const int32_t slot_index = slot_indices[i];

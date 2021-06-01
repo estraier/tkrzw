@@ -118,7 +118,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     char* write_buf = new char[record_size];
     std::memset(write_buf, '0' + id, record_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       if (is_append) {
         const Status status = file->Append(write_buf, record_size);
         if (status != Status::SUCCESS) {
@@ -194,7 +194,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     char* read_buf = new char[record_size];
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       int64_t off = 0;
       if (is_random) {
         off = off_dist(mt);
@@ -319,7 +319,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     char* read_buf = new char[record_size];
     std::memset(read_buf, 'x', record_size);
     bool midline = false;
-    for (int32_t i = 0; i < num_iterations; i++) {
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int64_t off = off_dist(mt);
       if (id == 0 && file->IsAtomic() && op_dist(mt) % 1000 == 0) {
         const Status status = file->Truncate(off_dist(mt));
