@@ -259,16 +259,18 @@ Status HashRecord::WriteChildOffset(int64_t offset, int64_t child_offset) {
 }
 
 Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t* next_offset) {
+  constexpr int32_t MAX_SHIFT_TRIES = 1000;
+  constexpr int32_t VALIDATION_COUNT = 3;
+  constexpr int32_t MAX_REC_SIZE = 1 << 20;
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
   const int32_t align = 1 << align_pow_;
   offset += min_record_size;
   offset = AlignNumber(offset, align);
   int64_t file_size = file_->GetSizeSimple();
   HashRecord rec(file_, offset_width_, align_pow_);
-  while (offset < file_size) {
+  int32_t num_shift_tries = MAX_SHIFT_TRIES;
+  while (num_shift_tries-- > 0 && offset < file_size) {
     if (rec.ReadMetadataKey(offset, min_read_size) == Status::SUCCESS) {
-      constexpr int32_t VALIDATION_COUNT = 3;
-      constexpr int32_t MAX_REC_SIZE = 1 << 20;
       int32_t count = 0;
       while (offset < file_size && count < VALIDATION_COUNT) {
         if (rec.ReadMetadataKey(offset, min_read_size) != Status::SUCCESS) {
