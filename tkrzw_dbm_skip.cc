@@ -42,12 +42,12 @@ constexpr int32_t META_OFFSET_FILE_SIZE = 40;
 constexpr int32_t META_OFFSET_MOD_TIME = 48;
 constexpr int32_t META_OFFSET_DB_TYPE = 56;
 constexpr int32_t META_OFFSET_OPAQUE = 64;
-constexpr uint32_t MIN_OFFSET_WIDTH = 3;
-constexpr uint32_t MAX_OFFSET_WIDTH = 6;
-constexpr uint32_t MIN_STEP_UNIT = 2;
-constexpr uint32_t MAX_STEP_UNIT = 64;
-constexpr uint32_t MIN_MAX_LEVEL = 1;
-constexpr uint32_t MAX_MAX_LEVEL = 32;
+constexpr int32_t MIN_OFFSET_WIDTH = 3;
+constexpr int32_t MAX_OFFSET_WIDTH = 6;
+constexpr int32_t MIN_STEP_UNIT = 2;
+constexpr int32_t MAX_STEP_UNIT = 64;
+constexpr int32_t MIN_MAX_LEVEL = 1;
+constexpr int32_t MAX_MAX_LEVEL = 32;
 constexpr int64_t MIN_SORT_MEM_SIZE = 1LL << 10;
 constexpr int64_t MAX_SORT_MEM_SIZE = 8LL << 30;
 constexpr int32_t MIN_MAX_CACHED_RECORDS = 1;
@@ -121,17 +121,17 @@ class SkipDBMImpl final {
   bool updated_;
   bool removed_;
   std::string path_;
-  uint8_t pkg_major_version_;
-  uint8_t pkg_minor_version_;
-  uint32_t offset_width_;
-  uint32_t step_unit_;
-  uint32_t max_level_;
-  uint8_t closure_flags_;
+  int32_t pkg_major_version_;
+  int32_t pkg_minor_version_;
+  int32_t offset_width_;
+  int32_t step_unit_;
+  int32_t max_level_;
+  int32_t closure_flags_;
   int64_t num_records_;
   int64_t eff_data_size_;
   int64_t file_size_;
   int64_t mod_time_;
-  uint32_t db_type_;
+  int32_t db_type_;
   std::string opaque_;
   IteratorList iterators_;
   std::unique_ptr<File> file_;
@@ -204,15 +204,15 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   }
   const std::string norm_path = NormalizePath(path);
   if (tuning_params.offset_width >= 0) {
-    offset_width_ = std::min(std::max(static_cast<uint32_t>(
+    offset_width_ = std::min(std::max(static_cast<int32_t>(
         tuning_params.offset_width), MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
   }
   if (tuning_params.step_unit >= 0) {
-    step_unit_ = std::min(std::max(static_cast<uint32_t>(
+    step_unit_ = std::min(std::max(static_cast<int32_t>(
         tuning_params.step_unit), MIN_STEP_UNIT), MAX_STEP_UNIT);
   }
   if (tuning_params.max_level >= 0) {
-    max_level_ = std::min(std::max(static_cast<uint32_t>(
+    max_level_ = std::min(std::max(static_cast<int32_t>(
         tuning_params.max_level), MIN_MAX_LEVEL), MAX_MAX_LEVEL);
   }
   if (tuning_params.sort_mem_size >= 0) {
@@ -945,26 +945,15 @@ Status SkipDBMImpl::SaveMetadata(bool finish) {
 }
 
 Status SkipDBMImpl::LoadMetadata() {
-  char meta[METADATA_SIZE];
-  const Status status = file_->Read(0, meta, METADATA_SIZE);
+  const Status status = SkipDBM::ReadMetadata(
+      file_.get(), &pkg_major_version_, &pkg_minor_version_,
+      &offset_width_, &step_unit_, &max_level_,
+      &closure_flags_, &num_records_,
+      &eff_data_size_, &file_size_, &mod_time_,
+      &db_type_, &opaque_);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
-  }
-  pkg_major_version_ = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
-  pkg_minor_version_ = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
-  offset_width_ = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
-  step_unit_ = ReadFixNum(meta + META_OFFSET_STEP_UNIT, 1);
-  max_level_ = ReadFixNum(meta + META_OFFSET_MAX_LEVEL, 1);
-  closure_flags_ = ReadFixNum(meta + META_OFFSET_CLOSURE_FLAGS, 1);
-  num_records_ = ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8);
-  eff_data_size_ = ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8);
-  file_size_ = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
-  mod_time_ = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
-  db_type_ = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
-  opaque_ = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
   if (pkg_major_version_ < 1 && pkg_minor_version_ < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid package version");
   }
@@ -1802,16 +1791,83 @@ std::vector<std::string> SkipDBM::ReduceToTotal(
   return result;
 }
 
-Status SkipDBM::RestoreDatabase(
-    const std::string& old_file_path, const std::string& new_file_path) {
-  SkipDBM old_dbm;
-  Status status = old_dbm.Open(old_file_path, false);
+Status SkipDBM::ReadMetadata(
+    File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+    int32_t* offset_width, int32_t* step_unit, int32_t *max_level,
+    int32_t* closure_flags, int64_t* num_records,
+    int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+    int32_t* db_type, std::string* opaque) {
+  char meta[METADATA_SIZE];
+  const Status status = file->Read(0, meta, METADATA_SIZE);
   if (status != Status::SUCCESS) {
     return status;
   }
-  SkipDBM new_dbm;
+  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
+    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
+  }
+  *pkg_major_version = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
+  *pkg_minor_version = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
+  *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
+  *step_unit = ReadFixNum(meta + META_OFFSET_STEP_UNIT, 1);
+  *max_level = ReadFixNum(meta + META_OFFSET_MAX_LEVEL, 1);
+  *closure_flags = ReadFixNum(meta + META_OFFSET_CLOSURE_FLAGS, 1);
+  *num_records = ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8);
+  *eff_data_size = ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8);
+  *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
+  *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
+  *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
+  *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
+  return Status(Status::SUCCESS);
+}
+
+Status SkipDBM::RestoreDatabase(
+    const std::string& old_file_path, const std::string& new_file_path) {
+  PositionalParallelFile old_file;
+  Status status = old_file.Open(old_file_path, false);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  int64_t actual_old_file_size = 0;
+  status = old_file.GetSize(&actual_old_file_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (actual_old_file_size < METADATA_SIZE) {
+    return Status(Status::BROKEN_DATA_ERROR, "too small file");
+  }
+  int32_t pkg_major_version = 0;
+  int32_t pkg_minor_version = 0;
+  int32_t offset_width = 0;
+  int32_t step_unit = 0;
+  int32_t max_level = 0;
+  int32_t closure_flags = 0;
+  int64_t num_records = 0;
+  int64_t eff_data_size = 0;
+  int64_t file_size = 0;
+  int64_t mod_time = 0;
+  int32_t db_type = 0;
+  std::string opaque;
+  status = ReadMetadata(
+      &old_file, &pkg_major_version, &pkg_minor_version,
+      &offset_width, &step_unit, &max_level,
+      &closure_flags, &num_records,
+      &eff_data_size, &file_size, &mod_time,
+      &db_type, &opaque);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::unique_ptr<File> new_file;
+  if (actual_old_file_size <= UINT32MAX) {
+    new_file = std::make_unique<MemoryMapParallelFile>();
+  } else {
+    new_file = std::make_unique<PositionalParallelFile>();
+  }
+  SkipDBM new_dbm(std::move(new_file));
   SkipDBM::TuningParameters tuning_params;
   tuning_params.insert_in_order = true;
+  tuning_params.offset_width = offset_width;
+  tuning_params.step_unit = step_unit;
+  tuning_params.max_level = max_level;
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {
     return status;
@@ -1819,21 +1875,33 @@ Status SkipDBM::RestoreDatabase(
   if (new_dbm.CountSimple() > 0) {
     return Status(Status::PRECONDITION_ERROR, "the new database is not empty");
   }
-  new_dbm.SetDatabaseType(old_dbm.GetDatabaseType());
-  new_dbm.SetOpaqueMetadata(old_dbm.GetOpaqueMetadata());
-  class Loader final : public RecordProcessor {
-   public:
-    explicit Loader(SkipDBM* dbm) : dbm_(dbm) {}
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      dbm_->Set(key, value);
-      return NOOP;
+  new_dbm.SetDatabaseType(db_type);
+  new_dbm.SetOpaqueMetadata(opaque);
+  tkrzw::SkipRecord rec(&old_file, offset_width, step_unit, max_level);
+  const int64_t end_offset = old_file.GetSizeSimple();
+  int64_t offset = METADATA_SIZE;
+  int64_t index = 0;
+  while (offset < end_offset) {
+    status = rec.ReadMetadataKey(offset, index);
+    if (status != Status::SUCCESS) {
+      break;
     }
-   private:
-    SkipDBM* dbm_;
-  } loader(&new_dbm);
-  status = old_dbm.ProcessEach(&loader, false);
-  old_dbm.Close();
-  status |= new_dbm.Close();
+    std::string_view value = rec.GetValue();
+    if (value.data() == nullptr) {
+      status = rec.ReadBody();
+      if (status != Status::SUCCESS) {
+        break;
+      }
+      value = rec.GetValue();
+    }
+    status = new_dbm.Set(rec.GetKey(), value);
+    if (status != Status::SUCCESS) {
+      break;
+    }
+    offset += rec.GetWholeSize();
+    index++;
+  }
+  status |= old_file.Close();
   return status;
 }
 

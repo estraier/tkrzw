@@ -3,6 +3,9 @@
 	- Release: 0.9.23
 	- Library version: 1.12.0
 
+	- Add ReadMetadata and ParseMetadata methods.
+	- Ability of RestoreDatabase metdhods to recover the file is improved.
+
 2021-05-29  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.22

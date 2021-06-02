@@ -149,18 +149,18 @@ class HashDBMImpl final {
   bool writable_;
   bool healthy_;
   std::string path_;
-  uint8_t pkg_major_version_;
-  uint8_t pkg_minor_version_;
-  uint8_t static_flags_;
+  int32_t pkg_major_version_;
+  int32_t pkg_minor_version_;
+  int32_t static_flags_;
   int32_t offset_width_;
   int32_t align_pow_;
-  uint8_t closure_flags_;
+  int32_t closure_flags_;
   int64_t num_buckets_;
   std::atomic_int64_t num_records_;
   std::atomic_int64_t eff_data_size_;
   int64_t file_size_;
   int64_t mod_time_;
-  uint32_t db_type_;
+  int32_t db_type_;
   std::string opaque_;
   int64_t record_base_;
   IteratorList iterators_;
@@ -1097,27 +1097,19 @@ Status HashDBMImpl::SaveMetadata(bool finish) {
 }
 
 Status HashDBMImpl::LoadMetadata() {
-  char meta[METADATA_SIZE];
-  const Status status = file_->Read(0, meta, METADATA_SIZE);
+  int64_t num_records = 0;
+  int64_t eff_data_size = 0;
+  const Status status = HashDBM::ReadMetadata(
+      file_.get(), &pkg_major_version_, &pkg_minor_version_,
+      &static_flags_, &offset_width_, &align_pow_,
+      &closure_flags_, &num_buckets_, &num_records,
+      &eff_data_size, &file_size_, &mod_time_,
+      &db_type_, &opaque_);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
-  }
-  pkg_major_version_ = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
-  pkg_minor_version_ = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
-  static_flags_ = ReadFixNum(meta + META_OFFSET_STATIC_FLAGS, 1);
-  offset_width_ = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
-  align_pow_ = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
-  closure_flags_ = ReadFixNum(meta + META_OFFSET_CLOSURE_FLAGS, 1);
-  num_buckets_ = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
-  num_records_.store(ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8));
-  eff_data_size_.store(ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8));
-  file_size_ = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
-  mod_time_ = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
-  db_type_ = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
-  opaque_ = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
+  num_records_.store(num_records);
+  eff_data_size_.store(eff_data_size);
   if (pkg_major_version_ < 1 && pkg_minor_version_ < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid package version");
   }
@@ -1961,6 +1953,41 @@ Status HashDBM::Iterator::Process(RecordProcessor* proc, bool writable) {
   return impl_->Process(proc, writable);
 }
 
+Status HashDBM::ReadMetadata(
+    File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+    int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
+    int32_t* closure_flags, int64_t* num_buckets, int64_t* num_records,
+    int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+    int32_t* db_type, std::string* opaque) {
+  assert(file != nullptr && pkg_major_version != nullptr && pkg_minor_version != nullptr &&
+         static_flags != nullptr && offset_width != nullptr && align_pow != nullptr &&
+         closure_flags != nullptr && num_buckets != nullptr && num_records != nullptr &&
+         eff_data_size != nullptr && file_size != nullptr && mod_time != nullptr &&
+         db_type != nullptr && opaque != nullptr);
+  char meta[METADATA_SIZE];
+  const Status status = file->Read(0, meta, METADATA_SIZE);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
+    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
+  }
+  *pkg_major_version = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
+  *pkg_minor_version = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
+  *static_flags = ReadFixNum(meta + META_OFFSET_STATIC_FLAGS, 1);
+  *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
+  *align_pow = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
+  *closure_flags = ReadFixNum(meta + META_OFFSET_CLOSURE_FLAGS, 1);
+  *num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
+  *num_records = ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8);
+  *eff_data_size = ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8);
+  *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
+  *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
+  *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
+  *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
+  return Status(Status::SUCCESS);
+}
+
 Status HashDBM::FindRecordBase(
     File* file, int64_t *record_base, int32_t* offset_width, int32_t* align_pow,
     int64_t* last_sync_size) {
@@ -2026,39 +2053,68 @@ Status HashDBM::FindRecordBase(
 
 Status HashDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
+  PositionalParallelFile old_file;
+  Status status = old_file.Open(old_file_path, false);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  int64_t actual_old_file_size = 0;
+  status = old_file.GetSize(&actual_old_file_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (actual_old_file_size < PAGE_SIZE) {
+    return Status(Status::BROKEN_DATA_ERROR, "too small file");
+  }
   UpdateMode update_mode = UPDATE_DEFAULT;
   int64_t num_buckets = -1;
   int32_t db_type = 0;
   std::string opaque;
-  {
-    HashDBM old_dbm(std::make_unique<PositionalParallelFile>());
-    if (old_dbm.Open(old_file_path, false) == Status::SUCCESS) {
-      update_mode = old_dbm.GetUpdateMode();
-      num_buckets = old_dbm.CountBuckets();
-      db_type = old_dbm.GetDatabaseType();
-      opaque = old_dbm.GetOpaqueMetadata();
-    }
-  }
-  auto old_file = std::make_unique<PositionalParallelFile>();
-  Status status = old_file->Open(old_file_path, false);
-  if (status != Status::SUCCESS) {
-    return status;
-  }
   int64_t record_base = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
   int64_t last_sync_size = 0;
   status = FindRecordBase(
-      old_file.get(), &record_base, &offset_width, &align_pow, &last_sync_size);
+      &old_file, &record_base, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
-  status = old_file->Close();
+  int32_t old_pkg_major_version = 0;
+  int32_t old_pkg_minor_version = 0;
+  int32_t old_static_flags = 0;
+  int32_t old_offset_width = 0;
+  int32_t old_align_pow = 0;
+  int32_t old_closure_flags = 0;
+  int64_t old_num_buckets = 0;
+  int64_t old_num_records = 0;
+  int64_t old_eff_data_size = 0;
+  int64_t old_file_size = 0;
+  int64_t old_mod_time = 0;
+  int32_t old_db_type = 0;
+  std::string old_opaque;
+  if (ReadMetadata(
+          &old_file, &old_pkg_major_version, &old_pkg_minor_version,
+          &old_static_flags, &old_offset_width, &old_align_pow,
+          &old_closure_flags, &old_num_buckets, &old_num_records,
+          &old_eff_data_size, &old_file_size, &old_mod_time,
+          &old_db_type, &old_opaque) == Status::SUCCESS) {
+    if (old_static_flags & STATIC_FLAG_UPDATE_IN_PLACE)  {
+      update_mode = HashDBM::UPDATE_IN_PLACE;
+    } else if (old_static_flags & STATIC_FLAG_UPDATE_APPENDING) {
+      update_mode = HashDBM::UPDATE_APPENDING;
+    }
+    offset_width = old_offset_width;
+    align_pow = old_align_pow;
+    num_buckets = old_num_buckets;
+    db_type = old_db_type;
+    opaque = old_opaque;
+  }
+  status = old_file.Close();
   if (status != Status::SUCCESS) {
     return status;
   }
   std::unique_ptr<File> new_file;
-  if (last_sync_size <= UINT32MAX) {
+  if (actual_old_file_size <= UINT32MAX) {
     new_file = std::make_unique<MemoryMapParallelFile>();
   } else {
     new_file = std::make_unique<PositionalParallelFile>();

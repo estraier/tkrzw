@@ -483,6 +483,30 @@ class TreeDBM final : public DBM {
   KeyComparator GetKeyComparator() const;
 
   /**
+   * Parses metadata on an opaque data sequence.
+   * @param opaque The opaque data from the underlying database.
+   * @param num_records The pointer to a variable to store the number of buckets.
+   * @param eff_data_size The pointer to a variable to store the effective data size.
+   * @param root_id The pointer to a variable to store the ID of the root node.
+   * @param first_id The pointer to a variable to store the ID of the first node.
+   * @param last_id The pointer to a variable to store the ID of the last node.
+   * @param num_leaf_nodes The pointer to a variable to store the number of leaf nodes.
+   * @param num_inner_nodes The pointer to a variable to store the number of inner nodes.
+   * @param max_page_size The pointer to a variable to store the max page size.
+   * @param max_branches The pointer to a variable to store the max branches.
+   * @param tree_level The pointer to a variable to store the tree level.
+   * @param key_comp_type The pointer to a variable to store the key comparator type.
+   * @param mini_opaque The pointer to a variable to store the mini opaque data.
+   * @return The result status.
+   */
+  static Status ParseMetadata(
+      std::string_view opaque, int64_t* num_records, int64_t* eff_data_size,
+      int64_t* root_id, int64_t* first_id, int64_t* last_id,
+      int64_t* num_leaf_nodes, int64_t* num_inner_nodes,
+      int32_t* max_page_size, int32_t* max_branches,
+      int32_t* tree_level, int32_t* key_comp_type, std::string* mini_opaque);
+
+  /**
    * Restores a broken database as a new healthy database.
    * @param old_file_path The path of the broken database.
    * @param new_file_path The path of the new database to be created.

@@ -174,9 +174,9 @@ class TreeDBMImpl final {
   int64_t root_id_;
   int64_t first_id_;
   int64_t last_id_;
-  std::atomic_int64_t num_leaf_nodes_;
-  std::atomic_int64_t num_inner_nodes_;
-  uint8_t tree_level_;
+  int64_t num_leaf_nodes_;
+  int64_t num_inner_nodes_;
+  int32_t tree_level_;
   int32_t max_page_size_;
   int32_t max_branches_;
   int32_t max_cached_pages_;
@@ -227,7 +227,7 @@ class TreeDBMIteratorImpl final {
 TreeLeafNode::TreeLeafNode(TreeDBMImpl* impl, int64_t prev_id, int64_t next_id)
     : impl(impl), id(0), prev_id(prev_id), next_id(next_id), records(),
       page_size(PAGE_ID_WIDTH * 2), dirty(true), on_disk(false), mutex() {
-  id = impl->num_leaf_nodes_.fetch_add(1) + LEAF_NODE_ID_BASE;
+  id = impl->num_leaf_nodes_++ + LEAF_NODE_ID_BASE;
 }
 
 TreeLeafNode::TreeLeafNode(TreeDBMImpl* impl, int64_t id, int64_t prev_id, int64_t next_id,
@@ -250,7 +250,7 @@ std::shared_ptr<TreeLeafNode> TreeLeafNode::AddToCache() {
 
 TreeInnerNode::TreeInnerNode(TreeDBMImpl* impl, int64_t heir_id)
     : impl(impl), id(0), heir_id(heir_id), links(), dirty(true), on_disk(false) {
-  id = impl->num_inner_nodes_.fetch_add(1) + INNER_NODE_ID_BASE;
+  id = impl->num_inner_nodes_++ + INNER_NODE_ID_BASE;
 }
 
 TreeInnerNode::TreeInnerNode(TreeDBMImpl* impl, int64_t id, int64_t heir_id,
@@ -420,8 +420,8 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     root_id_ = 0;
     first_id_ = 0;
     last_id_ = 0;
-    num_leaf_nodes_.store(0);
-    num_inner_nodes_.store(0);
+    num_leaf_nodes_ = 0;
+    num_inner_nodes_ = 0;
     InitializePageCache();
     auto leaf_node = (new TreeLeafNode(this, 0, 0))->AddToCache();
     root_id_ = leaf_node->id;
@@ -485,8 +485,8 @@ Status TreeDBMImpl::Close() {
   root_id_ = 0;
   first_id_ = 0;
   last_id_ = 0;
-  num_leaf_nodes_.store(0);
-  num_inner_nodes_.store(0);
+  num_leaf_nodes_ = 0;
+  num_inner_nodes_ = 0;
   tree_level_ = 0;
   max_page_size_ = TreeDBM::DEFAULT_MAX_PAGE_SIZE;
   max_branches_ = TreeDBM::DEFAULT_MAX_BRANCHES;
@@ -684,7 +684,8 @@ Status TreeDBMImpl::Clear() {
   root_id_ = 0;
   first_id_ = 0;
   last_id_ = 0;
-  num_inner_nodes_.store(0);
+  num_leaf_nodes_ = 0;
+  num_inner_nodes_ = 0;
   InitializePageCache();
   auto leaf_node = (new TreeLeafNode(this, 0, 0))->AddToCache();
   root_id_ = leaf_node->id;
@@ -780,8 +781,8 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
     Add("root_id", ToString(root_id_));
     Add("first_id", ToString(first_id_));
     Add("last_id", ToString(last_id_));
-    Add("num_leaf_nodes", ToString(num_leaf_nodes_.load()));
-    Add("num_inner_nodes", ToString(num_inner_nodes_.load()));
+    Add("num_leaf_nodes", ToString(num_leaf_nodes_));
+    Add("num_inner_nodes", ToString(num_inner_nodes_));
     Add("tree_level", ToString(tree_level_));
     Add("max_page_size", ToString(max_page_size_));
     Add("max_branches", ToString(max_branches_));
@@ -927,8 +928,8 @@ Status TreeDBMImpl::SaveMetadata() {
   WriteFixNum(wp + META_OFFSET_ROOT_ID, root_id_, 6);
   WriteFixNum(wp + META_OFFSET_FIRST_ID, first_id_, 6);
   WriteFixNum(wp + META_OFFSET_LAST_ID, last_id_, 6);
-  WriteFixNum(wp + META_OFFSET_NUM_LEAF_NODES, num_leaf_nodes_.load(), 6);
-  WriteFixNum(wp + META_OFFSET_NUM_INNER_NODES, num_inner_nodes_.load(), 6);
+  WriteFixNum(wp + META_OFFSET_NUM_LEAF_NODES, num_leaf_nodes_, 6);
+  WriteFixNum(wp + META_OFFSET_NUM_INNER_NODES, num_inner_nodes_, 6);
   WriteFixNum(wp + META_OFFSET_MAX_PAGE_SIZE, max_page_size_, 3);
   WriteFixNum(wp + META_OFFSET_MAX_BRANCHES, max_branches_, 3);
   WriteFixNum(wp + META_OFFSET_TREE_LEVEL, tree_level_, 1);
@@ -964,27 +965,21 @@ Status TreeDBMImpl::SaveMetadata() {
 }
 
 Status TreeDBMImpl::LoadMetadata() {
-  const std::string& opaque = hash_dbm_->GetOpaqueMetadata();
-  if (opaque.size() != HashDBM::OPAQUE_METADATA_SIZE) {
-    return Status(Status::BROKEN_DATA_ERROR, "missing metadata");
+  const std::string opaque = hash_dbm_->GetOpaqueMetadata();
+  int64_t num_records = 0;
+  int64_t eff_data_size = 0;
+  int32_t key_comp_type = 0;
+  const Status status = TreeDBM::ParseMetadata(
+      opaque, &num_records, &eff_data_size,
+      &root_id_, &first_id_, &last_id_,
+      &num_leaf_nodes_, &num_inner_nodes_,
+      &max_page_size_, &max_branches_,
+      &tree_level_, &key_comp_type, &mini_opaque_);
+  if (status != Status::SUCCESS) {
+    return status;
   }
-  const char* rp = opaque.data();
-  if (std::memcmp(rp, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
-  }
-  num_records_.store(ReadFixNum(rp + META_OFFSET_NUM_RECORDS, 6));
-  eff_data_size_.store(ReadFixNum(rp + META_OFFSET_EFF_DATA_SIZE, 6));
-  root_id_ = ReadFixNum(rp + META_OFFSET_ROOT_ID, 6);
-  first_id_ = ReadFixNum(rp + META_OFFSET_FIRST_ID, 6);
-  last_id_ = ReadFixNum(rp + META_OFFSET_FIRST_ID, 6);
-  num_leaf_nodes_.store(ReadFixNum(rp + META_OFFSET_NUM_LEAF_NODES, 6));
-  num_inner_nodes_.store(ReadFixNum(rp + META_OFFSET_NUM_INNER_NODES, 6));
-  max_page_size_ = ReadFixNum(rp + META_OFFSET_MAX_PAGE_SIZE, 3);
-  max_branches_ = ReadFixNum(rp + META_OFFSET_MAX_BRANCHES, 3);
-  tree_level_ = ReadFixNum(rp + META_OFFSET_TREE_LEVEL, 1);
-  const uint32_t key_comp_type = ReadFixNum(rp + META_OFFSET_KEY_COMPARATOR, 1);
-  mini_opaque_ =
-      std::string(rp + META_OFFSET_OPAQUE, HashDBM::OPAQUE_METADATA_SIZE - META_OFFSET_OPAQUE);
+  num_records_.store(num_records);
+  eff_data_size_.store(eff_data_size);
   if (num_records_.load() < 0) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid record count");
   }
@@ -1000,10 +995,10 @@ Status TreeDBMImpl::LoadMetadata() {
   if (last_id_ < 0) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid last node ID");
   }
-  if (num_leaf_nodes_.load() < 1) {
+  if (num_leaf_nodes_ < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid number of leaf nodes");
   }
-  if (num_inner_nodes_.load() < 0) {
+  if (num_inner_nodes_ < 0) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid number of inner nodes");
   }
   if (max_page_size_ < 1) {
@@ -2440,29 +2435,42 @@ Status TreeDBM::Iterator::Process(RecordProcessor* proc, bool writable) {
   return impl_->Process(proc, writable);
 }
 
+Status TreeDBM::ParseMetadata(
+      std::string_view opaque, int64_t* num_records, int64_t* eff_data_size,
+      int64_t* root_id, int64_t* first_id, int64_t* last_id,
+      int64_t* num_leaf_nodes, int64_t* num_inner_nodes,
+      int32_t* max_page_size, int32_t* max_branches,
+      int32_t* tree_level, int32_t* key_comp_type, std::string* mini_opaque) {
+  assert(num_records != nullptr && eff_data_size != nullptr &&
+         root_id != nullptr && first_id != nullptr && last_id != nullptr &&
+         num_leaf_nodes != nullptr && num_inner_nodes != nullptr &&
+         max_page_size != nullptr && max_branches != nullptr &&
+         tree_level != nullptr && key_comp_type != nullptr && mini_opaque != nullptr);
+  if (opaque.size() != HashDBM::OPAQUE_METADATA_SIZE) {
+    return Status(Status::BROKEN_DATA_ERROR, "missing metadata");
+  }
+  const char* rp = opaque.data();
+  if (std::memcmp(rp, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
+    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
+  }
+  *num_records = ReadFixNum(rp + META_OFFSET_NUM_RECORDS, 6);
+  *eff_data_size = ReadFixNum(rp + META_OFFSET_EFF_DATA_SIZE, 6);
+  *root_id = ReadFixNum(rp + META_OFFSET_ROOT_ID, 6);
+  *first_id = ReadFixNum(rp + META_OFFSET_FIRST_ID, 6);
+  *last_id = ReadFixNum(rp + META_OFFSET_FIRST_ID, 6);
+  *num_leaf_nodes = ReadFixNum(rp + META_OFFSET_NUM_LEAF_NODES, 6);
+  *num_inner_nodes = ReadFixNum(rp + META_OFFSET_NUM_INNER_NODES, 6);
+  *max_page_size = ReadFixNum(rp + META_OFFSET_MAX_PAGE_SIZE, 3);
+  *max_branches = ReadFixNum(rp + META_OFFSET_MAX_BRANCHES, 3);
+  *tree_level = ReadFixNum(rp + META_OFFSET_TREE_LEVEL, 1);
+  *key_comp_type = ReadFixNum(rp + META_OFFSET_KEY_COMPARATOR, 1);
+  *mini_opaque =
+      std::string(rp + META_OFFSET_OPAQUE, HashDBM::OPAQUE_METADATA_SIZE - META_OFFSET_OPAQUE);
+  return Status(Status::SUCCESS);
+}
+
 Status TreeDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
-  int32_t offset_width = -1;
-  int32_t align_pow = -1;
-  int64_t num_buckets = -1;
-  int32_t max_page_size = -1;
-  int32_t max_branches = -1;
-  int32_t db_type = 0;
-  std::string opaque;
-  {
-    TreeDBM old_dbm(std::make_unique<PositionalParallelFile>());
-    if (old_dbm.Open(old_file_path, false) == Status::SUCCESS) {
-      const auto& meta = old_dbm.Inspect();
-      const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
-      offset_width = StrToInt(SearchMap(meta_map, "offset_width", "-1"));
-      align_pow = StrToInt(SearchMap(meta_map, "align_pow", "-1"));
-      num_buckets = StrToInt(SearchMap(meta_map, "hash_num_buckets", "-1"));
-      max_page_size = StrToInt(SearchMap(meta_map, "max_page_size", "-1"));
-      max_branches = StrToInt(SearchMap(meta_map, "max_branches", "-1"));
-      db_type = old_dbm.GetDatabaseType();
-      opaque = old_dbm.GetOpaqueMetadata();
-    }
-  }
   const std::string tmp_file_path = new_file_path + ".tmp.restore";
   Status status = HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset);
   if (status != Status::SUCCESS) {
@@ -2470,9 +2478,36 @@ Status TreeDBM::RestoreDatabase(
     return status;
   }
   HashDBM tmp_dbm;
-  status = tmp_dbm.OpenAdvanced(tmp_file_path, false);
+  status = tmp_dbm.Open(tmp_file_path, false);
   if (status != Status::SUCCESS) {
     RemoveFile(tmp_file_path);
+    return status;
+  }
+  const auto& meta = tmp_dbm.Inspect();
+  const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
+  int32_t offset_width = StrToInt(SearchMap(meta_map, "offset_width", "-1"));
+  int32_t align_pow = StrToInt(SearchMap(meta_map, "align_pow", "-1"));
+  int64_t num_buckets = StrToInt(SearchMap(meta_map, "hash_num_buckets", "-1"));
+  int64_t num_records = 0;
+  int64_t eff_data_size = 0;
+  int64_t root_id = 0;
+  int64_t first_id = 0;
+  int64_t last_id = 0;
+  int64_t num_leaf_nodes = 0;
+  int64_t num_inner_nodes = 0;
+  int32_t max_page_size = 0;
+  int32_t max_branches = 0;
+  int32_t tree_level = 0;
+  int32_t key_comp_type = 0;
+  std::string mini_opaque;
+  const std::string opaque = tmp_dbm.GetOpaqueMetadata();
+  status = ParseMetadata(
+      opaque, &num_records, &eff_data_size,
+      &root_id, &first_id, &last_id,
+      &num_leaf_nodes, &num_inner_nodes,
+      &max_page_size, &max_branches,
+      &tree_level, &key_comp_type, &mini_opaque);
+  if (status != Status::SUCCESS) {
     return status;
   }
   TuningParameters params;
@@ -2490,8 +2525,8 @@ Status TreeDBM::RestoreDatabase(
     RemoveFile(new_file_path);
     return status;
   }
-  new_dbm.SetDatabaseType(db_type);
-  new_dbm.SetOpaqueMetadata(opaque);
+  new_dbm.SetDatabaseType(tmp_dbm.GetDatabaseType());
+  new_dbm.SetOpaqueMetadata(mini_opaque);
   class Loader final : public RecordProcessor {
    public:
     explicit Loader(TreeDBM* dbm) : dbm_(dbm) {}

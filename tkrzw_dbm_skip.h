@@ -674,6 +674,30 @@ class SkipDBM final : public DBM {
       const std::string& key, const std::vector<std::string>& values);
 
   /**
+   * Reads metadata from a database file.
+   * @param file A file object having opened the database file.
+   * @param pkg_major_version The pointer to a variable to store the package major version.
+   * @param pkg_minor_version The pointer to a variable to store the package minor version.
+   * @param offset_width The pointer to a variable to store the offset width.
+   * @param step_unit The pointer to a variable to store the step unit.
+   * @param max_level The pointer to a variable to store the max level.
+   * @param closure_flags The pointer to a variable to store the closure flags.
+   * @param num_records The pointer to a variable to store the number of records.
+   * @param eff_data_size The pointer to a variable to store the effective data size.
+   * @param file_size The pointer to a variable to store the file size.
+   * @param mod_time The pointer to a variable to store the last modified time.
+   * @param db_type The pointer to a variable to store the database type.
+   * @param opaque The pointer to a variable to store the opaque data.
+   * @return The result status.
+   */
+  static Status ReadMetadata(
+      File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+      int32_t* offset_width, int32_t* step_unit, int32_t* max_level,
+      int32_t* closure_flags, int64_t* num_records,
+      int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+      int32_t* db_type, std::string* opaque);
+
+  /**
    * Restores a broken database as a new healthy database.
    * @param old_file_path The path of the broken database.
    * @param new_file_path The path of the new database to be created.

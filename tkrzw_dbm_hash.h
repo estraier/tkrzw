@@ -166,12 +166,24 @@ class HashDBM final : public DBM {
    * Enumeration for update modes.
    */
    enum UpdateMode {
-     /** The default behavior. */
+     /** The default behavior: in-place or to succeed the current mode. */
      UPDATE_DEFAULT = 0,
      /** To do in-place writing. */
      UPDATE_IN_PLACE = 1,
      /** To do appending writing. */
      UPDATE_APPENDING = 2,
+  };
+
+  /**
+   * Enumeration for restore modes.
+   */
+  enum RestoreMode {
+    /** The default behavior: to restore as many records as possible. */
+    RESTORE_DEFAULT = 0,
+    /** To restore to the last synchronized state. */
+    RESTORE_SYNC = 1,
+    /** To do nothing make the database read-only. */
+    RESTORE_NOOP = 2,
   };
 
   /**
@@ -203,6 +215,15 @@ class HashDBM final : public DBM {
      * records.  -1 means that the default value 1048583 is set.
      */
     int64_t num_buckets = -1;
+    /**
+     * How to restore the broken database file.
+     * @details If the database file is not closed properly, when you open the file next time,
+     * it is considered broken.  Then, restore operations are done implicitly.  By default,
+     * the whole database is scanned to recover as many records as possible.  As this
+     * parameter is not saved as a metadata of the database, it should be set each time when
+     * opening the database.
+     */
+    RestoreMode restore_mode = RESTORE_DEFAULT;
     /**
      * The capacity of the free block pool.
      * @details The free block pool is for reusing dead space of removed or moved records in
@@ -604,6 +625,31 @@ class HashDBM final : public DBM {
   Status ImportFromFileBackward(
       const std::string& path, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
+
+  /**
+   * Reads metadata from a database file.
+   * @param file A file object having opened the database file.
+   * @param pkg_major_version The pointer to a variable to store the package major version.
+   * @param pkg_minor_version The pointer to a variable to store the package minor version.
+   * @param static_flags The pointer to a variable to store the static flags.
+   * @param offset_width The pointer to a variable to store the offset width.
+   * @param align_pow The pointer to a variable to store the alignment power.
+   * @param closure_flags The pointer to a variable to store the closure flags.
+   * @param num_buckets The pointer to a variable to store the number of buckets.
+   * @param num_records The pointer to a variable to store the number of records.
+   * @param eff_data_size The pointer to a variable to store the effective data size.
+   * @param file_size The pointer to a variable to store the file size.
+   * @param mod_time The pointer to a variable to store the last modified time.
+   * @param db_type The pointer to a variable to store the database type.
+   * @param opaque The pointer to a variable to store the opaque data.
+   * @return The result status.
+   */
+  static Status ReadMetadata(
+      File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+      int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
+      int32_t* closure_flags, int64_t* num_buckets, int64_t* num_records,
+      int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+      int32_t* db_type, std::string* opaque);
 
   /**
    * Finds the record base of a hash database file.
