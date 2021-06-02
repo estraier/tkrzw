@@ -127,6 +127,7 @@ class TreeDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   bool IsHealthy();
+  bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
   const File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -168,6 +169,7 @@ class TreeDBMImpl final {
   bool open_;
   bool writable_;
   bool healthy_;
+  bool auto_restored_;
   std::string path_;
   std::atomic_int64_t num_records_;
   std::atomic_int64_t eff_data_size_;
@@ -352,7 +354,7 @@ Status DeserializeInnerNode(
 }
 
 TreeDBMImpl::TreeDBMImpl(std::unique_ptr<File> file)
-    : open_(false), writable_(false), healthy_(false), path_(),
+    : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
       num_records_(0), eff_data_size_(0),
       root_id_(0), first_id_(0), last_id_(0),
       num_leaf_nodes_(0), num_inner_nodes_(0), tree_level_(0),
@@ -390,6 +392,13 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   hash_params.fbp_capacity = tuning_params.fbp_capacity >= 0 ?
       tuning_params.fbp_capacity : TreeDBM::DEFAULT_FBP_CAPACITY;
   hash_params.min_read_size = tuning_params.min_read_size;
+  if (hash_params.min_read_size < 1) {
+    hash_params.min_read_size = 1;
+    auto* pos_file = dynamic_cast<const PositionalFile*>(hash_dbm_->GetInternalFile());
+    if (pos_file != nullptr && pos_file->IsDirectIO()) {
+      hash_params.min_read_size = AlignNumber(max_page_size_, 1 << hash_params.align_pow);
+    }
+  }
   if (tuning_params.max_page_size > 0) {
     max_page_size_ = tuning_params.max_page_size;
   }
@@ -402,16 +411,29 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   if (tuning_params.key_comparator != nullptr) {
     key_comparator_ = tuning_params.key_comparator;
   }
-  if (hash_params.min_read_size < 1) {
-    hash_params.min_read_size = 1;
-    auto* pos_file = dynamic_cast<const PositionalFile*>(hash_dbm_->GetInternalFile());
-    if (pos_file != nullptr && pos_file->IsDirectIO()) {
-      hash_params.min_read_size = AlignNumber(max_page_size_, 1 << hash_params.align_pow);
-    }
-  }
   Status status = hash_dbm_->OpenAdvanced(norm_path, writable, options, hash_params);
   if (status != Status::SUCCESS) {
     return status;
+  }
+  if (writable && hash_dbm_->IsAutoRestored() &&
+      (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
+    hash_dbm_->Close();
+    const std::string tmp_path = path_ + ".tmp.restore";
+    const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+    status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset);
+    if (status != Status::SUCCESS) {
+      RemoveFile(tmp_path);
+      return status;
+    }
+    status = RenameFile(tmp_path, norm_path);
+    if (status != Status::SUCCESS) {
+      RemoveFile(tmp_path);
+      return status;
+    }
+    status = hash_dbm_->OpenAdvanced(norm_path, true, options, hash_params);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
   }
   if (writable && hash_dbm_->CountSimple() == 0 &&
       hash_dbm_->GetOpaqueMetadata() == std::string(HashDBM::OPAQUE_METADATA_SIZE, 0)) {
@@ -454,6 +476,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   open_ = true;
   writable_ = writable;
   healthy_ = hash_dbm_->IsHealthy();
+  auto_restored_ = hash_dbm_->IsAutoRestored();
   path_ = norm_path;
   return Status(Status::SUCCESS);
 }
@@ -479,6 +502,7 @@ Status TreeDBMImpl::Close() {
   open_ = false;
   writable_ = false;
   healthy_ = false;
+  auto_restored_ = false;
   path_.clear();
   num_records_.store(0);
   eff_data_size_.store(0);
@@ -775,6 +799,7 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
   Add("class", "TreeDBM");
   if (open_) {
     Add("healthy", ToString(healthy_));
+    Add("auto_restored", ToString(auto_restored_));
     Add("path", path_);
     Add("num_records", ToString(num_records_.load()));
     Add("eff_data_size", ToString(eff_data_size_.load()));
@@ -813,7 +838,7 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
     }
     Add("key_comparator", ToString(comp_name));
     const std::map<std::string, std::string> name_map = {
-      {"class", ""}, {"path", ""}, {"healthy", ""},
+      {"class", ""}, {"path", ""},
       {"num_buckets", "hash_num_buckets"},
       {"num_records", "hash_num_records"},
       {"eff_data_size", "hash_eff_data_size"},
@@ -845,6 +870,11 @@ bool TreeDBMImpl::IsWritable() {
 bool TreeDBMImpl::IsHealthy() {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   return open_ && healthy_;
+}
+
+bool TreeDBMImpl::IsAutoRestored() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> TreeDBMImpl::MakeDBM() {
@@ -2351,6 +2381,10 @@ bool TreeDBM::IsWritable() const {
 
 bool TreeDBM::IsHealthy() const {
   return impl_->IsHealthy();
+}
+
+bool TreeDBM::IsAutoRestored() const {
+  return impl_->IsAutoRestored();
 }
 
 std::unique_ptr<DBM::Iterator> TreeDBM::MakeIterator() {

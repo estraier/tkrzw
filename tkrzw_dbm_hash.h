@@ -461,6 +461,13 @@ class HashDBM final : public DBM {
   bool IsHealthy() const override;
 
   /**
+   * Checks whether the database has been restored automatically.
+   * @return True if the database condition has been restored by the last Open method.
+   * @details Precondition: The database is opened.
+   */
+  bool IsAutoRestored() const;
+
+  /**
    * Checks whether ordered operations are supported.
    * @return Always false.  Ordered operations are not supported.
    */

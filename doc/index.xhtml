@@ -122,7 +122,7 @@ window.onload = function(){
 
 <p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, the database file is opend with the "Open" method and closed with the "Close" method.  You can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
 
-<p>Translactional features are also supported.  If you want to evaluate a record and update it atomically, you use the "Process" method, which takes a key and an arbitrary callback function to operate the record.  If you want to evaluate multiple records and update them atomically, you use the "ProcessMulti" method, which takes keys and arbitrary callback functions to operate the records.  If you want to do long transactions without locking records, the "CompareExchange" method and the "CompareExchangeMulti" method are useful.</p>
+<p>Transactional features are also supported.  If you want to evaluate a record and update it atomically, you use the "Process" method, which takes a key and an arbitrary callback function to operate the record.  If you want to evaluate multiple records and update them atomically, you use the "ProcessMulti" method, which takes keys and arbitrary callback functions to operate the records.  If you want to do long transactions without locking records, the "CompareExchange" method and the "CompareExchangeMulti" method are useful.</p>
 
 <p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
 
@@ -715,7 +715,7 @@ int main(int argc, char** argv) {
 
 <p>Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each hash bucket.  Therefore, even writer threads which can set or remove records performs in parallel.  Blocking is done only when multiple writers try to update the same record simultaneously.  Reader threads which retrieve records don't block each other even for the same record.</p>
 
-<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, you can restore the database to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be restored.  In appending mode, any record can never be lost unless the file system itself breaks.</p>
+<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, you can restore the database to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be restored.  In appending mode, any record can never be lost unless the file system itself breaks.  By default, restoration is done automatically when you open a broken database.</p>
 
 <p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
 
@@ -3279,9 +3279,9 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>Tkrzw doesn't support rollback features.  Usually, checking the precondition in ProcessMulti or before CompareExchangeMulti makes rollback unnecessary.  Even so, if you want rollback features, you'll record "undo" translaction logs in another database.</p>
+<p>Tkrzw doesn't support rollback features.  Usually, checking the precondition in ProcessMulti or before CompareExchangeMulti makes rollback unnecessary.  If you want rollback features, you have to record "undo" translaction logs in another database and apply them explicitly by yourself.</p>
 
-<p>ProcessMulti and CompareExchangeMulti assure Atomicity, Consistency, and Isolation of the ACID properties of transaction.  As Tkrzw is a local (in-process) library, Durability can be defined only in a software level.  In other words, whereas crash of the process and crash of the operating system are considered as recoverable insidents, hardware problems are considered unrecoverable insidents.  To assure durability, you use the appending update mode and call the Synchronize method after each transaction.  Then, you record the file size of the database somewhere.  As the database file in the appending update mode is considered a list of REDO logs, you can restore the state at an arbitrary time specified by giving the file size to the RestoreDatabase method.</p>
+<p>ProcessMulti and CompareExchangeMulti assure Atomicity, Consistency, and Isolation of the ACID properties of transaction.  As Tkrzw is a local (in-process) library, Durability can be defined only in a software level.  In other words, whereas crash of the process and crash of the operating system are considered as recoverable insidents, hardware problems are considered unrecoverable insidents.  To assure durability, you use the appending update mode and call the Synchronize method after each transaction.  You open the database with the restore_mode tuning parameter being RESTORE_SYNC, which means that rollback is done automatically to the state when you call Synchronize the last time.</p>
 
 <h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
 
@@ -3590,9 +3590,13 @@ $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard -
 
 <p>In these settings, using FileIndex slows down significantly.  If you need more throughput than 61K QPS, you should use on-memory indices.  If parallelism of updating operations is important, using MemIndex is the best.  Otherwise, using StdIndex is recommended.  Using integer type as much as possible is a good idea.</p>
 
-<h3 id="tips_hashdbm_restore">Restoring Broken Databases</h3>
+<h3 id="tips_restore">Restoring Broken Databases</h3>
 
-<p>An opened database should be closed properly.  Otherwise, the database file will be broken.  When a database is opened, a field in the metadata section is marked as "opened".  When the database is closed, the field is marked as "closed".  If the process opening a database crashes without closing the database, the field is still marked as "opened".  When the database file is opened the next time, the library detects the past incident and the database is considered unhealthy.  Unhealthy databases cannot be updated in order to protect remaining data.  You can check it by a command like this.</p>
+<p>An opened database should be closed properly.  Otherwise, the database file might be broken.  When a database is opened, a field in the metadata section is marked as "opened".  When the database is closed, the field is marked as "closed".  If the process opening a database crashes without closing the database, the field is still marked as "opened".  When the database file is opened the next time, the library detects the past incident and the database is considered "unhealthy".</p>
+
+<p>By default, an unhealthy database is restored automatically when you open the database.  The whole database file is scanned and as many records as possible are salvaged.  This behavior can be changed by setting the restore_mode tuning parameter.  If it is RESTORE_SYNC, the database is restored to the state at the time when the Synchronized method was called last time.  If it is RESTORE_NOOP, no restore operations are done and the database becomes read-only to avoid further inconsistency.</p>
+
+<p>You can check whether a database is healthy or not by a command like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util inspect casket.tkh 
 Inspection:
@@ -3606,7 +3610,9 @@ Number of Records: 0
 Should be Rebuilt: true
 ]]></code></pre>
 
-<p>"num_records", "file_size", and "mod_time" represent information when the database was closed successfully at the last time.  So, even if you add many records before the last crash, the metadata doesn't reflect them.  However, written record data can be salvaged by restoring the database.  You'll run a command like this.</p>
+<p>"num_records", "file_size", and "mod_time" represent information when the database was closed successfully (or the Synchronize method is called) the last time.  So, even if you add many records before the last crash, the metadata doesn't reflect them.  However, written record data can be salvaged by restoring the database.</p>
+
+<p>If you want to do the restore operation explicitly, you'll run a command like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh casket-restored.tkh
 ]]></code></pre>
@@ -3623,7 +3629,7 @@ Should be Rebuilt: true
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore --dbm shard --class hash casket.tkh casket-restored.tkh
 ]]></code></pre>
 
-<p>Databases in the appending mode can utilize an interesting feature called snapshot reproduction.  As every updating operation is recorded and serialized in the database file, you can reproduce them until a certain moment.  And, the moment is represented as the then size of the database file.  Given that you have the file size of the moment by calling the FileSize method, you can restore the database of the state at the moment.  You'll check it by commands like this.</p>
+<p>HashDBM and TreeDBM support the appending update mode.  Databases in the appending mode can utilize an interesting feature called snapshot reproduction.  As all updating operations are recorded in the database, you can consider the database as a list of REDO logs.  You can replay them until a certain moment.  And, the moment is represented as the then size of the database file.  Given that you know the file size at a moment by calling the GetFileSize method, you can restore the database to the state at the moment.  You'll check the behavior by commands like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --append casket.tkh  # Appending mode.
 $ tkrzw_dbm_util set casket.tkh one first
@@ -3641,7 +3647,7 @@ two    second
 one    first
 ]]></code></pre>
 
-<p>As the file tree database is based on the file hash database, snapshot reproduction can be done for the file tree database.</p>
+<p>If the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time.  If the value of --end_offset is -1, as many records as possible are salvaged.</p>
 
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 

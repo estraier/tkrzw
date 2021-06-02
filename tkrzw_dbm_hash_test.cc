@@ -67,6 +67,7 @@ void HashDBMTest::HashDBMEmptyDatabaseTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(typeid(tkrzw::HashDBM), static_cast<tkrzw::DBM*>(dbm)->GetType());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, true));
   EXPECT_TRUE(dbm->IsHealthy());
+  EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_GT(dbm->GetFileSizeSimple(), 0);
   EXPECT_GT(dbm->GetModificationTime(), 0);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetDatabaseType(123));
@@ -75,6 +76,7 @@ void HashDBMTest::HashDBMEmptyDatabaseTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(file_path, false));
   EXPECT_EQ(123, dbm->GetDatabaseType());
   EXPECT_TRUE(dbm->IsHealthy());
+  EXPECT_FALSE(dbm->IsAutoRestored());
   const int64_t file_size = dbm->GetFileSizeSimple();
   EXPECT_GT(file_size, 0);
   EXPECT_GT(dbm->GetModificationTime(), 0);
@@ -155,6 +157,7 @@ void HashDBMTest::HashDBMLargeRecordTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -183,6 +186,7 @@ void HashDBMTest::HashDBMBasicTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -211,6 +215,7 @@ void HashDBMTest::HashDBMSequenceTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -239,6 +244,7 @@ void HashDBMTest::HashDBMAppendTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -267,6 +273,7 @@ void HashDBMTest::HashDBMProcessTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           ProcessTest(dbm);
@@ -294,6 +301,7 @@ void HashDBMTest::HashDBMProcessMultiTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           ProcessMultiTest(dbm);
@@ -321,6 +329,7 @@ void HashDBMTest::HashDBMProcessEachTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
           ProcessEachTest(dbm);
@@ -348,6 +357,7 @@ void HashDBMTest::HashDBMRandomTestOne(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -376,6 +386,7 @@ void HashDBMTest::HashDBMRandomTestThread(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -397,6 +408,7 @@ void HashDBMTest::HashDBMRecordMigrationTest(tkrzw::HashDBM* dbm, tkrzw::File* f
     tkrzw::HashDBM::TuningParameters tuning_params;
     tuning_params.update_mode = update_mode;
     tuning_params.num_buckets = 1000;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
     tuning_params.lock_mem_buckets = 1;
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
         file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -418,6 +430,7 @@ void HashDBMTest::HashDBMOpenCloseTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = num_keys;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   tuning_params.lock_mem_buckets = 1;
   std::mt19937 mt(1);
   std::uniform_int_distribution<int32_t> key_dist(1, num_keys);
@@ -482,11 +495,13 @@ void HashDBMTest::HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 2;
   tuning_params.num_buckets = 10;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   tuning_params.fbp_capacity = tkrzw::INT32MAX;
   tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
+  EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(10, dbm->CountBuckets());
   EXPECT_EQ(0, dbm->CountUsedBuckets());
@@ -531,7 +546,6 @@ void HashDBMTest::HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(num_records, dbm->CountSimple());
   EXPECT_EQ(num_records * 25, dbm->GetEffectiveDataSize());
   EXPECT_GT(dbm->GetFileSizeSimple(), file_size);
-
   for (int32_t i = 0; i < num_records; i += 2) {
     const std::string& key = tkrzw::SPrintF("%010d", i);
     const std::string& value = tkrzw::SPrintF("%020d", i);
@@ -599,10 +613,12 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 2;
   tuning_params.num_buckets = 10;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
+  EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(10, dbm->CountBuckets());
   EXPECT_EQ(0, dbm->CountUsedBuckets());
@@ -919,6 +935,7 @@ void HashDBMTest::HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           HashDBMRebuildStaticTestOne(dbm, tuning_params);
         }
@@ -944,6 +961,7 @@ void HashDBMTest::HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.align_pow = align_pow;
           tuning_params.num_buckets = num_buckets;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
           tuning_params.lock_mem_buckets = 1;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -966,9 +984,12 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 3;
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 10;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       first_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  EXPECT_TRUE(dbm->IsHealthy());
+  EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetDatabaseType(123));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetOpaqueMetadata("0123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", "x"));
@@ -1021,6 +1042,8 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::HashDBM::RestoreDatabase(first_file_path, second_file_path, -1));
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Open(second_file_path, true));
+  EXPECT_TRUE(second_dbm.IsHealthy());
+  EXPECT_FALSE(second_dbm.IsAutoRestored());
   EXPECT_EQ(123, second_dbm.GetDatabaseType());
   EXPECT_EQ("0123456789", second_dbm.GetOpaqueMetadata().substr(0, 10));
   EXPECT_EQ(tkrzw::HashDBM::UPDATE_IN_PLACE, second_dbm.GetUpdateMode());
@@ -1050,6 +1073,7 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 3;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   tuning_params.cache_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -1104,6 +1128,7 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 3;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));

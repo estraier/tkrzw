@@ -95,6 +95,7 @@ class HashDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   bool IsHealthy();
+  bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
   const File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -121,6 +122,7 @@ class HashDBMImpl final {
       int64_t record_base, int64_t end_offset);
 
  private:
+  void SetTuning(const HashDBM::TuningParameters& tuning_params);
   Status OpenImpl(bool writable);
   Status CloseImpl();
   void CancelIterators();
@@ -148,6 +150,7 @@ class HashDBMImpl final {
   bool open_;
   bool writable_;
   bool healthy_;
+  bool auto_restored_;
   std::string path_;
   int32_t pkg_major_version_;
   int32_t pkg_minor_version_;
@@ -193,7 +196,7 @@ class HashDBMIteratorImpl final {
 };
 
 HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
-    : open_(false), writable_(false), healthy_(false), path_(),
+    : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
       pkg_major_version_(0), pkg_minor_version_(0), static_flags_(STATIC_FLAG_NONE),
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
@@ -223,32 +226,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
   const std::string norm_path = NormalizePath(path);
-  if (tuning_params.update_mode == HashDBM::UPDATE_DEFAULT ||
-      tuning_params.update_mode == HashDBM::UPDATE_IN_PLACE) {
-    static_flags_ |= STATIC_FLAG_UPDATE_IN_PLACE;
-  } else {
-    static_flags_ |= STATIC_FLAG_UPDATE_APPENDING;
-  }
-  if (tuning_params.offset_width >= 0) {
-    offset_width_ =
-        std::min(std::max(tuning_params.offset_width, MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
-  }
-  if (tuning_params.align_pow >= 0) {
-    align_pow_ = std::min(tuning_params.align_pow, MAX_ALIGN_POW);
-  }
-  if (tuning_params.num_buckets >= 0) {
-    num_buckets_ = GetHashBucketSize(std::min(tuning_params.num_buckets, MAX_NUM_BUCKETS));
-  }
-  if (tuning_params.fbp_capacity >= 0) {
-    fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
-  }
-  if (tuning_params.min_read_size > 0) {
-    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
-  } else {
-    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
-  }
-  lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
-  cache_buckets_ = tuning_params.cache_buckets > 0;
+  SetTuning(tuning_params);
   Status status = CheckFileBeforeOpen(file_.get(), path, writable);
   if (status != Status::SUCCESS) {
     return status;
@@ -262,6 +240,38 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   if (status != Status::SUCCESS) {
     file_->Close();
     return status;
+  }
+  auto_restored_ = false;
+  if (writable && !healthy_ && (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
+    CloseImpl();
+    file_->Close();
+    const std::string tmp_path = path_ + ".tmp.restore";
+    const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+    status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
+    if (status != Status::SUCCESS) {
+      RemoveFile(tmp_path);
+      return status;
+    }
+    status = RenameFile(tmp_path, path_);
+    if (status != Status::SUCCESS) {
+      RemoveFile(tmp_path);
+      return status;
+    }
+    SetTuning(tuning_params);
+    status = CheckFileBeforeOpen(file_.get(), path, writable);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    status = file_->Open(norm_path, writable, options);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    status = OpenImpl(writable);
+    if (status != Status::SUCCESS) {
+      file_->Close();
+      return status;
+    }
+    auto_restored_ = true;
   }
   return Status(Status::SUCCESS);
 }
@@ -696,6 +706,7 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
   Add("class", "HashDBM");
   if (open_) {
     Add("healthy", ToString(healthy_));
+    Add("auto_restored", ToString(auto_restored_));
     Add("path", path_);
     Add("pkg_major_version", ToString(pkg_major_version_));
     Add("pkg_minor_version", ToString(pkg_minor_version_));
@@ -733,6 +744,11 @@ bool HashDBMImpl::IsWritable() {
 bool HashDBMImpl::IsHealthy() {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   return open_ && healthy_;
+}
+
+bool HashDBMImpl::IsAutoRestored() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> HashDBMImpl::MakeDBM() {
@@ -954,6 +970,35 @@ Status HashDBMImpl::ImportFromFileBackward(
   }
   return ImportFromFileBackwardImpl(file, skip_broken_records, record_base, end_offset,
                                     offset_path, dead_path);
+}
+
+void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
+  if (tuning_params.update_mode == HashDBM::UPDATE_DEFAULT ||
+      tuning_params.update_mode == HashDBM::UPDATE_IN_PLACE) {
+    static_flags_ |= STATIC_FLAG_UPDATE_IN_PLACE;
+  } else {
+    static_flags_ |= STATIC_FLAG_UPDATE_APPENDING;
+  }
+  if (tuning_params.offset_width >= 0) {
+    offset_width_ =
+        std::min(std::max(tuning_params.offset_width, MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
+  }
+  if (tuning_params.align_pow >= 0) {
+    align_pow_ = std::min(tuning_params.align_pow, MAX_ALIGN_POW);
+  }
+  if (tuning_params.num_buckets >= 0) {
+    num_buckets_ = GetHashBucketSize(std::min(tuning_params.num_buckets, MAX_NUM_BUCKETS));
+  }
+  if (tuning_params.fbp_capacity >= 0) {
+    fbp_.SetCapacity(std::max(1, tuning_params.fbp_capacity));
+  }
+  if (tuning_params.min_read_size > 0) {
+    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
+  } else {
+    min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
+  }
+  lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
+  cache_buckets_ = tuning_params.cache_buckets > 0;
 }
 
 Status HashDBMImpl::OpenImpl(bool writable) {
@@ -1853,6 +1898,10 @@ bool HashDBM::IsHealthy() const {
   return impl_->IsHealthy();
 }
 
+bool HashDBM::IsAutoRestored() const {
+  return impl_->IsAutoRestored();
+}
+
 std::unique_ptr<DBM::Iterator> HashDBM::MakeIterator() {
   std::unique_ptr<HashDBM::Iterator> iter(new HashDBM::Iterator(impl_));
   return iter;
@@ -2121,6 +2170,7 @@ Status HashDBM::RestoreDatabase(
   }
   TuningParameters tuning_params;
   tuning_params.update_mode = update_mode;
+  tuning_params.restore_mode = HashDBM::RESTORE_NOOP;
   tuning_params.offset_width = offset_width;
   tuning_params.align_pow = align_pow;
   tuning_params.num_buckets = num_buckets;

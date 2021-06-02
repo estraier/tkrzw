@@ -41,7 +41,7 @@ inline void SetDirectAccessToOpenFlag(int32_t* oflags) {
 
 inline void SetDirectAccessToFileDescriptor(int32_t fd) {
 #if defined(_SYS_MACOSX_)
-  std::cout << fcntl(fd, F_NOCACHE, 1) << std::endl;
+  fcntl(fd, F_NOCACHE, 1);
 #endif
 }
 
