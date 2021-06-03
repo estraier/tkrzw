@@ -18,6 +18,7 @@ LIBREV := @MYLIBREV@
 LIBFMT := @MYLIBFMT@
 
 # Targets
+VPATH := .:..
 HEADERFILES := @MYHEADERFILES@
 LIBRARYFILES := @MYLIBRARYFILES@
 LIBOBJFILES := @MYLIBOBJFILES@
@@ -94,7 +95,8 @@ setversion :
 
 install :
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	cp -Rf $(HEADERFILES) $(DESTDIR)$(INCLUDEDIR)
+	[ ! -f tkrzw_lib_commons.h -a -f ../tkrzw_lib_common.h ] && cd .. ; \
+	  cp -Rf $(HEADERFILES) $(DESTDIR)$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	cp -Rf $(LIBRARYFILES) $(DESTDIR)$(LIBDIR)
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -129,7 +131,7 @@ dist :
 distclean : clean apidocclean
 	[ ! -f example/Makefile ] || cd example && $(MAKE) clean
 	rm -Rf Makefile tkrzw.pc \
-	  config.cache config.log config.status config.tmp autom4te.cache
+	  config.cache config.log config.status config.tmp autom4te.cache build
 
 check :
 	$(MAKE) check-build-util

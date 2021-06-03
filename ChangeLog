@@ -5,6 +5,7 @@
 
 	- Add ReadMetadata and ParseMetadata methods.
 	- Ability of RestoreDatabase metdhods to recover the file is improved.
+	- Modify Makefile.in to support build operations in a subdirectory.
 
 2021-05-29  Mikio Hirabayashi  <hirarin@gmail.com>
 
