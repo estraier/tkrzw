@@ -187,6 +187,7 @@ Status GetErrnoStatus(const char* call_name, int32_t sys_err_num) {
     case ENOMEM: return Status(Status::INFEASIBLE_ERROR, msg("no enough memory"));
     case EEXIST: return Status(Status::DUPLICATION_ERROR, msg("already exist"));
     case ENOTEMPTY: return Status(Status::INFEASIBLE_ERROR, msg("not empty"));
+    case EXDEV: return Status(Status::INFEASIBLE_ERROR, msg("cross device move"));
     case EBADF: return Status(Status::SYSTEM_ERROR, msg("bad file descriptor"));
     case EINVAL: return Status(Status::SYSTEM_ERROR, msg("invalid file descriptor"));
     case EIO: return Status(Status::SYSTEM_ERROR, msg("low-level I/O error"));

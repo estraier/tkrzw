@@ -58,6 +58,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
   void HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm);
   void HashDBMRestoreTest(tkrzw::HashDBM* dbm);
+  void HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm);
   void HashDBMDirectIOTest(tkrzw::HashDBM* dbm);
 };
 
@@ -1065,6 +1066,74 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
 }
 
+void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
+  for (const auto& update_mode : update_modes) {
+    tkrzw::HashDBM::TuningParameters tuning_params;
+    tuning_params.update_mode = update_mode;
+    tuning_params.offset_width = 4;
+    tuning_params.align_pow = 0;
+    tuning_params.num_buckets = 3;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.cache_buckets = 1;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+    tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+    EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+    EXPECT_FALSE(dbm->IsHealthy());
+    EXPECT_FALSE(dbm->IsAutoRestored());
+    std::string value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+    EXPECT_EQ("first", value);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+    EXPECT_EQ("second", value);
+    EXPECT_EQ(0, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+    EXPECT_TRUE(dbm->IsHealthy());
+    EXPECT_TRUE(dbm->IsAutoRestored());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+    EXPECT_EQ("first", value);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+    EXPECT_EQ("second", value);
+    EXPECT_EQ(2, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+    file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+    EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_SYNC;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+    EXPECT_TRUE(dbm->IsHealthy());
+    EXPECT_TRUE(dbm->IsAutoRestored());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+    EXPECT_EQ("first", value);
+    EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
+    EXPECT_EQ(1, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+    EXPECT_EQ("third", value);
+    EXPECT_EQ(2, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  }  
+}
+
 void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
@@ -1269,6 +1338,11 @@ TEST_F(HashDBMTest, RebuildRandom) {
 TEST_F(HashDBMTest, Restore) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMRestoreTest(&dbm);
+}
+
+TEST_F(HashDBMTest, AutoRestore) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMAutoRestoreTest(&dbm);
 }
 
 TEST_F(HashDBMTest, DirectIO) {

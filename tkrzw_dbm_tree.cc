@@ -415,10 +415,11 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   if (status != Status::SUCCESS) {
     return status;
   }
+  auto_restored_ = false;
   if (writable && hash_dbm_->IsAutoRestored() &&
       (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
     hash_dbm_->Close();
-    const std::string tmp_path = path_ + ".tmp.restore";
+    const std::string tmp_path = norm_path + ".tmp.restore";
     const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
     status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset);
     if (status != Status::SUCCESS) {
@@ -434,6 +435,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     if (status != Status::SUCCESS) {
       return status;
     }
+    auto_restored_ = true;
   }
   if (writable && hash_dbm_->CountSimple() == 0 &&
       hash_dbm_->GetOpaqueMetadata() == std::string(HashDBM::OPAQUE_METADATA_SIZE, 0)) {
@@ -476,7 +478,6 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   open_ = true;
   writable_ = writable;
   healthy_ = hash_dbm_->IsHealthy();
-  auto_restored_ = hash_dbm_->IsAutoRestored();
   path_ = norm_path;
   return Status(Status::SUCCESS);
 }
