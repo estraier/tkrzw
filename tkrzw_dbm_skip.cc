@@ -90,6 +90,7 @@ class SkipDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   bool IsHealthy();
+  bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
   const File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -118,6 +119,7 @@ class SkipDBMImpl final {
   bool open_;
   bool writable_;
   bool healthy_;
+  bool auto_restored_;
   bool updated_;
   bool removed_;
   std::string path_;
@@ -173,7 +175,7 @@ class SkipDBMIteratorImpl final {
 };
 
 SkipDBMImpl::SkipDBMImpl(std::unique_ptr<File> file)
-    : open_(false),  writable_(false), healthy_(false),
+    : open_(false),  writable_(false), healthy_(false), auto_restored_(false),
       updated_(false), removed_(false), path_(),
       pkg_major_version_(0), pkg_minor_version_(0),
       offset_width_(SkipDBM::DEFAULT_OFFSET_WIDTH), step_unit_(SkipDBM::DEFAULT_STEP_UNIT),
@@ -247,13 +249,16 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   }
   status = LoadMetadata();
   if (status != Status::SUCCESS) {
+    file_->Close();
     return status;
   }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
+  bool invalid_file_size = false;
   const int64_t actual_file_size = file_->GetSizeSimple();
   if (file_size_ != actual_file_size) {
     if (file_size_ > actual_file_size) {
       healthy = false;
+      invalid_file_size = true;
     } else {
       const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
       char* buf = new char[remainder];
@@ -276,11 +281,47 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
         }
       } else {
         healthy = false;
+        invalid_file_size = true;
       }
     }
   }
+  auto_restored_ = false;
+  if (writable && !healthy && (tuning_params.restore_mode != SkipDBM::RESTORE_NOOP)) {
+    if (invalid_file_size) {
+      file_->Close();
+      const std::string tmp_path = norm_path + ".tmp.restore";
+      status = SkipDBM::RestoreDatabase(norm_path, tmp_path);
+      if (status != Status::SUCCESS) {
+        RemoveFile(tmp_path);
+        return status;
+      }
+      status = RenameFile(tmp_path, norm_path);
+      if (status != Status::SUCCESS) {
+        RemoveFile(tmp_path);
+        return status;
+      }
+      status = file_->Open(norm_path, writable, options);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      status = LoadMetadata();
+      if (status != Status::SUCCESS) {
+        file_->Close();
+        return status;
+      }
+    } else {
+      closure_flags_ |= CLOSURE_FLAG_CLOSE;
+    }
+    healthy = true;
+    auto_restored_ = true;
+  }
   path_ = norm_path;
-  if (writable) {
+  if (writable && healthy) {
+    status = SaveMetadata(false);
+    if (status != Status::SUCCESS) {
+      path_ .clear();
+      return status;
+    }
     status = PrepareStorage();
     if (status != Status::SUCCESS) {
       path_ .clear();
@@ -293,7 +334,6 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   healthy_ = healthy;
   updated_ = false;
   removed_ = false;
-  path_ = path;
   return Status(Status::SUCCESS);
 }
 
@@ -309,15 +349,16 @@ Status SkipDBMImpl::Close() {
       status |= FinishStorage(nullptr);
     } else {
       status |= DiscardStorage();
+      file_size_ = file_->GetSizeSimple();
+      mod_time_ = GetWallTime() * 1000000;
+      status |= SaveMetadata(true);
     }
-    file_size_ = file_->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
-    status |= SaveMetadata(true);
   }
   status |= file_->Close();
   open_ = false;
   writable_ = false;
   healthy_ = false;
+  auto_restored_ = false;
   updated_ = false;
   removed_ = false;
   path_.clear();
@@ -572,6 +613,8 @@ Status SkipDBMImpl::Clear() {
   Status status = file_->Truncate(METADATA_SIZE);
   num_records_ = 0;
   eff_data_size_ = 0;
+  file_size_ = file_->GetSizeSimple();
+  mod_time_ = GetWallTime() * 1000000;
   status |= SaveMetadata(false);
   status |= LoadMetadata();
   status |= PrepareStorage();
@@ -693,7 +736,8 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   LoadMetadata();
   db_type_ = db_type;
   opaque_ = opaque;
-  SaveMetadata(false);
+  file_size_ = file_->GetSizeSimple();
+  status |= SaveMetadata(false);
   status |= PrepareStorage();
   cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
@@ -729,8 +773,12 @@ Status SkipDBMImpl::Synchronize(
   }
   CancelIterators();
   Status status = FinishStorage(reducer);
+
+
   status |= file_->Synchronize(hard);
-  status |= SaveMetadata(true);
+
+
+
   if (proc != nullptr) {
     proc->Process(path_);
   }
@@ -749,6 +797,7 @@ std::vector<std::pair<std::string, std::string>> SkipDBMImpl::Inspect() {
   Add("class", "SkipDBM");
   if (open_) {
     Add("healthy", ToString(healthy_));
+    Add("auto_restored", ToString(auto_restored_));
     Add("updated", ToString(updated_));
     Add("removed", ToString(removed_));
     Add("path", path_);
@@ -784,6 +833,11 @@ bool SkipDBMImpl::IsWritable() {
 bool SkipDBMImpl::IsHealthy() {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   return open_ && healthy_;
+}
+
+bool SkipDBMImpl::IsAutoRestored() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> SkipDBMImpl::MakeDBM() {
@@ -1151,7 +1205,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   updated_ = false;
   file_size_ = file_->GetSizeSimple();
   mod_time_ = GetWallTime() * 1000000;
-  status |= SaveMetadata(false);
+  status |= SaveMetadata(true);
   return status;
 }
 
@@ -1631,6 +1685,10 @@ bool SkipDBM::IsHealthy() const {
   return impl_->IsHealthy();
 }
 
+bool SkipDBM::IsAutoRestored() const {
+  return impl_->IsAutoRestored();
+}
+
 std::unique_ptr<DBM::Iterator> SkipDBM::MakeIterator() {
   std::unique_ptr<SkipDBM::Iterator> iter(new SkipDBM::Iterator(impl_));
   return iter;
@@ -1901,6 +1959,7 @@ Status SkipDBM::RestoreDatabase(
     offset += rec.GetWholeSize();
     index++;
   }
+  status = new_dbm.Close();
   status |= old_file.Close();
   return status;
 }

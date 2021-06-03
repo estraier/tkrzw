@@ -172,6 +172,18 @@ class SkipDBM final : public DBM {
   };
 
   /**
+   * Enumeration for restore modes.
+   */
+  enum RestoreMode {
+    /** The default behavior: to restore as many records as possible. */
+    RESTORE_DEFAULT = 0,
+    /** To restore to the last synchronized state. */
+    RESTORE_SYNC = 1,
+    /** To do nothing make the database read-only. */
+    RESTORE_NOOP = 2,
+  };
+
+  /**
    * Interface of a function to reduce records of the same key in the at-random build mode.
    * @details The first parameter is the key.  The second parameter is a vecgtor of record
    * values.  The return value is a vector of new values which are stored in the database.
@@ -201,6 +213,15 @@ class SkipDBM final : public DBM {
      * the default value 14 is set.
      */
     int32_t max_level = -1;
+    /**
+     * How to restore the broken database file.
+     * @details If the database file is not closed properly, when you open the file next time,
+     * it is considered broken.  Then, restore operations are done implicitly.  By default,
+     * the whole database is scanned to recover as many records as possible.  As this
+     * parameter is not saved as a metadata of the database, it should be set each time when
+     * opening the database.
+     */
+    RestoreMode restore_mode = RESTORE_DEFAULT;
     /**
      * The memory size used for sorting to build the database in the at-random mode.
      * @details When total size of records exceeds this value, records are written in a temporary
@@ -489,6 +510,13 @@ class SkipDBM final : public DBM {
    * @details Precondition: The database is opened.
    */
   bool IsHealthy() const override;
+
+  /**
+   * Checks whether the database has been restored automatically.
+   * @return True if the database condition has been restored by the last Open method.
+   * @details Precondition: The database is opened.
+   */
+  bool IsAutoRestored() const;
 
   /**
    * Checks whether ordered operations are supported.

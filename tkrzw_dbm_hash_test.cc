@@ -1131,7 +1131,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(2, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  }  
+  }
 }
 
 void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {

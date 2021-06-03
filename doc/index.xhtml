@@ -3649,6 +3649,8 @@ one    first
 
 <p>If the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time.  If the value of --end_offset is -1, as many records as possible are salvaged.</p>
 
+<p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
+
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 
 <p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFileData and Export.</p>

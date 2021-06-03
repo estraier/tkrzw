@@ -850,7 +850,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(2, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  }  
+  }
 }
 
 void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
