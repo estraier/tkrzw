@@ -69,6 +69,11 @@ TEST_F(CacheDBMTest, Process) {
   ProcessTest(&dbm);
 }
 
+TEST_F(CacheDBMTest, ProcessMulti) {
+  tkrzw::CacheDBM dbm;
+  ProcessMultiTest(&dbm);
+}
+
 TEST_F(CacheDBMTest, Random) {
   tkrzw::CacheDBM dbm;
   RandomTest(&dbm, 1);

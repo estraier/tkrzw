@@ -476,7 +476,7 @@ Status PolyDBM::Append(std::string_view key, std::string_view value, std::string
 Status PolyDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  return dbm_->ProcessMulti(key_proc_pairs, writable);
 }
 
 Status PolyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

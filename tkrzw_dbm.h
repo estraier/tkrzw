@@ -1083,10 +1083,10 @@ class DBM {
 
   /**
    * Compares the values of records and exchanges if the condition meets.
-   * @param expected The record keys and their expected values.  If the data is nullptr, no
+   * @param expected The record keys and their expected values.  If the value is nullptr, no
    * existing record is expected.
-   * @param desired The record keys and their desired values.  If the data is nullptr, the record
-   * is to be removed.
+   * @param desired The record keys and their desired values.  If the value is nullptr, the
+   * record is to be removed.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
   virtual Status CompareExchangeMulti(

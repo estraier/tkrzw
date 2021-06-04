@@ -156,7 +156,15 @@ Status ShardDBM::Append(std::string_view key, std::string_view value, std::strin
 Status ShardDBM::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
-  return Status(Status::NOT_IMPLEMENTED_ERROR);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  // TODO: Make this atomic by locking the minimum key.
+  Status status(Status::SUCCESS);
+  for (const auto& key_proc : key_proc_pairs) {
+    status |= Process(key_proc.first, key_proc.second, writable);
+  }
+  return status;
 }
 
 Status ShardDBM::ProcessEach(RecordProcessor* proc, bool writable) {

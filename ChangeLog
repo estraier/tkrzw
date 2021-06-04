@@ -7,6 +7,11 @@
 	- Ability of RestoreDatabase metdhods to recover the file is improved.
 	- Modify Makefile.in to support build operations in a subdirectory.
 
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.10
+	- tkrzw-python: 0.1.10
+	- tkrzw-ruby: 0.1.10
+
 2021-05-29  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.22
@@ -28,7 +33,6 @@
 	- tkrzw-java: 0.1.9
 	- tkrzw-python: 0.1.9
 	- tkrzw-ruby: 0.1.9
-
 
 2021-05-24  Mikio Hirabayashi  <hirarin@gmail.com>
 
