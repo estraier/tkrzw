@@ -48,7 +48,7 @@ TEST_F(PolyDBMTest, BasicTest) {
   };
   const std::vector<Config> configs = {
     {"HashDBM", "casket",
-     {{"dbm", "hash"}, {"file", "mmap-para"}, {"num_buckets", "50"}},
+     {{"dbm", "hash"}, {"file", "mmap-para"}, {"num_buckets", "50"}, {"restore_mode", "noop"}},
      {}, {{"offset_width", "3"}}},
     {"HashDBM", "casket.tkh",
      {{"file", "mmap-atom"}, {"update_mode", "update_appending"}, {"offset_width", "3"},
@@ -61,12 +61,12 @@ TEST_F(PolyDBMTest, BasicTest) {
      {}, {{"max_page_size", "512"}}},
     {"TreeDBM", "casket.tkt",
      {{"file", "pos-atom"}, {"block_size", "512"}, {"access_options", "direct:padding"},
-      {"update_mode", "update_appending"},
+      {"update_mode", "update_appending"}, {"restore_mode", "sync"},
       {"key_comparator", "realnumber"}}, {}, {}},
     {"SkipDBM", "casket",
      {{"dbm", "skip"}, {"step_unit", "3"}}, {{"reducer", "last"}}, {{"max_level", "5"}}},
     {"SkipDBM", "casket.tks",
-     {{"insert_in_order", "true"}, {"step_unit", "8"}}, {}, {}},
+     {{"insert_in_order", "true"}, {"step_unit", "8"}, {"restore_mode", "noop"}}, {}, {}},
     {"TinyDBM", "",
      {{"dbm", "tiny"}, {"num_buckets", "50"}}, {}, {{"num_buckets", "30"}}},
     {"TinyDBM", "casket.tiny",

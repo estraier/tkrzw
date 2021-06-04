@@ -176,6 +176,13 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
+  const std::string restore_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
+  if (restore_mode == "restore_sync" || restore_mode == "sync") {
+    tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
+  }
+  if (restore_mode == "restore_noop" || restore_mode == "noop") {
+    tuning_params->restore_mode = HashDBM::RESTORE_NOOP;
+  }
   tuning_params->fbp_capacity = StrToInt(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToInt(SearchMap(*params, "min_read_size", "-1"));
   tuning_params->lock_mem_buckets = StrToIntOrBool(SearchMap(*params, "lock_mem_buckets", "-1"));
@@ -184,6 +191,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   params->erase("offset_width");
   params->erase("align_pow");
   params->erase("num_buckets");
+  params->erase("restore_mode");
   params->erase("fbp_capacity");
   params->erase("min_read_size");
   params->erase("lock_mem_buckets");
@@ -208,12 +216,20 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
   tuning_params->step_unit = StrToInt(SearchMap(*params, "step_unit", "-1"));
   tuning_params->max_level = StrToInt(SearchMap(*params, "max_level", "-1"));
+  const std::string restore_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
+  if (restore_mode == "restore_sync" || restore_mode == "sync") {
+    tuning_params->restore_mode = SkipDBM::RESTORE_SYNC;
+  }
+  if (restore_mode == "restore_noop" || restore_mode == "noop") {
+    tuning_params->restore_mode = SkipDBM::RESTORE_NOOP;
+  }
   tuning_params->sort_mem_size = StrToInt(SearchMap(*params, "sort_mem_size", "-1"));
   tuning_params->insert_in_order = StrToBool(SearchMap(*params, "insert_in_order", "false"));
   tuning_params->max_cached_records = StrToInt(SearchMap(*params, "max_cached_records", "-1"));
   params->erase("offset_width");
   params->erase("step_unit");
   params->erase("max_level");
+  params->erase("restore_mode");
   params->erase("sort_mem_size");
   params->erase("insert_in_order");
   params->erase("max_cached_records");
