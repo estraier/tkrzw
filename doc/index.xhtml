@@ -2881,6 +2881,8 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>All updating operations are linked from the end to the beginning.  And the hash table refers to the last operations.  Therefore, the latest state is always read.  Thanks to this structure, the existing information never breaks.  However, the size of the database file increases rapidly with any kind of updating operations.  So, you should rebuild the database frequently.</p>
 
+<div class="dbstructure"><img src="appending.svg"/></div>
+
 <p>You might think that the in-place mode is faster and that the appending mode is slower.  However, it is not the case necessarily.  In the in-place mode, updated "dirty" pages of the I/O buffer scatter across the database file so that effectiveness of synchronizing the dirty pages with the device is low.  Meanwhile, in the appending mode, dirty pages occurs only at end of the file so that effectiveness of synchronizing the dirty pages with the device is high.  In other words, a database in the appending mode causes inefficient reading with random access but it causes efficient writing with sequential access.  Therefore, if rebuilding the database is done at a reasonable frequency, the appending mode can be faster than the in-place mode.  SSD devices are good at random reading but not good at random writing.  Especially if you build a huge database on an SSD storage, the appending mode is worth to consider.</p>
 
 <p>Let's build a hash database and store 100 million records (10 million for each of 10 threads).  And then retrieve and remove all of them.  First, we check performance of the in-place mode.</p>
