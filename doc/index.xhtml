@@ -715,7 +715,7 @@ int main(int argc, char** argv) {
 
 <p>Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each hash bucket.  Therefore, even writer threads which can set or remove records performs in parallel.  Blocking is done only when multiple writers try to update the same record simultaneously.  Reader threads which retrieve records don't block each other even for the same record.</p>
 
-<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, you can restore the database to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be restored.  In appending mode, any record can never be lost unless the file system itself breaks.  By default, restoration is done automatically when you open a broken database.</p>
+<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, the database is restored automatically to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be recovered.  In appending mode, any record can never be lost unless the file system itself breaks.</p>
 
 <p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
 
@@ -3612,7 +3612,7 @@ Should be Rebuilt: true
 
 <p>"num_records", "file_size", and "mod_time" represent information when the database was closed successfully (or the Synchronize method is called) the last time.  So, even if you add many records before the last crash, the metadata doesn't reflect them.  However, written record data can be salvaged by restoring the database.</p>
 
-<p>If you want to do the restore operation explicitly, you'll run a command like this.</p>
+<p>In contrast to the default API setting, the command line tool doesn't restore the database implicitly.  If you want to do the restore operation explicitly, you'll run a command like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh casket-restored.tkh
 ]]></code></pre>
@@ -3650,6 +3650,9 @@ one    first
 <p>If the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time.  If the value of --end_offset is -1, as many records as possible are salvaged.</p>
 
 <p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export casket.tkh external.flat
+]]></code></pre>
 
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 
