@@ -43,7 +43,7 @@ class MemoryMapParallelFileImpl final {
   Status Close();
   Status Truncate(int64_t size);
   Status TruncateFakely(int64_t size);
-  Status Synchronize(bool hard);
+  Status Synchronize(bool hard, int64_t off, int64_t size);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status CopyProperties(File* file);
@@ -286,7 +286,7 @@ Status MemoryMapParallelFileImpl::TruncateFakely(int64_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status MemoryMapParallelFileImpl::Synchronize(bool hard) {
+Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -562,8 +562,8 @@ Status MemoryMapParallelFile::TruncateFakely(int64_t size) {
   return impl_->TruncateFakely(size);
 }
 
-Status MemoryMapParallelFile::Synchronize(bool hard) {
-  return impl_->Synchronize(hard);
+Status MemoryMapParallelFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->Synchronize(hard, off, size);
 }
 
 Status MemoryMapParallelFile::GetSize(int64_t* size) {
@@ -630,7 +630,7 @@ class MemoryMapAtomicFileImpl final {
   Status Close();
   Status Truncate(int64_t size);
   Status TruncateFakely(int64_t size);
-  Status Synchronize(bool hard);
+  Status Synchronize(bool hard, int64_t off, int64_t size);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status CopyProperties(File* file);
@@ -878,7 +878,7 @@ Status MemoryMapAtomicFileImpl::TruncateFakely(int64_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status MemoryMapAtomicFileImpl::Synchronize(bool hard) {
+Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -1141,8 +1141,8 @@ Status MemoryMapAtomicFile::TruncateFakely(int64_t size) {
   return impl_->TruncateFakely(size);
 }
 
-Status MemoryMapAtomicFile::Synchronize(bool hard) {
-  return impl_->Synchronize(hard);
+Status MemoryMapAtomicFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->Synchronize(hard, off, size);
 }
 
 Status MemoryMapAtomicFile::GetSize(int64_t* size) {

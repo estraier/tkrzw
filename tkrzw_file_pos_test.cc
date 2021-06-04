@@ -294,6 +294,11 @@ TEST_F(PositionalParallelFileTest, Truncate) {
   TruncateTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, Synchronize) {
+  tkrzw::PositionalParallelFile file;
+  SynchronizeTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, ImplicitClose) {
   tkrzw::PositionalParallelFile file;
   ImplicitCloseTest(&file);
@@ -415,6 +420,11 @@ TEST_F(PositionalAtomicFileTest, ReallocWriteBlock) {
 TEST_F(PositionalAtomicFileTest, Truncate) {
   tkrzw::PositionalAtomicFile file;
   TruncateTest(&file);
+}
+
+TEST_F(PositionalAtomicFileTest, Synchronize) {
+  tkrzw::PositionalAtomicFile file;
+  SynchronizeTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, ImplicitClose) {

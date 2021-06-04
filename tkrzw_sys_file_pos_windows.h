@@ -43,7 +43,7 @@ class PositionalParallelFileImpl final {
   Status Append(const void* buf, size_t size, int64_t* off);
   Status Truncate(int64_t size);
   Status TruncateFakely(int64_t size);
-  Status Synchronize(bool hard);
+  Status Synchronize(bool hard, int64_t off, int64_t size);
   Status GetSize(int64_t* size);
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
@@ -349,7 +349,7 @@ Status PositionalParallelFileImpl::TruncateFakely(int64_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status PositionalParallelFileImpl::Synchronize(bool hard) {
+Status PositionalParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -654,8 +654,8 @@ Status PositionalParallelFile::TruncateFakely(int64_t size) {
   return impl_->TruncateFakely(size);
 }
 
-Status PositionalParallelFile::Synchronize(bool hard) {
-  return impl_->Synchronize(hard);
+Status PositionalParallelFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->Synchronize(hard, off, size);
 }
 
 Status PositionalParallelFile::GetSize(int64_t* size) {
@@ -714,7 +714,7 @@ class PositionalAtomicFileImpl final {
   Status Append(const void* buf, size_t size, int64_t* off);
   Status Truncate(int64_t size);
   Status TruncateFakely(int64_t size);
-  Status Synchronize(bool hard);
+  Status Synchronize(bool hard, int64_t off, int64_t size);
   Status GetSize(int64_t* size);
   Status SetHeadBuffer(int64_t size);
   Status SetAccessStrategy(int64_t block_size, int32_t options);
@@ -1014,7 +1014,7 @@ Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status PositionalAtomicFileImpl::Synchronize(bool hard) {
+Status PositionalAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -1325,8 +1325,8 @@ Status PositionalAtomicFile::TruncateFakely(int64_t size) {
   return impl_->TruncateFakely(size);
 }
 
-Status PositionalAtomicFile::Synchronize(bool hard) {
-  return impl_->Synchronize(hard);
+Status PositionalAtomicFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->Synchronize(hard, off, size);
 }
 
 Status PositionalAtomicFile::GetSize(int64_t* size) {

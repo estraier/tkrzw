@@ -1131,9 +1131,6 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(2, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-
-
-
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
         file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
@@ -1157,9 +1154,6 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(3, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-
-
-    
   }
 }
 

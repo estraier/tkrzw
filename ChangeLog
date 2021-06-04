@@ -6,6 +6,8 @@
 	- Add ReadMetadata and ParseMetadata methods.
 	- Ability of RestoreDatabase metdhods to recover the file is improved.
 	- Modify Makefile.in to support build operations in a subdirectory.
+	- Add parameters for the offset and the size to File::Synchronize.
+	- Performance of synchronizing the database file is improved.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.10

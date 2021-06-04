@@ -219,12 +219,15 @@ class MemoryMapParallelFile final : public MemoryMapFile {
    * Synchronizes the content of the file to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
+   * @param off The offset of the region to be synchronized.
+   * @param size The size of the region to be synchronized.  If it is zero, the length to the
+   * end of file is specified.
    * @return The result status.
    * @details The pysical file size can be larger than the logical size in order to improve
    * performance by reducing frequency of allocation.  Thus, you should call this function before
    * accessing the file with external tools.
    */
-  Status Synchronize(bool hard) override;
+  Status Synchronize(bool hard, int64_t off = 0, int64_t size = 0) override;
 
   /**
    * Gets the size of the file.
@@ -484,12 +487,15 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * Synchronizes the content of the file to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
+   * @param off The offset of the region to be synchronized.
+   * @param size The size of the region to be synchronized.  If it is zero, the length to the
+   * end of file is specified.
    * @return The result status.
    * @details The pysical file size can be larger than the logical size in order to improve
    * performance by reducing frequency of allocation.  Thus, you should call this function before
    * accessing the file with external tools.
    */
-  Status Synchronize(bool hard) override;
+  Status Synchronize(bool hard, int64_t off = 0, int64_t size = 0) override;
 
   /**
    * Gets the size of the file.

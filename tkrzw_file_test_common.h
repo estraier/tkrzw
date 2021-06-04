@@ -31,6 +31,7 @@ class CommonFileTest : public Test {
   void ReallocWriteTest(tkrzw::File* file);
   void TruncateTest(tkrzw::File* file);
   void ImplicitCloseTest(tkrzw::File* file);
+  void SynchronizeTest(tkrzw::File* file);
   void OpenOptionsTest(tkrzw::File* file);
   void OrderedThreadTest(tkrzw::File* file);
   void RandomThreadTest(tkrzw::File* file);
@@ -109,7 +110,6 @@ void CommonFileTest::SimpleWriteTest(tkrzw::File* file) {
   EXPECT_EQ("012XYZ67ABCDEFGHIJKLMN", content);
 }
 
-
 void CommonFileTest::ReallocWriteTest(tkrzw::File* file) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
@@ -183,6 +183,29 @@ void CommonFileTest::TruncateTest(tkrzw::File* file) {
   EXPECT_EQ(1978, file->GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(65536));
   EXPECT_EQ(65536, file->GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+}
+
+void CommonFileTest::SynchronizeTest(tkrzw::File* file) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 1.2));
+  char buf[1024];
+  std::memset(buf, 0, std::size(buf));
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  for (int32_t i = 0; i < 8; i++) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(buf, std::size(buf)));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(buf, std::size(buf)));
+  }
+  const int64_t file_size = file->GetSizeSimple();
+  for (int64_t off = 0; off < file_size; off += 256) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(true, off, 256));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(true, 0, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(true, 1, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(true, 0, 8192));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(true, 8192, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 

@@ -103,8 +103,8 @@ Status MemoryMapParallelFile::TruncateFakely(int64_t size) {
   return impl_->file.TruncateFakely(size);
 }
 
-Status MemoryMapParallelFile::Synchronize(bool hard) {
-  return impl_->file.Synchronize(hard);
+Status MemoryMapParallelFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->file.Synchronize(hard, off, size);
 }
 
 Status MemoryMapParallelFile::GetSize(int64_t* size) {
@@ -254,8 +254,8 @@ Status MemoryMapAtomicFile::TruncateFakely(int64_t size) {
   return impl_->file.TruncateFakely(size);
 }
 
-Status MemoryMapAtomicFile::Synchronize(bool hard) {
-  return impl_->file.Synchronize(hard);
+Status MemoryMapAtomicFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->file.Synchronize(hard, off, size);
 }
 
 Status MemoryMapAtomicFile::GetSize(int64_t* size) {

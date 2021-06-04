@@ -124,10 +124,13 @@ class StdFile final : public File {
    * Synchronizes the content of the file to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
+   * @param off The offset of the region to be synchronized.
+   * @param size The size of the region to be synchronized.  If it is zero, the length to the
+   * end of file is specified.
    * @return The result status.
    * @details This is a dummy implementation and has no effect.
    */
-  Status Synchronize(bool hard) override;
+  Status Synchronize(bool hard, int64_t off = 0, int64_t size = 0) override;
 
   /**
    * Gets the size of the file.

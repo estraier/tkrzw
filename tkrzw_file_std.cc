@@ -34,7 +34,7 @@ class StdFileImpl final {
   Status Expand(size_t inc_size, int64_t* old_size);
   Status Truncate(int64_t size);
   Status TruncateFakely(int64_t size);
-  Status Synchronize(bool hard);
+  Status Synchronize(bool hard, int64_t off, int64_t size);
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status CopyProperties(File* file);
@@ -175,7 +175,7 @@ Status StdFileImpl::TruncateFakely(int64_t size) {
   return Status(Status::SUCCESS);
 }
 
-Status StdFileImpl::Synchronize(bool hard) {
+Status StdFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (file_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -474,8 +474,9 @@ Status StdFile::TruncateFakely(int64_t size) {
   return impl_->TruncateFakely(size);
 }
 
-Status StdFile::Synchronize(bool hard) {
-  return impl_->Synchronize(hard);
+Status StdFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  assert(off >= 0 && size >= 0);
+  return impl_->Synchronize(hard, off, size);
 }
 
 Status StdFile::GetSize(int64_t* size) {

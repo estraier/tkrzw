@@ -773,12 +773,7 @@ Status SkipDBMImpl::Synchronize(
   }
   CancelIterators();
   Status status = FinishStorage(reducer);
-
-
   status |= file_->Synchronize(hard);
-
-
-
   if (proc != nullptr) {
     proc->Process(path_);
   }

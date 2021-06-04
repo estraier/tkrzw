@@ -90,8 +90,8 @@ Status PositionalParallelFile::TruncateFakely(int64_t size) {
   return impl_->file.TruncateFakely(size);
 }
 
-Status PositionalParallelFile::Synchronize(bool hard) {
-  return impl_->file.Synchronize(hard);
+Status PositionalParallelFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->file.Synchronize(hard, off, size);
 }
 
 Status PositionalParallelFile::GetSize(int64_t* size) {
@@ -200,8 +200,8 @@ Status PositionalAtomicFile::TruncateFakely(int64_t size) {
   return impl_->file.TruncateFakely(size);
 }
 
-Status PositionalAtomicFile::Synchronize(bool hard) {
-  return impl_->file.Synchronize(hard);
+Status PositionalAtomicFile::Synchronize(bool hard, int64_t off, int64_t size) {
+  return impl_->file.Synchronize(hard, off, size);
 }
 
 Status PositionalAtomicFile::GetSize(int64_t* size) {
