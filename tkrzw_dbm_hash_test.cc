@@ -1131,6 +1131,35 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(2, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+
+
+
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+    file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+    EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+    EXPECT_TRUE(dbm->IsHealthy());
+    EXPECT_TRUE(dbm->IsAutoRestored());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+    EXPECT_EQ("first", value);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+    EXPECT_EQ("second", value);
+    EXPECT_EQ(2, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+    EXPECT_EQ("third", value);
+    EXPECT_EQ(3, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+
+
+    
   }
 }
 

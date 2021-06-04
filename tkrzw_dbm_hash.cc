@@ -243,33 +243,38 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
   }
   auto_restored_ = false;
   if (writable && !healthy_ && (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
-    CloseImpl();
-    file_->Close();
-    const std::string tmp_path = path_ + ".tmp.restore";
-    const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
-    status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
-    if (status != Status::SUCCESS) {
-      RemoveFile(tmp_path);
-      return status;
-    }
-    status = RenameFile(tmp_path, path_);
-    if (status != Status::SUCCESS) {
-      RemoveFile(tmp_path);
-      return status;
-    }
-    SetTuning(tuning_params);
-    status = CheckFileBeforeOpen(file_.get(), path, writable);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    status = file_->Open(norm_path, writable, options);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    status = OpenImpl(writable);
-    if (status != Status::SUCCESS) {
+    if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
+        file_size_ == file_->GetSizeSimple()) {
+      healthy_ = true;
+    } else {
+      CloseImpl();
       file_->Close();
-      return status;
+      const std::string tmp_path = path_ + ".tmp.restore";
+      const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+      status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
+      if (status != Status::SUCCESS) {
+        RemoveFile(tmp_path);
+        return status;
+      }
+      status = RenameFile(tmp_path, path_);
+      if (status != Status::SUCCESS) {
+        RemoveFile(tmp_path);
+        return status;
+      }
+      SetTuning(tuning_params);
+      status = CheckFileBeforeOpen(file_.get(), path, writable);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      status = file_->Open(norm_path, writable, options);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      status = OpenImpl(writable);
+      if (status != Status::SUCCESS) {
+        file_->Close();
+        return status;
+      }
     }
     auto_restored_ = true;
   }
