@@ -90,6 +90,7 @@ void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   auto file = dbm->GetInternalFile()->MakeFile();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, false));
+  int32_t cyclic_magic = 0;
   int32_t meta_pkg_major_version = 0;
   int32_t meta_pkg_minor_version = 0;
   int32_t meta_offset_width = 0;
@@ -103,11 +104,12 @@ void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
   int32_t meta_db_type = 0;
   std::string meta_opaque;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SkipDBM::ReadMetadata(
-      file.get(), &meta_pkg_major_version, &meta_pkg_minor_version,
+      file.get(), &cyclic_magic, &meta_pkg_major_version, &meta_pkg_minor_version,
       &meta_offset_width, &meta_step_unit, &meta_max_level,
       &meta_closure_flags, &meta_num_records,
       &meta_eff_data_size, &meta_file_size,
       &meta_mod_time, &meta_db_type, &meta_opaque));
+  EXPECT_GT(cyclic_magic, 0);
   EXPECT_GT(meta_pkg_major_version + meta_pkg_minor_version, 0);
   EXPECT_GT(meta_offset_width, 0);
   EXPECT_GT(meta_step_unit, 1);

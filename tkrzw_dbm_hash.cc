@@ -30,6 +30,7 @@ namespace tkrzw {
 
 constexpr int32_t METADATA_SIZE = 128;
 const char META_MAGIC_DATA[] = "TkrzwHDB\n";
+constexpr int32_t META_OFFSET_CYCLIC_MAGIC_FRONT = 9;
 constexpr int32_t META_OFFSET_PKG_MAJOR_VERSION = 10;
 constexpr int32_t META_OFFSET_PKG_MINOR_VERSION = 11;
 constexpr int32_t META_OFFSET_STATIC_FLAGS = 12;
@@ -42,6 +43,7 @@ constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 32;
 constexpr int32_t META_OFFSET_FILE_SIZE = 40;
 constexpr int32_t META_OFFSET_MOD_TIME = 48;
 constexpr int32_t META_OFFSET_DB_TYPE = 56;
+constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 63;
 constexpr int32_t META_OFFSET_OPAQUE = 64;
 constexpr int32_t FBP_SECTION_SIZE = 1008;
 constexpr int32_t RECORD_BASE_HEADER_SIZE = 16;
@@ -152,6 +154,7 @@ class HashDBMImpl final {
   bool healthy_;
   bool auto_restored_;
   std::string path_;
+  int32_t cyclic_magic_;
   int32_t pkg_major_version_;
   int32_t pkg_minor_version_;
   int32_t static_flags_;
@@ -197,7 +200,8 @@ class HashDBMIteratorImpl final {
 
 HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
     : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
-      pkg_major_version_(0), pkg_minor_version_(0), static_flags_(STATIC_FLAG_NONE),
+      cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
+      static_flags_(STATIC_FLAG_NONE),
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
       num_buckets_(HashDBM::DEFAULT_NUM_BUCKETS),
@@ -714,6 +718,7 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
     Add("healthy", ToString(healthy_));
     Add("auto_restored", ToString(auto_restored_));
     Add("path", path_);
+    Add("cyclic_magic", ToString(static_cast<uint8_t>(cyclic_magic_)));
     Add("pkg_major_version", ToString(pkg_major_version_));
     Add("pkg_minor_version", ToString(pkg_minor_version_));
     Add("static_flags", ToString(static_flags_));
@@ -1094,6 +1099,7 @@ Status HashDBMImpl::CloseImpl() {
   open_ = false;
   writable_ = false;
   healthy_ = false;
+  cyclic_magic_ = 0;
   pkg_major_version_ = 0;
   pkg_minor_version_ = 0;
   static_flags_ = STATIC_FLAG_NONE;
@@ -1122,9 +1128,11 @@ void HashDBMImpl::CancelIterators() {
 }
 
 Status HashDBMImpl::SaveMetadata(bool finish) {
+  cyclic_magic_++;
   char meta[METADATA_SIZE];
   std::memset(meta, 0, METADATA_SIZE);
-  std::memcpy(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA));
+  std::memcpy(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1);
+  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, cyclic_magic_, 1);
   WriteFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, pkg_major_version_, 1);
   WriteFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, pkg_minor_version_, 1);
   WriteFixNum(meta + META_OFFSET_STATIC_FLAGS, static_flags_, 1);
@@ -1141,6 +1149,7 @@ Status HashDBMImpl::SaveMetadata(bool finish) {
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
   WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
+  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, cyclic_magic_, 1);
   const int32_t opaque_size =
       std::min<int32_t>(opaque_.size(), METADATA_SIZE - META_OFFSET_OPAQUE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
@@ -1151,7 +1160,7 @@ Status HashDBMImpl::LoadMetadata() {
   int64_t num_records = 0;
   int64_t eff_data_size = 0;
   const Status status = HashDBM::ReadMetadata(
-      file_.get(), &pkg_major_version_, &pkg_minor_version_,
+      file_.get(), &cyclic_magic_, &pkg_major_version_, &pkg_minor_version_,
       &static_flags_, &offset_width_, &align_pow_,
       &closure_flags_, &num_buckets_, &num_records,
       &eff_data_size, &file_size_, &mod_time_,
@@ -2009,7 +2018,8 @@ Status HashDBM::Iterator::Process(RecordProcessor* proc, bool writable) {
 }
 
 Status HashDBM::ReadMetadata(
-    File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+    File* file, int32_t* cyclic_magic,
+    int32_t* pkg_major_version, int32_t* pkg_minor_version,
     int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
     int32_t* closure_flags, int64_t* num_buckets, int64_t* num_records,
     int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
@@ -2024,9 +2034,10 @@ Status HashDBM::ReadMetadata(
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
+  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1) != 0) {
     return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
   }
+  *cyclic_magic = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, 1);
   *pkg_major_version = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
   *pkg_minor_version = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
   *static_flags = ReadFixNum(meta + META_OFFSET_STATIC_FLAGS, 1);
@@ -2039,7 +2050,11 @@ Status HashDBM::ReadMetadata(
   *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
   *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
   *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
+  const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
+  if (*cyclic_magic != cyclic_magic_back) {
+    return Status(Status::BROKEN_DATA_ERROR, "bad cyclic magic data");
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -2053,7 +2068,7 @@ Status HashDBM::FindRecordBase(
   char meta[METADATA_SIZE];
   Status status = file->Read(0, meta, METADATA_SIZE);
   if (status == Status::SUCCESS &&
-      std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) == 0) {
+      std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1) == 0) {
     *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
     *align_pow = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
     int64_t num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
@@ -2134,6 +2149,7 @@ Status HashDBM::RestoreDatabase(
   if (status != Status::SUCCESS) {
     return status;
   }
+  int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;
   int32_t old_pkg_minor_version = 0;
   int32_t old_static_flags = 0;
@@ -2148,7 +2164,7 @@ Status HashDBM::RestoreDatabase(
   int32_t old_db_type = 0;
   std::string old_opaque;
   if (ReadMetadata(
-          &old_file, &old_pkg_major_version, &old_pkg_minor_version,
+          &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
           &old_static_flags, &old_offset_width, &old_align_pow,
           &old_closure_flags, &old_num_buckets, &old_num_records,
           &old_eff_data_size, &old_file_size, &old_mod_time,

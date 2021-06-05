@@ -30,6 +30,7 @@ namespace tkrzw {
 
 constexpr int32_t METADATA_SIZE = 128;
 const char META_MAGIC_DATA[] = "TkrzwSDB\n";
+constexpr int32_t META_OFFSET_CYCLIC_MAGIC_FRONT = 9;
 constexpr int32_t META_OFFSET_PKG_MAJOR_VERSION = 10;
 constexpr int32_t META_OFFSET_PKG_MINOR_VERSION = 11;
 constexpr int32_t META_OFFSET_OFFSET_WIDTH = 12;
@@ -41,6 +42,7 @@ constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 32;
 constexpr int32_t META_OFFSET_FILE_SIZE = 40;
 constexpr int32_t META_OFFSET_MOD_TIME = 48;
 constexpr int32_t META_OFFSET_DB_TYPE = 56;
+constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 63;
 constexpr int32_t META_OFFSET_OPAQUE = 64;
 constexpr int32_t MIN_OFFSET_WIDTH = 3;
 constexpr int32_t MAX_OFFSET_WIDTH = 6;
@@ -123,6 +125,7 @@ class SkipDBMImpl final {
   bool updated_;
   bool removed_;
   std::string path_;
+  int32_t cyclic_magic_;
   int32_t pkg_major_version_;
   int32_t pkg_minor_version_;
   int32_t offset_width_;
@@ -177,7 +180,7 @@ class SkipDBMIteratorImpl final {
 SkipDBMImpl::SkipDBMImpl(std::unique_ptr<File> file)
     : open_(false),  writable_(false), healthy_(false), auto_restored_(false),
       updated_(false), removed_(false), path_(),
-      pkg_major_version_(0), pkg_minor_version_(0),
+      cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
       offset_width_(SkipDBM::DEFAULT_OFFSET_WIDTH), step_unit_(SkipDBM::DEFAULT_STEP_UNIT),
       max_level_(SkipDBM::DEFAULT_MAX_LEVEL), closure_flags_(CLOSURE_FLAG_NONE),
       num_records_(0), eff_data_size_(0), file_size_(0), mod_time_(0),
@@ -796,6 +799,7 @@ std::vector<std::pair<std::string, std::string>> SkipDBMImpl::Inspect() {
     Add("updated", ToString(updated_));
     Add("removed", ToString(removed_));
     Add("path", path_);
+    Add("cyclic_magic", ToString(static_cast<uint8_t>(cyclic_magic_)));
     Add("pkg_major_version", ToString(pkg_major_version_));
     Add("pkg_minor_version", ToString(pkg_minor_version_));
     Add("offset_width", ToString(offset_width_));
@@ -969,9 +973,11 @@ void SkipDBMImpl::CancelIterators() {
 }
 
 Status SkipDBMImpl::SaveMetadata(bool finish) {
+  cyclic_magic_++;
   char meta[METADATA_SIZE];
   std::memset(meta, 0, METADATA_SIZE);
-  std::memcpy(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA));
+  std::memcpy(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1);
+  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, cyclic_magic_, 1);
   WriteFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, pkg_major_version_, 1);
   WriteFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, pkg_minor_version_, 1);
   WriteFixNum(meta + META_OFFSET_OFFSET_WIDTH, offset_width_, 1);
@@ -987,6 +993,7 @@ Status SkipDBMImpl::SaveMetadata(bool finish) {
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
   WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
+  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, cyclic_magic_, 1);
   const int32_t opaque_size =
       std::min<int32_t>(opaque_.size(), METADATA_SIZE - META_OFFSET_OPAQUE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
@@ -995,7 +1002,7 @@ Status SkipDBMImpl::SaveMetadata(bool finish) {
 
 Status SkipDBMImpl::LoadMetadata() {
   const Status status = SkipDBM::ReadMetadata(
-      file_.get(), &pkg_major_version_, &pkg_minor_version_,
+      file_.get(), &cyclic_magic_, &pkg_major_version_, &pkg_minor_version_,
       &offset_width_, &step_unit_, &max_level_,
       &closure_flags_, &num_records_,
       &eff_data_size_, &file_size_, &mod_time_,
@@ -1845,7 +1852,7 @@ std::vector<std::string> SkipDBM::ReduceToTotal(
 }
 
 Status SkipDBM::ReadMetadata(
-    File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+    File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,
     int32_t* offset_width, int32_t* step_unit, int32_t *max_level,
     int32_t* closure_flags, int64_t* num_records,
     int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
@@ -1855,9 +1862,10 @@ Status SkipDBM::ReadMetadata(
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA)) != 0) {
+  if (std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1) != 0) {
     return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
   }
+  *cyclic_magic = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, 1);
   *pkg_major_version = ReadFixNum(meta + META_OFFSET_PKG_MAJOR_VERSION, 1);
   *pkg_minor_version = ReadFixNum(meta + META_OFFSET_PKG_MINOR_VERSION, 1);
   *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
@@ -1869,7 +1877,11 @@ Status SkipDBM::ReadMetadata(
   *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
   *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
   *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
+  const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
+  if (*cyclic_magic != cyclic_magic_back) {
+    return Status(Status::BROKEN_DATA_ERROR, "bad cyclic magic data");
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -1888,24 +1900,25 @@ Status SkipDBM::RestoreDatabase(
   if (actual_old_file_size < METADATA_SIZE) {
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
-  int32_t pkg_major_version = 0;
-  int32_t pkg_minor_version = 0;
-  int32_t offset_width = 0;
-  int32_t step_unit = 0;
-  int32_t max_level = 0;
-  int32_t closure_flags = 0;
-  int64_t num_records = 0;
-  int64_t eff_data_size = 0;
-  int64_t file_size = 0;
-  int64_t mod_time = 0;
-  int32_t db_type = 0;
-  std::string opaque;
+  int32_t old_cyclic_magic = 0;
+  int32_t old_pkg_major_version = 0;
+  int32_t old_pkg_minor_version = 0;
+  int32_t old_offset_width = 0;
+  int32_t old_step_unit = 0;
+  int32_t old_max_level = 0;
+  int32_t old_closure_flags = 0;
+  int64_t old_num_records = 0;
+  int64_t old_eff_data_size = 0;
+  int64_t old_file_size = 0;
+  int64_t old_mod_time = 0;
+  int32_t old_db_type = 0;
+  std::string old_opaque;
   status = ReadMetadata(
-      &old_file, &pkg_major_version, &pkg_minor_version,
-      &offset_width, &step_unit, &max_level,
-      &closure_flags, &num_records,
-      &eff_data_size, &file_size, &mod_time,
-      &db_type, &opaque);
+      &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
+      &old_offset_width, &old_step_unit, &old_max_level,
+      &old_closure_flags, &old_num_records,
+      &old_eff_data_size, &old_file_size, &old_mod_time,
+      &old_db_type, &old_opaque);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1918,9 +1931,9 @@ Status SkipDBM::RestoreDatabase(
   SkipDBM new_dbm(std::move(new_file));
   SkipDBM::TuningParameters tuning_params;
   tuning_params.insert_in_order = true;
-  tuning_params.offset_width = offset_width;
-  tuning_params.step_unit = step_unit;
-  tuning_params.max_level = max_level;
+  tuning_params.offset_width = old_offset_width;
+  tuning_params.step_unit = old_step_unit;
+  tuning_params.max_level = old_max_level;
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {
     return status;
@@ -1928,9 +1941,9 @@ Status SkipDBM::RestoreDatabase(
   if (new_dbm.CountSimple() > 0) {
     return Status(Status::PRECONDITION_ERROR, "the new database is not empty");
   }
-  new_dbm.SetDatabaseType(db_type);
-  new_dbm.SetOpaqueMetadata(opaque);
-  tkrzw::SkipRecord rec(&old_file, offset_width, step_unit, max_level);
+  new_dbm.SetDatabaseType(old_db_type);
+  new_dbm.SetOpaqueMetadata(old_opaque);
+  tkrzw::SkipRecord rec(&old_file, old_offset_width, old_step_unit, old_max_level);
   const int64_t end_offset = old_file.GetSizeSimple();
   int64_t offset = METADATA_SIZE;
   int64_t index = 0;

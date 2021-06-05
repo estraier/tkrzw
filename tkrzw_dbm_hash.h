@@ -636,6 +636,7 @@ class HashDBM final : public DBM {
   /**
    * Reads metadata from a database file.
    * @param file A file object having opened the database file.
+   * @param cyclic_magic The pointer to a variable to store the cyclic magic data.
    * @param pkg_major_version The pointer to a variable to store the package major version.
    * @param pkg_minor_version The pointer to a variable to store the package minor version.
    * @param static_flags The pointer to a variable to store the static flags.
@@ -652,7 +653,7 @@ class HashDBM final : public DBM {
    * @return The result status.
    */
   static Status ReadMetadata(
-      File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+      File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,
       int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
       int32_t* closure_flags, int64_t* num_buckets, int64_t* num_records,
       int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,

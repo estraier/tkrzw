@@ -704,6 +704,7 @@ class SkipDBM final : public DBM {
   /**
    * Reads metadata from a database file.
    * @param file A file object having opened the database file.
+   * @param cyclic_magic The pointer to a variable to store the cyclic magic data.
    * @param pkg_major_version The pointer to a variable to store the package major version.
    * @param pkg_minor_version The pointer to a variable to store the package minor version.
    * @param offset_width The pointer to a variable to store the offset width.
@@ -719,7 +720,7 @@ class SkipDBM final : public DBM {
    * @return The result status.
    */
   static Status ReadMetadata(
-      File* file, int32_t* pkg_major_version, int32_t* pkg_minor_version,
+      File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,
       int32_t* offset_width, int32_t* step_unit, int32_t* max_level,
       int32_t* closure_flags, int64_t* num_records,
       int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,

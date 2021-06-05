@@ -946,7 +946,9 @@ int main(int argc, char** argv) {
 
 <dl>
 <dt>Magic data</dt>
-<dd>From the offset 0.  A string "TkrzwHDB\n" and a training null '\0' character.</dd>
+<dd>From the offset 0.  A 9-byte string "TkrzwHDB\n".</dd>
+<dt>The front cyclic magic data.</dt>
+<dd>From the offset 9.  A 1-byte integer.</dd>
 <dt>The package major version</dt>
 <dd>From the offset 10.  A 1-byte integer.</dd>
 <dt>The package minor version</dt>
@@ -971,11 +973,13 @@ int main(int argc, char** argv) {
 <dd>From the offset 48.  An 8-byte big-endian integer.</dd>
 <dt>The database type</dt>
 <dd>From the offset 56.  A 4-byte big-endian integer.</dd>
+<dt>The back cyclic magic data.</dt>
+<dd>From the offset 63.  A 1-byte integer.</dd>
 <dt>The opaque data</dt>
 <dd>From the offset 64.  Arbitrary string data.</dd>
 </dl>
 
-<p>The magic data and the package version data are used for identifying the kind of the file.  The version data indicates the version of the Tkrzw package when the file is created.</p>
+<p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
 
 <p>The static flags specifies flags which are not changed during lifetime of the database.  The flags must have a bit of 0x1 or 0x2.  0x1 represents the in-place update mode.  0x2 represents the appending update mode.</p>
 
@@ -1605,7 +1609,9 @@ int main(int argc, char** argv) {
 
 <dl>
 <dt>Magic data</dt>
-<dd>From the offset 0.  A string "TkrzwSDB\n" and a training null '\0' character.</dd>
+<dd>From the offset 0.  A 9-byte string "TkrzwSDB\n".</dd>
+<dt>The front cyclic magic data.</dt>
+<dd>From the offset 9.  A 1-byte integer.</dd>
 <dt>The package major version</dt>
 <dd>From the offset 10.  A 1-byte integer.</dd>
 <dt>The package minor version</dt>
@@ -1628,9 +1634,13 @@ int main(int argc, char** argv) {
 <dd>From the offset 48.  An 8-byte big-endian integer.</dd>
 <dt>The database type</dt>
 <dd>From the offset 56.  A 4-byte big-endian integer.</dd>
+<dt>The back cyclic magic data.</dt>
+<dd>From the offset 63.  A 1-byte integer.</dd>
 <dt>The opaque data</dt>
 <dd>From the offset 64.  Arbitrary string data.</dd>
 </dl>
+
+<p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
 
 <p>The offset width specifies how many bytes are used to store an offset value.  Given the offset width W, the maximum value is 2^(W*8).  So, W=3 sets the maximum value 16,777,216 and W=4 sets it 4,294,967,296.  The offset width affects the size of the buckets and the footprint of each record.  The default value of the offset width is 4, which means the maximum file size is 4GB.  The step unit specifies how often records are given links to forward records.  Given the step unit S, records whose indices can be divided by S have the level 1 links, which refers to the forward record in S-th steps.  Records whose indices can be divided by S^2 have the level 2 links, which refers to the forward in S^2-th steps.  Likewise, fewer records have higher level links.  The highest level is limited by the maximum level property.  To get the optimal performance, given the number of records N, the maximum level should be higher than Log_S N - 1.  So given, R=1000000 and S=4, the maximum level should be higher than log_4 100000 - 1 = 8.96.  The default value of the step unit is 4 and the default value of the maximum level is 14.  So, they are optimal until the number of records is 4^15 = 1,073,741,824.</p>
 
@@ -3653,8 +3663,7 @@ one    first
 
 <p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export casket.tkh external.flat
-]]></code></pre>
+<p>If the metadata of the database file is broken for some reason, automatic restoration is not done.  In that case, you should do restoration by calling the RestoreDatabase method or running tkrzw_dbm_util restore explicitly.</p>
 
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 
