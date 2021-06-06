@@ -152,6 +152,7 @@ check :
 	$(MAKE) check-sharddbm-perf
 	$(MAKE) check-sharddbm-util
 	$(MAKE) check-index-perf
+	$(MAKE) check-tran
 	rm -Rf casket*
 	@printf '\n'
 	@printf '#================================================================\n'
@@ -642,6 +643,27 @@ check-index-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf index --type str \
 	  --iter 20000 --threads 5 --random_key --random_value
 
+check-tran :
+	rm -Rf casket*
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkh --iter 50000 --threads 4 \
+	  --sync_freq 100
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkh --iter 50000 --threads 4 \
+	  --sync_freq 100 --rebuild --remove
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
+	  --sync_freq 100
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
+	  --sync_freq 100 --rebuild --remove
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tks --iter 50000 --threads 4 \
+	  --sync_freq 10000
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tks --iter 50000 --threads 4 \
+	  --sync_freq 10000 --rebuild --remove
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tks
+
 check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
 
 check-direct-hashdbm :
@@ -820,10 +842,13 @@ tkrzw_str_perf : tkrzw_str_perf.o $(LIBRARYFILES)
 tkrzw_file_perf : tkrzw_file_perf.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
+tkrzw_dbm_util : tkrzw_dbm_util.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
+
 tkrzw_dbm_perf : tkrzw_dbm_perf.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
-tkrzw_dbm_util : tkrzw_dbm_util.o $(LIBRARYFILES)
+tkrzw_dbm_tran : tkrzw_dbm_tran.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
 #================================================================

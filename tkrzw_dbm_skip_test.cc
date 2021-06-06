@@ -755,9 +755,9 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ("third", value);
   EXPECT_EQ(3, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  
 
-  
+
+
 }
 
 void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {

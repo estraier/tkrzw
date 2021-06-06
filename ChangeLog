@@ -4,6 +4,8 @@
 	- Library version: 1.14.0
 
 	- Auto recovery supports metadata brokage.
+	- Add a command to check transaction features.
+	- Add SkipDBM::ReduceToTotalBigEndian.
 
 2021-06-05  Mikio Hirabayashi  <hirarin@gmail.com>
 

@@ -1854,6 +1854,16 @@ std::vector<std::string> SkipDBM::ReduceToTotal(
   return result;
 }
 
+std::vector<std::string> SkipDBM::ReduceToTotalBigEndian(
+    const std::string& key, const std::vector<std::string>& values) {
+  uint64_t total = 0;
+  for (const auto& value : values) {
+    total += StrToIntBigEndian(value);
+  }
+  const std::vector<std::string> result = {IntToStrBigEndian(total)};
+  return result;
+}
+
 Status SkipDBM::ReadMetadata(
     File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,
     int32_t* offset_width, int32_t* step_unit, int32_t *max_level,

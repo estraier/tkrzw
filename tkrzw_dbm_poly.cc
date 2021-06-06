@@ -114,6 +114,8 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
     return SkipDBM::ReduceConcatWithLine;
   } else if (lower_name == "reducetototal" || lower_name == "total") {
     return SkipDBM::ReduceToTotal;
+  } else if (lower_name == "reducetototalbigendian" || lower_name == "totalbe") {
+    return SkipDBM::ReduceToTotalBigEndian;
   }
   return nullptr;
 }

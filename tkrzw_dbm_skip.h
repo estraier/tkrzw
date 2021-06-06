@@ -702,6 +702,15 @@ class SkipDBM final : public DBM {
       const std::string& key, const std::vector<std::string>& values);
 
   /**
+   * Reduces the values of records of the same key by totaling big-endian binary expressions.
+   * @param key The common key of the records.
+   * @param values The values of the records of the same key.
+   * @return A vector containing the total big-endian binary expression.
+   */
+  static std::vector<std::string> ReduceToTotalBigEndian(
+      const std::string& key, const std::vector<std::string>& values);
+
+  /**
    * Reads metadata from a database file.
    * @param file A file object having opened the database file.
    * @param cyclic_magic The pointer to a variable to store the cyclic magic data.
@@ -718,7 +727,7 @@ class SkipDBM final : public DBM {
    * @param db_type The pointer to a variable to store the database type.
    * @param opaque The pointer to a variable to store the opaque data.
    * @return The result status.
-   * @detail If the leading magic data is inconsistent, it returns failure.  If the cyclic magic
+   * @details If the leading magic data is inconsistent, it returns failure.  If the cyclic magic
    * data is inconsistent, it returns success and -1 is assigned to cyclic_magic.
    */
   static Status ReadMetadata(

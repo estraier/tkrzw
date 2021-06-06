@@ -1,5 +1,5 @@
 /*************************************************************************************************
- * Performance checker of file implementations
+ * Performance checker of DBM implementations
  *
  * Copyright 2020 Google LLC
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
@@ -30,7 +30,6 @@ static void PrintUsageAndDie() {
   P("    : Checks consistency with various operations.\n");
   P("  %s index [options]\n", progname);
   P("    : Checks performance of on-memory indexing.\n");
-  P("\n");
   P("\n");
   P("Common options:\n");
   P("  --dbm impl : The name of a DBM implementation:"
