@@ -107,7 +107,7 @@ class SkipDBMImpl final {
 
  private:
   void CancelIterators();
-  Status SaveMetadata(bool finish);
+  Status SaveMetadata(File* file, bool finish);
   Status LoadMetadata();
   Status CheckFileBeforeOpen(File* file, const std::string& path, bool writable);
   Status PadFileForDirectIO();
@@ -245,7 +245,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     closure_flags_ |= CLOSURE_FLAG_CLOSE;
     file_size_ = file_->GetSizeSimple();
     mod_time_ = GetWallTime() * 1000000;
-    const Status status = SaveMetadata(true);
+    const Status status = SaveMetadata(file_.get(), true);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -320,7 +320,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   }
   path_ = norm_path;
   if (writable && healthy) {
-    status = SaveMetadata(false);
+    status = SaveMetadata(file_.get(), false);
     if (status != Status::SUCCESS) {
       path_ .clear();
       return status;
@@ -354,7 +354,7 @@ Status SkipDBMImpl::Close() {
       status |= DiscardStorage();
       file_size_ = file_->GetSizeSimple();
       mod_time_ = GetWallTime() * 1000000;
-      status |= SaveMetadata(true);
+      status |= SaveMetadata(file_.get(), true);
     }
   }
   status |= file_->Close();
@@ -618,7 +618,7 @@ Status SkipDBMImpl::Clear() {
   eff_data_size_ = 0;
   file_size_ = file_->GetSizeSimple();
   mod_time_ = GetWallTime() * 1000000;
-  status |= SaveMetadata(false);
+  status |= SaveMetadata(file_.get(), false);
   status |= LoadMetadata();
   status |= PrepareStorage();
   cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
@@ -740,7 +740,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   db_type_ = db_type;
   opaque_ = opaque;
   file_size_ = file_->GetSizeSimple();
-  status |= SaveMetadata(false);
+  status |= SaveMetadata(file_.get(), false);
   status |= PrepareStorage();
   cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
@@ -780,7 +780,7 @@ Status SkipDBMImpl::Synchronize(
   if (proc != nullptr) {
     proc->Process(path_);
   }
-  status |= SaveMetadata(false);
+  status |= SaveMetadata(file_.get(), false);
   status |= PrepareStorage();
   cache_ = std::make_unique<SkipRecordCache>(step_unit_, max_cached_records_, num_records_);
   return status;
@@ -972,7 +972,7 @@ void SkipDBMImpl::CancelIterators() {
   }
 }
 
-Status SkipDBMImpl::SaveMetadata(bool finish) {
+Status SkipDBMImpl::SaveMetadata(File* file, bool finish) {
   cyclic_magic_++;
   char meta[METADATA_SIZE];
   std::memset(meta, 0, METADATA_SIZE);
@@ -997,7 +997,7 @@ Status SkipDBMImpl::SaveMetadata(bool finish) {
   const int32_t opaque_size =
       std::min<int32_t>(opaque_.size(), METADATA_SIZE - META_OFFSET_OPAQUE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
-  return file_->Write(0, meta, METADATA_SIZE);
+  return file->Write(0, meta, METADATA_SIZE);
 }
 
 Status SkipDBMImpl::LoadMetadata() {
@@ -1094,11 +1094,14 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   if (reducer == nullptr && sorted_file_ != nullptr &&
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
       !record_sorter_->IsUpdated()) {
+    file_size_ = sorted_file_->GetSizeSimple();
+    mod_time_ = GetWallTime() * 1000000;
+    status |= SaveMetadata(sorted_file_.get(), true);
     file_->DisablePathOperations();
     if (!IS_POSIX) {
       file_->Close();
     }
-    status = sorted_file_->Rename(path_);
+    status |= sorted_file_->Rename(path_);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -1196,6 +1199,9 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
       status |= RemoveFile(swap_path);
       swap_file.reset(nullptr);
     }
+    file_size_ = file_->GetSizeSimple();
+    mod_time_ = GetWallTime() * 1000000;
+    status |= SaveMetadata(file_.get(), true);
     if (sorted_file_ != nullptr) {
       status |= sorted_file_->Close();
       status |= RemoveFile(sorted_path);
@@ -1205,9 +1211,6 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   past_offsets_.clear();
   record_sorter_.reset(nullptr);
   updated_ = false;
-  file_size_ = file_->GetSizeSimple();
-  mod_time_ = GetWallTime() * 1000000;
-  status |= SaveMetadata(true);
   return status;
 }
 

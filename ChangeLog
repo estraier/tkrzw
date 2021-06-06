@@ -1,9 +1,10 @@
 2021-06-05  Mikio Hirabayashi  <hirarin@gmail.com>
 
-	- Release: 0.9.23
+	- Release: 0.9.24
 	- Library version: 1.12.0
 
 	- Add cyclic metadata to HashDBM and SkipDBM.
+	- SkipDBM::FinishStorage becomes more robust.
 
 2021-05-30  Mikio Hirabayashi  <hirarin@gmail.com>
 
