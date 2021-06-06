@@ -700,15 +700,21 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
   tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-  EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  auto tmp_file = std::make_unique<tkrzw::MemoryMapParallelFile>();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Append("XYZ", 3));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_FALSE(dbm->IsHealthy());
   EXPECT_FALSE(dbm->IsAutoRestored());
   std::string value;
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one", &value));
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
-  EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+  EXPECT_EQ("first", value);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+  EXPECT_EQ("second", value);
+  EXPECT_EQ(2, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_DEFAULT;
@@ -716,35 +722,19 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
   EXPECT_TRUE(dbm->IsAutoRestored());
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one", &value));
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
-  EXPECT_EQ(0, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-  file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append("XYZ", 3));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-  EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_SYNC;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-      file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-  EXPECT_TRUE(dbm->IsHealthy());
-  EXPECT_TRUE(dbm->IsAutoRestored());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
   EXPECT_EQ("first", value);
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
-  EXPECT_EQ(1, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+  EXPECT_EQ("second", value);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
   EXPECT_EQ("first", value);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+  EXPECT_EQ("second", value);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
   EXPECT_EQ("third", value);
-  EXPECT_EQ(2, dbm->CountSimple());
+  EXPECT_EQ(3, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 

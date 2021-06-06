@@ -58,7 +58,7 @@ constexpr int64_t MINIMUM_DIO_BLOCK_SIZE = 512;
 const char* REBUILD_FILE_SUFFIX = ".tmp.rebuild";
 const char* SORTER_FILE_SUFFIX = ".tmp.sorter";
 const char* SORTED_FILE_SUFFIX = ".tmp.sorted";
-const char* SWAP_FILE_SUFFIX = ".tmp.swap";
+const char* MERGED_FILE_SUFFIX = ".tmp.merged";
 
 enum ClosureFlag : uint8_t {
   CLOSURE_FLAG_NONE = 0,
@@ -1089,7 +1089,7 @@ Status SkipDBMImpl::PrepareStorage() {
 
 Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
   const std::string sorted_path = path_ + SORTED_FILE_SUFFIX;
-  const std::string swap_path = path_ + SWAP_FILE_SUFFIX;
+  const std::string merged_path = path_ + MERGED_FILE_SUFFIX;
   Status status(Status::SUCCESS);
   if (reducer == nullptr && sorted_file_ != nullptr &&
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
@@ -1107,23 +1107,9 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
     }
     file_ = std::move(sorted_file_);
   } else {
-    std::unique_ptr<File> swap_file(nullptr);
     if (file_->GetSizeSimple() > static_cast<int64_t>(METADATA_SIZE)) {
-      status = file_->Rename(swap_path);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-      swap_file = std::move(file_);
-      file_ = swap_file->MakeFile();
-      swap_file->CopyProperties(file_.get());
-      status = file_->Open(path_, true, File::OPEN_TRUNCATE);
-      if (status != Status::SUCCESS) {
-        swap_file->Rename(path_);
-        return status;
-      }
-      file_->Truncate(METADATA_SIZE);
       record_sorter_->AddSkipRecord(new SkipRecord(
-          swap_file.get(), offset_width_, step_unit_, max_level_), METADATA_SIZE);
+          file_.get(), offset_width_, step_unit_, max_level_), METADATA_SIZE);
     }
     if (sorted_file_ != nullptr &&
         sorted_file_->GetSizeSimple() > static_cast<int64_t>(METADATA_SIZE)) {
@@ -1134,6 +1120,13 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
     if (status != Status::SUCCESS) {
       return status;
     }
+    auto merged_file = file_->MakeFile();
+    merged_file->CopyProperties(file_.get());
+    status = merged_file->Open(merged_path, true, File::OPEN_TRUNCATE);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    merged_file->Truncate(METADATA_SIZE);
     num_records_ = 0;
     eff_data_size_ = 0;
     record_index_ = 0;
@@ -1151,7 +1144,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
         break;
       }
       if (reducer == nullptr && !removed_) {
-        status = WriteRecord(key, value, file_.get());
+        status = WriteRecord(key, value, merged_file.get());
         if (status != Status::SUCCESS) {
           return status;
         }
@@ -1168,7 +1161,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
             const auto& new_values =
                 reducer == nullptr ? live_values : reducer(last_key, live_values);
             for (const auto& new_value : new_values) {
-              status = WriteRecord(last_key, new_value, file_.get());
+              status = WriteRecord(last_key, new_value, merged_file.get());
               if (status != Status::SUCCESS) {
                 return status;
               }
@@ -1187,21 +1180,25 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
         const auto& new_values =
             reducer == nullptr ? live_values : reducer(last_key, live_values);
         for (const auto& new_value : new_values) {
-          status = WriteRecord(last_key, new_value, file_.get());
+          status = WriteRecord(last_key, new_value, merged_file.get());
           if (status != Status::SUCCESS) {
             return status;
           }
         }
       }
     }
-    if (swap_file != nullptr) {
-      status |= swap_file->Close();
-      status |= RemoveFile(swap_path);
-      swap_file.reset(nullptr);
-    }
-    file_size_ = file_->GetSizeSimple();
+    file_size_ = merged_file->GetSizeSimple();
     mod_time_ = GetWallTime() * 1000000;
-    status |= SaveMetadata(file_.get(), true);
+    status |= SaveMetadata(merged_file.get(), true);
+    file_->DisablePathOperations();
+    if (!IS_POSIX) {
+      file_->Close();
+    }
+    status |= merged_file->Rename(path_);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    file_ = std::move(merged_file);
     if (sorted_file_ != nullptr) {
       status |= sorted_file_->Close();
       status |= RemoveFile(sorted_path);
