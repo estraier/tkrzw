@@ -5,6 +5,8 @@
 
 	- Add cyclic metadata to HashDBM and SkipDBM.
 	- SkipDBM::FinishStorage becomes more robust.
+	- PageCache supports partial flush.
+	- Performance of HashDBM::Synchronize improves.
 
 2021-05-30  Mikio Hirabayashi  <hirarin@gmail.com>
 

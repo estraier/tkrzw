@@ -800,16 +800,22 @@ Status PageCache::Write(int64_t off, const void* buf, size_t size) {
   return status;
 }
 
-Status PageCache::Flush() {
+Status PageCache::Flush(int64_t off, int64_t size) {
   Status status(Status::SUCCESS);
+  if (size == 0) {
+    size = std::max<int64_t>(0, region_size_.load() - off);
+  }
+  int64_t end_position = AlignNumber(off + size, page_size_);
+  off -= off % page_size_;
+  size = end_position - off;
   for (auto& slot : slots_) {
     std::lock_guard lock(slot.mutex);
     auto& pages = *slot.pages;
     for (auto it = pages.begin(); it != pages.end(); ++it) {
-      const int64_t off = it->key;
+      const int64_t page_off = it->key;
       Page& page = it->value;
-      if (page.dirty) {
-        status |= WritePages(&slot, off, &page);
+      if (page.dirty && page_off >= off && page_off < end_position) {
+        status |= WritePages(&slot, page_off, &page);
       }
     }
   }

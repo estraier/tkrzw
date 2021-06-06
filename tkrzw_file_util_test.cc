@@ -336,6 +336,37 @@ TEST(FileUtilTest, PageCache) {
   cache.Clear();
   EXPECT_EQ(105, cache.GetRegionSize());
   for (int32_t i = 0; i < file_size; i++) {
+    file_buffer[i] = 'x';
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "0000000000", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(20, "0000000000", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(40, "0000000000", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush(22, 1));
+  EXPECT_EQ("xxxxxxxxxxxxxxxxxxxx0000000000xxxxxxxxxxxxxxxxxxxx",
+            std::string_view(file_buffer, 50));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "1111111111", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(20, "1111111111", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(40, "1111111111", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush(0, 1));
+  EXPECT_EQ("1111111111xxxxxxxxxx0000000000xxxxxxxxxxxxxxxxxxxx",
+            std::string_view(file_buffer, 50));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "2222222222", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(20, "2222222222", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(40, "2222222222", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush(5, 25));
+  EXPECT_EQ("2222222222xxxxxxxxxx2222222222xxxxxxxxxxxxxxxxxxxx",
+            std::string_view(file_buffer, 50));
+  cache.Clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(0, "3333333333", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(20, "3333333333", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Write(40, "3333333333", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, cache.Flush(0, 0));
+  EXPECT_EQ("3333333333xxxxxxxxxx3333333333xxxxxxxxxx3333333333",
+            std::string_view(file_buffer, 50));
+  cache.Clear();
+  for (int32_t i = 0; i < file_size; i++) {
     file_buffer[i] = '0' + i % 10;
   }
   auto task = [&](int32_t id) {

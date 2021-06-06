@@ -331,9 +331,12 @@ class PageCache final {
 
   /**
    * Flushes all dirty buffers to the file.
+   * @param off The offset of the region to be synchronized.
+   * @param size The size of the region to be synchronized.  If it is zero, the length to the
+   * end of file is specified.
    * @return The result status.
    */
-  Status Flush();
+  Status Flush(int64_t off = 0, int64_t size = 0);
 
   /**
    * Clear all data.
