@@ -651,6 +651,8 @@ class HashDBM final : public DBM {
    * @param db_type The pointer to a variable to store the database type.
    * @param opaque The pointer to a variable to store the opaque data.
    * @return The result status.
+   * @detail If the leading magic data is inconsistent, it returns failure.  If the cyclic magic
+   * data is inconsistent, it returns success and -1 is assigned to cyclic_magic.
    */
   static Status ReadMetadata(
       File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,

@@ -1034,6 +1034,9 @@ Status HashDBMImpl::OpenImpl(bool writable) {
   if (status != Status::SUCCESS) {
     return status;
   }
+  if (cyclic_magic_ < 0) {
+    file_size_ = INT64MAX;
+  }
   SetRecordBase();
   status = TuneFileAfterOpen();
   if (status != Status::SUCCESS) {
@@ -1044,7 +1047,7 @@ Status HashDBMImpl::OpenImpl(bool writable) {
   if (file_size_ != actual_file_size) {
     if (file_size_ > actual_file_size) {
       healthy = false;
-    } else {
+    } else if (file_size_ > 0) {
       const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
       char* buf = new char[remainder];
       status = file_->Read(file_size_, buf, remainder);
@@ -2053,7 +2056,7 @@ Status HashDBM::ReadMetadata(
   const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
   if (*cyclic_magic != cyclic_magic_back) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad cyclic magic data");
+    *cyclic_magic = -1;
   }
   return Status(Status::SUCCESS);
 }
@@ -2168,7 +2171,7 @@ Status HashDBM::RestoreDatabase(
           &old_static_flags, &old_offset_width, &old_align_pow,
           &old_closure_flags, &old_num_buckets, &old_num_records,
           &old_eff_data_size, &old_file_size, &old_mod_time,
-          &old_db_type, &old_opaque) == Status::SUCCESS) {
+          &old_db_type, &old_opaque) == Status::SUCCESS && old_cyclic_magic >= 0) {
     if (old_static_flags & STATIC_FLAG_UPDATE_IN_PLACE)  {
       update_mode = HashDBM::UPDATE_IN_PLACE;
     } else if (old_static_flags & STATIC_FLAG_UPDATE_APPENDING) {

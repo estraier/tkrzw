@@ -255,6 +255,9 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     file_->Close();
     return status;
   }
+  if (cyclic_magic_ < 0) {
+    file_size_ = INT64MAX;
+  }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
   bool invalid_file_size = false;
   const int64_t actual_file_size = file_->GetSizeSimple();
@@ -1880,7 +1883,7 @@ Status SkipDBM::ReadMetadata(
   const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
   if (*cyclic_magic != cyclic_magic_back) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad cyclic magic data");
+    *cyclic_magic = -1;
   }
   return Status(Status::SUCCESS);
 }
@@ -1900,6 +1903,9 @@ Status SkipDBM::RestoreDatabase(
   if (actual_old_file_size < METADATA_SIZE) {
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
+  int32_t offset_width = -1;
+  int32_t step_unit = -1;
+  int32_t max_level = -1;
   int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;
   int32_t old_pkg_minor_version = 0;
@@ -1913,14 +1919,15 @@ Status SkipDBM::RestoreDatabase(
   int64_t old_mod_time = 0;
   int32_t old_db_type = 0;
   std::string old_opaque;
-  status = ReadMetadata(
-      &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
-      &old_offset_width, &old_step_unit, &old_max_level,
-      &old_closure_flags, &old_num_records,
-      &old_eff_data_size, &old_file_size, &old_mod_time,
-      &old_db_type, &old_opaque);
-  if (status != Status::SUCCESS) {
-    return status;
+  if (ReadMetadata(
+          &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
+          &old_offset_width, &old_step_unit, &old_max_level,
+          &old_closure_flags, &old_num_records,
+          &old_eff_data_size, &old_file_size, &old_mod_time,
+          &old_db_type, &old_opaque) == Status::SUCCESS && old_cyclic_magic >= 0) {
+    offset_width = old_offset_width;
+    step_unit = old_step_unit;
+    max_level = old_max_level;
   }
   std::unique_ptr<File> new_file;
   if (actual_old_file_size <= UINT32MAX) {
@@ -1931,9 +1938,9 @@ Status SkipDBM::RestoreDatabase(
   SkipDBM new_dbm(std::move(new_file));
   SkipDBM::TuningParameters tuning_params;
   tuning_params.insert_in_order = true;
-  tuning_params.offset_width = old_offset_width;
-  tuning_params.step_unit = old_step_unit;
-  tuning_params.max_level = old_max_level;
+  tuning_params.offset_width = offset_width;
+  tuning_params.step_unit = step_unit;
+  tuning_params.max_level = max_level;
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {
     return status;

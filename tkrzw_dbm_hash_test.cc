@@ -1156,6 +1156,22 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ("third", value);
     EXPECT_EQ(3, dbm->CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+    auto tmp_file = std::make_unique<tkrzw::MemoryMapParallelFile>();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Write(9, "\xFF", 1));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+    EXPECT_TRUE(dbm->IsHealthy());
+    EXPECT_TRUE(dbm->IsAutoRestored());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+    EXPECT_EQ("first", value);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+    EXPECT_EQ("second", value);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+    EXPECT_EQ("third", value);
+    EXPECT_EQ(3, dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   }
 }
 

@@ -2536,14 +2536,17 @@ Status TreeDBM::RestoreDatabase(
   int32_t key_comp_type = 0;
   std::string mini_opaque;
   const std::string opaque = tmp_dbm.GetOpaqueMetadata();
-  status = ParseMetadata(
-      opaque, &num_records, &eff_data_size,
-      &root_id, &first_id, &last_id,
-      &num_leaf_nodes, &num_inner_nodes,
-      &max_page_size, &max_branches,
-      &tree_level, &key_comp_type, &mini_opaque);
-  if (status != Status::SUCCESS) {
-    return status;
+  if (ParseMetadata(
+          opaque, &num_records, &eff_data_size,
+          &root_id, &first_id, &last_id,
+          &num_leaf_nodes, &num_inner_nodes,
+          &max_page_size, &max_branches,
+          &tree_level, &key_comp_type, &mini_opaque) != Status::SUCCESS) {
+    offset_width = TreeDBM::DEFAULT_OFFSET_WIDTH;
+    align_pow = TreeDBM::DEFAULT_ALIGN_POW;
+    num_buckets = std::max(tmp_dbm.CountSimple() * 2, DEFAULT_NUM_BUCKETS);
+    max_page_size = -1;
+    max_branches = -1;
   }
   TuningParameters params;
   params.update_mode = tmp_dbm.GetUpdateMode();

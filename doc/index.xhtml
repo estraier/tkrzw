@@ -3663,8 +3663,6 @@ one    first
 
 <p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
 
-<p>If the metadata of the database file is broken for some reason, automatic restoration is not done.  In that case, you should do restoration by calling the RestoreDatabase method or running tkrzw_dbm_util restore explicitly.</p>
-
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 
 <p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFileData and Export.</p>
