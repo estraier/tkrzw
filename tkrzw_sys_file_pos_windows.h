@@ -324,7 +324,7 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
+    status |= page_cache_->Flush(0, size);
     page_cache_->Clear();
   }
   int64_t new_trunc_size =
@@ -358,8 +358,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t s
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
-    page_cache_->Clear();
+    status |= page_cache_->Flush(off, size);
   }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
@@ -984,7 +983,7 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
+    status |= page_cache_->Flush(0, size);
     page_cache_->Clear();
   }
   int64_t new_trunc_size =
@@ -1024,8 +1023,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t siz
   }
   Status status(Status::SUCCESS);
   if (page_cache_ != nullptr) {
-    status |= page_cache_->Flush();
-    page_cache_->Clear();
+    status |= page_cache_->Flush(off, size);
   }
   if (head_buffer_ != nullptr) {
     status |= PWriteSequence(file_handle_, 0, head_buffer_, head_buffer_size_);
