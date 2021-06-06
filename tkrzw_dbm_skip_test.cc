@@ -532,6 +532,8 @@ TEST_F(SkipDBMTest, Reducer) {
   EXPECT_THAT(tkrzw::SkipDBM::ReduceConcatWithTab("", {"a", "b", "c"}), ElementsAre("a\tb\tc"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceConcatWithLine("", {"a", "b", "c"}), ElementsAre("a\nb\nc"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceToTotal("", {"11", "22", "33"}), ElementsAre("66"));
+  EXPECT_THAT(tkrzw::SkipDBM::ReduceToTotalBigEndian("", {"\x10\x01", "\x20\x02", "\x30\x03"}),
+              ElementsAre(std::string_view("\x00\x00\x00\x00\x00\x00\x60\x06", 8)));
 }
 
 void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
