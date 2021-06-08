@@ -1540,7 +1540,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
   int32_t align_pow = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &record_base, &offset_width, &align_pow, &last_sync_size);
+      file, &tmp_record_base, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1589,7 +1589,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   int32_t align_pow = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &record_base, &offset_width, &align_pow, &last_sync_size);
+      file, &tmp_record_base, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1992,7 +1992,7 @@ Status HashDBM::ImportFromFileBackward(
 Status HashDBM::ImportFromFileBackward(
     File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
   assert(file != nullptr);
-  return impl_->ImportFromFileForward(file, skip_broken_records, record_base, end_offset);
+  return impl_->ImportFromFileBackward(file, skip_broken_records, record_base, end_offset);
 }
 
 HashDBM::Iterator::Iterator(HashDBMImpl* dbm_impl) {

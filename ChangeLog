@@ -6,6 +6,7 @@
 	- Auto recovery supports metadata brokage.
 	- Add a command to check transaction features.
 	- Add SkipDBM::ReduceToTotalBigEndian.
+	- Fix a bug that Rebuild performance has inefficiency.
 
 2021-06-05  Mikio Hirabayashi  <hirarin@gmail.com>
 

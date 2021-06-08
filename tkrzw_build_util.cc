@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
       tkrzw::PrintUsageAndDie();
     }
   } catch (const std::runtime_error& e) {
-    std::cerr << e.what() << std::endl;
+    tkrzw::EPrintL(e.what());
     rv = 1;
   }
   return rv;

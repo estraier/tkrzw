@@ -195,7 +195,7 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
     PrintL("Open failed: ", status);
     has_error = true;
   }
-  std::cout << "Healthy: " << dbm.IsHealthy() << std::endl;
+  PrintL("Healthy: ", dbm.IsHealthy());
   bool restored = false;
   auto* hash_dbm = dynamic_cast<tkrzw::HashDBM*>(dbm.GetInternalDBM());
   if (hash_dbm != nullptr) {
@@ -209,9 +209,9 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
   if (skip_dbm != nullptr) {
     restored = skip_dbm->IsAutoRestored();
   }
-  std::cout << "Restored: " << restored << std::endl;
+  PrintL("Restored: ", restored);
   int64_t num_records = dbm.CountSimple();
-  std::cout << "Records: " << num_records << std::endl;
+  PrintL("Records: ", num_records);
   const int64_t log_freq = std::max<int64_t>(num_records / 25, 10);
   int64_t count = 0;
   auto iter = dbm.MakeIterator();
@@ -280,7 +280,7 @@ int main(int argc, char** argv) {
       tkrzw::PrintUsageAndDie();
     }
   } catch (const std::runtime_error& e) {
-    std::cerr << e.what() << std::endl;
+    tkrzw::EPrintL(e.what());
     rv = 1;
   }
   return rv;
