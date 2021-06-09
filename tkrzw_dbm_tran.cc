@@ -78,7 +78,9 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
   std::atomic_bool has_error(false);
   tkrzw::PolyDBM dbm;
-  Status status = dbm.Open(path, true, File::OPEN_TRUNCATE);
+  const std::map<std::string, std::string> tuning_params =
+      tkrzw::StrSplitIntoMap(poly_params, ",", "=");
+  Status status = dbm.OpenAdvanced(path, true, File::OPEN_TRUNCATE, tuning_params);
   if (status != Status::SUCCESS) {
     PrintL("Open failed: ", status);
     has_error = true;
@@ -190,7 +192,9 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
   const int32_t num_increments = GetIntegerArgument(cmd_args, "--incr", 0, 3);
   bool has_error = false;
   tkrzw::PolyDBM dbm;
-  Status status = dbm.Open(path, true, File::OPEN_DEFAULT);
+  const std::map<std::string, std::string> tuning_params =
+      tkrzw::StrSplitIntoMap(poly_params, ",", "=");
+  Status status = dbm.OpenAdvanced(path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {
     PrintL("Open failed: ", status);
     has_error = true;

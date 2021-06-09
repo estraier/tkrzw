@@ -32,6 +32,35 @@
 
 namespace tkrzw {
 
+class NoopIterator final : public DBM::Iterator {
+ public:
+  virtual ~NoopIterator() = default;
+  Status First() override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status Last() override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status Jump(std::string_view key) override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status JumpLower(std::string_view key, bool inclusive = false) override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status JumpUpper(std::string_view key, bool inclusive = false) override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status Next() override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status Previous() override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+  Status Process(DBM::RecordProcessor* proc, bool writable) override {
+    return Status(Status::PRECONDITION_ERROR);
+  }
+};
+
 std::string GuessClassNameFromPath(const std::string& path) {
   const std::string base = StrLowerCase(PathToBaseName(path));
   std::string ext = PathToExtension(base);
@@ -178,7 +207,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
-  const std::string restore_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
+  const std::string restore_mode = StrLowerCase(SearchMap(*params, "restore_mode", ""));
   if (restore_mode == "restore_sync" || restore_mode == "sync") {
     tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
   }
@@ -668,7 +697,7 @@ bool PolyDBM::IsOrdered() const {
 
 std::unique_ptr<DBM::Iterator> PolyDBM::MakeIterator() {
   if (dbm_ == nullptr) {
-    return std::unique_ptr<DBM::Iterator>(nullptr);
+    return std::make_unique<NoopIterator>();
   }
   std::unique_ptr<PolyDBM::Iterator> iter(new PolyDBM::Iterator(dbm_->MakeIterator()));
   return iter;
