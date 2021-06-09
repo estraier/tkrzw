@@ -94,7 +94,7 @@ class HashRecord final {
   /**
    * Gets the padding size of the record.
    * @return The padding size of the record.
-   * @detains This can be called only if GetWholeSize returns a non-zero value..
+   * @details This can be called only if GetWholeSize returns a non-zero value..
    */
   int32_t GetPaddingSize() const;
 
