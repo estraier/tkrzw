@@ -2506,14 +2506,25 @@ Status TreeDBM::ParseMetadata(
 
 Status TreeDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
-  const std::string tmp_file_path = new_file_path + ".tmp.restore";
-  Status status = HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset);
-  if (status != Status::SUCCESS) {
-    RemoveFile(tmp_file_path);
-    return status;
+  bool healthy = false;
+  {
+    HashDBM check_dbm(std::make_unique<PositionalParallelFile>());
+    if (check_dbm.Open(old_file_path, false) == Status::SUCCESS) {
+      healthy = check_dbm.IsHealthy();
+    }
+    check_dbm.Close();
+  }
+  std::string tmp_file_path = old_file_path;
+  if (!healthy) {
+    tmp_file_path = new_file_path + ".tmp.restore";
+    const Status status = HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset);
+    if (status != Status::SUCCESS) {
+      RemoveFile(tmp_file_path);
+      return status;
+    }
   }
   HashDBM tmp_dbm;
-  status = tmp_dbm.Open(tmp_file_path, false);
+  Status status = tmp_dbm.Open(tmp_file_path, false);
   if (status != Status::SUCCESS) {
     RemoveFile(tmp_file_path);
     return status;
@@ -2591,9 +2602,11 @@ Status TreeDBM::RestoreDatabase(
     TreeDBM* dbm_;
   } loader(&new_dbm);
   status = tmp_dbm.ProcessEach(&loader, false);
-  tmp_dbm.Close();
-  RemoveFile(tmp_file_path);
   status |= new_dbm.Close();
+  tmp_dbm.Close();
+  if (tmp_file_path != old_file_path) {
+    RemoveFile(tmp_file_path);
+  }
   return status;
 }
 

@@ -744,7 +744,7 @@ class DBM {
      * Process a file.
      * @param path The path of the file.
      */
-    virtual void Process(const std::string& path) = 0;
+    virtual void Process(const std::string& path) {}
   };
 
   /**

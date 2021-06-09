@@ -92,6 +92,13 @@ class HashRecord final {
   int32_t GetWholeSize() const;
 
   /**
+   * Gets the padding size of the record.
+   * @return The padding size of the record.
+   * @detains This can be called only if GetWholeSize returns a non-zero value..
+   */
+  int32_t GetPaddingSize() const;
+
+  /**
    * Read the metadata and the key.
    * @param offset The offset of the record.
    * @param min_read_size The minimum reading size.
@@ -153,9 +160,11 @@ class HashRecord final {
    * Replays operations applied on a hash database file.
    * @param file A file object having opened the database file.
    * @param proc The pointer to the processor object.
+   * @param bucket_base The bucket base offset.
    * @param record_base The record base offset.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
+   * @param num_buckets The number of buckets.
    * @param min_read_size The minimum reading size.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
@@ -166,9 +175,9 @@ class HashRecord final {
    * than NOOP, the iteration is cancelled.
    */
   static Status ReplayOperations(
-      File* file, DBM::RecordProcessor* proc,
-      int64_t record_base, int32_t offset_width, int32_t align_pow,int32_t min_read_size,
-      bool skip_broken_records, int64_t end_offset);
+      File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
+      int64_t record_base, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+      int32_t min_read_size, bool skip_broken_records, int64_t end_offset);
 
   /**
    * Extracts a sequence of offsets from a file.

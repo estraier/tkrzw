@@ -14,6 +14,7 @@
 #include "tkrzw_sys_config.h"
 
 #include "tkrzw_dbm.h"
+#include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_dbm_hash_impl.h"
 #include "tkrzw_file.h"
 
@@ -46,6 +47,10 @@ int64_t HashRecord::GetChildOffset() const {
 
 int32_t HashRecord::GetWholeSize() const {
   return whole_size_;
+}
+
+int32_t HashRecord::GetPaddingSize() const {
+  return padding_size_;
 }
 
 Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
@@ -303,12 +308,14 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
 }
 
 Status HashRecord::ReplayOperations(
-    File* file, DBM::RecordProcessor* proc,
-    int64_t record_base, int32_t offset_width, int32_t align_pow, int32_t min_read_size,
-    bool skip_broken_records, int64_t end_offset) {
+    File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
+    int64_t record_base, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+    int32_t min_read_size, bool skip_broken_records, int64_t end_offset) {
   assert(file != nullptr && proc != nullptr && offset_width > 0);
+  bool unlimited = false;
   if (end_offset < 0) {
     end_offset = INT64MAX;
+    unlimited = true;
   }
   end_offset = std::min(end_offset, file->GetSizeSimple());
   int64_t offset = record_base;
@@ -331,6 +338,15 @@ Status HashRecord::ReplayOperations(
     if (rec_size == 0) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
+        if (skip_broken_records) {
+          int64_t next_offset = 0;
+          if (rec.FindNextOffset(offset, min_read_size, &next_offset) == Status::SUCCESS) {
+            offset = next_offset;
+            continue;
+          } else {
+            break;
+          }
+        }
         return status;
       }
       rec_size = rec.GetWholeSize();
@@ -343,9 +359,27 @@ Status HashRecord::ReplayOperations(
         if (value.data() == nullptr) {
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
+            if (skip_broken_records) {
+              offset += rec_size;
+              continue;
+            }
             return status;
           }
           value = rec.GetValue();
+        }
+        if (unlimited && offset + rec_size >= end_offset && num_buckets > 0 &&
+            !value.empty() && value.back() == 0 && rec.GetPaddingSize() == 0) {
+          const uint64_t bucket_index = PrimaryHash(key, num_buckets);
+          char bucket_buf[sizeof(uint64_t)];
+          const int64_t bucket_offset = bucket_base + bucket_index * offset_width;
+          status = file->Read(bucket_offset, bucket_buf, offset_width);
+          if (status != Status::SUCCESS) {
+            break;
+          }
+          const int64_t bucket_value = ReadFixNum(bucket_buf, offset_width) << align_pow;
+          if (offset != bucket_value) {
+            break;
+          }
         }
         res = proc->ProcessFull(key, value);
         break;

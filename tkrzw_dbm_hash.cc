@@ -1538,9 +1538,10 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
   int64_t tmp_record_base = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
+  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base, &offset_width, &align_pow, &last_sync_size);
+      file, &tmp_record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1549,9 +1550,10 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
   }
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
-      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
+      end_offset = -1;
+    } else {
+      end_offset = last_sync_size;
     }
-    end_offset = last_sync_size;
   }
   Status import_status(Status::SUCCESS);
   class Importer final : public DBM::RecordProcessor {
@@ -1576,7 +1578,8 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     Status* status_;
   } importer(this, &import_status);
   return HashRecord::ReplayOperations(
-      file, &importer, record_base, offset_width, align_pow, min_read_size_,
+      file, &importer, METADATA_SIZE, record_base,
+      offset_width, align_pow, num_buckets, min_read_size_,
       skip_broken_records, end_offset);
 }
 
@@ -1587,9 +1590,10 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
    int64_t tmp_record_base = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
+  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base, &offset_width, &align_pow, &last_sync_size);
+      file, &tmp_record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -2063,28 +2067,33 @@ Status HashDBM::ReadMetadata(
 
 Status HashDBM::FindRecordBase(
     File* file, int64_t *record_base, int32_t* offset_width, int32_t* align_pow,
-    int64_t* last_sync_size) {
+    int64_t* num_buckets, int64_t* last_sync_size) {
   assert(file != nullptr &&
          record_base != nullptr && offset_width != nullptr && align_pow != nullptr &&
-         last_sync_size != nullptr);
+         num_buckets != nullptr && last_sync_size != nullptr);
   *record_base = 0;
+  *offset_width = 0;
+  *align_pow = 0;
+  *num_buckets = 0;
+  *last_sync_size = 0;
   char meta[METADATA_SIZE];
   Status status = file->Read(0, meta, METADATA_SIZE);
   if (status == Status::SUCCESS &&
       std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1) == 0) {
     *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
     *align_pow = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
-    int64_t num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
+    *num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
     if ((*offset_width >= MIN_OFFSET_WIDTH && *offset_width <= MAX_OFFSET_WIDTH) &&
-        *align_pow <= MAX_ALIGN_POW && num_buckets <= MAX_NUM_BUCKETS) {
+        *align_pow <= MAX_ALIGN_POW && *num_buckets <= MAX_NUM_BUCKETS) {
       const int32_t align = std::max(RECORD_BASE_ALIGN, 1 << *align_pow);
-      *record_base = METADATA_SIZE + num_buckets * *offset_width +
+      *record_base = METADATA_SIZE + *num_buckets * *offset_width +
           FBP_SECTION_SIZE + RECORD_BASE_HEADER_SIZE;
       *record_base = AlignNumber(*record_base, align);
     }
-    *last_sync_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
-  } else {
-    *last_sync_size = 0;
+    if (ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, 1) ==
+        ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1)) {
+      *last_sync_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
+    }
   }
   if (*record_base == 0) {
     int64_t offset = RECORD_BASE_ALIGN;
@@ -2140,15 +2149,15 @@ Status HashDBM::RestoreDatabase(
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
   UpdateMode update_mode = UPDATE_DEFAULT;
-  int64_t num_buckets = -1;
   int32_t db_type = 0;
   std::string opaque;
   int64_t record_base = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
+  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   status = FindRecordBase(
-      &old_file, &record_base, &offset_width, &align_pow, &last_sync_size);
+      &old_file, &record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
