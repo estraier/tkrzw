@@ -1626,6 +1626,11 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     CleanUp();
     return status;
   }
+  bool unlimited = false;
+  if (end_offset < 0) {
+    end_offset = file->GetSizeSimple();
+    unlimited = true;
+  }
   const int64_t num_offsets = offset_file->GetSizeSimple() / offset_width_;
   const int64_t dead_num_buckets = std::min(num_offsets, num_buckets_);
   HashDBM::TuningParameters dead_tuning_params;
@@ -1647,6 +1652,9 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     }
     status = rec.ReadMetadataKey(offset, min_read_size_);
     if (status != Status::SUCCESS) {
+      if (skip_broken_records) {
+        continue;
+      }
       CleanUp();
       return status;
     }
@@ -1657,11 +1665,15 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
         if (value.data() == nullptr) {
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
+            if (skip_broken_records) {
+              continue;
+            }
             CleanUp();
             return status;
           }
           value = rec.GetValue();
         }
+        int64_t rec_size = rec.GetWholeSize();
         bool removed = false;
         status = dead_dbm.Get(key, nullptr);
         if (status == Status::SUCCESS) {
@@ -1671,6 +1683,22 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
           return status;
         }
         if (!removed) {
+          if (unlimited && num_buckets > 0 &&
+              offset + rec_size >= end_offset - HashRecord::RESTORE_CHECK_CHAIN_RANGE) {
+            status = HashRecord::CheckHashChain(
+                file, METADATA_SIZE, offset_width, align_pow, num_buckets, key, offset);
+            if (status != Status::SUCCESS) {
+              if (skip_broken_records) {
+                offset += rec_size;
+                continue;
+              }
+              if (status == Status::NOT_FOUND_ERROR) {
+                status = Status(Status::BROKEN_DATA_ERROR, "unreachable record");
+              }
+              CleanUp();
+              return status;
+            }
+          }
           Status set_status(Status::SUCCESS);
           DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
           status = Process(key, &setter, true);

@@ -36,6 +36,9 @@ namespace tkrzw {
  */
 class HashRecord final {
  public:
+  /** The range to check the hash chain for restoration. */
+  static constexpr int64_t RESTORE_CHECK_CHAIN_RANGE = 1024 * 1024;
+
   /**
    * Enumeration for operation types.
    */
@@ -90,13 +93,6 @@ class HashRecord final {
    * @return The whole size of the record.  It might be zero if the body hasn't been read.
    */
   int32_t GetWholeSize() const;
-
-  /**
-   * Gets the padding size of the record.
-   * @return The padding size of the record.
-   * @details This can be called only if GetWholeSize returns a non-zero value..
-   */
-  int32_t GetPaddingSize() const;
 
   /**
    * Read the metadata and the key.
@@ -178,6 +174,22 @@ class HashRecord final {
       File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
       int64_t record_base, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
       int32_t min_read_size, bool skip_broken_records, int64_t end_offset);
+
+  /**
+   * Checks whether a record is reachable from the hash table.
+   * @param file A file object having opened the database file.
+   * @param bucket_base The bucket base offset.
+   * @param offset_width The offset width.
+   * @param align_pow The alignment power.
+   * @param num_buckets The number of buckets.
+   * @param key The key of the record to find.
+   * @param offset The offset of the record to find.
+   * @return The result status.
+   */
+  static Status CheckHashChain(
+      File* file, int64_t bucket_base,
+      int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+      std::string_view key, int64_t offset);
 
   /**
    * Extracts a sequence of offsets from a file.

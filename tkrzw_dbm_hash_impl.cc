@@ -49,10 +49,6 @@ int32_t HashRecord::GetWholeSize() const {
   return whole_size_;
 }
 
-int32_t HashRecord::GetPaddingSize() const {
-  return padding_size_;
-}
-
 Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
   int64_t record_size = file_->GetSizeSimple() - offset;
@@ -367,18 +363,19 @@ Status HashRecord::ReplayOperations(
           }
           value = rec.GetValue();
         }
-        if (unlimited && offset + rec_size >= end_offset && num_buckets > 0 &&
-            !value.empty() && value.back() == 0 && rec.GetPaddingSize() == 0) {
-          const uint64_t bucket_index = PrimaryHash(key, num_buckets);
-          char bucket_buf[sizeof(uint64_t)];
-          const int64_t bucket_offset = bucket_base + bucket_index * offset_width;
-          status = file->Read(bucket_offset, bucket_buf, offset_width);
+        if (unlimited && num_buckets > 0 &&
+            offset + rec_size >= end_offset - RESTORE_CHECK_CHAIN_RANGE) {
+          status = CheckHashChain(
+              file, bucket_base, offset_width, align_pow, num_buckets, key, offset);
           if (status != Status::SUCCESS) {
-            break;
-          }
-          const int64_t bucket_value = ReadFixNum(bucket_buf, offset_width) << align_pow;
-          if (offset != bucket_value) {
-            break;
+            if (skip_broken_records) {
+              offset += rec_size;
+              continue;
+            }
+            if (status == Status::NOT_FOUND_ERROR) {
+              status = Status(Status::BROKEN_DATA_ERROR, "unreachable record");
+            }
+            return status;
           }
         }
         res = proc->ProcessFull(key, value);
@@ -399,6 +396,32 @@ Status HashRecord::ReplayOperations(
     offset += rec_size;
   }
   return Status(Status::SUCCESS);
+}
+
+Status HashRecord::CheckHashChain(
+    File* file, int64_t bucket_base,
+    int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+    std::string_view key, int64_t offset) {
+  const uint64_t bucket_index = PrimaryHash(key, num_buckets);
+  char bucket_buf[sizeof(uint64_t)];
+  const int64_t bucket_offset = bucket_base + bucket_index * offset_width;
+  Status status = file->Read(bucket_offset, bucket_buf, offset_width);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  int64_t current_offset = ReadFixNum(bucket_buf, offset_width) << align_pow;
+  while (current_offset > 0) {
+    if (current_offset == offset) {
+      return Status(Status::SUCCESS);
+    }
+    HashRecord rec(file, offset_width, align_pow);
+    status = rec.ReadMetadataKey(current_offset, META_MIN_READ_SIZE);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    current_offset = rec.GetChildOffset();
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status HashRecord::ExtractOffsets(

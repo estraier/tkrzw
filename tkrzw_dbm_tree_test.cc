@@ -787,6 +787,65 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     }
     EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.Close());
   }
+  const std::string first_file_path = tmp_dir.MakeUniquePath();
+  const std::string second_file_path = tmp_dir.MakeUniquePath();
+  constexpr int32_t num_iterations = 10000;
+  for (const auto& update_mode : update_modes) {
+    tkrzw::TreeDBM::TuningParameters tuning_params;
+    tuning_params.update_mode = update_mode;
+    tuning_params.offset_width = 3;
+    tuning_params.num_buckets = 1234;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.max_page_size = 200;
+    tuning_params.max_branches = 5;
+    tkrzw::TreeDBM second_dbm;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        first_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    std::mt19937 mt(1);
+    std::uniform_int_distribution<int32_t> num_dist(1, num_iterations);
+    std::uniform_int_distribution<int32_t> op_dist(0, tkrzw::INT32MAX);
+    for (int32_t i = 0; i < num_iterations; i++) {
+      const int32_t num_key = num_dist(mt) / 2;
+      const std::string& key = tkrzw::ToString(num_key);
+      const int32_t num_value = num_dist(mt);
+      const std::string& value = tkrzw::ToString(num_value * num_value);
+      if (op_dist(mt) % 5 == 0) {
+        const tkrzw::Status status = dbm->Remove(key);
+        EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
+                    status == tkrzw::Status::NOT_FOUND_ERROR);
+      } else if (op_dist(mt) % 3 == 0) {
+        const tkrzw::Status status = dbm->Append(key, value, ":");
+        EXPECT_TRUE(status == tkrzw::Status::SUCCESS);
+      } else {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+      }
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::HashDBM::RestoreDatabase(first_file_path, second_file_path, -1));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(first_file_path, false));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Open(second_file_path, false));
+    EXPECT_TRUE(second_dbm.IsHealthy());
+    EXPECT_EQ(dbm->CountSimple(), second_dbm.CountSimple());
+    int64_t count = 0;
+    auto iter = second_dbm.MakeIterator();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+    while (true) {
+      std::string key, value;
+      tkrzw::Status status = iter->Get(&key, &value);
+      if (status != tkrzw::Status::SUCCESS) {
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+        break;
+      }
+      count++;
+      EXPECT_EQ(dbm->GetSimple(key), value);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
+    }
+    EXPECT_EQ(dbm->CountSimple(), count);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(second_file_path));
+  }
 }
 
 void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
