@@ -48,6 +48,7 @@ constexpr int32_t META_OFFSET_OPAQUE = 64;
 constexpr int32_t FBP_SECTION_SIZE = 1008;
 constexpr int32_t RECORD_BASE_HEADER_SIZE = 16;
 const char RECORD_BASE_MAGIC_DATA[] = "TkrzwREC\n";
+constexpr int32_t RECHEAD_OFFSET_STATIC_FLAGS = 9;
 constexpr int32_t RECHEAD_OFFSET_OFFSET_WIDTH = 10;
 constexpr int32_t RECHEAD_OFFSET_ALIGN_POW = 11;
 constexpr int32_t RECORD_MUTEX_NUM_SLOTS = 128;
@@ -1259,7 +1260,8 @@ Status HashDBMImpl::InitializeBuckets() {
   delete[] buf;
   char head[RECORD_BASE_HEADER_SIZE];
   std::memset(head, 0, RECORD_BASE_HEADER_SIZE);
-  std::memcpy(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA));
+  std::memcpy(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1);
+  WriteFixNum(head + RECHEAD_OFFSET_STATIC_FLAGS, static_flags_, 1);
   WriteFixNum(head + RECHEAD_OFFSET_OFFSET_WIDTH, offset_width_, 1);
   WriteFixNum(head + RECHEAD_OFFSET_ALIGN_POW, align_pow_, 1);
   status |= file_->Write(record_base_ - RECORD_BASE_HEADER_SIZE, head, RECORD_BASE_HEADER_SIZE);
@@ -1536,12 +1538,14 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     File* file, bool skip_broken_records,
     int64_t record_base, int64_t end_offset) {
   int64_t tmp_record_base = 0;
+  int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
   int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      file, &tmp_record_base,
+      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1587,13 +1591,15 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     File* file, bool skip_broken_records,
     int64_t record_base, int64_t end_offset,
     const std::string& offset_path, const std::string& dead_path) {
-   int64_t tmp_record_base = 0;
+  int64_t tmp_record_base = 0;
+  int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
   int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      file, &tmp_record_base,
+      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1602,9 +1608,10 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   }
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
-      return Status(Status::BROKEN_DATA_ERROR, "unavailable last sync size");
+      end_offset = -1;
+    } else {
+      end_offset = last_sync_size;
     }
-    end_offset = last_sync_size;
   }
   auto offset_file = file_->MakeFile();
   HashDBM dead_dbm;
@@ -2094,20 +2101,23 @@ Status HashDBM::ReadMetadata(
 }
 
 Status HashDBM::FindRecordBase(
-    File* file, int64_t *record_base, int32_t* offset_width, int32_t* align_pow,
+    File* file, int64_t *record_base,
+    int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
     int64_t* num_buckets, int64_t* last_sync_size) {
-  assert(file != nullptr &&
-         record_base != nullptr && offset_width != nullptr && align_pow != nullptr &&
+  assert(file != nullptr && record_base != nullptr &&
+         static_flags != nullptr && offset_width != nullptr && align_pow != nullptr &&
          num_buckets != nullptr && last_sync_size != nullptr);
   *record_base = 0;
   *offset_width = 0;
   *align_pow = 0;
   *num_buckets = 0;
   *last_sync_size = 0;
+  bool meta_ok = false;
   char meta[METADATA_SIZE];
   Status status = file->Read(0, meta, METADATA_SIZE);
   if (status == Status::SUCCESS &&
       std::memcmp(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1) == 0) {
+    *static_flags = ReadFixNum(meta + META_OFFSET_STATIC_FLAGS, 1);
     *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
     *align_pow = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
     *num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
@@ -2117,6 +2127,7 @@ Status HashDBM::FindRecordBase(
       *record_base = METADATA_SIZE + *num_buckets * *offset_width +
           FBP_SECTION_SIZE + RECORD_BASE_HEADER_SIZE;
       *record_base = AlignNumber(*record_base, align);
+      meta_ok = true;
     }
     if (ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_FRONT, 1) ==
         ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1)) {
@@ -2131,7 +2142,7 @@ Status HashDBM::FindRecordBase(
       char head[RECORD_BASE_HEADER_SIZE];
       status = file->Read(magic_offset, head, RECORD_BASE_HEADER_SIZE);
       if (status == Status::SUCCESS &&
-          std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA)) == 0) {
+          std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1) == 0) {
         *record_base = offset;
         break;
       }
@@ -2147,11 +2158,14 @@ Status HashDBM::FindRecordBase(
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA)) != 0) {
+  if (std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1) != 0) {
     return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
   }
-  *offset_width = ReadFixNum(head + RECHEAD_OFFSET_OFFSET_WIDTH, 1);
-  *align_pow = ReadFixNum(head + RECHEAD_OFFSET_ALIGN_POW, 1);
+  if (!meta_ok) {
+    *static_flags = ReadFixNum(head + RECHEAD_OFFSET_STATIC_FLAGS, 1);
+    *offset_width = ReadFixNum(head + RECHEAD_OFFSET_OFFSET_WIDTH, 1);
+    *align_pow = ReadFixNum(head + RECHEAD_OFFSET_ALIGN_POW, 1);
+  }
   if (*offset_width < MIN_OFFSET_WIDTH || *offset_width > MAX_OFFSET_WIDTH) {
     return Status(Status::BROKEN_DATA_ERROR, "the offset width is invalid");
   }
@@ -2180,14 +2194,21 @@ Status HashDBM::RestoreDatabase(
   int32_t db_type = 0;
   std::string opaque;
   int64_t record_base = 0;
+  int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
   int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   status = FindRecordBase(
-      &old_file, &record_base, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      &old_file, &record_base,
+      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
+  }
+  if (static_flags & STATIC_FLAG_UPDATE_IN_PLACE)  {
+    update_mode = HashDBM::UPDATE_IN_PLACE;
+  } else if (static_flags & STATIC_FLAG_UPDATE_APPENDING) {
+    update_mode = HashDBM::UPDATE_APPENDING;
   }
   int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;

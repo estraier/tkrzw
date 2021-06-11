@@ -665,6 +665,7 @@ class HashDBM final : public DBM {
    * Finds the record base of a hash database file.
    * @param file A file object having opened the database file.
    * @param record_base The pointer to an integer to store the record base offset.
+   * @param static_flags The pointer to an integer to store the static flags.
    * @param offset_width The pointer to an integer to store the offset width.
    * @param align_pow The pointer to an integer to store the alignment power.
    * @param num_buckets The pointer to an integer to store the number of buckets.
@@ -674,7 +675,8 @@ class HashDBM final : public DBM {
    * @return The result status.
    */
   static Status FindRecordBase(
-      File* file, int64_t *record_base, int32_t* offset_width, int32_t* align_pow,
+      File* file, int64_t *record_base,
+      int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
       int64_t* num_buckets, int64_t* last_sync_size);
 
   /**

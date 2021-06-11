@@ -689,14 +689,16 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   tkrzw::MemoryMapParallelFile offset_file;
   EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Open(offset_file_path, true));
   int64_t in_record_base = 0;
+  int32_t in_static_flags = 0;
   int32_t in_offset_width = 0;
   int32_t in_align_pow = 0;
   int64_t in_num_buckets = 0;
   int64_t last_sync_size = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashDBM::FindRecordBase(
-      &in_file, &in_record_base, &in_offset_width, &in_align_pow,
+      &in_file, &in_record_base, &in_static_flags, &in_offset_width, &in_align_pow,
       &in_num_buckets, &last_sync_size));
   EXPECT_GT(in_record_base, 0);
+  EXPECT_GT(in_offset_width, 0);
   EXPECT_EQ(tuning_params.offset_width, in_offset_width);
   EXPECT_EQ(tuning_params.align_pow, in_align_pow);
   EXPECT_EQ(tuning_params.num_buckets, in_num_buckets);
@@ -705,9 +707,10 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, in_file.Open(file_path, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, in_file.Write(0, "0123", 4));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashDBM::FindRecordBase(
-      &in_file, &in_record_base, &in_offset_width, &in_align_pow,
+      &in_file, &in_record_base, &in_static_flags, &in_offset_width, &in_align_pow,
       &in_num_buckets, &last_sync_size));
   EXPECT_GT(in_record_base, 0);
+  EXPECT_GT(in_offset_width, 0);
   EXPECT_EQ(tuning_params.offset_width, in_offset_width);
   EXPECT_EQ(tuning_params.align_pow, in_align_pow);
   EXPECT_EQ(0, in_num_buckets);

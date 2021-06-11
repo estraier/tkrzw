@@ -1026,7 +1026,7 @@ int main(int argc, char** argv) {
 
 <p>With the default 4-byte offset width and small-sized (less than 128 bytes) keys and medium-sized (less than 16384 bytes) values, the footprint for each record is 1 + 4 + 1 + 2 + 1 = 9 bytes.  However, due to alignment, padding bytes can be added.  With the default 8-byte alignment, average padding size is about 4 bytes.</p>
 
-<p>The 16 bytes before the record section is the record header section.  It is composed of "TkrzwREC\n", null '\0' character, a 1-byte integer for the offset width, and a 1-byte integer for the alignment power.  They would be used to recover records even if the header was broken.</p>
+<p>The 16 bytes before the record section is the record header section.  It is composed of "TkrzwREC\n", a 1-byte integer for the static flags, a 1-byte integer for the offset width, and a 1-byte integer for the alignment power.  They would be used to recover records even if the main header was broken.</p>
 
 <p>The 1008 bytes before the record header section is the free block pool section.  It contains pairs of an offset and a size of each free block.  The offset is a big-endian integer of the offset width.  The size is a big-endian integer of 4 bytes.  The maximum number of pairs is determined as 1008 / (W + 4).  Given the offset width 4, the maximum number is 126.</p>
 
