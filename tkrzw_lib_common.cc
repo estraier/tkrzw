@@ -123,14 +123,14 @@ uint64_t HashFNV(const void* buf, size_t size) {
   return hash;
 }
 
-uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
-  static uint32_t table[256];
+uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  static uint8_t table[256];
   static std::once_flag table_once_flag;
   std::call_once(table_once_flag, [&]() {
     for (uint32_t i = 0; i < 256; i++) {
-      uint32_t c = i;
-      for (int32_t j = 0; j < 8; j++) {
-        c = (c & 1) ? (0xEDB88320 ^ (c >> 1)) : (c >> 1);
+      uint8_t c = i;
+      for (uint32_t j = 0; j < 8; j++) {
+        c = (c << 1) ^ ((c & 0x80) ? 0x07 : 0);
       }
       table[i] = c;
     }
@@ -139,11 +139,8 @@ uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t
   const uint8_t* ep = rp + size;
   uint32_t crc = seed;
   while (rp < ep) {
-    crc = table[(crc ^ *rp) & 0xFF] ^ (crc >> 8);
+    crc = table[(crc ^ *rp)];
     rp++;
-  }
-  if (finish) {
-    crc ^= 0xFFFFFFFF;
   }
   return crc;
 }
@@ -170,14 +167,14 @@ uint32_t HashCRC16Continuous(const void* buf, size_t size, bool finish, uint32_t
   return crc & 0xFFFF;
 }
 
-uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
-  static uint8_t table[256];
+uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  static uint32_t table[256];
   static std::once_flag table_once_flag;
   std::call_once(table_once_flag, [&]() {
     for (uint32_t i = 0; i < 256; i++) {
-      uint8_t c = i;
-      for (uint32_t j = 0; j < 8; j++) {
-        c = (c << 1) ^ ((c & 0x80) ? 0x07 : 0);
+      uint32_t c = i;
+      for (int32_t j = 0; j < 8; j++) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >> 1)) : (c >> 1);
       }
       table[i] = c;
     }
@@ -186,8 +183,11 @@ uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t 
   const uint8_t* ep = rp + size;
   uint32_t crc = seed;
   while (rp < ep) {
-    crc = table[(crc ^ *rp)];
+    crc = table[(crc ^ *rp) & 0xFF] ^ (crc >> 8);
     rp++;
+  }
+  if (finish) {
+    crc ^= 0xFFFFFFFF;
   }
   return crc;
 }

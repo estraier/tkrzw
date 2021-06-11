@@ -351,7 +351,7 @@ class LinkedHashMap final {
   /**
    * Enumeration for move modes.
    */
-  enum MoveMode {
+  enum MoveMode : int32_t {
     /** To keep the current position. */
     MOVE_CURRENT = 0,
     /** To move to the first. */

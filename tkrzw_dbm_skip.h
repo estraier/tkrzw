@@ -174,7 +174,7 @@ class SkipDBM final : public DBM {
   /**
    * Enumeration for restore modes.
    */
-  enum RestoreMode {
+  enum RestoreMode : int32_t {
     /** The default behavior: to restore as many records as possible. */
     RESTORE_DEFAULT = 0,
     /** To restore to the last synchronized state. */
