@@ -313,6 +313,64 @@ inline uint32_t HashCRC32(const std::string& str) {
 }
 
 /**
+ * Gets the hash value by CRC-16, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0xFFFF for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC16Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0xFFFF);
+
+/**
+ * Gets the hash value by CRC-16.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC16(const void* buf, size_t size) {
+  return HashCRC16Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-8.
+ * @see HashCRC8
+ */
+inline uint32_t HashCRC16(const std::string& str) {
+  return HashCRC16Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by CRC-8, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC8Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
+
+/**
+ * Gets the hash value by CRC-8.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC8(const void* buf, size_t size) {
+  return HashCRC8Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-8.
+ * @see HashCRC8
+ */
+inline uint32_t HashCRC8(const std::string& str) {
+  return HashCRC8Continuous(str.data(), str.size(), true);
+}
+
+/**
  * Makes a random integer from a hidden seed.
  * @return the random integer in a range [0, UINT64MAX] with the inclusive end.
  */

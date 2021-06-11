@@ -151,12 +151,33 @@ TEST(LibCommonTest, HashFNV) {
 }
 
 TEST(LibCommonTest, HashCRC32) {
+  EXPECT_EQ(0x3610A686U, tkrzw::HashCRC32("hello"));
   EXPECT_EQ(0x4A17B156U, tkrzw::HashCRC32("Hello World"));
   EXPECT_EQ(0x75197186U, tkrzw::HashCRC32("こんにちは世界"));
-  uint32_t crc = tkrzw::HashCRC32Continuous("Hello", 5, false, 0xFFFFFFFF);
+  uint32_t crc = tkrzw::HashCRC32Continuous("Hello", 5, false);
   crc = tkrzw::HashCRC32Continuous(" ", 1, false, crc);
   crc = tkrzw::HashCRC32Continuous("World", 5, true, crc);
   EXPECT_EQ(0x4A17B156U, crc);
+}
+
+TEST(LibCommonTest, HashCRC16) {
+  EXPECT_EQ(0xD26E, tkrzw::HashCRC16("hello"));
+  EXPECT_EQ(0x4D25, tkrzw::HashCRC16("Hello World"));
+  EXPECT_EQ(0xCFDB, tkrzw::HashCRC16("こんにちは世界"));
+  uint32_t crc = tkrzw::HashCRC16Continuous("Hello", 5, false);
+  crc = tkrzw::HashCRC16Continuous(" ", 1, false, crc);
+  crc = tkrzw::HashCRC16Continuous("World", 5, true, crc);
+  EXPECT_EQ(0x4D25, crc);
+}
+
+TEST(LibCommonTest, HashCRC8) {
+  EXPECT_EQ(0x92, tkrzw::HashCRC8("hello"));
+  EXPECT_EQ(0x25, tkrzw::HashCRC8("Hello World"));
+  EXPECT_EQ(0xB7, tkrzw::HashCRC8("こんにちは世界"));
+  uint32_t crc = tkrzw::HashCRC8Continuous("Hello", 5, false);
+  crc = tkrzw::HashCRC8Continuous(" ", 1, false, crc);
+  crc = tkrzw::HashCRC8Continuous("World", 5, true, crc);
+  EXPECT_EQ(0x25, crc);
 }
 
 TEST(LibCommonTest, MakeRandomInt) {
