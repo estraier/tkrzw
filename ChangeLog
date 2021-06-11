@@ -5,6 +5,7 @@
 
 	- Improve ability to detect corrupt records on restoration.
 	- Add CRC functions.
+	- The record header section has static_flags.
 
 2021-06-08  Mikio Hirabayashi  <hirarin@gmail.com>
 
