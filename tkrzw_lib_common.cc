@@ -124,10 +124,12 @@ uint64_t HashFNV(const void* buf, size_t size) {
 }
 
 uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
-  static std::unique_ptr<uint8_t[]> table;
+  static std::unique_ptr<uint8_t[]> uniq_table;
+  static uint8_t* table = nullptr;
   static std::once_flag table_once_flag;
   std::call_once(table_once_flag, [&]() {
-    table.reset(new uint8_t[256]);
+    uniq_table.reset(new uint8_t[256]);
+    table = uniq_table.get();
     for (uint32_t i = 0; i < 256; i++) {
       uint8_t c = i;
       for (uint32_t j = 0; j < 8; j++) {
@@ -147,10 +149,12 @@ uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t 
 }
 
 uint32_t HashCRC16Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
-  static std::unique_ptr<uint16_t[]> table;
+  static std::unique_ptr<uint16_t[]> uniq_table;
+  static uint16_t* table = nullptr;
   static std::once_flag table_once_flag;
   std::call_once(table_once_flag, [&]() {
-    table.reset(new uint16_t[256]);
+    uniq_table.reset(new uint16_t[256]);
+    table = uniq_table.get();
     for (uint32_t i = 0; i < 256; i++) {
       uint16_t c = i << 8;
       for (uint32_t j = 0; j < 8; j++) {
@@ -170,10 +174,12 @@ uint32_t HashCRC16Continuous(const void* buf, size_t size, bool finish, uint32_t
 }
 
 uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
-  static std::unique_ptr<uint32_t[]> table;
+  static std::unique_ptr<uint32_t[]> uniq_table;
+  static uint32_t* table = nullptr;
   static std::once_flag table_once_flag;
   std::call_once(table_once_flag, [&]() {
-    table.reset(new uint32_t[256]);
+    uniq_table.reset(new uint32_t[256]);
+    table = uniq_table.get();
     for (uint32_t i = 0; i < 256; i++) {
       uint32_t c = i;
       for (int32_t j = 0; j < 8; j++) {
