@@ -212,7 +212,7 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   }
   PrintL("Hash: iterations=", num_iterations, " text_size=", text_size);
   auto murmur = [](std::string_view sv) -> uint32_t {
-                  return tkrzw::HashMurmur(sv);
+                  return tkrzw::HashMurmur(sv, 0);
                 };
   auto fnv = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashFNV(sv);
