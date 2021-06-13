@@ -65,6 +65,10 @@ install :
 	-for %I in ($(LIBRARYFILES)) do copy /B /Y %I "$(LIBDIR)"
 	-md "$(BINDIR)" > NUL: 2>&1
 	-for %I in ($(COMMANDFILES)) do copy /B /Y %I "$(BINDIR)"
+	@echo #
+	@echo #================================================================
+	@echo # Thanks for using Tkrzw.
+	@echo #================================================================
 
 uninstall :
 	-rd /S "$(BASEDIR)"
