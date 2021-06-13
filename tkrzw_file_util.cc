@@ -1090,7 +1090,8 @@ FlatRecord::~FlatRecord() {
 Status FlatRecord::Read(int64_t offset) {
   offset_ = offset;
   constexpr int64_t min_record_size = sizeof(uint8_t) * 2;
-  int64_t record_size = file_->GetSizeSimple() - offset;
+  const int64_t max_read_size = std::min(file_->GetSizeSimple() - offset, MAX_MEMORY_SIZE);
+  int64_t record_size = max_read_size;
   if (record_size > static_cast<int64_t>(READ_BUFFER_SIZE)) {
     record_size = READ_BUFFER_SIZE;
   } else {
@@ -1114,6 +1115,9 @@ Status FlatRecord::Read(int64_t offset) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid record size");
   }
   data_size_ = num;
+  if (static_cast<int64_t>(data_size_) > max_read_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large record size");
+  }
   rp += step;
   record_size -= step;
   const size_t header_size = rp - buffer_;

@@ -52,7 +52,8 @@ int32_t HashRecord::GetWholeSize() const {
 Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   const int64_t min_record_size =
       sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3 + crc_width_;
-  int64_t record_size = file_->GetSizeSimple() - offset;
+  const int64_t max_read_size = std::min(file_->GetSizeSimple() - offset, MAX_MEMORY_SIZE);
+  int64_t record_size = max_read_size;
   if (record_size < min_record_size) {
     return Status(Status::BROKEN_DATA_ERROR, "too short record data");
   }
@@ -92,6 +93,9 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
   }
   key_size_ = num;
+  if (key_size_ > max_read_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large key size");
+  }
   rp += step;
   record_size -= step;
   step = ReadVarNum(rp, record_size, &num);
@@ -99,6 +103,9 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid value size");
   }
   value_size_ = num;
+  if (value_size_ > max_read_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large value size");
+  }
   rp += step;
   record_size -= step;
   if (record_size < 1) {

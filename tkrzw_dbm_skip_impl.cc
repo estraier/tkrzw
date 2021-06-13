@@ -75,7 +75,8 @@ Status SkipRecord::ReadMetadataKey(int64_t offset, int64_t index) {
   offset_ = offset;
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ * level_ + sizeof(uint8_t) * 2;
   const int64_t read_size = min_record_size + READ_DATA_SIZE;
-  int64_t record_size = file_->GetSizeSimple() - offset;
+  const int64_t max_read_size = std::min(file_->GetSizeSimple() - offset, MAX_MEMORY_SIZE);
+  int64_t record_size = max_read_size;
   if (record_size > read_size) {
     record_size = read_size;
   } else {
@@ -110,6 +111,9 @@ Status SkipRecord::ReadMetadataKey(int64_t offset, int64_t index) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
   }
   key_size_ = num;
+  if (key_size_ > max_read_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large key size");
+  }
   rp += step;
   record_size -= step;
   step = ReadVarNum(rp, record_size, &num);
@@ -117,6 +121,9 @@ Status SkipRecord::ReadMetadataKey(int64_t offset, int64_t index) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid value size");
   }
   value_size_ = num;
+  if (value_size_ > max_read_size) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large value size");
+  }
   rp += step;
   record_size -= step;
   const int32_t header_size = sizeof(uint8_t) + offset_width_ * level_ +
