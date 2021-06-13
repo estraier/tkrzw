@@ -4,6 +4,7 @@
 	- Library version: 1.17.0
 
 	- Fix a bug of interface of the Murmur hash function.
+	- Avoid reading too large data from the file.
 
 2021-06-12  Mikio Hirabayashi  <hirarin@gmail.com>
 
