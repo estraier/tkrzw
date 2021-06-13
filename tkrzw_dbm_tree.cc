@@ -420,7 +420,8 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
       (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
     hash_dbm_->Close();
     const std::string tmp_path = norm_path + ".tmp.restore";
-    const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+    const int64_t end_offset =
+        tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? INT64MAX : INT64MIN;
     status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset);
     if (status != Status::SUCCESS) {
       RemoveFile(tmp_path);
@@ -2506,16 +2507,10 @@ Status TreeDBM::ParseMetadata(
 
 Status TreeDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
-  bool healthy = false;
-  {
-    HashDBM check_dbm(std::make_unique<PositionalParallelFile>());
-    if (check_dbm.Open(old_file_path, false) == Status::SUCCESS) {
-      healthy = check_dbm.IsHealthy();
-    }
-    check_dbm.Close();
-  }
   std::string tmp_file_path = old_file_path;
-  if (!healthy) {
+  if (end_offset == INT64MIN || end_offset == INT64MAX) {
+    end_offset = end_offset == INT64MIN ? -1 : 0;
+  } else {
     tmp_file_path = new_file_path + ".tmp.restore";
     const Status status = HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset);
     if (status != Status::SUCCESS) {
@@ -2531,6 +2526,15 @@ Status TreeDBM::RestoreDatabase(
   }
   const auto& meta = tmp_dbm.Inspect();
   const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
+  const std::string& record_crc_expr = SearchMap(meta_map, "record_crc_mode", "");
+  HashDBM::RecordCRCMode record_crc_mode = HashDBM::RECORD_CRC_NONE;
+  if (record_crc_expr == "crc-8") {
+    record_crc_mode = HashDBM::RECORD_CRC_8;
+  } else if (record_crc_expr == "crc-16") {
+    record_crc_mode = HashDBM::RECORD_CRC_16;
+  } else if (record_crc_expr == "crc-32") {
+    record_crc_mode = HashDBM::RECORD_CRC_32;
+  }
   int32_t offset_width = StrToInt(SearchMap(meta_map, "offset_width", "-1"));
   int32_t align_pow = StrToInt(SearchMap(meta_map, "align_pow", "-1"));
   int64_t num_buckets = StrToInt(SearchMap(meta_map, "hash_num_buckets", "-1"));
@@ -2561,6 +2565,7 @@ Status TreeDBM::RestoreDatabase(
   }
   TuningParameters params;
   params.update_mode = tmp_dbm.GetUpdateMode();
+  params.record_crc_mode = record_crc_mode;
   params.offset_width = offset_width;
   params.align_pow = align_pow;
   params.num_buckets = num_buckets;

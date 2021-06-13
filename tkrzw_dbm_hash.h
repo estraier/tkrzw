@@ -166,12 +166,28 @@ class HashDBM final : public DBM {
    * Enumeration for update modes.
    */
   enum UpdateMode : int32_t {
-     /** The default behavior: in-place or to succeed the current mode. */
-     UPDATE_DEFAULT = 0,
-     /** To do in-place writing. */
-     UPDATE_IN_PLACE = 1,
-     /** To do appending writing. */
-     UPDATE_APPENDING = 2,
+    /** The default behavior: in-place or to succeed the current mode. */
+    UPDATE_DEFAULT = 0,
+    /** To do in-place writing. */
+    UPDATE_IN_PLACE = 1,
+    /** To do appending writing. */
+    UPDATE_APPENDING = 2,
+  };
+
+  /**
+   * Enumeration for record CRC modes.
+   */
+  enum RecordCRCMode : int32_t {
+    /** The default behavior: no CRC or to succeed the current mode. */
+    RECORD_CRC_DEFAULT = 0,
+    /** To add no CRC to each record. */
+    RECORD_CRC_NONE = 1,
+    /** To add CRC-8 to each record. */
+    RECORD_CRC_8 = 2,
+    /** To add CRC-16 to each record. */
+    RECORD_CRC_16 = 3,
+    /** To add CRC-32 to each record. */
+    RECORD_CRC_32 = 4,
   };
 
   /**
@@ -197,6 +213,13 @@ class HashDBM final : public DBM {
      * by appending new data at the end of the file.  The default mode is in-place writing.
      */
     UpdateMode update_mode = UPDATE_DEFAULT;
+    /**
+     * How to add the CRC data to the record.
+     * @details The cyclic redundancy check detects corruption of record data.  Although no CRC
+     * is added, corruption is detected at a certain probability.  The more width the CRC has,
+     * the more likely corruption is detected.
+     */
+    RecordCRCMode record_crc_mode = RECORD_CRC_DEFAULT;
     /**
      * The width to represent the offset of records.
      * @details This determines the maximum size of the database and the footprint.  -1 means
@@ -678,6 +701,13 @@ class HashDBM final : public DBM {
       File* file, int64_t *record_base,
       int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
       int64_t* num_buckets, int64_t* last_sync_size);
+
+  /**
+   * Gets the record CRC width from the static flags.
+   * @param The static flags.
+   * @return the record CRC width.
+   */
+  static int32_t GetCRCWidthFromStaticFlags(int32_t static_flags);
 
   /**
    * Restores a broken database as a new healthy database.

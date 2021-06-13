@@ -275,6 +275,9 @@ class PolyDBM final : public ParamDBM {
    * @details For HashDBM, these optional parameters are supported.
    *   - update_mode (string): How to update the database file: "UPDATE_IN_PLACE" for the
    *     in-palce or "UPDATE_APPENDING" for the appending mode.
+   *   - record_crc_mode (string): How to add the CRC data to the record: "RECORD_CRC_NONE"
+   *     to add no CRC to each record, "RECORD_CRC_8" to add CRC-8 to each record, "RECORD_CRC_16"
+   *     to add CRC-16 to each record, or "RECORD_CRC_32" to add CRC-32 to each record.
    *   - offset_width (int): The width to represent the offset of records.
    *   - align_pow (int): The power to align records.
    *   - num_buckets (int): The number of buckets for hashing.

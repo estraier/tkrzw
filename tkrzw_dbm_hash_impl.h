@@ -54,10 +54,11 @@ class HashRecord final {
   /**
    * Constructor.
    * @param file The pointer to the file object.
+   * @param crc_width The width of the CRC value.
    * @param offset_width The width of the offset data.
    * @param align_pow The alignment power.
    */
-  HashRecord(File* file, int32_t offset_width, int32_t align_pow);
+  HashRecord(File* file, int32_t crc_size, int32_t offset_width, int32_t align_pow);
 
   /**
    * Destructor.
@@ -95,7 +96,7 @@ class HashRecord final {
   int32_t GetWholeSize() const;
 
   /**
-   * Read the metadata and the key.
+   * Reads the metadata and the key.
    * @param offset The offset of the record.
    * @param min_read_size The minimum reading size.
    * @return The result status.
@@ -105,10 +106,16 @@ class HashRecord final {
   Status ReadMetadataKey(int64_t offset, int32_t min_read_size);
 
   /**
-   * Read the body data and fill all the properties.
+   * Reads the body data and fill all the properties.
    * @return The result status.
    */
   Status ReadBody();
+
+  /**
+   * Check the CRC.
+   * @return The result status.
+   */
+  Status CheckCRC();
 
   /**
    * Sets the actual data of the record.
@@ -158,6 +165,7 @@ class HashRecord final {
    * @param proc The pointer to the processor object.
    * @param bucket_base The bucket base offset.
    * @param record_base The record base offset.
+   * @param crc_width The width of the CRC value.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
    * @param num_buckets The number of buckets.
@@ -172,13 +180,15 @@ class HashRecord final {
    */
   static Status ReplayOperations(
       File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
-      int64_t record_base, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+      int64_t record_base, int32_t crc_width, int32_t offset_width,
+      int32_t align_pow, int64_t num_buckets,
       int32_t min_read_size, bool skip_broken_records, int64_t end_offset);
 
   /**
    * Checks whether a record is reachable from the hash table.
    * @param file A file object having opened the database file.
    * @param bucket_base The bucket base offset.
+   * @param crc_width The width of the CRC value.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
    * @param num_buckets The number of buckets.
@@ -188,7 +198,7 @@ class HashRecord final {
    */
   static Status CheckHashChain(
       File* file, int64_t bucket_base,
-      int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+      int32_t crc_width, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
       std::string_view key, int64_t offset);
 
   /**
@@ -196,6 +206,7 @@ class HashRecord final {
    * @param in_file A file object having opened the input database file.
    * @param out_file A file object having opened as a writer to store the output.
    * @param record_base The record base offset.
+   * @param crc_width The width of the CRC value.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
    * @param skip_broken_records If true, the operation continues even if there are broken records
@@ -205,7 +216,7 @@ class HashRecord final {
    */
   static Status ExtractOffsets(
       File* in_file, File* out_file,
-      int64_t record_base, int32_t offset_width, int32_t align_pow,
+      int64_t record_base, int32_t crc_width, int32_t offset_width, int32_t align_pow,
       bool skip_broken_records, int64_t end_offset);
 
  private:
@@ -227,6 +238,8 @@ class HashRecord final {
   static constexpr uint8_t PADDING_TOP_MAGIC = 0xDD;
   /** The file object, unowned. */
   File* file_;
+  /** The width of the CRC function. */
+  int32_t crc_width_;
   /** The width of the offset data. */
   int32_t offset_width_;
   /** The alignment power. */
@@ -249,6 +262,8 @@ class HashRecord final {
   int32_t padding_size_;
   /** The offset of the child record. */
   int64_t child_offset_;
+  /** The CRC value. */
+  uint32_t crc_value_;
   /** The pointer to the key region. */
   const char* key_ptr_;
   /** The pointer to the value region. */

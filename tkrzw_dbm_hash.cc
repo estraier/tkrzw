@@ -65,6 +65,9 @@ enum StaticFlag : uint8_t {
   STATIC_FLAG_NONE = 0,
   STATIC_FLAG_UPDATE_IN_PLACE = 1 << 0,
   STATIC_FLAG_UPDATE_APPENDING = 1 << 1,
+  STATIC_FLAG_RECORD_CRC_8 = 1 << 2,
+  STATIC_FLAG_RECORD_CRC_16 = 1 << 3,
+  STATIC_FLAG_RECORD_CRC_32 = 1 << 4,
 };
 
 enum ClosureFlag : uint8_t {
@@ -137,6 +140,7 @@ class HashDBMImpl final {
   Status InitializeBuckets();
   Status SaveFBP();
   Status LoadFBP();
+  int32_t GetCRCWidth();
   Status ProcessImpl(
       std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc, bool writable);
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
@@ -159,6 +163,7 @@ class HashDBMImpl final {
   int32_t pkg_major_version_;
   int32_t pkg_minor_version_;
   int32_t static_flags_;
+  int32_t crc_width_;
   int32_t offset_width_;
   int32_t align_pow_;
   int32_t closure_flags_;
@@ -202,7 +207,7 @@ class HashDBMIteratorImpl final {
 HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
     : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
       cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
-      static_flags_(STATIC_FLAG_NONE),
+      static_flags_(STATIC_FLAG_NONE), crc_width_(0),
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
       num_buckets_(HashDBM::DEFAULT_NUM_BUCKETS),
@@ -369,7 +374,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     const int64_t end_offset = file_->GetSizeSimple();
     int64_t offset = record_base_;
-    HashRecord rec(file_.get(), offset_width_, align_pow_);
+    HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
     while (offset < end_offset) {
       Status status = rec.ReadMetadataKey(offset, min_read_size_);
       if (status != Status::SUCCESS) {
@@ -413,7 +418,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     }
     std::set<std::string> keys, dead_keys;
     while (current_offset > 0) {
-      HashRecord rec(file_.get(), offset_width_, align_pow_);
+      HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
       status = rec.ReadMetadataKey(current_offset, min_read_size_);
       if (status != Status::SUCCESS) {
         return status;
@@ -499,7 +504,7 @@ Status HashDBMImpl::Clear() {
   const int64_t num_buckets = num_buckets_;
   const int32_t min_read_size = min_read_size_;
   const bool lock_mem_buckets = lock_mem_buckets_;
-  const bool cache_buckets =cache_buckets_;
+  const bool cache_buckets = cache_buckets_;
   const uint32_t db_type = db_type_;
   const std::string opaque = opaque_;
   CancelIterators();
@@ -511,7 +516,7 @@ Status HashDBMImpl::Clear() {
   num_buckets_ = num_buckets;
   min_read_size_ = min_read_size;
   lock_mem_buckets_ = lock_mem_buckets;
-  cache_buckets_ =cache_buckets;
+  cache_buckets_ = cache_buckets;
   db_type_ = db_type;
   opaque_ = opaque;
   status |= OpenImpl(true);
@@ -538,6 +543,18 @@ Status HashDBMImpl::Rebuild(
   }
   HashDBM::TuningParameters tmp_tuning_params;
   tmp_tuning_params.update_mode = HashDBM::UPDATE_IN_PLACE;
+  if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_NONE ||
+      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_8 ||
+      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_16 ||
+      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_32) {
+    tmp_tuning_params.record_crc_mode = tuning_params.record_crc_mode;
+  } else if (crc_width_ == 1) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_8;
+  } else if (crc_width_ == 2) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_16;
+  } else if (crc_width_ == 4) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_32;
+  }
   tmp_tuning_params.offset_width = tuning_params.offset_width > 0 ?
       tuning_params.offset_width : offset_width_;
   tmp_tuning_params.align_pow = tuning_params.align_pow >= 0 ?
@@ -734,11 +751,22 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
     Add("db_type", ToString(db_type_));
     Add("max_file_size", ToString(1LL << (offset_width_ * 8 + align_pow_)));
     Add("record_base", ToString(record_base_));
+    const char* update_mode = "unknown";
     if (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) {
-      Add("update_mode", "in-place");
+      update_mode = "in-place";
     } else if (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) {
-      Add("update_mode", "appending");
+      update_mode = "appending";
     }
+    Add("update_mode", update_mode);
+    const char* record_crc_mode = "none";
+    if (crc_width_ == 1) {
+      record_crc_mode = "crc-8";
+    } else if (crc_width_ == 2) {
+      record_crc_mode = "crc-16";
+    } else if (crc_width_ == 4) {
+      record_crc_mode = "crc-32";
+    }
+    Add("record_crc_mode", record_crc_mode);
   }
   return meta;
 }
@@ -991,6 +1019,13 @@ void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
   } else {
     static_flags_ |= STATIC_FLAG_UPDATE_APPENDING;
   }
+  if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_8) {
+    static_flags_ |= STATIC_FLAG_RECORD_CRC_8;
+  } else if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_16) {
+    static_flags_ |= STATIC_FLAG_RECORD_CRC_16;
+  } else if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_32) {
+    static_flags_ |= STATIC_FLAG_RECORD_CRC_32;
+  }
   if (tuning_params.offset_width >= 0) {
     offset_width_ =
         std::min(std::max(tuning_params.offset_width, MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
@@ -1172,6 +1207,7 @@ Status HashDBMImpl::LoadMetadata() {
   if (status != Status::SUCCESS) {
     return status;
   }
+  crc_width_ = HashDBM::GetCRCWidthFromStaticFlags(static_flags_);
   num_records_.store(num_records);
   eff_data_size_.store(eff_data_size);
   if (pkg_major_version_ < 1 && pkg_minor_version_ < 1) {
@@ -1295,7 +1331,7 @@ Status HashDBMImpl::ProcessImpl(
   }
   int64_t current_offset = top;
   int64_t parent_offset = 0;
-  HashRecord rec(file_.get(), offset_width_, align_pow_);
+  HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   while (current_offset > 0) {
     status = rec.ReadMetadataKey(current_offset, min_read_size_);
     if (status != Status::SUCCESS) {
@@ -1504,7 +1540,7 @@ Status HashDBMImpl::ReadNextBucketRecords(HashDBMIteratorImpl* iter) {
     if (current_offset != 0) {
       std::set<std::string> dead_keys;
       while (current_offset > 0) {
-        HashRecord rec(file_.get(), offset_width_, align_pow_);
+        HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
         status = rec.ReadMetadataKey(current_offset, min_read_size_);
         if (status != Status::SUCCESS) {
           return status;
@@ -1552,6 +1588,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
   if (record_base < 0) {
     record_base = tmp_record_base;
   }
+  const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -1582,7 +1619,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     Status* status_;
   } importer(this, &import_status);
   return HashRecord::ReplayOperations(
-      file, &importer, METADATA_SIZE, record_base,
+      file, &importer, METADATA_SIZE, record_base, crc_width,
       offset_width, align_pow, num_buckets, min_read_size_,
       skip_broken_records, end_offset);
 }
@@ -1606,6 +1643,20 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   if (record_base < 0) {
     record_base = tmp_record_base;
   }
+
+
+  const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
+
+/*
+  int32_t crc_width = 0;
+  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
+    crc_width = 1;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
+    crc_width = 2;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
+    crc_width = 4;
+  }
+*/
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -1627,7 +1678,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     return status;
   }
   status = HashRecord::ExtractOffsets(
-      file, offset_file.get(), record_base, offset_width, align_pow,
+      file, offset_file.get(), record_base, crc_width, offset_width, align_pow,
       skip_broken_records, end_offset);
   if (status != Status::SUCCESS) {
     CleanUp();
@@ -1646,7 +1697,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   dead_tuning_params.num_buckets = dead_num_buckets;
   status = dead_dbm.OpenAdvanced(dead_path, true, File::OPEN_TRUNCATE, dead_tuning_params);
   OffsetReader reader(offset_file.get(), offset_width, align_pow, true);
-  HashRecord rec(file, offset_width, align_pow);
+  HashRecord rec(file, crc_width, offset_width, align_pow);
   while (true) {
     int64_t offset = 0;
     status = reader.ReadOffset(&offset);
@@ -1658,6 +1709,9 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
       break;
     }
     status = rec.ReadMetadataKey(offset, min_read_size_);
+    if (status == Status::SUCCESS) {
+      status = rec.CheckCRC();
+    }
     if (status != Status::SUCCESS) {
       if (skip_broken_records) {
         continue;
@@ -1693,7 +1747,8 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
           if (unlimited && num_buckets > 0 &&
               offset + rec_size >= end_offset - HashRecord::RESTORE_CHECK_CHAIN_RANGE) {
             status = HashRecord::CheckHashChain(
-                file, METADATA_SIZE, offset_width, align_pow, num_buckets, key, offset);
+                file, METADATA_SIZE, crc_width, offset_width, align_pow, num_buckets,
+                key, offset);
             if (status != Status::SUCCESS) {
               if (skip_broken_records) {
                 offset += rec_size;
@@ -2175,6 +2230,17 @@ Status HashDBM::FindRecordBase(
   return Status(Status::SUCCESS);
 }
 
+int32_t HashDBM::GetCRCWidthFromStaticFlags(int32_t static_flags) {
+  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
+    return 1;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
+    return 2;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
+    return 4;
+  }
+  return 0;
+}
+
 Status HashDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
   PositionalParallelFile old_file;
@@ -2191,6 +2257,7 @@ Status HashDBM::RestoreDatabase(
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
   UpdateMode update_mode = UPDATE_DEFAULT;
+  RecordCRCMode record_crc_mode = RECORD_CRC_DEFAULT;
   int32_t db_type = 0;
   std::string opaque;
   int64_t record_base = 0;
@@ -2209,6 +2276,13 @@ Status HashDBM::RestoreDatabase(
     update_mode = HashDBM::UPDATE_IN_PLACE;
   } else if (static_flags & STATIC_FLAG_UPDATE_APPENDING) {
     update_mode = HashDBM::UPDATE_APPENDING;
+  }
+  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
+    record_crc_mode = RECORD_CRC_8;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
+    record_crc_mode = RECORD_CRC_16;
+  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
+    record_crc_mode = RECORD_CRC_32;
   }
   int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;
@@ -2235,6 +2309,13 @@ Status HashDBM::RestoreDatabase(
     } else if (old_static_flags & STATIC_FLAG_UPDATE_APPENDING) {
       update_mode = HashDBM::UPDATE_APPENDING;
     }
+    if (old_static_flags & STATIC_FLAG_RECORD_CRC_8) {
+      record_crc_mode = RECORD_CRC_8;
+    } else if (old_static_flags & STATIC_FLAG_RECORD_CRC_16) {
+      record_crc_mode = RECORD_CRC_16;
+    } else if (old_static_flags & STATIC_FLAG_RECORD_CRC_32) {
+      record_crc_mode = RECORD_CRC_32;
+    }
     offset_width = old_offset_width;
     align_pow = old_align_pow;
     num_buckets = old_num_buckets;
@@ -2253,10 +2334,11 @@ Status HashDBM::RestoreDatabase(
   }
   TuningParameters tuning_params;
   tuning_params.update_mode = update_mode;
-  tuning_params.restore_mode = HashDBM::RESTORE_NOOP;
+  tuning_params.record_crc_mode = record_crc_mode;
   tuning_params.offset_width = offset_width;
   tuning_params.align_pow = align_pow;
   tuning_params.num_buckets = num_buckets;
+  tuning_params.restore_mode = HashDBM::RESTORE_NOOP;
   HashDBM new_dbm(std::move(new_file));
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {

@@ -177,7 +177,8 @@ check-hashdbm-perf :
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value --append
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value \
+	  --append --record_crc 8
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
@@ -186,16 +187,16 @@ check-hashdbm-perf :
 	  --iter 100000 --threads 1 --size 8 --buckets 10000 --random_key --random_value --rebuild
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 100000 --threads 1 --size 8 --buckets 10000 --lock_mem_buckets \
-	  --random_key --random_value --keys 10000 --rebuild --append
+	  --random_key --random_value --keys 10000 --rebuild --append --record_crc 8
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
-	  --random_key --random_value --keys 5000 --rebuild --append  --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append  --record_crc 16 --sleep 0.0001
 	tkrzw_dbm_perf.exe wicked --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets \
 	  --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets \
-	  --append --iterator --clear --rebuild
+	  --append --record_crc 32 --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm hash --file pos-para --path casket.tkh \
 	  --block_size 512 --direct_io --padding \
 	  --iter 5000 --threads 1 --size 100 --buckets 100000 --iterator --clear --rebuild
@@ -208,7 +209,7 @@ check-hashdbm-perf :
 
 check-hashdbm-util :
 	-del casket* /F /Q > NUL: 2>&1
-	tkrzw_dbm_util.exe create --dbm hash --buckets 10 casket.tkh
+	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket.tkh
 	tkrzw_dbm_util.exe set --dbm hash casket.tkh one first
 	tkrzw_dbm_util.exe set --dbm hash casket.tkh two second
 	tkrzw_dbm_util.exe set --dbm hash casket.tkh three third
@@ -217,12 +218,12 @@ check-hashdbm-util :
 	tkrzw_dbm_util.exe set --dbm hash casket.tkh five fifth
 	tkrzw_dbm_util.exe get --dbm hash casket.tkh two
 	tkrzw_dbm_util.exe export --dbm hash casket.tkh casket.flat
-	tkrzw_dbm_util.exe create --dbm hash --buckets 10 casket-2.tkh
+	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket-2.tkh
 	tkrzw_dbm_util.exe import --dbm hash casket-2.tkh casket.flat
 	tkrzw_dbm_util.exe list --dbm hash casket-2.tkh
 	tkrzw_dbm_util.exe list --dbm hash --jump three --items 2 casket-2.tkh
 	tkrzw_dbm_util.exe export --dbm hash --tsv casket.tkh casket.tsv
-	tkrzw_dbm_util.exe create --dbm hash --buckets 10 casket-3.tkh
+	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket-3.tkh
 	tkrzw_dbm_util.exe import --dbm hash --tsv casket-3.tkh casket.tsv
 	tkrzw_dbm_util.exe get --dbm hash casket-3.tkh three
 	tkrzw_dbm_util.exe rebuild --dbm hash casket.tkh
@@ -275,11 +276,12 @@ check-treedbm-perf :
 	  --random_key --random_value --rebuild
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 100000 --threads 1 --size 8 --max_page_size 200 --max_branches 8 \
-	  --max_cached_pages 256 --random_key --random_value --keys 10000 --rebuild --append
+	  --max_cached_pages 256 --random_key --random_value --keys 10000 --rebuild \
+		--append --record_crc 8
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
 	  --max_page_size 200 --max_branches 8 \
-	  --random_key --random_value --keys 5000 --rebuild --append  --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
 	tkrzw_dbm_perf.exe wicked --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --iterator --clear --rebuild
@@ -293,15 +295,15 @@ check-treedbm-perf :
 	tkrzw_dbm_perf.exe wicked --dbm tree --file pos-para --path casket.tkt \
 	  --block_size 512 --direct_io --padding --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \
-	  --append --iterator --clear --rebuild
+	  --append --record_crc 16 --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm tree --file pos-para --path casket.tkt \
 	  --block_size 512 --direct_io --padding --pagecache --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \
-	  --append --iterator --clear --rebuild
+	  --append --record_crc 32 --iterator --clear --rebuild
 
 check-treedbm-util :
 	-del casket* /F /Q > NUL: 2>&1
-	tkrzw_dbm_util.exe create --dbm tree --buckets 10 casket.tkt
+	tkrzw_dbm_util.exe create --dbm tree --record_crc 16 --buckets 10 casket.tkt
 	tkrzw_dbm_util.exe set --dbm tree casket.tkt one first
 	tkrzw_dbm_util.exe set --dbm tree casket.tkt two second
 	tkrzw_dbm_util.exe set --dbm tree casket.tkt three third
@@ -566,16 +568,16 @@ check-index-perf :
 
 check-tran :
 	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
-	  --sync_freq 100
+	  --sync_freq 100 --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
 	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
-	  --sync_freq 100 --rebuild --remove
+	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
 	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
-	  --sync_freq 100
+	  --sync_freq 100 --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
 	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
-	  --sync_freq 100 --rebuild --remove
+	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
 	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000

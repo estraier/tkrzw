@@ -96,6 +96,7 @@ static void PrintUsageAndDie() {
   P("Tuning options for HashDBM:\n");
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
   P("  --append : Uses appending rather than pre-defined ones.\n");
+  P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d or -1)\n",
     HashDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d or -1)\n",
@@ -106,6 +107,7 @@ static void PrintUsageAndDie() {
   P("Tuning options for TreeDBM:\n");
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
   P("  --append : Uses appending rather than pre-defined ones.\n");
+  P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d or -1)\n",
     TreeDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d or -1)\n",
@@ -251,7 +253,7 @@ SkipDBM::ReducerType GetReducerOrDie(const std::string& reducer_name) {
 // Opens a database file.
 bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool truncate,
              bool with_no_wait, bool with_no_lock,
-             bool is_in_place, bool is_append,
+             bool is_in_place, bool is_append, int32_t record_crc,
              int32_t offset_width, int32_t align_pow, int64_t num_buckets,
              int32_t max_page_size, int32_t max_branches, const std::string& cmp_name,
              int32_t step_unit, int32_t max_level, int64_t sort_mem_size, bool insert_in_order,
@@ -279,6 +281,15 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     } else if (is_append) {
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_APPENDING;
     }
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
+    }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
@@ -298,6 +309,15 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
     } else if (is_append) {
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_APPENDING;
+    }
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -366,7 +386,7 @@ bool CloseDBM(DBM* dbm) {
 }
 
 // Rebuilds a database file.
-bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
+bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append, int32_t record_crc,
                 int32_t offset_width, int32_t align_pow, int64_t num_buckets,
                 int32_t max_page_size, int32_t max_branches,
                 int32_t step_unit, int32_t max_level,
@@ -380,6 +400,15 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
     } else if (is_append) {
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_APPENDING;
+    }
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -399,6 +428,15 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
     } else if (is_append) {
       tuning_params.update_mode = tkrzw::HashDBM::UPDATE_APPENDING;
+    }
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -445,7 +483,7 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--in_place", 0}, {"--append", 0},
+    {"--in_place", 0}, {"--append", 0}, {"--record_crc", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--comparator", 1},
     {"--step_unit", 1}, {"--max_level", 1},
@@ -471,6 +509,7 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_in_place = CheckMap(cmd_args, "--in_place");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, 0);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -488,7 +527,7 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, true, true, with_truncate, with_no_wait, with_no_lock,
-               is_in_place, is_append, offset_width, align_pow, num_buckets,
+               is_in_place, is_append, record_crc, offset_width, align_pow, num_buckets,
                max_page_size, max_branches, cmp_name,
                step_unit, max_level, -1, false,
                poly_params)) {
@@ -533,7 +572,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
       block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -586,7 +625,7 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -645,7 +684,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -708,7 +747,7 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -765,7 +804,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -839,7 +878,7 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--in_place", 0}, {"--append", 0},
+    {"--in_place", 0}, {"--append", 0}, {"--record_crc", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--max_page_size", 1}, {"--max_branches", 1},
     {"--step_unit", 1}, {"--max_level", 1},
@@ -865,6 +904,7 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_in_place = CheckMap(cmd_args, "--in_place");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, -1);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -881,13 +921,13 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, true, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                max_page_size, max_branches, "",
                -1, -1, -1, false,
                poly_params)) {
     return 1;
   }
-  bool ok = RebuildDBM(dbm.get(), is_in_place, is_append,
+  bool ok = RebuildDBM(dbm.get(), is_in_place, is_append, record_crc,
                        offset_width, align_pow, num_buckets,
                        max_page_size, max_branches,
                        step_unit, max_level,
@@ -1009,7 +1049,7 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, dest_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), dest_path, true, true, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                poly_params)) {
@@ -1117,7 +1157,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
       dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
       block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, false, false, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
                "")) {
@@ -1218,7 +1258,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
       dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
       block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
   if (!OpenDBM(dbm.get(), file_path, true, true, false, with_no_wait, with_no_lock,
-               false, false, -1, -1, -1,
+               false, false, 0, -1, -1, -1,
                -1, -1, "",
                -1, -1, sort_mem_size, insert_in_order,
                poly_params)) {

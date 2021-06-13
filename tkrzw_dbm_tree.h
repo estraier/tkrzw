@@ -518,7 +518,9 @@ class TreeDBM final : public DBM {
    * @param old_file_path The path of the broken database.
    * @param new_file_path The path of the new database to be created.
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
-   * 0 means the size when the database is synched or closed properly.
+   * 0 means the size when the database is synched or closed properly.  INT64MIN and INT64MAX
+   * mean to omit restore of the underlying hash database.  Then, INT64MIN is unlimited and
+   * INT64MAX means synched restoration.
    * @return The result status.
    */
   static Status RestoreDatabase(

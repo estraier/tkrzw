@@ -715,7 +715,7 @@ int main(int argc, char** argv) {
 
 <p>Thread concurrency is pursued in this implementation.  Only reader-writer locking is applied to each hash bucket.  Therefore, even writer threads which can set or remove records performs in parallel.  Blocking is done only when multiple writers try to update the same record simultaneously.  Reader threads which retrieve records don't block each other even for the same record.</p>
 
-<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, the database is restored automatically to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be recovered.  In appending mode, any record can never be lost unless the file system itself breaks.</p>
+<p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, the database is restored automatically to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be recovered.  In the appending mode, any record can never be lost unless the file system itself breaks.</p>
 
 <p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
 
@@ -1008,6 +1008,8 @@ int main(int argc, char** argv) {
 <dd>A byte delta encoded integer.</dd>
 <dt>The padding size</dt>
 <dd>A 1-byte integer.</dd>
+<dt>The CRC value</dt>
+<dd>Optional: A 1-byte, 2-byte, or 4-byte integer.</dd>
 <dt>The key data</dt>
 <dd>Arbitrary string data.</dd>
 <dt>The value data</dt>
@@ -1023,6 +1025,8 @@ int main(int argc, char** argv) {
 <p>The key size and the value size are represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16,383 takes 2 bytes. A value between 16,384 and 2,097,151 takes 3 bytes.  A value between 268,435,456 and 34,359,738,367 takes 4 bytes.</p>
 
 <p>The 1-byte padding size can represent 0 to 255.  If the padding size is 238 (0xEE) or more, the first 4 bytes of the padding data indicates the actual size of the padding data in big endian.  The first byte of the actual padding data is 0xDD and the remaining bytes are 0x00.</p>
+
+<p>The CRC value is optional.  If it exists, the value is the result of CRC-8, CRC-16, or CRC-32 applied to the concatenated data of the key and the value.  The CRC value is used to detect inconsistency when the database is restored.</p>
 
 <p>With the default 4-byte offset width and small-sized (less than 128 bytes) keys and medium-sized (less than 16384 bytes) values, the footprint for each record is 1 + 4 + 1 + 2 + 1 = 9 bytes.  However, due to alignment, padding bytes can be added.  With the default 8-byte alignment, average padding size is about 4 bytes.</p>
 
@@ -2636,12 +2640,14 @@ int main(int argc, char** argv) {
 <dt>Tuning options for HashDBM:</dt>
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
+<dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583 or -1)</dd>
 <dt>Tuning options for TreeDBM:</dt>
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
+<dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 10 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101 or -1)</dd>
@@ -2742,6 +2748,7 @@ applet  A small application.
 <dd><code>--random_value</code> : Uses random length values rather than fixed ones.</dd>
 <dt>Options for HashDBM:</dt>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
+<dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583)</dd>
@@ -2751,6 +2758,7 @@ applet  A small application.
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
 <dt>Options for TreeDBM:</dt>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
+<dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 10)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101)</dd>
@@ -3660,6 +3668,12 @@ one    first
 ]]></code></pre>
 
 <p>If the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time.  If the value of --end_offset is -1, as many records as possible are salvaged.</p>
+
+<p>If you don't use RESTORE_SYNC but use the default restore mode (RESTORE_DEFAULT), when an unhealthy database is opened, as many record as possible are recovered.  However, in the default restore mode, contents of recovered records are not checked.  In other words, there's no guarantee about the consistency of the content.  Let's say, a large record dominates three blocks.  The header of the record is in the first block.  So, if the first header has been written to the device successfully, the record is recovered.  However, there's no guarantee that the second and the third blocks have been written successfully if there was a sudden system-level crash or power outage.  If writing the second and the third blocks was on failure, the recovered record would have garbage data.</p>
+
+<p>If you want to avoid such inconsistency, you can add CRC (cyclic redundancy check) to each record.  If the tuning parameter record_crc_mode is set RECORD_CRC_8, a CRC-8 checksum is added to each record.  CRC-8 increases the record footprint by one byte and its error detection rate is 1 - 1/256 = 99.6%.  Likewise, RECORD_CRC_16 adds CRC-16, which increases the record footprint by two bytes and its error detection rate is 1 - 1/65536 = 99.9985%.  RECORD_CRC_32 adds CRC-32, which increases the record footprint by four bytes and its error detection rate is 1 - 1/4294967296 = 99.999999976%.  Assuming that sudden system crashes are not so often, CRC-8 or CRC-16 is enough for many cases.</p>
+
+<p>In short, if you store in a database mission-critical data which shouldn't be lost, you should use the appending update mode (UPDATE_APPENDING).  If data consistency is of the utmost importance, you should set the synced restore mode (RESTORE_SYNC) too and call the Synchronize method periodically or for each transaction.  Meanwhile, if performance and throughput are of the utmost importance but consistency is also important, you should use the default restore mode (RESTORE_DEFAULT) and set the record CRC mode for CRC-8 (RECORD_CRC_8) or CRC-16 (RECORD_CRC_16).  If you are an extreme worrywart, combining RESTORE_SYNC and RECORD_CRC_32 is possible.</p>
 
 <p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
 

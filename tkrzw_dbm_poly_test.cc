@@ -48,8 +48,8 @@ TEST_F(PolyDBMTest, BasicTest) {
   };
   const std::vector<Config> configs = {
     {"HashDBM", "casket",
-     {{"dbm", "hash"}, {"file", "mmap-para"}, {"num_buckets", "50"}, {"restore_mode", "noop"}},
-     {}, {{"offset_width", "3"}}},
+     {{"dbm", "hash"}, {"file", "mmap-para"}, {"record_crc_mode", "8"}, {"num_buckets", "50"},
+      {"restore_mode", "noop"}}, {}, {{"offset_width", "3"}}},
     {"HashDBM", "casket.tkh",
      {{"file", "mmap-atom"}, {"update_mode", "update_appending"}, {"offset_width", "3"},
       {"align_pow", "1"}, {"num_buckets", "50"}, {"lock_mem_buckets", "true"}}, {}, {}},
@@ -57,8 +57,8 @@ TEST_F(PolyDBMTest, BasicTest) {
      {{"file", "pos-para"}, {"block_size", "512"}, {"access_options", "direct:padding"},
       {"num_buckets", "100"}, {"min_read_size", "512"}, {"cache_buckets", "true"}}, {}, {}},
     {"TreeDBM", "casket",
-     {{"dbm", "tree"}, {"file", "pos-para"}, {"key_comparator", "decimal"}},
-     {}, {{"max_page_size", "512"}}},
+     {{"dbm", "tree"}, {"file", "pos-para"}, {"record_crc_mode", "16"},
+      {"key_comparator", "decimal"}}, {}, {{"max_page_size", "512"}}},
     {"TreeDBM", "casket.tkt",
      {{"file", "pos-atom"}, {"block_size", "512"}, {"access_options", "direct:padding"},
       {"update_mode", "update_appending"}, {"restore_mode", "sync"},

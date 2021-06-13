@@ -82,6 +82,7 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Options for HashDBM:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
+  P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
     HashDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d)\n",
@@ -96,6 +97,7 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Options for TreeDBM and FileIndex:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
+  P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
     TreeDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d)\n",
@@ -217,7 +219,8 @@ std::unique_ptr<DBM> MakeDBMOrDie(
 // Sets up a DBM object.
 bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_path,
               bool with_no_wait, bool with_no_lock,
-              bool is_append, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+              bool is_append, int32_t record_crc,
+              int32_t offset_width, int32_t align_pow, int64_t num_buckets,
               int32_t fbp_cap, int32_t min_read_size, bool lock_mem_buckets, bool cache_buckets,
               int32_t max_page_size, int32_t max_branches, int32_t max_cached_pages,
               int32_t step_unit, int32_t max_level, int64_t sort_mem_size,
@@ -240,6 +243,15 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tkrzw::HashDBM::TuningParameters tuning_params;
     tuning_params.update_mode =
         is_append ? tkrzw::HashDBM::UPDATE_APPENDING : tkrzw::HashDBM::UPDATE_IN_PLACE;
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
+    }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
@@ -260,6 +272,15 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tkrzw::TreeDBM::TuningParameters tuning_params;
     tuning_params.update_mode =
         is_append ? tkrzw::HashDBM::UPDATE_APPENDING : tkrzw::HashDBM::UPDATE_IN_PLACE;
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
+    }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
@@ -491,7 +512,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
+    {"--append", 0}, {"--record_crc", 1},
+    {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -527,6 +549,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, 0);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -598,7 +621,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   };
   if (!is_get_only && !is_remove_only) {
     if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
-                  is_append, offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  is_append, record_crc,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
@@ -665,7 +689,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   };
   if (!is_set_only && !is_remove_only) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
-                  is_append, offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  is_append, record_crc,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
@@ -724,7 +749,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   };
   if (!is_set_only && !is_get_only) {
     if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock,
-                  is_append, offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  is_append, record_crc,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
                   max_page_size, max_branches, max_cached_pages,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
@@ -773,7 +799,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
+    {"--append", 0}, {"--record_crc", 1},
+    {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -809,6 +836,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, 0);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -920,7 +948,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     delete[] value_buf;
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
-                is_append, offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                is_append, record_crc,
+                offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                 lock_mem_buckets, cache_buckets,
                 max_page_size, max_branches, max_cached_pages,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
@@ -968,7 +997,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
+    {"--append", 0}, {"--record_crc", 1},
+    {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -1003,6 +1033,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, 0);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument(cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -1212,7 +1243,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     delete[] value_buf;
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
-                is_append, offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                is_append, record_crc,
+                offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                 lock_mem_buckets, cache_buckets,
                 max_page_size, max_branches, max_cached_pages,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
@@ -1256,7 +1288,8 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     {"", 0}, {"--type", 1}, {"--iter", 1}, {"--threads", 1},{"--random_seed", 1},
     {"--random_key", 0}, {"--random_value", 0},
     {"--path", 1},
-    {"--append", 0}, {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
+    {"--append", 0}, {"--record_crc", 1},
+    {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--lock_mem_buckets", 0}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
   };
@@ -1274,6 +1307,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const bool is_random_value = CheckMap(cmd_args, "--random_value");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
   const bool is_append = CheckMap(cmd_args, "--append");
+  const int32_t record_crc = GetIntegerArgument(cmd_args, "--record_crc", 0, 0);
   const int32_t offset_width = GetIntegerArgument(cmd_args, "--offset_width", 0, -1);
   const int32_t align_pow = GetIntegerArgument( cmd_args, "--align_pow", 0, -1);
   const int64_t num_buckets = GetIntegerArgument(cmd_args, "--buckets", 0, -1);
@@ -1318,6 +1352,15 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     tkrzw::TreeDBM::TuningParameters tuning_params;
     tuning_params.update_mode =
         is_append ? tkrzw::HashDBM::UPDATE_APPENDING : tkrzw::HashDBM::UPDATE_IN_PLACE;
+    if (record_crc == 0) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_NONE;
+    } else if (record_crc == 8) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+    } else if (record_crc == 16) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_16;
+    } else if (record_crc == 32) {
+      tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
+    }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;

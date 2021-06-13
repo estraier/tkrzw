@@ -20,8 +20,8 @@
 
 namespace tkrzw {
 
-HashRecord::HashRecord(File* file, int32_t offset_width, int32_t align_pow)
-    : file_(file), offset_width_(offset_width), align_pow_(align_pow),
+HashRecord::HashRecord(File* file, int32_t crc_width, int32_t offset_width, int32_t align_pow)
+    : file_(file), crc_width_(crc_width), offset_width_(offset_width), align_pow_(align_pow),
       ext_meta_buf_(nullptr), body_buf_(nullptr) {}
 
 HashRecord::~HashRecord() {
@@ -50,7 +50,8 @@ int32_t HashRecord::GetWholeSize() const {
 }
 
 Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
-  const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
+  const int64_t min_record_size =
+      sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3 + crc_width_;
   int64_t record_size = file_->GetSizeSimple() - offset;
   if (record_size < min_record_size) {
     return Status(Status::BROKEN_DATA_ERROR, "too short record data");
@@ -106,6 +107,12 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   padding_size_ = ReadFixNum(rp, 1);
   rp++;
   record_size--;
+  if (record_size < crc_width_) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
+  }
+  crc_value_ = ReadFixNum(rp, crc_width_);
+  rp += crc_width_;
+  record_size -= crc_width_;
   header_size_ = rp - read_buf;
   whole_size_ = padding_size_ < PADDING_SIZE_MAGIC ?
                                 header_size_ + key_size_ + value_size_ + padding_size_ : 0;
@@ -185,13 +192,44 @@ Status HashRecord::ReadBody() {
   return Status(Status::SUCCESS);
 }
 
+Status HashRecord::CheckCRC() {
+  if (crc_width_ == 0) {
+    return Status(Status::SUCCESS);
+  }
+  if (value_ptr_ == nullptr) {
+    const Status status = ReadBody();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  uint32_t crc_value = 0;
+  switch (crc_width_) {
+    case 1:
+      crc_value = HashCRC8Continuous(value_ptr_, value_size_, true, HashCRC8Continuous(
+          key_ptr_, key_size_, false));
+      break;
+    case 2:
+      crc_value = HashCRC16Continuous(value_ptr_, value_size_, true, HashCRC16Continuous(
+          key_ptr_, key_size_, false));
+      break;
+    case 4:
+      crc_value = HashCRC32Continuous(value_ptr_, value_size_, true, HashCRC32Continuous(
+          key_ptr_, key_size_, false));
+      break;
+  }
+  if (crc_value_ != crc_value) {
+    return Status(Status::BROKEN_DATA_ERROR, "inconcistent CRC");
+  }
+  return Status(Status::SUCCESS);
+}
+
 void HashRecord::SetData(OperationType type, int32_t ideal_whole_size,
                          const char* key_ptr, int32_t key_size,
                          const char* value_ptr, int32_t value_size,
                          int64_t child_offset) {
   type_ = type;
   int32_t base_size = sizeof(uint8_t) + offset_width_ +
-      SizeVarNum(key_size) + SizeVarNum(value_size) + sizeof(uint8_t) +
+      SizeVarNum(key_size) + SizeVarNum(value_size) + sizeof(uint8_t) + crc_width_ +
       key_size + value_size;
   whole_size_ = std::max(base_size, ideal_whole_size);
   whole_size_ = AlignNumber(whole_size_, 1 << align_pow_);
@@ -199,6 +237,20 @@ void HashRecord::SetData(OperationType type, int32_t ideal_whole_size,
   value_size_ = value_size;
   padding_size_ = whole_size_ - base_size;
   child_offset_ = child_offset;
+  switch (crc_width_) {
+    default:
+      crc_value_ = 0;
+      break;
+    case 1: crc_value_ = HashCRC8Continuous(value_ptr, value_size, true, HashCRC8Continuous(
+        key_ptr, key_size, false));
+      break;
+    case 2: crc_value_ = HashCRC16Continuous(value_ptr, value_size, true, HashCRC16Continuous(
+        key_ptr, key_size, false));
+      break;
+    case 4: crc_value_ = HashCRC32Continuous(value_ptr, value_size, true, HashCRC32Continuous(
+        key_ptr, key_size, false));
+      break;
+  }
   key_ptr_ = key_ptr;
   value_ptr_ = value_ptr;
 }
@@ -227,6 +279,10 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
     *(wp++) = PADDING_SIZE_MAGIC;
   } else {
     *(wp++) = padding_size_;
+  }
+  if (crc_width_ > 0) {
+    WriteFixNum(wp, crc_value_, crc_width_);
+    wp += crc_width_;
   }
   std::memcpy(wp, key_ptr_, key_size_);
   wp += key_size_;
@@ -263,21 +319,30 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
   constexpr int32_t MAX_SHIFT_TRIES = 1000;
   constexpr int32_t VALIDATION_COUNT = 3;
   constexpr int32_t MAX_REC_SIZE = 1 << 20;
-  const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
+  const int64_t min_record_size =
+      sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3 + crc_width_;
   const int32_t align = 1 << align_pow_;
   offset += min_record_size;
   offset = AlignNumber(offset, align);
   int64_t file_size = file_->GetSizeSimple();
-  HashRecord rec(file_, offset_width_, align_pow_);
+  HashRecord rec(file_, crc_width_, offset_width_, align_pow_);
   int32_t num_shift_tries = MAX_SHIFT_TRIES;
   while (num_shift_tries-- > 0 && offset < file_size) {
-    if (rec.ReadMetadataKey(offset, min_read_size) == Status::SUCCESS) {
-      int32_t count = 0;
-      while (offset < file_size && count < VALIDATION_COUNT) {
-        if (rec.ReadMetadataKey(offset, min_read_size) != Status::SUCCESS) {
+    if (rec.ReadMetadataKey(offset, min_read_size) == Status::SUCCESS &&
+        rec.CheckCRC() == Status::SUCCESS) {
+      int32_t rec_size = rec.GetWholeSize();
+      if (rec_size == 0) {
+        if (rec.ReadBody() != Status::SUCCESS) {
           break;
         }
-        int32_t rec_size = rec.GetWholeSize();
+        rec_size = rec.GetWholeSize();
+      }
+      int32_t count = 0;
+      int64_t forward_offset = offset + rec_size;
+      while (forward_offset < file_size && count < VALIDATION_COUNT &&
+             rec.ReadMetadataKey(forward_offset, min_read_size) == Status::SUCCESS &&
+             rec.CheckCRC() == Status::SUCCESS) {
+        rec_size = rec.GetWholeSize();
         if (rec_size == 0) {
           if (rec.ReadBody() != Status::SUCCESS) {
             break;
@@ -287,11 +352,12 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
         if (rec_size <= MAX_REC_SIZE && rec_size % align != 0) {
           break;
         }
-        if (offset + rec_size == file_size) {
+        if (forward_offset + rec_size == file_size) {
           count = VALIDATION_COUNT;
           break;
         }
         count++;
+        forward_offset += rec_size;
       }
       if (count >= VALIDATION_COUNT) {
         *next_offset = offset;
@@ -305,7 +371,8 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
 
 Status HashRecord::ReplayOperations(
     File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
-    int64_t record_base, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+    int64_t record_base, int32_t crc_width, int32_t offset_width,
+    int32_t align_pow, int64_t num_buckets,
     int32_t min_read_size, bool skip_broken_records, int64_t end_offset) {
   assert(file != nullptr && proc != nullptr && offset_width > 0);
   bool unlimited = false;
@@ -315,9 +382,12 @@ Status HashRecord::ReplayOperations(
   }
   end_offset = std::min(end_offset, file->GetSizeSimple());
   int64_t offset = record_base;
-  HashRecord rec(file, offset_width, align_pow);
+  HashRecord rec(file, crc_width, offset_width, align_pow);
   while (offset < end_offset) {
     Status status = rec.ReadMetadataKey(offset, min_read_size);
+    if (status == Status::SUCCESS) {
+      status = rec.CheckCRC();
+    }
     if (status != Status::SUCCESS) {
       int64_t next_offset = 0;
       if (skip_broken_records) {
@@ -366,7 +436,7 @@ Status HashRecord::ReplayOperations(
         if (unlimited && num_buckets > 0 &&
             offset + rec_size >= end_offset - RESTORE_CHECK_CHAIN_RANGE) {
           status = CheckHashChain(
-              file, bucket_base, offset_width, align_pow, num_buckets, key, offset);
+              file, bucket_base, crc_width, offset_width, align_pow, num_buckets, key, offset);
           if (status != Status::SUCCESS) {
             if (skip_broken_records) {
               offset += rec_size;
@@ -400,7 +470,7 @@ Status HashRecord::ReplayOperations(
 
 Status HashRecord::CheckHashChain(
     File* file, int64_t bucket_base,
-    int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+    int32_t crc_width, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
     std::string_view key, int64_t offset) {
   const uint64_t bucket_index = PrimaryHash(key, num_buckets);
   char bucket_buf[sizeof(uint64_t)];
@@ -414,7 +484,7 @@ Status HashRecord::CheckHashChain(
     if (current_offset == offset) {
       return Status(Status::SUCCESS);
     }
-    HashRecord rec(file, offset_width, align_pow);
+    HashRecord rec(file, crc_width, offset_width, align_pow);
     status = rec.ReadMetadataKey(current_offset, META_MIN_READ_SIZE);
     if (status != Status::SUCCESS) {
       return status;
@@ -426,7 +496,7 @@ Status HashRecord::CheckHashChain(
 
 Status HashRecord::ExtractOffsets(
     File* in_file, File* out_file,
-    int64_t record_base, int32_t offset_width, int32_t align_pow,
+    int64_t record_base, int32_t crc_width, int32_t offset_width, int32_t align_pow,
     bool skip_broken_records, int64_t end_offset) {
   assert(in_file != nullptr && out_file != nullptr && offset_width > 0);
   if (end_offset < 0) {
@@ -434,7 +504,7 @@ Status HashRecord::ExtractOffsets(
   }
   end_offset = std::min(end_offset, in_file->GetSizeSimple());
   int64_t offset = record_base;
-  HashRecord rec(in_file, offset_width, align_pow);
+  HashRecord rec(in_file, crc_width, offset_width, align_pow);
   char buf[WRITE_BUFFER_SIZE];
   const char* ep = buf + WRITE_BUFFER_SIZE - offset_width;
   char* wp = buf;

@@ -42,218 +42,224 @@ TEST(DBMHashImplTest, HashRecord) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true));
   tkrzw::MemoryMapParallelFile offset_file;
   EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Open(offset_file_path, true));
+  const std::vector<int32_t> crc_widths = {0, 1, 2, 4};
   const std::vector<int32_t> offset_widths = {3, 4, 5};
   const std::vector<int32_t> align_pows = {0, 1, 2, 3, 9, 10};
   const std::vector<int32_t> key_sizes = {
     0, 1, 2, 4, 8, 15, 16, 31, 32, 63, 64, 127, 128, 230, 16385, 16386};
   const std::vector<int32_t> value_sizes = {
     0, 1, 2, 4, 8, 15, 16, 31, 32, 63, 64, 127, 128, 230, 16385, 16386};
-  for (const auto& offset_width : offset_widths) {
-    for (const auto& align_pow : align_pows) {
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(0));
-      int64_t off = 0;
-      tkrzw::HashRecord r1(&file, offset_width, align_pow);
-      for (const auto& key_size : key_sizes) {
-        for (const auto& value_size : value_sizes) {
-          char* key_buf = new char[key_size];
-          std::memset(key_buf, 'k', key_size);
-          char* value_buf = new char[value_size];
-          std::memset(value_buf, 'v', value_size);
-          const int64_t child_offset = (key_size + value_size) << align_pow;
-          r1.SetData(tkrzw::HashRecord::OP_SET, 0, key_buf, key_size,
-                     value_buf, value_size, child_offset);
-          EXPECT_EQ(tkrzw::HashRecord::OP_SET, r1.GetOperationType());
-          EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(off, nullptr));
-          tkrzw::HashRecord r2(&file, offset_width, align_pow);
-          EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadMetadataKey(off, 48));
-          EXPECT_EQ(tkrzw::HashRecord::OP_SET, r2.GetOperationType());
-          EXPECT_EQ(r1.GetKey(), r2.GetKey());
-          EXPECT_EQ(r1.GetChildOffset(), r2.GetChildOffset());
-          if (r2.GetWholeSize() == 0) {
-            EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
+  for (const auto& crc_width : crc_widths) {
+    for (const auto& offset_width : offset_widths) {
+      for (const auto& align_pow : align_pows) {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Truncate(0));
+        int64_t off = 0;
+        tkrzw::HashRecord r1(&file, crc_width, offset_width, align_pow);
+        for (const auto& key_size : key_sizes) {
+          for (const auto& value_size : value_sizes) {
+            char* key_buf = new char[key_size];
+            std::memset(key_buf, 'k', key_size);
+            char* value_buf = new char[value_size];
+            std::memset(value_buf, 'v', value_size);
+            const int64_t child_offset = (key_size + value_size) << align_pow;
+            r1.SetData(tkrzw::HashRecord::OP_SET, 0, key_buf, key_size,
+                       value_buf, value_size, child_offset);
+            EXPECT_EQ(tkrzw::HashRecord::OP_SET, r1.GetOperationType());
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(off, nullptr));
+            tkrzw::HashRecord r2(&file, crc_width, offset_width, align_pow);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadMetadataKey(off, 48));
+            EXPECT_EQ(tkrzw::HashRecord::OP_SET, r2.GetOperationType());
+            EXPECT_EQ(r1.GetKey(), r2.GetKey());
+            EXPECT_EQ(r1.GetChildOffset(), r2.GetChildOffset());
+            if (r2.GetWholeSize() == 0) {
+              EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
+              EXPECT_EQ(r1.GetWholeSize(), r2.GetWholeSize());
+            }
+            std::string_view r2_value = r2.GetValue();
+            if (r2_value.data() == nullptr) {
+              EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
+              r2_value = r2.GetValue();
+            }
+            EXPECT_EQ(r1.GetValue(), r2_value);
             EXPECT_EQ(r1.GetWholeSize(), r2.GetWholeSize());
+            off += r2.GetWholeSize();
+            EXPECT_EQ(file.GetSizeSimple(), off);
+            int64_t new_off = 0;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r2.Write(-1, &new_off));
+            EXPECT_EQ(off, new_off);
+            off = new_off + r2.GetWholeSize();
+            delete[] value_buf;
+            delete[] key_buf;
           }
-          std::string_view r2_value = r2.GetValue();
-          if (r2_value.data() == nullptr) {
-            EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
-            r2_value = r2.GetValue();
-          }
-          EXPECT_EQ(r1.GetValue(), r2_value);
-          EXPECT_EQ(r1.GetWholeSize(), r2.GetWholeSize());
-          off += r2.GetWholeSize();
-          EXPECT_EQ(file.GetSizeSimple(), off);
-          int64_t new_off = 0;
-          EXPECT_EQ(tkrzw::Status::SUCCESS, r2.Write(-1, &new_off));
-          EXPECT_EQ(off, new_off);
-          off = new_off + r2.GetWholeSize();
-          delete[] value_buf;
-          delete[] key_buf;
         }
-      }
-      off = 0;
-      int32_t count_first = 0;
-      tkrzw::HashRecord r3(&file, offset_width, align_pow);
-      while (off < file.GetSizeSimple()) {
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadMetadataKey(off, 48));
-        EXPECT_EQ(tkrzw::HashRecord::OP_SET, r3.GetOperationType());
-        if (r3.GetWholeSize() == 0) {
-          EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadBody());
-        }
-        const size_t whole_size = r3.GetWholeSize();
-        r3.SetData(count_first % 2 == 0 ? tkrzw::HashRecord::OP_SET : tkrzw::HashRecord::OP_REMOVE,
-                   whole_size, "", 0, "", 0, 0);
-        EXPECT_EQ(whole_size, r3.GetWholeSize());
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r3.Write(off, nullptr));
-        off += whole_size;
-        count_first++;
-      }
-      EXPECT_EQ(file.GetSizeSimple(), off);
-      std::set<int64_t> offsets;
-      off = 0;
-      int32_t count_second = 0;
-      while (off < file.GetSizeSimple()) {
-        offsets.emplace(off);
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadMetadataKey(off, 48));
-        if (count_second % 2 == 0) {
+        off = 0;
+        int32_t count_first = 0;
+        tkrzw::HashRecord r3(&file, crc_width, offset_width, align_pow);
+        while (off < file.GetSizeSimple()) {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadMetadataKey(off, 48));
           EXPECT_EQ(tkrzw::HashRecord::OP_SET, r3.GetOperationType());
-        } else {
-          EXPECT_EQ(tkrzw::HashRecord::OP_REMOVE, r3.GetOperationType());
+          if (r3.GetWholeSize() == 0) {
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadBody());
+          }
+          const size_t whole_size = r3.GetWholeSize();
+          r3.SetData(count_first % 2 == 0 ?
+                     tkrzw::HashRecord::OP_SET : tkrzw::HashRecord::OP_REMOVE,
+                     whole_size, "", 0, "", 0, 0);
+          EXPECT_EQ(whole_size, r3.GetWholeSize());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r3.Write(off, nullptr));
+          off += whole_size;
+          count_first++;
         }
-        if (r3.GetWholeSize() == 0) {
-          EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadBody());
+        EXPECT_EQ(file.GetSizeSimple(), off);
+        std::set<int64_t> offsets;
+        off = 0;
+        int32_t count_second = 0;
+        while (off < file.GetSizeSimple()) {
+          offsets.emplace(off);
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadMetadataKey(off, 48));
+          if (count_second % 2 == 0) {
+            EXPECT_EQ(tkrzw::HashRecord::OP_SET, r3.GetOperationType());
+          } else {
+            EXPECT_EQ(tkrzw::HashRecord::OP_REMOVE, r3.GetOperationType());
+          }
+          if (r3.GetWholeSize() == 0) {
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r3.ReadBody());
+          }
+          off += r3.GetWholeSize();
+          count_second++;
         }
-        off += r3.GetWholeSize();
-        count_second++;
-      }
-      EXPECT_EQ(file.GetSizeSimple(), off);
-      EXPECT_EQ(count_first, count_second);
-      class Counter final : public tkrzw::DBM::RecordProcessor {
-       public:
-        std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-          count_++;
-          return NOOP;
+        EXPECT_EQ(file.GetSizeSimple(), off);
+        EXPECT_EQ(count_first, count_second);
+        class Counter final : public tkrzw::DBM::RecordProcessor {
+         public:
+          std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+            count_++;
+            return NOOP;
+          }
+          std::string_view ProcessEmpty(std::string_view key) override {
+            count_++;
+            return NOOP;
+          }
+          int32_t GetCount() const {
+            return count_;
+          }
+         private:
+          int32_t count_ = 0;
+        } counter;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
+            &file, &counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, false, -1));
+        EXPECT_EQ(count_first, counter.GetCount());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
+            &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
+        const int64_t num_offsets = offset_file.GetSizeSimple() / offset_width;
+        EXPECT_EQ(count_first, num_offsets);
+        std::set<int64_t> rev_offsets(offsets.begin(), offsets.end());
+        tkrzw::OffsetReader reader(&offset_file, offset_width, align_pow, false);
+        while (true) {
+          int64_t offset = 0;
+          const tkrzw::Status status = reader.ReadOffset(&offset);
+          if (status != tkrzw::Status::SUCCESS) {
+            EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+            break;
+          }
+          EXPECT_EQ(1, offsets.erase(offset));
         }
-        std::string_view ProcessEmpty(std::string_view key) override {
-          count_++;
-          return NOOP;
+        EXPECT_TRUE(offsets.empty());
+        tkrzw::OffsetReader rev_reader(&offset_file, offset_width, align_pow, true);
+        while (true) {
+          int64_t offset = 0;
+          const tkrzw::Status status = rev_reader.ReadOffset(&offset);
+          if (status != tkrzw::Status::SUCCESS) {
+            EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+            break;
+          }
+          EXPECT_EQ(1, rev_offsets.erase(offset));
         }
-        int32_t GetCount() const {
-          return count_;
-        }
-       private:
-        int32_t count_ = 0;
-      } counter;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-          &file, &counter, -1, 0, offset_width, align_pow, -1, 48, false, -1));
-      EXPECT_EQ(count_first, counter.GetCount());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
-          &file, &offset_file, 0, offset_width, align_pow, false, -1));
-      const int64_t num_offsets = offset_file.GetSizeSimple() / offset_width;
-      EXPECT_EQ(count_first, num_offsets);
-      std::set<int64_t> rev_offsets(offsets.begin(), offsets.end());
-      tkrzw::OffsetReader reader(&offset_file, offset_width, align_pow, false);
-      while (true) {
-        int64_t offset = 0;
-        const tkrzw::Status status = reader.ReadOffset(&offset);
-        if (status != tkrzw::Status::SUCCESS) {
-          EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
-          break;
-        }
-        EXPECT_EQ(1, offsets.erase(offset));
-      }
-      EXPECT_TRUE(offsets.empty());
-      tkrzw::OffsetReader rev_reader(&offset_file, offset_width, align_pow, true);
-      while (true) {
-        int64_t offset = 0;
-        const tkrzw::Status status = rev_reader.ReadOffset(&offset);
-        if (status != tkrzw::Status::SUCCESS) {
-          EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
-          break;
-        }
-        EXPECT_EQ(1, rev_offsets.erase(offset));
-      }
-      EXPECT_TRUE(rev_offsets.empty());
-      int64_t next_offset = 0;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.FindNextOffset(0, 48, &next_offset));
-      EXPECT_GT(next_offset, 0);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(0, 48));
-      int64_t first_rec_size = r1.GetWholeSize();
-      if (first_rec_size == 0) {
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
-        first_rec_size = r1.GetWholeSize();
-      }
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(first_rec_size, 48));
-      int64_t second_rec_size = r1.GetWholeSize();
-      if (second_rec_size == 0) {
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
-        second_rec_size = r1.GetWholeSize();
-      }
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(0, "", 1));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(first_rec_size, "", 1));
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(0, 48));
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(first_rec_size, 48));
-      Counter broken_counter;
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ReplayOperations(
-          &file, &broken_counter, -1, 0, offset_width, align_pow, -1, 48, false, -1));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ExtractOffsets(
-          &file, &offset_file, 0, offset_width, align_pow, false, -1));
-      Counter skip_counter;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-          &file, &skip_counter, -1, 0, offset_width, align_pow, -1, 48, true, -1));
-      EXPECT_EQ(counter.GetCount() - 2, skip_counter.GetCount());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
-          &file, &offset_file, 0, offset_width, align_pow, true, -1));
-      const int64_t skip_num_offsets = offset_file.GetSizeSimple() / offset_width;
-      EXPECT_EQ(count_first - 2, skip_num_offsets);
-      r1.SetData(tkrzw::HashRecord::OP_SET, first_rec_size, "", 0, "", 0, 0);
-      EXPECT_EQ(first_rec_size, r1.GetWholeSize());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(0, nullptr));
-      r1.SetData(tkrzw::HashRecord::OP_REMOVE, second_rec_size, "", 0, "", 0, 0);
-      EXPECT_EQ(second_rec_size, r1.GetWholeSize());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(first_rec_size, nullptr));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(0, 48));
-      EXPECT_EQ(tkrzw::HashRecord::OP_SET, r1.GetOperationType());
-      EXPECT_EQ(0, r1.GetKey().size());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(first_rec_size, 48));
-      EXPECT_EQ(tkrzw::HashRecord::OP_REMOVE, r1.GetOperationType());
-      EXPECT_EQ(0, r1.GetKey().size());
-      Counter restore_counter;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-          &file, &restore_counter, -1, 0, offset_width, align_pow, -1, 48, false, -1));
-      EXPECT_EQ(counter.GetCount(), restore_counter.GetCount());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
-          &file, &offset_file, 0, offset_width, align_pow, false, -1));
-      const int64_t restore_num_offsets = offset_file.GetSizeSimple() / offset_width;
-      EXPECT_EQ(count_first, restore_num_offsets);
-      off = 0;
-      int32_t count_void = 0;
-      while (off < file.GetSizeSimple()) {
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(off, 48));
-        if (r1.GetWholeSize() == 0) {
+        EXPECT_TRUE(rev_offsets.empty());
+        int64_t next_offset = 0;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.FindNextOffset(0, 48, &next_offset));
+        EXPECT_GT(next_offset, 0);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(0, 48));
+        int64_t first_rec_size = r1.GetWholeSize();
+        if (first_rec_size == 0) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
+          first_rec_size = r1.GetWholeSize();
         }
-        const size_t whole_size = r1.GetWholeSize();
-        r1.SetData(count_void % 2 == 0 ? tkrzw::HashRecord::OP_SET : tkrzw::HashRecord::OP_VOID,
-                   whole_size, "", 0, "", 0, 0);
-        EXPECT_EQ(whole_size, r1.GetWholeSize());
-        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(off, nullptr));
-        off += whole_size;
-        count_void++;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(first_rec_size, 48));
+        int64_t second_rec_size = r1.GetWholeSize();
+        if (second_rec_size == 0) {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
+          second_rec_size = r1.GetWholeSize();
+        }
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(0, "", 1));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(first_rec_size, "", 1));
+        EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(0, 48));
+        EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(first_rec_size, 48));
+        Counter broken_counter;
+        EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ReplayOperations(
+            &file, &broken_counter, -1, 0, crc_width, offset_width, align_pow,
+            -1, 48, false, -1));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
+        EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ExtractOffsets(
+            &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
+        Counter skip_counter;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
+            &file, &skip_counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, true, -1));
+        EXPECT_EQ(counter.GetCount() - 2, skip_counter.GetCount());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
+            &file, &offset_file, 0, crc_width, offset_width, align_pow, true, -1));
+        const int64_t skip_num_offsets = offset_file.GetSizeSimple() / offset_width;
+        EXPECT_EQ(count_first - 2, skip_num_offsets);
+        r1.SetData(tkrzw::HashRecord::OP_SET, first_rec_size, "", 0, "", 0, 0);
+        EXPECT_EQ(first_rec_size, r1.GetWholeSize());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(0, nullptr));
+        r1.SetData(tkrzw::HashRecord::OP_REMOVE, second_rec_size, "", 0, "", 0, 0);
+        EXPECT_EQ(second_rec_size, r1.GetWholeSize());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(first_rec_size, nullptr));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(0, 48));
+        EXPECT_EQ(tkrzw::HashRecord::OP_SET, r1.GetOperationType());
+        EXPECT_EQ(0, r1.GetKey().size());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(first_rec_size, 48));
+        EXPECT_EQ(tkrzw::HashRecord::OP_REMOVE, r1.GetOperationType());
+        EXPECT_EQ(0, r1.GetKey().size());
+        Counter restore_counter;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
+            &file, &restore_counter, -1, 0, crc_width, offset_width, align_pow,
+            -1, 48, false, -1));
+        EXPECT_EQ(counter.GetCount(), restore_counter.GetCount());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
+            &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
+        const int64_t restore_num_offsets = offset_file.GetSizeSimple() / offset_width;
+        EXPECT_EQ(count_first, restore_num_offsets);
+        off = 0;
+        int32_t count_void = 0;
+        while (off < file.GetSizeSimple()) {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadMetadataKey(off, 48));
+          if (r1.GetWholeSize() == 0) {
+            EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
+          }
+          const size_t whole_size = r1.GetWholeSize();
+          r1.SetData(count_void % 2 == 0 ? tkrzw::HashRecord::OP_SET : tkrzw::HashRecord::OP_VOID,
+                     whole_size, "", 0, "", 0, 0);
+          EXPECT_EQ(whole_size, r1.GetWholeSize());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, r1.Write(off, nullptr));
+          off += whole_size;
+          count_void++;
+        }
+        EXPECT_EQ(file.GetSizeSimple(), off);
+        Counter void_counter;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
+            &file, &void_counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, false, -1));
+        EXPECT_EQ(count_void / 2, void_counter.GetCount());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
+            &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
+        const int64_t void_num_offsets = offset_file.GetSizeSimple() / offset_width;
+        EXPECT_EQ(count_void / 2, void_num_offsets);
       }
-      EXPECT_EQ(file.GetSizeSimple(), off);
-      Counter void_counter;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-          &file, &void_counter, -1, 0, offset_width, align_pow, -1, 48, false, -1));
-      EXPECT_EQ(count_void / 2, void_counter.GetCount());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
-          &file, &offset_file, 0, offset_width, align_pow, false, -1));
-      const int64_t void_num_offsets = offset_file.GetSizeSimple() / offset_width;
-      EXPECT_EQ(count_void / 2, void_num_offsets);
     }
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Close());

@@ -204,6 +204,23 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   if (update_mode == "update_appending" || update_mode == "appending") {
     tuning_params->update_mode = HashDBM::UPDATE_APPENDING;
   }
+  const std::string record_crc_mode = StrLowerCase(SearchMap(*params, "record_crc_mode", ""));
+  if (record_crc_mode == "record_crc_none" || record_crc_mode == "crc_none" ||
+      record_crc_mode == "none") {
+    tuning_params->record_crc_mode = HashDBM::RECORD_CRC_NONE;
+  }
+  if (record_crc_mode == "record_crc_8" || record_crc_mode == "crc_8" ||
+      record_crc_mode == "crc-8" || record_crc_mode == "8") {
+    tuning_params->record_crc_mode = HashDBM::RECORD_CRC_8;
+  }
+  if (record_crc_mode == "record_crc_16" || record_crc_mode == "crc_16" ||
+      record_crc_mode == "crc-16" || record_crc_mode == "16") {
+    tuning_params->record_crc_mode = HashDBM::RECORD_CRC_16;
+  }
+  if (record_crc_mode == "record_crc_32" || record_crc_mode == "crc_32" ||
+      record_crc_mode == "crc-32" || record_crc_mode == "32") {
+    tuning_params->record_crc_mode = HashDBM::RECORD_CRC_32;
+  }
   tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
@@ -219,6 +236,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->lock_mem_buckets = StrToIntOrBool(SearchMap(*params, "lock_mem_buckets", "-1"));
   tuning_params->cache_buckets = StrToIntOrBool(SearchMap(*params, "cache_buckets", "-1"));
   params->erase("update_mode");
+  params->erase("record_crc_mode");
   params->erase("offset_width");
   params->erase("align_pow");
   params->erase("num_buckets");
