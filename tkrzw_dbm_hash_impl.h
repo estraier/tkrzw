@@ -58,7 +58,7 @@ class HashRecord final {
    * @param offset_width The width of the offset data.
    * @param align_pow The alignment power.
    */
-  HashRecord(File* file, int32_t crc_size, int32_t offset_width, int32_t align_pow);
+  HashRecord(File* file, int32_t crc_width, int32_t offset_width, int32_t align_pow);
 
   /**
    * Destructor.

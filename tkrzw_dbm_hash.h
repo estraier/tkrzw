@@ -704,7 +704,7 @@ class HashDBM final : public DBM {
 
   /**
    * Gets the record CRC width from the static flags.
-   * @param The static flags.
+   * @param static_flags The static flags.
    * @return the record CRC width.
    */
   static int32_t GetCRCWidthFromStaticFlags(int32_t static_flags);
