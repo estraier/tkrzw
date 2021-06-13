@@ -24,6 +24,8 @@ static void PrintUsageAndDie() {
   P("Usage:\n");
   P("  %s search [options]\n", progname);
   P("    : Checks search performance.\n");
+  P("  %s hash [options]\n", progname);
+  P("    : Checks hashing performance.\n");
   P("\n");
   P("Options of the search subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
@@ -34,6 +36,10 @@ static void PrintUsageAndDie() {
   P("  --whole num : The maximum number of results to get. 0 means the first only."
     " (default: 0)\n");
   P("  --batch num : The number of patterns in a batch. 0 menas no batching. (default: 0)\n");
+  P("\n");
+  P("Options of the hash subcommand:\n");
+  P("  --iter num : The number of iterations. (default: 10000)\n");
+  P("  --text num : The size of each text to search. (default: 10000)\n");
   P("\n");
   std::exit(1);
 }
@@ -180,6 +186,68 @@ static int32_t ProcessSearch(int32_t argc, const char** args) {
   return 0;
 }
 
+// Processes the hash subcommand.
+static int32_t ProcessHash(int32_t argc, const char** args) {
+  const std::map<std::string, int32_t>& cmd_configs = {
+    {"--iter", 1}, {"--text", 1},
+  };
+  std::map<std::string, std::vector<std::string>> cmd_args;
+  std::string cmd_error;
+  if (!ParseCommandArguments(argc, args, cmd_configs, &cmd_args, &cmd_error)) {
+    EPrint("Invalid command: ", cmd_error, "\n\n");
+    PrintUsageAndDie();
+  }
+  const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
+  const int32_t text_size = GetIntegerArgument(cmd_args, "--text", 0, 10000);
+  if (num_iterations < 1) {
+    Die("Invalid number of iterations");
+  }
+  if (text_size < 1) {
+    Die("Invalid text size");
+  }
+  std::string text;
+  text.reserve(text_size);
+  for (int32_t i = 0; i < text_size; i++) {
+    text.append(1, i % 256);
+  }
+  PrintL("Hash: iterations=", num_iterations, " text_size=", text_size);
+  auto murmur = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashMurmur(sv);
+                };
+  auto fnv = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashFNV(sv);
+                };
+  auto crc8 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashCRC8(sv);
+                };
+  auto crc16 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashCRC16(sv);
+                };
+  auto crc32 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashCRC32(sv);
+                };
+  const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
+    {murmur, "Murmur"},
+    {fnv, "FNV"},
+    {crc8, "CRC-8"},
+    {crc16, "CRC-16"},
+    {crc32, "CRC-32"},
+  };
+  for (const auto& test_set : test_sets) {
+    const uint32_t expected_value = test_set.first(text);
+    const auto start_time = tkrzw::GetWallTime();
+    for (int32_t i = 0; i < num_iterations; i++) {
+      if (test_set.first(text) != expected_value) {
+        Die("Inconsistent result");
+      }
+    }
+    const auto end_time = tkrzw::GetWallTime();
+    const auto elapsed_time = end_time - start_time;
+    PrintL("func=", test_set.second, " time=", elapsed_time, " value=", expected_value);
+  }
+  return 0;
+}
+
 }  // namespace tkrzw
 
 // Main routine
@@ -192,6 +260,8 @@ int main(int argc, char** argv) {
   try {
     if (std::strcmp(args[1], "search") == 0) {
       rv = tkrzw::ProcessSearch(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "hash") == 0) {
+      rv = tkrzw::ProcessHash(argc - 1, args + 1);
     } else {
       tkrzw::PrintUsageAndDie();
     }

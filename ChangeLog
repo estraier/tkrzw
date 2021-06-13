@@ -4,6 +4,7 @@
 	- Library version: 1.16.0
 
 	- Add record CRC modes to detect data corruption.
+	- Add a performance test for hash functions.
 
 2021-06-11  Mikio Hirabayashi  <hirarin@gmail.com>
 

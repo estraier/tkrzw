@@ -257,13 +257,13 @@ inline typename MAP::value_type::first_type SearchMap(
  * @param seed The seed value.
  * @return The hash value.
  */
-uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed);
+uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed = 0);
 
 /**
  * Gets the hash value by Murmur hashing.
  * @see HashMurmur
  */
-inline uint64_t HashMurmur(std::string_view str, uint64_t seed) {
+inline uint64_t HashMurmur(std::string_view str, uint64_t seed = 0) {
   return HashMurmur(str.data(), str.size(), seed);
 }
 
@@ -308,7 +308,7 @@ inline uint32_t HashCRC8(const void* buf, size_t size) {
  * Gets the hash value by CRC-8.
  * @see HashCRC8
  */
-inline uint32_t HashCRC8(const std::string& str) {
+inline uint32_t HashCRC8(std::string_view str) {
   return HashCRC8Continuous(str.data(), str.size(), true);
 }
 
@@ -337,7 +337,7 @@ inline uint32_t HashCRC16(const void* buf, size_t size) {
  * Gets the hash value by CRC-8.
  * @see HashCRC8
  */
-inline uint32_t HashCRC16(const std::string& str) {
+inline uint32_t HashCRC16(std::string_view str) {
   return HashCRC16Continuous(str.data(), str.size(), true);
 }
 
@@ -366,7 +366,7 @@ inline uint32_t HashCRC32(const void* buf, size_t size) {
  * Gets the hash value by CRC-32.
  * @see HashCRC32
  */
-inline uint32_t HashCRC32(const std::string& str) {
+inline uint32_t HashCRC32(std::string_view str) {
   return HashCRC32Continuous(str.data(), str.size(), true);
 }
 
