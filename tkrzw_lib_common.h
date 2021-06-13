@@ -257,13 +257,13 @@ inline typename MAP::value_type::first_type SearchMap(
  * @param seed The seed value.
  * @return The hash value.
  */
-uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed = 0);
+uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed);
 
 /**
  * Gets the hash value by Murmur hashing.
  * @see HashMurmur
  */
-inline uint64_t HashMurmur(std::string_view str, uint64_t seed = 0) {
+inline uint64_t HashMurmur(std::string_view str, uint64_t seed) {
   return HashMurmur(str.data(), str.size(), seed);
 }
 
