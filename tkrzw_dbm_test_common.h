@@ -44,7 +44,11 @@ class CommonDBMTest : public Test {
 };
 
 inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
-  const std::string copy_path = path + ".copy";
+  const std::string ext = tkrzw::PathToExtension(path);
+  std::string copy_path = path + "-copy";
+  if (!ext.empty()) {
+    copy_path += "." + ext;
+  }
   EXPECT_FALSE(dbm->IsOpen());
   EXPECT_FALSE(dbm->IsWritable());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(path, true));
@@ -83,7 +87,10 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", "XX"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(true));
   EXPECT_EQ("XX", dbm->GetSimple("x"));
-  const std::string export_path = path + ".export";
+  std::string export_path = path + ".export";
+  if (!ext.empty()) {
+    export_path += "." + ext;
+  }
   auto new_dbm = dbm->MakeDBM();
   EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm->Open(export_path, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Export(new_dbm.get()));

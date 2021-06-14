@@ -154,16 +154,61 @@ Status ShardDBM::Append(std::string_view key, std::string_view value, std::strin
 }
 
 Status ShardDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
-  // TODO: Make this atomic by locking the minimum key.
-  Status status(Status::SUCCESS);
-  for (const auto& key_proc : key_proc_pairs) {
-    status |= Process(key_proc.first, key_proc.second, writable);
+  if (key_proc_pairs.empty()) {
+    return Status(Status::SUCCESS);
   }
+  struct Proc {
+    std::string_view key;
+    int32_t shard_index;
+    DBM::RecordProcessor* proc;
+  };
+  std::vector<Proc> procs;
+  procs.reserve(key_proc_pairs.size());
+  int32_t min_shard_index = key_proc_pairs.size();
+  for (const auto& key_proc : key_proc_pairs) {
+    const int32_t shard_index = SecondaryHash(key_proc.first, dbms_.size());
+    procs.emplace_back(Proc({key_proc.first, shard_index, key_proc.second}));
+    min_shard_index = std::min(min_shard_index, shard_index);
+  }
+  Status proc_status(Status::SUCCESS);
+  std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> key_wrap_pairs;
+  key_wrap_pairs.reserve(key_proc_pairs.size());
+  struct Delegator : public DBM::RecordProcessor {
+    Status* status;
+    DBM* dbm;
+    DBM::RecordProcessor* proc;
+    bool writable;
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      *status |= dbm->Process(key, proc, writable);
+      return NOOP;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      *status |= dbm->Process(key, proc, writable);
+      return NOOP;
+    }
+  };
+  std::vector<Delegator> delegators;
+  delegators.reserve(key_proc_pairs.size());
+  for (const auto& proc : procs) {
+    if (proc.shard_index == min_shard_index) {
+      key_wrap_pairs.emplace_back(std::make_pair(proc.key, proc.proc));
+    } else {
+      delegators.emplace_back(Delegator());
+      auto& delegator = delegators.back();
+      delegator.status = &proc_status;
+      delegator.dbm = dbms_[proc.shard_index].get();
+      delegator.proc = proc.proc;
+      delegator.writable = writable;
+      key_wrap_pairs.emplace_back(std::make_pair(proc.key, &delegator));
+    }
+  }
+  Status status = dbms_[min_shard_index]->ProcessMulti(key_wrap_pairs, writable);
+  status |= proc_status;
   return status;
 }
 
@@ -582,7 +627,38 @@ Status ShardDBM::Iterator::Process(RecordProcessor* proc, bool writable) {
     return Status(Status::NOT_FOUND_ERROR);
   }
   auto* slot = heap_.front();
-  return slot->iter->Process(proc, writable);
+  class Checker : public DBM::RecordProcessor {
+   public:
+    explicit Checker(RecordProcessor* proc) : proc_(proc), removed_(false)  {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      const std::string_view rv = proc_->ProcessFull(key, value);
+      if (rv.data() == REMOVE.data()) {
+        removed_ = true;
+      }
+      return rv;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      return proc_->ProcessEmpty(key);
+    }
+    bool HasRemoved() const {
+      return removed_;
+    }
+   private:
+    DBM::RecordProcessor* proc_;
+    bool removed_;
+  } checker(proc);
+  const Status status = slot->iter->Process(&checker, writable);
+  if (status == Status::SUCCESS && writable && checker.HasRemoved()) {
+    std::pop_heap(heap_.begin(), heap_.end(), ShardSlotComparator(comp_, true));
+    slot = heap_.back();
+    const Status get_status = slot->iter->Get(&slot->key, &slot->value);
+    if (get_status == Status::SUCCESS) {
+      std::push_heap(heap_.begin(), heap_.end(), ShardSlotComparator(comp_, true));
+    } else {
+      heap_.pop_back();
+    }
+  }
+  return status;
 }
 
 Status ShardDBM::Iterator::Get(std::string* key, std::string* value) {
@@ -604,7 +680,11 @@ Status ShardDBM::Iterator::Set(std::string_view value) {
     return Status(Status::NOT_FOUND_ERROR);
   }
   auto* slot = heap_.front();
-  return slot->iter->Set(value);
+  const Status status = slot->iter->Set(value);
+  if (status == Status::SUCCESS) {
+    slot->value = value;
+  }
+  return status;
 }
 
 Status ShardDBM::Iterator::Remove() {
@@ -612,7 +692,18 @@ Status ShardDBM::Iterator::Remove() {
     return Status(Status::NOT_FOUND_ERROR);
   }
   auto* slot = heap_.front();
-  return slot->iter->Remove();
+  const Status status = slot->iter->Remove();
+  if (status == Status::SUCCESS) {
+    std::pop_heap(heap_.begin(), heap_.end(), ShardSlotComparator(comp_, true));
+    slot = heap_.back();
+    const Status get_status = slot->iter->Get(&slot->key, &slot->value);
+    if (get_status == Status::SUCCESS) {
+      std::push_heap(heap_.begin(), heap_.end(), ShardSlotComparator(comp_, true));
+    } else {
+      heap_.pop_back();
+    }
+  }
+  return status;
 }
 
 Status ShardDBM::RestoreDatabase(

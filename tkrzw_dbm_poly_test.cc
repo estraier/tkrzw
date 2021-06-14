@@ -37,7 +37,94 @@ int main(int argc, char** argv) {
 
 class PolyDBMTest : public CommonDBMTest {};
 
+TEST_F(PolyDBMTest, FileTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  FileTest(&dbm, file_path);
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  FileTest(&dbm, file_path);
+}
+
 TEST_F(PolyDBMTest, BasicTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  BasicTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  BasicTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, SequenceTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  SequenceTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  SequenceTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, AppendTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  AppendTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  AppendTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, ProcessTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, ProcessEachTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, ProcessMultiTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(PolyDBMTest, PolyBasicTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string class_name;
@@ -196,7 +283,7 @@ TEST_F(PolyDBMTest, BasicTest) {
   }
 }
 
-TEST_F(PolyDBMTest, LargeRecord) {
+TEST_F(PolyDBMTest, PolyLargeRecord) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -219,7 +306,7 @@ TEST_F(PolyDBMTest, LargeRecord) {
   }
 }
 
-TEST_F(PolyDBMTest, RebuildRandom) {
+TEST_F(PolyDBMTest, PolyRebuildRandom) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -239,7 +326,7 @@ TEST_F(PolyDBMTest, RebuildRandom) {
   }
 }
 
-TEST_F(PolyDBMTest, BackIterator) {
+TEST_F(PolyDBMTest, PolyBackIterator) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -261,7 +348,7 @@ TEST_F(PolyDBMTest, BackIterator) {
   }
 }
 
-TEST_F(PolyDBMTest, IteratorBound) {
+TEST_F(PolyDBMTest, PolyIteratorBound) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;

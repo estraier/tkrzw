@@ -40,6 +40,84 @@ class ShardDBMTest : public CommonDBMTest {};
 
 TEST_F(ShardDBMTest, BasicTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  BasicTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  BasicTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, SequenceTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  SequenceTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  SequenceTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, AppendTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  AppendTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  AppendTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, ProcessTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, ProcessEachTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, ProcessMultiTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(ShardDBMTest, ShardBasicTest) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string class_name;
     std::string path;
@@ -178,7 +256,7 @@ TEST_F(ShardDBMTest, BasicTest) {
   }
 }
 
-TEST_F(ShardDBMTest, LargeRecord) {
+TEST_F(ShardDBMTest, ShardLargeRecord) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -201,7 +279,7 @@ TEST_F(ShardDBMTest, LargeRecord) {
   }
 }
 
-TEST_F(ShardDBMTest, RebuildRandom) {
+TEST_F(ShardDBMTest, ShardRebuildRandom) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -223,7 +301,7 @@ TEST_F(ShardDBMTest, RebuildRandom) {
   }
 }
 
-TEST_F(ShardDBMTest, BackIterator) {
+TEST_F(ShardDBMTest, ShardBackIterator) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
@@ -247,7 +325,7 @@ TEST_F(ShardDBMTest, BackIterator) {
   }
 }
 
-TEST_F(ShardDBMTest, IteratorBound) {
+TEST_F(ShardDBMTest, ShardIteratorBound) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string path;
