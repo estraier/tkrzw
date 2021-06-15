@@ -159,22 +159,7 @@ Status ShardDBM::ProcessMulti(
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
-  if (key_proc_pairs.empty()) {
-    return Status(Status::SUCCESS);
-  }
-  struct Proc {
-    std::string_view key;
-    int32_t shard_index;
-    DBM::RecordProcessor* proc;
-  };
-  std::vector<Proc> procs;
-  procs.reserve(key_proc_pairs.size());
-  int32_t min_shard_index = key_proc_pairs.size();
-  for (const auto& key_proc : key_proc_pairs) {
-    const int32_t shard_index = SecondaryHash(key_proc.first, dbms_.size());
-    procs.emplace_back(Proc({key_proc.first, shard_index, key_proc.second}));
-    min_shard_index = std::min(min_shard_index, shard_index);
-  }
+
   Status proc_status(Status::SUCCESS);
   std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> key_wrap_pairs;
   key_wrap_pairs.reserve(key_proc_pairs.size());
@@ -194,20 +179,21 @@ Status ShardDBM::ProcessMulti(
   };
   std::vector<Delegator> delegators;
   delegators.reserve(key_proc_pairs.size());
-  for (const auto& proc : procs) {
-    if (proc.shard_index == min_shard_index) {
-      key_wrap_pairs.emplace_back(std::make_pair(proc.key, proc.proc));
+  for (const auto& key_proc : key_proc_pairs) {
+    const int32_t shard_index = SecondaryHash(key_proc.first, dbms_.size());
+    if (shard_index == 0) {
+      key_wrap_pairs.emplace_back(key_proc);
     } else {
       delegators.emplace_back(Delegator());
       auto& delegator = delegators.back();
       delegator.status = &proc_status;
-      delegator.dbm = dbms_[proc.shard_index].get();
-      delegator.proc = proc.proc;
+      delegator.dbm = dbms_[shard_index].get();
+      delegator.proc = key_proc.second;
       delegator.writable = writable;
-      key_wrap_pairs.emplace_back(std::make_pair(proc.key, &delegator));
+      key_wrap_pairs.emplace_back(std::make_pair(key_proc.first, &delegator));
     }
   }
-  Status status = dbms_[min_shard_index]->ProcessMulti(key_wrap_pairs, writable);
+  Status status = dbms_[0]->ProcessMulti(key_wrap_pairs, writable);
   status |= proc_status;
   return status;
 }
