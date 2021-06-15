@@ -1,3 +1,10 @@
+2021-06-14  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.29
+	- Library version: 1.18.0
+
+	- Parallelism of ProcessMulti and ComareExchangeMulti of ShardDBM is improved.
+
 2021-06-13  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.28
