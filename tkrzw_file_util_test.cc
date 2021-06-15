@@ -190,7 +190,7 @@ TEST(FileUtilTest, CopyFileData) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(dest_path, &content));
   EXPECT_EQ("abcd0123", content);
   std::string src_content;
-  for (int32_t i = 0; i < 2000; i++) {
+  for (int32_t i = 0; i < 8000; i++) {
     src_content.append("0123456789");
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(src_path, src_content));

@@ -56,6 +56,10 @@ const char* const TMP_DIR_CANDIDATES[] = {
 
 #endif
 
+#if defined(_SYS_LINUX_)
+#include <sys/sendfile.h>
+#endif
+
 std::string MakeTemporaryName() {
   static std::atomic_uint32_t count(0);
   const uint32_t current_count = count++;
@@ -385,7 +389,42 @@ Status RenameFile(const std::string& src_path, const std::string& dest_path) {
 }
 
 Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
-  // TODO: use sendfile on Linux.
+#if defined(_SYS_LINUX_)
+  const int32_t src_fd = open(src_path.c_str(), O_RDONLY);
+  if (src_fd < 0) {
+    return GetErrnoStatus("open", errno);
+  }
+  int64_t file_size = lseek(src_fd, 0, SEEK_END);
+  if (file_size < 0) {
+    return GetErrnoStatus("lseek", errno);
+  }
+  if (lseek(src_fd, 0, SEEK_SET)) {
+    return GetErrnoStatus("lseek", errno);
+  }
+  const int32_t dest_fd = open(dest_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, FILEPERM);
+  if (dest_fd < 0) {
+    const Status status = GetErrnoStatus("open", errno);
+    close(src_fd);
+    return status;
+  }
+  Status status(Status::SUCCESS);
+  while (file_size > 0) {
+    const int64_t sent_size =
+        sendfile(dest_fd, src_fd, nullptr, std::min<int64_t>(file_size, 65536));
+    if (sent_size < 0) {
+      status |= GetErrnoStatus("read", errno);
+      break;
+    }
+    file_size -= sent_size;
+  }
+  if (close(dest_fd) != 0) {
+    status |= GetErrnoStatus("close", errno);
+  }
+  if (close(src_fd) != 0) {
+    status |= GetErrnoStatus("close", errno);
+  }
+  return status;
+#else
   const int32_t src_fd = open(src_path.c_str(), O_RDONLY);
   if (src_fd < 0) {
     return GetErrnoStatus("open", errno);
@@ -425,6 +464,7 @@ Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
     status |= GetErrnoStatus("close", errno);
   }
   return status;
+#endif
 }
 
 Status ReadDirectory(const std::string& path, std::vector<std::string>* children) {
