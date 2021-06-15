@@ -322,10 +322,30 @@ class ShardDBM final : public ParamDBM {
    * consistent to the open mode.
    * @details If the specified record exists, the ProcessFull of the processor is called.
    * Otherwise, the ProcessEmpty of the processor is called.
+   * @details ShardDBM has a special implementation to assure isolation of transactions in
+   * multi-threading environments.  The given keys are locked in the space of the first shard so
+   * that isolation is assured among ProcessMulti even if actual keys belongs to different shards.
+   * In other words, other methods such as Get, Set, and Remove are executed without exclusive
+   * control.
    */
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) override;
+
+  /**
+   * Compares the values of records and exchanges if the condition meets.
+   * @param expected The record keys and their expected values.  If the value is nullptr, no
+   * existing record is expected.
+   * @param desired The record keys and their desired values.  If the value is nullptr, the
+   * record is to be removed.
+   * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
+   * @details ShardDBM has a special implementation to assure isolation of transactions in
+   * multi-threading environments.  In contrast to the ProcessMulti method, isolation of
+   * CompareExchangeMulti is assured among all kinds of methods.
+   */
+  Status CompareExchangeMulti(
+      const std::vector<std::pair<std::string_view, std::string_view>>& expected,
+      const std::vector<std::pair<std::string_view, std::string_view>>& desired) override;
 
   /**
    * Processes each and every record in the database with a processor.

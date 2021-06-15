@@ -50,11 +50,14 @@ TEST_F(PolyDBMTest, BasicTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   BasicTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   BasicTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
@@ -63,11 +66,14 @@ TEST_F(PolyDBMTest, SequenceTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   SequenceTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   SequenceTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
@@ -76,11 +82,14 @@ TEST_F(PolyDBMTest, AppendTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   AppendTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   AppendTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
@@ -89,11 +98,14 @@ TEST_F(PolyDBMTest, ProcessTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   ProcessTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   ProcessTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
@@ -102,11 +114,14 @@ TEST_F(PolyDBMTest, ProcessEachTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   ProcessEachTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
   ProcessEachTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
@@ -115,12 +130,15 @@ TEST_F(PolyDBMTest, ProcessMultiTest) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
-  ProcessEachTest(&dbm);
+  std::map<std::string, std::string> params = {{"num_buckets", "10000"}};
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
+  ProcessMultiTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
-  ProcessEachTest(&dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, params));
+  ProcessMultiTest(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 

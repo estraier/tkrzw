@@ -1090,8 +1090,8 @@ class DBM {
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
   virtual Status CompareExchangeMulti(
-      std::vector<std::pair<std::string_view, std::string_view>> expected,
-      std::vector<std::pair<std::string_view, std::string_view>> desired) {
+      const std::vector<std::pair<std::string_view, std::string_view>>& expected,
+      const std::vector<std::pair<std::string_view, std::string_view>>& desired) {
     std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
     key_proc_pairs.reserve(expected.size() + desired.size());
     bool noop = false;

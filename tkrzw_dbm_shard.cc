@@ -159,7 +159,6 @@ Status ShardDBM::ProcessMulti(
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
-
   Status proc_status(Status::SUCCESS);
   std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> key_wrap_pairs;
   key_wrap_pairs.reserve(key_proc_pairs.size());
@@ -196,6 +195,134 @@ Status ShardDBM::ProcessMulti(
   Status status = dbms_[0]->ProcessMulti(key_wrap_pairs, writable);
   status |= proc_status;
   return status;
+}
+
+Status ShardDBM::CompareExchangeMulti(
+    const std::vector<std::pair<std::string_view, std::string_view>>& expected,
+    const std::vector<std::pair<std::string_view, std::string_view>>& desired) {
+  typedef std::pair<std::string_view, std::string_view> Condition;
+  typedef std::pair<std::vector<Condition>, std::vector<Condition>> ConditionListPair;
+  std::map<int32_t, ConditionListPair> shard_conditions;
+  for (auto& cond : expected) {
+    const int32_t shard_index = SecondaryHash(cond.first, dbms_.size());
+    shard_conditions[shard_index].first.emplace_back(cond);
+  }
+  for (auto& cond : desired) {
+    const int32_t shard_index = SecondaryHash(cond.first, dbms_.size());
+    shard_conditions[shard_index].second.emplace_back(cond);
+  }
+  if (shard_conditions.empty()) {
+    return Status(Status::SUCCESS);
+  }
+  struct Command {
+    DBM* dbm;
+    std::vector<std::pair<std::string_view, RecordProcessor*>> params;
+  };
+  std::vector<Command> commands(shard_conditions.size());
+  class Checker : public RecordProcessor {
+   public:
+    Checker(Status* status, std::string_view expected, Command* next_command)
+        : status_(status), expected_(expected), next_command_(next_command) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      if (expected_.data() == nullptr || expected_ != value) {
+        *status_ = Status(Status::INFEASIBLE_ERROR);
+        return NOOP;
+      }
+      if (next_command_ != nullptr) {
+        *status_ |= next_command_->dbm->ProcessMulti(next_command_->params, true);
+      }
+      return NOOP;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      if (expected_.data() != nullptr) {
+        *status_ = Status(Status::INFEASIBLE_ERROR);
+        return NOOP;
+      }
+      if (next_command_ != nullptr) {
+        *status_ |= next_command_->dbm->ProcessMulti(next_command_->params, true);
+      }
+      return NOOP;
+    }
+
+   private:
+    Status* status_;
+    std::string_view expected_;
+    Command* next_command_;
+  };
+  std::vector<std::shared_ptr<Checker>> checkers;
+  class Setter : public RecordProcessor {
+   public:
+   Setter(Status* status, std::string_view desired, Command* next_command)
+       : status_(status), desired_(desired), next_command_(next_command) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      if (next_command_ != nullptr) {
+        *status_ |= next_command_->dbm->ProcessMulti(next_command_->params, true);
+        if (*status_ != Status::SUCCESS) {
+          return NOOP;
+        }
+      }
+      return desired_.data() == nullptr ? REMOVE : desired_;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      if (next_command_ != nullptr) {
+        *status_ |= next_command_->dbm->ProcessMulti(next_command_->params, true);
+        if (*status_ != Status::SUCCESS) {
+          return NOOP;
+        }
+      }
+      return desired_.data() == nullptr ? NOOP : desired_;
+    }
+   private:
+    Status* status_;
+    std::string_view desired_;
+    Command* next_command_;
+  };
+  std::vector<std::shared_ptr<Setter>> setters;
+  Status proc_status(Status::SUCCESS);
+  size_t command_index = 0;
+  for (const auto& shard_condition : shard_conditions) {
+    auto& command = commands[command_index];
+    const int32_t shard_index = shard_condition.first;
+    const auto& shard_expected = shard_condition.second.first;
+    const auto& shard_desired = shard_condition.second.second;
+    command.dbm = dbms_[shard_index].get();
+    for (size_t i = 0; i < shard_expected.size(); i++) {
+      const auto& key_value = shard_expected[i];
+      Command* next_command =
+          command_index < commands.size() - 1 && i == shard_expected.size() - 1 ?
+                          &commands[command_index + 1] : nullptr;
+      checkers.emplace_back(std::make_unique<Checker>(
+          &proc_status, key_value.second, next_command));
+      command.params.emplace_back(std::make_pair(key_value.first, checkers.back().get()));
+    }
+    for (size_t i = 0; i < shard_desired.size(); i++) {
+      const auto& key_value = shard_desired[i];
+      Command* next_command =
+          command_index < commands.size() - 1 && shard_expected.empty() && i == 0 ?
+                          &commands[command_index + 1] : nullptr;
+      setters.emplace_back(std::make_unique<Setter>(
+          &proc_status, key_value.second, next_command));
+      command.params.emplace_back(std::make_pair(key_value.first, setters.back().get()));
+    }
+    command_index++;
+  }
+  const Status status = commands[0].dbm->ProcessMulti(commands[0].params, true);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  return proc_status;
 }
 
 Status ShardDBM::ProcessEach(RecordProcessor* proc, bool writable) {
