@@ -212,4 +212,26 @@ TEST(CmdUtilTest, PrintDBMRecordsInTSV) {
   EXPECT_EQ(" aa\t A A \nbb \t B B \n", testing::internal::GetCapturedStdout());
 }
 
+TEST(CmdUtilTest, MakeCyclishText) {
+  int32_t seed = 0;
+  for (int32_t size = 1; size < 1024; size *= 2) {
+    const std::string text = tkrzw::MakeCyclishText(size, seed++);
+    EXPECT_EQ(size, text.size());
+    for (auto c : text) {
+      EXPECT_TRUE(c == ' ' || (c >= 'a' && c <= 'z'));
+    }
+  }
+}
+
+TEST(CmdUtilTest, MakeNaturalishText) {
+  int32_t seed = 0;
+  for (int32_t size = 1; size < 1024; size *= 2) {
+    const std::string text = tkrzw::MakeNaturalishText(size, seed++);
+    EXPECT_EQ(size, text.size());
+    for (auto c : text) {
+      EXPECT_TRUE(c == ' ' || (c >= 'a' && c <= 'z'));
+    }
+  }
+}
+
 // END OF FILE

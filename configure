@@ -707,6 +707,10 @@ enable_optarch
 enable_static
 enable_shared
 enable_stdonly
+enable_lz4
+enable_zstd
+enable_zlib
+enable_lzma
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1348,6 +1352,10 @@ Optional Features:
   --enable-static         build by static linking
   --disable-shared        avoid to build shared libraries
   --enable-stdonly        use the standard library only
+  --enable-lz4            enable the LZ4 compressin feature
+  --enable-zstd           enable the zstd compressin feature
+  --enable-zlib           enable the zlib compressin feature
+  --enable-lzma           enable the LZMA compressin feature
 
 Some influential environment variables:
   CC          C compiler command
@@ -2118,11 +2126,11 @@ MYLIBREV=19
 MYLIBFMT=0
 
 # Targets
-MYHEADERFILES="tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h"
+MYHEADERFILES="tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_compress.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h"
 MYLIBRARYFILES="libtkrzw.a"
-MYLIBOBJFILES="tkrzw_lib_common.o tkrzw_str_util.o tkrzw_cmd_util.o tkrzw_thread_util.o tkrzw_file_util.o tkrzw_file_std.o tkrzw_file_mmap.o tkrzw_file_pos.o tkrzw_dbm.o tkrzw_dbm_common_impl.o tkrzw_dbm_hash_impl.o tkrzw_dbm_hash.o tkrzw_dbm_tree_impl.o tkrzw_dbm_tree.o tkrzw_dbm_skip_impl.o tkrzw_dbm_skip.o tkrzw_dbm_tiny.o tkrzw_dbm_baby.o tkrzw_dbm_cache.o tkrzw_dbm_std.o tkrzw_dbm_poly.o tkrzw_dbm_shard.o"
+MYLIBOBJFILES="tkrzw_lib_common.o tkrzw_str_util.o tkrzw_cmd_util.o tkrzw_thread_util.o tkrzw_compress.o tkrzw_file_util.o tkrzw_file_std.o tkrzw_file_mmap.o tkrzw_file_pos.o tkrzw_dbm.o tkrzw_dbm_common_impl.o tkrzw_dbm_hash_impl.o tkrzw_dbm_hash.o tkrzw_dbm_tree_impl.o tkrzw_dbm_tree.o tkrzw_dbm_skip_impl.o tkrzw_dbm_skip.o tkrzw_dbm_tiny.o tkrzw_dbm_baby.o tkrzw_dbm_cache.o tkrzw_dbm_std.o tkrzw_dbm_poly.o tkrzw_dbm_shard.o"
 MYCOMMANDFILES="tkrzw_build_util tkrzw_str_perf tkrzw_file_perf tkrzw_dbm_util tkrzw_dbm_perf tkrzw_dbm_tran"
-MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkrzw_cmd_util_test tkrzw_thread_util_test tkrzw_containers_test tkrzw_key_comparators_test tkrzw_file_util_test tkrzw_file_std_test tkrzw_file_mmap_test tkrzw_file_pos_test tkrzw_dbm_common_impl_test tkrzw_dbm_hash_impl_test tkrzw_dbm_tree_impl_test tkrzw_dbm_tree_test tkrzw_dbm_hash_test tkrzw_dbm_skip_impl_test tkrzw_dbm_skip_test tkrzw_dbm_tiny_test tkrzw_dbm_baby_test tkrzw_dbm_cache_test tkrzw_dbm_std_test tkrzw_dbm_poly_test tkrzw_dbm_shard_test tkrzw_index_test"
+MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkrzw_cmd_util_test tkrzw_thread_util_test tkrzw_compress_test tkrzw_containers_test tkrzw_key_comparators_test tkrzw_file_util_test tkrzw_file_std_test tkrzw_file_mmap_test tkrzw_file_pos_test tkrzw_dbm_common_impl_test tkrzw_dbm_hash_impl_test tkrzw_dbm_tree_impl_test tkrzw_dbm_tree_test tkrzw_dbm_hash_test tkrzw_dbm_skip_impl_test tkrzw_dbm_skip_test tkrzw_dbm_tiny_test tkrzw_dbm_baby_test tkrzw_dbm_cache_test tkrzw_dbm_std_test tkrzw_dbm_poly_test tkrzw_dbm_shard_test tkrzw_index_test"
 MYPCFILES="tkrzw.pc"
 
 # Building flags
@@ -2159,6 +2167,10 @@ export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
 # Internal variables
 enables=""
 is_static=""
+use_lz4=""
+use_zstd=""
+use_zlib=""
+use_lzma=""
 
 # Development mode
 # Check whether --enable-devel was given.
@@ -2271,6 +2283,58 @@ if test "$enable_stdonly" = "yes"
 then
   enables="$enables (stdonly)"
   MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_STDONLY"
+fi
+
+# Enable the lz4 compression feature
+# Check whether --enable-lz4 was given.
+if test "${enable_lz4+set}" = set; then :
+  enableval=$enable_lz4;
+fi
+
+if test "$enable_lz4" = "yes"
+then
+  use_lz4="yes"
+  enables="$enables (lz4)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+fi
+
+# Enable the zstd compression feature
+# Check whether --enable-zstd was given.
+if test "${enable_zstd+set}" = set; then :
+  enableval=$enable_zstd;
+fi
+
+if test "$enable_zstd" = "yes"
+then
+  use_zstd="yes"
+  enables="$enables (zstd)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
+fi
+
+# Enable the zlib compression feature
+# Check whether --enable-zlib was given.
+if test "${enable_zlib+set}" = set; then :
+  enableval=$enable_zlib;
+fi
+
+if test "$enable_zlib" = "yes"
+then
+  use_zlib="yes"
+  enables="$enables (zlib)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+fi
+
+# Enable the LZMA compression feature
+# Check whether --enable-lzma was given.
+if test "${enable_lzma+set}" = set; then :
+  enableval=$enable_lzma;
+fi
+
+if test "$enable_lzma" = "yes"
+then
+  use_lzma="yes"
+  enables="$enables (lzma)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZMA"
 fi
 
 # Memory locking test flags
@@ -4178,6 +4242,174 @@ _ACEOF
 
 fi
 
+if test "$use_lz4" = "yes"
+then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -llz4" >&5
+$as_echo_n "checking for main in -llz4... " >&6; }
+if ${ac_cv_lib_lz4_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llz4  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_lz4_main=yes
+else
+  ac_cv_lib_lz4_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lz4_main" >&5
+$as_echo "$ac_cv_lib_lz4_main" >&6; }
+if test "x$ac_cv_lib_lz4_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBLZ4 1
+_ACEOF
+
+  LIBS="-llz4 $LIBS"
+
+fi
+
+fi
+if test "$use_zstd" = "yes"
+then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lzstd" >&5
+$as_echo_n "checking for main in -lzstd... " >&6; }
+if ${ac_cv_lib_zstd_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lzstd  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_zstd_main=yes
+else
+  ac_cv_lib_zstd_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_zstd_main" >&5
+$as_echo "$ac_cv_lib_zstd_main" >&6; }
+if test "x$ac_cv_lib_zstd_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZSTD 1
+_ACEOF
+
+  LIBS="-lzstd $LIBS"
+
+fi
+
+fi
+if test "$use_zlib" = "yes"
+then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lz" >&5
+$as_echo_n "checking for main in -lz... " >&6; }
+if ${ac_cv_lib_z_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_z_main=yes
+else
+  ac_cv_lib_z_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_main" >&5
+$as_echo "$ac_cv_lib_z_main" >&6; }
+if test "x$ac_cv_lib_z_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZ 1
+_ACEOF
+
+  LIBS="-lz $LIBS"
+
+fi
+
+fi
+if test "$use_lzma" = "yes"
+then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -llzma" >&5
+$as_echo_n "checking for main in -llzma... " >&6; }
+if ${ac_cv_lib_lzma_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llzma  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_lzma_main=yes
+else
+  ac_cv_lib_lzma_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lzma_main" >&5
+$as_echo "$ac_cv_lib_lzma_main" >&6; }
+if test "x$ac_cv_lib_lzma_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBLZMA 1
+_ACEOF
+
+  LIBS="-llzma $LIBS"
+
+fi
+
+fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -ltkrzw" >&5
 $as_echo_n "checking for main in -ltkrzw... " >&6; }
 if ${ac_cv_lib_tkrzw_main+:} false; then :
@@ -4320,6 +4552,50 @@ else
 fi
 
 
+if test "$use_lz4" = "yes"
+then
+  ac_fn_cxx_check_header_mongrel "$LINENO" "lz4.h" "ac_cv_header_lz4_h" "$ac_includes_default"
+if test "x$ac_cv_header_lz4_h" = xyes; then :
+  true
+else
+  as_fn_error $? "lz4.h is required" "$LINENO" 5
+fi
+
+
+fi
+if test "$use_zstd" = "yes"
+then
+  ac_fn_cxx_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_h" = xyes; then :
+  true
+else
+  as_fn_error $? "zstd.h is required" "$LINENO" 5
+fi
+
+
+fi
+if test "$use_zlib" = "yes"
+then
+  ac_fn_cxx_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_zlib_h" = xyes; then :
+  true
+else
+  as_fn_error $? "zlib.h is required" "$LINENO" 5
+fi
+
+
+fi
+if test "$use_lzma" = "yes"
+then
+  ac_fn_cxx_check_header_mongrel "$LINENO" "lzma.h" "ac_cv_header_lzma_h" "$ac_includes_default"
+if test "x$ac_cv_header_lzma_h" = xyes; then :
+  true
+else
+  as_fn_error $? "lzma.h is required" "$LINENO" 5
+fi
+
+
+fi
 
 # Static linking
 if test "$is_static" = "yes"

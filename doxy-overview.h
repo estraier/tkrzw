@@ -78,6 +78,7 @@ namespace tkrzw {}
  * @file tkrzw_str_util.h String utilities.
  * @file tkrzw_cmd_util.h Command-line utilities.
  * @file tkrzw_thread_util.h Threading utilities.
+ * @file tkrzw_compress.h Data compression functions.
  * @file tkrzw_containers.h Miscellaneous data containers.
  * @file tkrzw_key_comparators.h Built-in comparators for record keys.
  * @file tkrzw_file_util.h File system utilities.

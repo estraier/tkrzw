@@ -30,6 +30,7 @@
 #include <cstdarg>
 
 #include "tkrzw_containers.h"
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_baby.h"
 #include "tkrzw_dbm_cache.h"
@@ -278,6 +279,22 @@ void SetHeadBufferOfFileOrDie(File* file, int64_t size);
  * @param dbm The DBM object.
  */
 void PrintDBMRecordsInTSV(DBM* dbm);
+
+/**
+ * Makes a text whose characters appear in a cyclic pattern.
+ * @param size The size of the output text.
+ * @param seed The random seed.
+ * @return The result text.
+ */
+std::string MakeCyclishText(size_t size, int32_t seed);
+
+/**
+ * Makes a text whose character distribution is sililar to natural Englsh.
+ * @param size The size of the output text.
+ * @param seed The random seed.
+ * @return The result text.
+ */
+std::string MakeNaturalishText(size_t size, int32_t seed);
 
 }  // namespace tkrzw
 

@@ -13,11 +13,11 @@ MYLIBREV=19
 MYLIBFMT=0
 
 # Targets
-MYHEADERFILES="tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h"
+MYHEADERFILES="tkrzw_lib_common.h tkrzw_str_util.h tkrzw_cmd_util.h tkrzw_thread_util.h tkrzw_compress.h tkrzw_containers.h tkrzw_key_comparators.h tkrzw_file.h tkrzw_file_util.h tkrzw_file_std.h tkrzw_file_mmap.h tkrzw_file_pos.h tkrzw_dbm.h tkrzw_dbm_common_impl.h tkrzw_dbm_hash_impl.h tkrzw_dbm_hash.h tkrzw_dbm_tree_impl.h tkrzw_dbm_tree.h tkrzw_dbm_skip_impl.h tkrzw_dbm_skip.h tkrzw_dbm_tiny.h tkrzw_dbm_baby.h tkrzw_dbm_cache.h tkrzw_dbm_std.h tkrzw_dbm_poly.h tkrzw_dbm_shard.h tkrzw_index.h"
 MYLIBRARYFILES="libtkrzw.a"
-MYLIBOBJFILES="tkrzw_lib_common.o tkrzw_str_util.o tkrzw_cmd_util.o tkrzw_thread_util.o tkrzw_file_util.o tkrzw_file_std.o tkrzw_file_mmap.o tkrzw_file_pos.o tkrzw_dbm.o tkrzw_dbm_common_impl.o tkrzw_dbm_hash_impl.o tkrzw_dbm_hash.o tkrzw_dbm_tree_impl.o tkrzw_dbm_tree.o tkrzw_dbm_skip_impl.o tkrzw_dbm_skip.o tkrzw_dbm_tiny.o tkrzw_dbm_baby.o tkrzw_dbm_cache.o tkrzw_dbm_std.o tkrzw_dbm_poly.o tkrzw_dbm_shard.o"
+MYLIBOBJFILES="tkrzw_lib_common.o tkrzw_str_util.o tkrzw_cmd_util.o tkrzw_thread_util.o tkrzw_compress.o tkrzw_file_util.o tkrzw_file_std.o tkrzw_file_mmap.o tkrzw_file_pos.o tkrzw_dbm.o tkrzw_dbm_common_impl.o tkrzw_dbm_hash_impl.o tkrzw_dbm_hash.o tkrzw_dbm_tree_impl.o tkrzw_dbm_tree.o tkrzw_dbm_skip_impl.o tkrzw_dbm_skip.o tkrzw_dbm_tiny.o tkrzw_dbm_baby.o tkrzw_dbm_cache.o tkrzw_dbm_std.o tkrzw_dbm_poly.o tkrzw_dbm_shard.o"
 MYCOMMANDFILES="tkrzw_build_util tkrzw_str_perf tkrzw_file_perf tkrzw_dbm_util tkrzw_dbm_perf tkrzw_dbm_tran"
-MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkrzw_cmd_util_test tkrzw_thread_util_test tkrzw_containers_test tkrzw_key_comparators_test tkrzw_file_util_test tkrzw_file_std_test tkrzw_file_mmap_test tkrzw_file_pos_test tkrzw_dbm_common_impl_test tkrzw_dbm_hash_impl_test tkrzw_dbm_tree_impl_test tkrzw_dbm_tree_test tkrzw_dbm_hash_test tkrzw_dbm_skip_impl_test tkrzw_dbm_skip_test tkrzw_dbm_tiny_test tkrzw_dbm_baby_test tkrzw_dbm_cache_test tkrzw_dbm_std_test tkrzw_dbm_poly_test tkrzw_dbm_shard_test tkrzw_index_test"
+MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkrzw_cmd_util_test tkrzw_thread_util_test tkrzw_compress_test tkrzw_containers_test tkrzw_key_comparators_test tkrzw_file_util_test tkrzw_file_std_test tkrzw_file_mmap_test tkrzw_file_pos_test tkrzw_dbm_common_impl_test tkrzw_dbm_hash_impl_test tkrzw_dbm_tree_impl_test tkrzw_dbm_tree_test tkrzw_dbm_hash_test tkrzw_dbm_skip_impl_test tkrzw_dbm_skip_test tkrzw_dbm_tiny_test tkrzw_dbm_baby_test tkrzw_dbm_cache_test tkrzw_dbm_std_test tkrzw_dbm_poly_test tkrzw_dbm_shard_test tkrzw_index_test"
 MYPCFILES="tkrzw.pc"
 
 # Building flags
@@ -54,6 +54,10 @@ export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
 # Internal variables
 enables=""
 is_static=""
+use_lz4=""
+use_zstd=""
+use_zlib=""
+use_lzma=""
 
 # Development mode
 AC_ARG_ENABLE(devel,
@@ -144,6 +148,46 @@ then
   MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_STDONLY"
 fi
 
+# Enable the lz4 compression feature
+AC_ARG_ENABLE(lz4,
+  AC_HELP_STRING([--enable-lz4], [enable the LZ4 compressin feature]))
+if test "$enable_lz4" = "yes"
+then
+  use_lz4="yes"
+  enables="$enables (lz4)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+fi
+
+# Enable the zstd compression feature
+AC_ARG_ENABLE(zstd,
+  AC_HELP_STRING([--enable-zstd], [enable the zstd compressin feature]))
+if test "$enable_zstd" = "yes"
+then
+  use_zstd="yes"
+  enables="$enables (zstd)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
+fi
+
+# Enable the zlib compression feature
+AC_ARG_ENABLE(zlib,
+  AC_HELP_STRING([--enable-zlib], [enable the zlib compressin feature]))
+if test "$enable_zlib" = "yes"
+then
+  use_zlib="yes"
+  enables="$enables (zlib)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+fi
+
+# Enable the LZMA compression feature
+AC_ARG_ENABLE(lzma,
+  AC_HELP_STRING([--enable-lzma], [enable the LZMA compressin feature]))
+if test "$enable_lzma" = "yes"
+then
+  use_lzma="yes"
+  enables="$enables (lzma)"
+  MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZMA"
+fi
+
 # Memory locking test flags
 LOCKLIMIT="`ulimit -l 2>/dev/null`"
 if test -z "$LOCKLIMIT"
@@ -193,6 +237,22 @@ AC_CHECK_LIB(m, main)
 AC_CHECK_LIB(pthread, main)
 AC_CHECK_LIB(rt, main)
 AC_CHECK_LIB(stdc++, main)
+if test "$use_lz4" = "yes"
+then
+  AC_CHECK_LIB(lz4, main)
+fi
+if test "$use_zstd" = "yes"
+then
+  AC_CHECK_LIB(zstd, main)
+fi
+if test "$use_zlib" = "yes"
+then
+  AC_CHECK_LIB(z, main)
+fi
+if test "$use_lzma" = "yes"
+then
+  AC_CHECK_LIB(lzma, main)
+fi
 AC_CHECK_LIB(tkrzw, main, AC_MSG_WARN([old version of Tkrzw was detected]))
 MYLDLIBPATH="$LD_LIBRARY_PATH"
 
@@ -210,6 +270,22 @@ AC_CHECK_HEADER(mutex, true, AC_MSG_ERROR([mutex is required]))
 AC_CHECK_HEADER(thread, true, AC_MSG_ERROR([thread is required]))
 AC_CHECK_HEADER(regex, true, AC_MSG_ERROR([regex is required]))
 AC_CHECK_HEADER(cstdint, true, AC_MSG_ERROR([cstdint is required]))
+if test "$use_lz4" = "yes"
+then
+  AC_CHECK_HEADER(lz4.h, true, AC_MSG_ERROR([lz4.h is required]))
+fi
+if test "$use_zstd" = "yes"
+then
+  AC_CHECK_HEADER(zstd.h, true, AC_MSG_ERROR([zstd.h is required]))
+fi
+if test "$use_zlib" = "yes"
+then
+  AC_CHECK_HEADER(zlib.h, true, AC_MSG_ERROR([zlib.h is required]))
+fi
+if test "$use_lzma" = "yes"
+then
+  AC_CHECK_HEADER(lzma.h, true, AC_MSG_ERROR([lzma.h is required]))
+fi
 
 # Static linking
 if test "$is_static" = "yes"

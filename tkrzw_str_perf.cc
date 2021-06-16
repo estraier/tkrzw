@@ -26,6 +26,8 @@ static void PrintUsageAndDie() {
   P("    : Checks search performance.\n");
   P("  %s hash [options]\n", progname);
   P("    : Checks hashing performance.\n");
+  P("  %s compress [options]\n", progname);
+  P("    : Checks compression performance.\n");
   P("\n");
   P("Options of the search subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
@@ -38,6 +40,10 @@ static void PrintUsageAndDie() {
   P("  --batch num : The number of patterns in a batch. 0 menas no batching. (default: 0)\n");
   P("\n");
   P("Options of the hash subcommand:\n");
+  P("  --iter num : The number of iterations. (default: 10000)\n");
+  P("  --text num : The size of each text to search. (default: 10000)\n");
+  P("\n");
+  P("Options of the compress subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --text num : The size of each text to search. (default: 10000)\n");
   P("\n");
@@ -248,6 +254,133 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   return 0;
 }
 
+// Processes the compress subcommand.
+static int32_t ProcessCompress(int32_t argc, const char** args) {
+  const std::map<std::string, int32_t>& cmd_configs = {
+    {"--iter", 1}, {"--text", 1}, {"--pattern", 1},
+  };
+  std::map<std::string, std::vector<std::string>> cmd_args;
+  std::string cmd_error;
+  if (!ParseCommandArguments(argc, args, cmd_configs, &cmd_args, &cmd_error)) {
+    EPrint("Invalid command: ", cmd_error, "\n\n");
+    PrintUsageAndDie();
+  }
+  const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
+  const int32_t text_size = GetIntegerArgument(cmd_args, "--text", 0, 10000);
+  const std::string pattern = GetStringArgument(cmd_args, "--pattern", 0, "natural");
+  if (num_iterations < 1) {
+    Die("Invalid number of iterations");
+  }
+  if (text_size < 1) {
+    Die("Invalid text size");
+  }
+  const int32_t num_texts = 1000;
+  std::vector<std::string> texts;
+  texts.reserve(num_texts);
+  std::string (*text_gen)(size_t size, int32_t seed) = nullptr;
+  if (pattern == "natural") {
+    text_gen = tkrzw::MakeNaturalishText;
+  } else if (pattern == "cycle") {
+    text_gen = tkrzw::MakeCyclishText;
+  } else {
+    Die("Unknown text pattern");
+  }
+  for (int32_t i = 0; i < num_texts; i++) {
+    texts.emplace_back(text_gen(text_size, i));
+  }
+  PrintL("Compress: iterations=", num_iterations, " text_size=", text_size);
+  std::vector<std::pair<Compressor*, const char*>> test_sets;
+  tkrzw::DummyCompressor dummy_default;
+  if (dummy_default.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&dummy_default, "dummy-default"));
+  }
+  tkrzw::DummyCompressor dummy_checksum(true);
+  if (dummy_checksum.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&dummy_checksum, "dummy-checksum"));
+  }
+  tkrzw::LZ4Compressor lz4_fast(5);
+  if (lz4_fast.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&lz4_fast, "LZ4-fast"));
+  }
+  tkrzw::LZ4Compressor lz4_default;
+  if (lz4_default.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&lz4_default, "LZ4-default"));
+  }
+  tkrzw::ZStdCompressor zstd_fast(-1);
+  if (zstd_fast.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zstd_fast, "zstd-fast"));
+  }
+  tkrzw::ZStdCompressor zstd_default;
+  if (zstd_default.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zstd_default, "zstd-default"));
+  }
+  tkrzw::ZStdCompressor zstd_slow(10);
+  if (zstd_slow.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zstd_slow, "zstd-slow"));
+  }
+  tkrzw::ZLibCompressor zlib_fast(1);
+  if (zlib_fast.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zlib_fast, "zlib-fast"));
+  }
+  tkrzw::ZLibCompressor zlib_default;
+  if (zlib_default.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zlib_default, "zlib-default"));
+  }
+  tkrzw::ZLibCompressor zlib_slow(9);
+  if (zlib_slow.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&zlib_slow, "zlib-slow"));
+  }
+  tkrzw::LZMACompressor lzma_fast(1);
+  if (lzma_fast.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&lzma_fast, "lzma-fast"));
+  }
+  tkrzw::LZMACompressor lzma_default;
+  if (lzma_default.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&lzma_default, "lzma-default"));
+  }
+  tkrzw::LZMACompressor lzma_slow(9);
+  if (lzma_slow.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&lzma_slow, "lzma-slow"));
+  }
+  for (const auto& test_set : test_sets) {
+    tkrzw::Compressor* compressor = test_set.first;
+    std::vector<std::string_view> comp_values;
+    comp_values.reserve(num_texts);
+    int64_t output_size = 0;
+    const auto comp_start_time = tkrzw::GetWallTime();
+    for (int32_t i = 0; i < num_iterations; i++) {
+      const std::string& text = texts[i % texts.size()];
+      size_t comp_size = 0;
+      char* comp_data = compressor->Compress(text.data(), text.size(), &comp_size);
+      output_size += comp_size;
+      if (static_cast<int32_t>(comp_values.size()) < text_size) {
+        comp_values.emplace_back(std::string_view(comp_data, comp_size));
+      } else {
+        xfree(comp_data);
+      }
+    }
+    const auto comp_end_time = tkrzw::GetWallTime();
+    const auto comp_elapsed_time = comp_end_time - comp_start_time;
+    const auto decomp_start_time = tkrzw::GetWallTime();
+    for (int32_t i = 0; i < num_iterations; i++) {
+      auto& comp_value = comp_values[i % comp_values.size()];
+      size_t decomp_size = 0;
+      char* decomp_data =
+          compressor->Decompress(comp_value.data(), comp_value.size(), &decomp_size);
+      xfree(decomp_data);
+    }
+    const auto decomp_end_time = tkrzw::GetWallTime();
+    const auto decomp_elapsed_time = decomp_end_time - decomp_start_time;
+    for (auto& comp_value : comp_values) {
+      xfree(const_cast<char*>(comp_value.data()));
+    }
+    const double ratio = output_size * 1.0 / (text_size * num_iterations);
+    PrintL("config=", test_set.second, " comp_time=", comp_elapsed_time,
+           " decomp_time=", decomp_elapsed_time, " ratio=", ratio);
+  }
+  return 0;
+}
+
 }  // namespace tkrzw
 
 // Main routine
@@ -262,6 +395,8 @@ int main(int argc, char** argv) {
       rv = tkrzw::ProcessSearch(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "hash") == 0) {
       rv = tkrzw::ProcessHash(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "compress") == 0) {
+      rv = tkrzw::ProcessCompress(argc - 1, args + 1);
     } else {
       tkrzw::PrintUsageAndDie();
     }

@@ -176,6 +176,7 @@ check-str-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf search \
 	  --iter 1000 --text 2000 --pattern 5 --chars 10 --batch 3
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf hash --iter 1000 --text 10000
+	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf compress --iter 200 --text 500
 
 check-file-perf :
 	rm -Rf casket*
@@ -754,6 +755,7 @@ testrun :
 	$(RUNENV) $(RUNCMD) ./tkrzw_lib_common_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_thread_util_test
+	$(RUNENV) $(RUNCMD) ./tkrzw_compress_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_containers_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_key_comparators_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_file_util_test
@@ -871,6 +873,9 @@ tkrzw_cmd_util_test : tkrzw_cmd_util_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_thread_util_test : tkrzw_thread_util_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_compress_test : tkrzw_compress_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_containers_test : tkrzw_containers_test.o $(LIBRARYFILES)

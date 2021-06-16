@@ -68,6 +68,16 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
            (int)sizeof(void*), (int)sizeof(short), (int)sizeof(int), (int)sizeof(long),
            (int)sizeof(long long), (int)sizeof(size_t),
            (int)sizeof(float), (int)sizeof(double), (int)sizeof(long double));
+    std::vector<std::string> compressors;
+    if (LZ4Compressor().IsSupported()) {
+      compressors.emplace_back("lz4");
+    }
+    if (ZLibCompressor().IsSupported()) {
+      compressors.emplace_back("zlib");
+    }
+    if (!compressors.empty()) {
+      PrintF("COMPRESSORS: %s\n", StrJoin(compressors, ", ").c_str());
+    }
     std::map<std::string, std::string> info = GetSystemInfo();
     if (!info["mem_total"].empty()) {
       PrintF("MEMORY: total=%s free=%s cached=%s\n",

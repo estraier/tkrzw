@@ -309,6 +309,58 @@ void PrintDBMRecordsInTSV(DBM* dbm) {
   dbm->ProcessEach(&printer, false);
 }
 
+std::string MakeCyclishText(size_t size, int32_t seed) {
+  std::mt19937 mt(seed);
+  std::uniform_int_distribution<uint8_t> space_dist(0, 7);
+  std::string text;
+  text.reserve(size);
+  for (size_t i = 0; i < size; i++) {
+    if (!text.empty() && text.back() != ' ' && i < size - 1 && space_dist(mt) == 0) {
+      text.append(1, ' ');
+    } else {
+      const int32_t mod = 26 - (i % 2);
+      text.append(1, 'a' + (seed++) % mod);
+    }
+  }
+  return text;
+}
+
+std::string MakeNaturalishText(size_t size, int32_t seed) {
+  const char all_chars[] = "abcdefghijklmnopqrstuvwzyz";
+  const char freq_chars[] = "aeiou";
+  std::mt19937 mt(seed);
+  std::uniform_int_distribution<uint8_t> space_dist(0, 7);
+  std::uniform_int_distribution<uint8_t> mode_dist(0, 2);
+  std::normal_distribution<double> norm_dist(std::size(all_chars) / 2.0, sizeof(all_chars) / 4.0);
+  std::uniform_int_distribution<uint8_t> all_dist(0, sizeof(all_chars) - 2);
+  std::uniform_int_distribution<uint8_t> freq_dist(0, sizeof(freq_chars) - 2);
+  std::string text;
+  text.reserve(size);
+  for (size_t i = 0; i < size; i++) {
+    if (!text.empty() && text.back() != ' ' && i < size - 1 && space_dist(mt) == 0) {
+      text.append(1, ' ');
+    } else {
+      int32_t c = -1;
+      switch (mode_dist(mt)) {
+        default:
+          while (c < 0 || c >= static_cast<int32_t>(sizeof(all_chars) - 2)) {
+            c = norm_dist(mt);
+          }
+          text.append(1, all_chars[c]);
+          break;
+        case 1:
+          text.append(1, freq_chars[freq_dist(mt)]);
+          break;
+        case 2:
+          c = text.empty() || text.back() == ' ' ? all_chars[all_dist(mt)] : text.back();
+          text.append(1, c);
+          break;
+      }
+    }
+  }
+  return text;
+}
+
 }  // namespace tkrzw
 
 // END OF FILE
