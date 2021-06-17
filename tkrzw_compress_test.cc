@@ -67,6 +67,10 @@ void CompressorTest::BasicTest(tkrzw::Compressor* compressor) {
     tkrzw::xfree(decomp_data);
     tkrzw::xfree(comp_data);
   }
+  auto copy_compressor = compressor->MakeCompressor();
+  const auto& orig_entity = *compressor;
+  const auto& copy_entity = *copy_compressor;
+  EXPECT_EQ(typeid(orig_entity), typeid(copy_entity));
 }
 
 TEST_F(CompressorTest, DummyCompressorDefault) {
@@ -79,13 +83,23 @@ TEST_F(CompressorTest, DummyCompressorChecksum) {
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, LZ4CompressorDefault) {
-  tkrzw::LZ4Compressor compressor;
+TEST_F(CompressorTest, ZlibCompressoDefault) {
+  tkrzw::ZLibCompressor compressor;
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, LZ4CompressorFast) {
-  tkrzw::LZ4Compressor compressor(10);
+TEST_F(CompressorTest, ZlibCompressorNoop) {
+  tkrzw::ZLibCompressor compressor(0, tkrzw::ZLibCompressor::METADATA_NONE);
+  BasicTest(&compressor);
+}
+
+TEST_F(CompressorTest, ZlibCompressorFast) {
+  tkrzw::ZLibCompressor compressor(1, tkrzw::ZLibCompressor::METADATA_ADLER32);
+  BasicTest(&compressor);
+}
+
+TEST_F(CompressorTest, ZlibCompressorSlow) {
+  tkrzw::ZLibCompressor compressor(9, tkrzw::ZLibCompressor::METADATA_CRC32);
   BasicTest(&compressor);
 }
 
@@ -104,37 +118,27 @@ TEST_F(CompressorTest, ZStdCompressorSlow) {
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, ZlibCompressorRaw) {
-  tkrzw::ZLibCompressor compressor;
+TEST_F(CompressorTest, LZ4CompressorDefault) {
+  tkrzw::LZ4Compressor compressor;
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, ZlibCompressorNone) {
-  tkrzw::ZLibCompressor compressor(0, tkrzw::ZLibCompressor::METADATA_NONE);
+TEST_F(CompressorTest, LZ4CompressorFast) {
+  tkrzw::LZ4Compressor compressor(10);
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, ZlibCompressorDeflate) {
-  tkrzw::ZLibCompressor compressor(1, tkrzw::ZLibCompressor::METADATA_ADLER32);
-  BasicTest(&compressor);
-}
-
-TEST_F(CompressorTest, ZlibCompressorGzip) {
-  tkrzw::ZLibCompressor compressor(9, tkrzw::ZLibCompressor::METADATA_CRC32);
-  BasicTest(&compressor);
-}
-
-TEST_F(CompressorTest, LZMACompressorNone) {
+TEST_F(CompressorTest, LZMACompressorDefault) {
   tkrzw::LZMACompressor compressor(0, tkrzw::LZMACompressor::METADATA_NONE);
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, ZlibCompressorCRC) {
+TEST_F(CompressorTest, LZMACompressorFast) {
   tkrzw::LZMACompressor compressor(1, tkrzw::LZMACompressor::METADATA_CRC32);
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, ZlibCompressorSHA) {
+TEST_F(CompressorTest, LZMACompressorSlow) {
   tkrzw::LZMACompressor compressor(9, tkrzw::LZMACompressor::METADATA_SHA256);
   BasicTest(&compressor);
 }

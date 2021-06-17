@@ -13,6 +13,7 @@
 
 #include "tkrzw_sys_config.h"
 
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_dbm_hash.h"
@@ -67,7 +68,12 @@ enum StaticFlag : uint8_t {
   STATIC_FLAG_UPDATE_APPENDING = 1 << 1,
   STATIC_FLAG_RECORD_CRC_8 = 1 << 2,
   STATIC_FLAG_RECORD_CRC_16 = 1 << 3,
-  STATIC_FLAG_RECORD_CRC_32 = 1 << 4,
+  STATIC_FLAG_RECORD_CRC_32 = (1 << 2) | (1 << 3),
+  STATIC_FLAG_RECORD_COMP_ZLIB = 1 << 4,
+  STATIC_FLAG_RECORD_COMP_ZSTD = 1 << 5,
+  STATIC_FLAG_RECORD_COMP_LZ4 = (1 << 4) | (1 << 5),
+  STATIC_FLAG_RECORD_COMP_LZMA = 1 << 6,
+  STATIC_FLAG_RECORD_COMP_EXTRA = (1 << 4) | (1 << 5) | (1 << 6),
 };
 
 enum ClosureFlag : uint8_t {
@@ -140,7 +146,6 @@ class HashDBMImpl final {
   Status InitializeBuckets();
   Status SaveFBP();
   Status LoadFBP();
-  int32_t GetCRCWidth();
   Status ProcessImpl(
       std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc, bool writable);
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
@@ -184,6 +189,7 @@ class HashDBMImpl final {
   std::shared_timed_mutex mutex_;
   HashMutex record_mutex_;
   std::mutex file_mutex_;
+  std::unique_ptr<Compressor> compressor_;
 };
 
 class HashDBMIteratorImpl final {
@@ -218,7 +224,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       lock_mem_buckets_(false), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
-      file_mutex_() {}
+      file_mutex_(), compressor_(nullptr) {}
 
 HashDBMImpl::~HashDBMImpl() {
   if (open_) {
@@ -543,10 +549,7 @@ Status HashDBMImpl::Rebuild(
   }
   HashDBM::TuningParameters tmp_tuning_params;
   tmp_tuning_params.update_mode = HashDBM::UPDATE_IN_PLACE;
-  if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_NONE ||
-      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_8 ||
-      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_16 ||
-      tuning_params.record_crc_mode == HashDBM::RECORD_CRC_32) {
+  if (tuning_params.record_crc_mode != HashDBM::RECORD_CRC_DEFAULT) {
     tmp_tuning_params.record_crc_mode = tuning_params.record_crc_mode;
   } else if (crc_width_ == 1) {
     tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_8;
@@ -1643,20 +1646,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   if (record_base < 0) {
     record_base = tmp_record_base;
   }
-
-
   const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
-
-/*
-  int32_t crc_width = 0;
-  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
-    crc_width = 1;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
-    crc_width = 2;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
-    crc_width = 4;
-  }
-*/
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -2231,12 +2221,13 @@ Status HashDBM::FindRecordBase(
 }
 
 int32_t HashDBM::GetCRCWidthFromStaticFlags(int32_t static_flags) {
-  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
-    return 1;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
-    return 2;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
-    return 4;
+  switch (static_flags & STATIC_FLAG_RECORD_CRC_32) {
+    case STATIC_FLAG_RECORD_CRC_8:
+      return 1;
+    case STATIC_FLAG_RECORD_CRC_16:
+      return 2;
+    case STATIC_FLAG_RECORD_CRC_32:
+      return 4;
   }
   return 0;
 }
@@ -2277,12 +2268,16 @@ Status HashDBM::RestoreDatabase(
   } else if (static_flags & STATIC_FLAG_UPDATE_APPENDING) {
     update_mode = HashDBM::UPDATE_APPENDING;
   }
-  if (static_flags & STATIC_FLAG_RECORD_CRC_8) {
-    record_crc_mode = RECORD_CRC_8;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_16) {
-    record_crc_mode = RECORD_CRC_16;
-  } else if (static_flags & STATIC_FLAG_RECORD_CRC_32) {
-    record_crc_mode = RECORD_CRC_32;
+  switch (HashDBM::GetCRCWidthFromStaticFlags(static_flags)) {
+    case 1:
+      record_crc_mode = RECORD_CRC_8;
+      break;
+    case 2:
+      record_crc_mode = RECORD_CRC_16;
+      break;
+    case 4:
+      record_crc_mode = RECORD_CRC_32;
+      break;
   }
   int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;
@@ -2309,12 +2304,16 @@ Status HashDBM::RestoreDatabase(
     } else if (old_static_flags & STATIC_FLAG_UPDATE_APPENDING) {
       update_mode = HashDBM::UPDATE_APPENDING;
     }
-    if (old_static_flags & STATIC_FLAG_RECORD_CRC_8) {
-      record_crc_mode = RECORD_CRC_8;
-    } else if (old_static_flags & STATIC_FLAG_RECORD_CRC_16) {
-      record_crc_mode = RECORD_CRC_16;
-    } else if (old_static_flags & STATIC_FLAG_RECORD_CRC_32) {
-      record_crc_mode = RECORD_CRC_32;
+    switch (HashDBM::GetCRCWidthFromStaticFlags(old_static_flags)) {
+      case 1:
+        record_crc_mode = RECORD_CRC_8;
+        break;
+      case 2:
+        record_crc_mode = RECORD_CRC_16;
+        break;
+      case 4:
+        record_crc_mode = RECORD_CRC_32;
+        break;
     }
     offset_width = old_offset_width;
     align_pow = old_align_pow;

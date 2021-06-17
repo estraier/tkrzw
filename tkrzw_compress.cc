@@ -16,6 +16,12 @@
 #include "tkrzw_compress.h"
 #include "tkrzw_lib_common.h"
 
+#if _TKRZW_COMP_ZLIB
+extern "C" {
+#include <zlib.h>
+}
+#endif
+
 #if _TKRZW_COMP_ZSTD
 extern "C" {
 #include <zstd.h>
@@ -25,12 +31,6 @@ extern "C" {
 #if _TKRZW_COMP_LZ4
 extern "C" {
 #include <lz4.h>
-}
-#endif
-
-#if _TKRZW_COMP_ZLIB
-extern "C" {
-#include <zlib.h>
 }
 #endif
 
@@ -88,113 +88,8 @@ char* DummyCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
   return zbuf;
 }
 
-LZ4Compressor::LZ4Compressor(int32_t accelaration) : acceleration_(accelaration) {
-  assert(accelaration > 0);
-}
-
-LZ4Compressor::~LZ4Compressor() {
-}
-
-bool LZ4Compressor::IsSupported() const {
-#if _TKRZW_COMP_LZ4
-  return true;
-#else
-  return false;
-#endif
-}
-
-char* LZ4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
-#if _TKRZW_COMP_LZ4
-  int32_t zsiz = LZ4_compressBound(size);
-  char* zbuf = static_cast<char*>(xmalloc(zsiz));
-  const int32_t rsiz =
-      LZ4_compress_fast(static_cast<const char*>(buf), zbuf, size, zsiz, acceleration_);
-  if (rsiz < 1) {
-    xfree(zbuf);
-    return zbuf;
-  }
-  *sp = rsiz;
-  return zbuf;
-#else
-  return nullptr;
-#endif
-}
-
-char* LZ4Compressor::Decompress(const void* buf, size_t size, size_t* sp) {
-#if _TKRZW_COMP_LZ4
-  int32_t zsiz = size * 4 + 32;
-  char* zbuf = static_cast<char*>(xmalloc(zsiz));
-  while (true) {
-    const int32_t rsiz = LZ4_decompress_safe(static_cast<const char*>(buf), zbuf, size, zsiz);
-    if (rsiz >= 0) {
-      *sp = rsiz;
-      return zbuf;
-    }
-    if (zsiz >= INT32MAX / 2) {
-      break;
-    }
-    zsiz *= 2;
-    zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
-  }
-  xfree(zbuf);
-  return nullptr;
-#else
-  return nullptr;
-#endif
-}
-
-ZStdCompressor::ZStdCompressor(int32_t level) : level_(level) {
-  assert(level >= -1 && level <= 19);
-}
-
-ZStdCompressor::~ZStdCompressor() {
-}
-
-bool ZStdCompressor::IsSupported() const {
-#if _TKRZW_COMP_ZSTD
-  return true;
-#else
-  return false;
-#endif
-}
-
-char* ZStdCompressor::Compress(const void* buf, size_t size, size_t* sp) {
-#if _TKRZW_COMP_ZSTD
-  int32_t zsiz = ZSTD_compressBound(size);
-  char* zbuf = static_cast<char*>(xmalloc(zsiz));
-  const size_t rsiz = ZSTD_compress(zbuf, zsiz, static_cast<const char*>(buf), size, level_);
-  if (ZSTD_isError(rsiz)) {
-    xfree(zbuf);
-    return zbuf;
-  }
-  *sp = rsiz;
-  return zbuf;
-#else
-  return nullptr;
-#endif
-}
-
-char* ZStdCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
-#if _TKRZW_COMP_ZSTD
-  int32_t zsiz = size * 8 + 32;
-  char* zbuf = static_cast<char*>(xmalloc(zsiz));
-  while (true) {
-    const size_t rsiz = ZSTD_decompress(zbuf, zsiz, static_cast<const char*>(buf), size);
-    if (!ZSTD_isError(rsiz)) {
-      *sp = rsiz;
-      return zbuf;
-    }
-    if (zsiz >= INT32MAX / 2) {
-      break;
-    }
-    zsiz *= 2;
-    zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
-  }
-  xfree(zbuf);
-  return nullptr;
-#else
-  return nullptr;
-#endif
+std::unique_ptr<Compressor> DummyCompressor::MakeCompressor() const {
+  return std::make_unique<DummyCompressor>(checksum_);
 }
 
 ZLibCompressor::ZLibCompressor(int32_t level, MetadataMode metadata_mode)
@@ -309,6 +204,127 @@ char* ZLibCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
 #endif
 }
 
+std::unique_ptr<Compressor> ZLibCompressor::MakeCompressor() const {
+  return std::make_unique<ZLibCompressor>(level_, metadata_mode_);
+}
+
+ZStdCompressor::ZStdCompressor(int32_t level) : level_(level) {
+  assert(level >= -1 && level <= 19);
+}
+
+ZStdCompressor::~ZStdCompressor() {
+}
+
+bool ZStdCompressor::IsSupported() const {
+#if _TKRZW_COMP_ZSTD
+  return true;
+#else
+  return false;
+#endif
+}
+
+char* ZStdCompressor::Compress(const void* buf, size_t size, size_t* sp) {
+#if _TKRZW_COMP_ZSTD
+  int32_t zsiz = ZSTD_compressBound(size);
+  char* zbuf = static_cast<char*>(xmalloc(zsiz));
+  const size_t rsiz = ZSTD_compress(zbuf, zsiz, static_cast<const char*>(buf), size, level_);
+  if (ZSTD_isError(rsiz)) {
+    xfree(zbuf);
+    return zbuf;
+  }
+  *sp = rsiz;
+  return zbuf;
+#else
+  return nullptr;
+#endif
+}
+
+char* ZStdCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
+#if _TKRZW_COMP_ZSTD
+  int32_t zsiz = size * 8 + 32;
+  char* zbuf = static_cast<char*>(xmalloc(zsiz));
+  while (true) {
+    const size_t rsiz = ZSTD_decompress(zbuf, zsiz, static_cast<const char*>(buf), size);
+    if (!ZSTD_isError(rsiz)) {
+      *sp = rsiz;
+      return zbuf;
+    }
+    if (zsiz >= INT32MAX / 2) {
+      break;
+    }
+    zsiz *= 2;
+    zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
+  }
+  xfree(zbuf);
+  return nullptr;
+#else
+  return nullptr;
+#endif
+}
+
+std::unique_ptr<Compressor> ZStdCompressor::MakeCompressor() const {
+  return std::make_unique<ZStdCompressor>(level_);
+}
+
+LZ4Compressor::LZ4Compressor(int32_t accelaration) : acceleration_(accelaration) {
+  assert(accelaration > 0);
+}
+
+LZ4Compressor::~LZ4Compressor() {
+}
+
+bool LZ4Compressor::IsSupported() const {
+#if _TKRZW_COMP_LZ4
+  return true;
+#else
+  return false;
+#endif
+}
+
+char* LZ4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
+#if _TKRZW_COMP_LZ4
+  int32_t zsiz = LZ4_compressBound(size);
+  char* zbuf = static_cast<char*>(xmalloc(zsiz));
+  const int32_t rsiz =
+      LZ4_compress_fast(static_cast<const char*>(buf), zbuf, size, zsiz, acceleration_);
+  if (rsiz < 1) {
+    xfree(zbuf);
+    return zbuf;
+  }
+  *sp = rsiz;
+  return zbuf;
+#else
+  return nullptr;
+#endif
+}
+
+char* LZ4Compressor::Decompress(const void* buf, size_t size, size_t* sp) {
+#if _TKRZW_COMP_LZ4
+  int32_t zsiz = size * 4 + 32;
+  char* zbuf = static_cast<char*>(xmalloc(zsiz));
+  while (true) {
+    const int32_t rsiz = LZ4_decompress_safe(static_cast<const char*>(buf), zbuf, size, zsiz);
+    if (rsiz >= 0) {
+      *sp = rsiz;
+      return zbuf;
+    }
+    if (zsiz >= INT32MAX / 2) {
+      break;
+    }
+    zsiz *= 2;
+    zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
+  }
+  xfree(zbuf);
+  return nullptr;
+#else
+  return nullptr;
+#endif
+}
+
+std::unique_ptr<Compressor> LZ4Compressor::MakeCompressor() const {
+  return std::make_unique<LZ4Compressor>(acceleration_);
+}
+
 LZMACompressor::LZMACompressor(int32_t level, MetadataMode metadata_mode)
     : level_(level), metadata_mode_(metadata_mode) {
   assert(level >= 0 && level <= 9);
@@ -404,6 +420,10 @@ char* LZMACompressor::Decompress(const void* buf, size_t size, size_t* sp) {
 #else
   return nullptr;
 #endif
+}
+
+std::unique_ptr<Compressor> LZMACompressor::MakeCompressor() const {
+  return std::make_unique<LZMACompressor>(level_);
 }
 
 }  // namespace tkrzw

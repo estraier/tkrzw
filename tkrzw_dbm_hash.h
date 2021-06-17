@@ -191,6 +191,22 @@ class HashDBM final : public DBM {
   };
 
   /**
+   * Enumeration for record compression modes.
+   */
+  enum RecordCompressionMode : int32_t {
+    /** The default behavior: no compression or to succeed the current mode. */
+    RECORD_COMPRESSION_DEFAULT = 0,
+    /** To compress with ZLib. */
+    RECORD_COMPRESSION_ZLIB = 1,
+    /** To compress with ZStd. */
+    RECORD_COMPRESSION_ZSTD = 2,
+    /** To compress with LZ4. */
+    RECORD_COMPRESSION_LZ4 = 3,
+    /** To compress with LZMA. */
+    RECORD_COMPRESSION_LZMA = 4,
+  };
+
+  /**
    * Enumeration for restore modes.
    */
   enum RestoreMode : int32_t {
@@ -220,6 +236,13 @@ class HashDBM final : public DBM {
      * the more likely corruption is detected.
      */
     RecordCRCMode record_crc_mode = RECORD_CRC_DEFAULT;
+    /**
+     * How to compress the value data of the record.
+     * @details Because compression is done for each record, it is effective only if the record
+     * value is large.  Because compression is implemented with external libraries, available
+     * algorithms are limited to the ones which were enabled when the database librarry was built.
+     */
+    RecordCompressionMode record_compression_mode = RECORD_COMPRESSION_DEFAULT;
     /**
      * The width to represent the offset of records.
      * @details This determines the maximum size of the database and the footprint.  -1 means
@@ -507,7 +530,7 @@ class HashDBM final : public DBM {
 
   /**
    * Makes a new DBM object of the same concrete class.
-   * @return The new file object.
+   * @return The new DBM object.
    */
   std::unique_ptr<DBM> MakeDBM() const override;
 

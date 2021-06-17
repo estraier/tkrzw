@@ -1305,8 +1305,8 @@ class DBM {
   virtual std::unique_ptr<Iterator> MakeIterator() = 0;
 
   /**
-   * Make a new DBM object of the same concrete class.
-   * @return The new file object.
+   * Makes a new DBM object of the same concrete class.
+   * @return The new DBM object.
    */
   virtual std::unique_ptr<DBM> MakeDBM() const = 0;
 

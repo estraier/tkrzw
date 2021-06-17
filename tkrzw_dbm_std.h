@@ -313,7 +313,7 @@ class StdHashDBM final : public DBM {
 
   /**
    * Makes a new DBM object of the same concrete class.
-   * @return The new file object.
+   * @return The new DBM object.
    */
   std::unique_ptr<DBM> MakeDBM() const override;
 
@@ -603,7 +603,7 @@ class StdTreeDBM final : public DBM {
 
   /**
    * Makes a new DBM object of the same concrete class.
-   * @return The new file object.
+   * @return The new DBM object.
    */
   std::unique_ptr<DBM> MakeDBM() const override;
 

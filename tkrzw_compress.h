@@ -15,6 +15,7 @@
 #define _TKRZW_COMPRESS_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -63,6 +64,12 @@ class Compressor {
    * it should be released with the xfree function.
    */
   virtual char* Decompress(const void* buf, size_t size, size_t* sp) = 0;
+
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  virtual std::unique_ptr<Compressor> MakeCompressor() const = 0;
 };
 
 /**
@@ -111,114 +118,15 @@ class DummyCompressor : public Compressor {
    */
   char* Decompress(const void* buf, size_t size, size_t* sp) override;
 
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const;
+
  private:
   /** Whether to add a checksum. */
   bool checksum_;
-};
-
-/**
- * Complessor implemeted with LZ4.
- */
-class LZ4Compressor final : public Compressor {
- public:
-  /**
-   * Constructor.
-   * @param acceleration The accelaration level which is 1 or more.  Increasing it by 1 means
-   * 3-4% speed boost with less compression ratio.
-   */
-  explicit LZ4Compressor(int32_t acceleration = 1);
-
-  /**
-   * Destructor.
-   */
-  virtual ~LZ4Compressor();
-
-  /**
-   * Checks whether the implementation is actually supported.
-   * @return True if the implementation is actually supported.
-   */
-  bool IsSupported() const override;
-
-  /**
-   * Compresses a serial data.
-   * @param buf the input buffer.
-   * @param size the size of the input buffer.
-   * @param sp the pointer to the variable into which the size of the region of the return
-   * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
-   * @details Because the region of the return value is allocated with the xmalloc function,
-   * it should be released with the xfree function.
-   */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
-
-  /**
-   * Decompresses a serial data.
-   * @param buf the input buffer.
-   * @param size the size of the input buffer.
-   * @param sp the pointer to the variable into which the size of the region of the return
-   * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
-   * @details Because the region of the return value is allocated with the xmalloc function,
-   * it should be released with the xfree function.
-   */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
-
- private:
-  /** The acceleration level. */
-  int32_t acceleration_;
-};
-
-/**
- * Complessor implemeted with ZStd.
- */
-class ZStdCompressor final : public Compressor {
- public:
-  /**
-   * Constructor.
-   * @param level The compression level between -1 and 19.  Higher means slower but better
-   * compression.  0 is a special value for adaptive settings.  -1 is a special value for ultra
-   * fast settings.
-   */
-  explicit ZStdCompressor(int32_t level = 3);
-
-  /**
-   * Destructor.
-   */
-  virtual ~ZStdCompressor();
-
-  /**
-   * Checks whether the implementation is actually supported.
-   * @return True if the implementation is actually supported.
-   */
-  bool IsSupported() const override;
-
-  /**
-   * Compresses a serial data.
-   * @param buf the input buffer.
-   * @param size the size of the input buffer.
-   * @param sp the pointer to the variable into which the size of the region of the return
-   * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
-   * @details Because the region of the return value is allocated with the xmalloc function,
-   * it should be released with the xfree function.
-   */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
-
-  /**
-   * Decompresses a serial data.
-   * @param buf the input buffer.
-   * @param size the size of the input buffer.
-   * @param sp the pointer to the variable into which the size of the region of the return
-   * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
-   * @details Because the region of the return value is allocated with the xmalloc function,
-   * it should be released with the xfree function.
-   */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
-
- private:
-  /** The compression level. */
-  int32_t level_;
 };
 
 /**
@@ -281,11 +189,134 @@ class ZLibCompressor final : public Compressor {
    */
   char* Decompress(const void* buf, size_t size, size_t* sp) override;
 
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const;
+
  private:
   /** The compression level. */
   int32_t level_;
   /** The metadata mode. */
   MetadataMode metadata_mode_;
+};
+
+/**
+ * Complessor implemeted with ZStd.
+ */
+class ZStdCompressor final : public Compressor {
+ public:
+  /**
+   * Constructor.
+   * @param level The compression level between -1 and 19.  Higher means slower but better
+   * compression.  0 is a special value for adaptive settings.  -1 is a special value for ultra
+   * fast settings.
+   */
+  explicit ZStdCompressor(int32_t level = 3);
+
+  /**
+   * Destructor.
+   */
+  virtual ~ZStdCompressor();
+
+  /**
+   * Checks whether the implementation is actually supported.
+   * @return True if the implementation is actually supported.
+   */
+  bool IsSupported() const override;
+
+  /**
+   * Compresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return the pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Compress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Decompresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return the pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const;
+
+ private:
+  /** The compression level. */
+  int32_t level_;
+};
+
+/**
+ * Complessor implemeted with LZ4.
+ */
+class LZ4Compressor final : public Compressor {
+ public:
+  /**
+   * Constructor.
+   * @param acceleration The accelaration level which is 1 or more.  Increasing it by 1 means
+   * 3-4% speed boost with less compression ratio.
+   */
+  explicit LZ4Compressor(int32_t acceleration = 1);
+
+  /**
+   * Destructor.
+   */
+  virtual ~LZ4Compressor();
+
+  /**
+   * Checks whether the implementation is actually supported.
+   * @return True if the implementation is actually supported.
+   */
+  bool IsSupported() const override;
+
+  /**
+   * Compresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return the pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Compress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Decompresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return the pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const;
+
+ private:
+  /** The acceleration level. */
+  int32_t acceleration_;
 };
 
 /**
@@ -347,6 +378,12 @@ class LZMACompressor final : public Compressor {
    * it should be released with the xfree function.
    */
   char* Decompress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const;
 
  private:
   /** The compression level. */

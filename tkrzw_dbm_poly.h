@@ -528,8 +528,8 @@ class PolyDBM final : public ParamDBM {
   std::unique_ptr<DBM::Iterator> MakeIterator() override;
 
   /**
-   * Make a new DBM object of the same concrete class.
-   * @return The new file object.
+   * Makes a new DBM object of the same concrete class.
+   * @return The new DBM object.
    */
   std::unique_ptr<DBM> MakeDBM() const override;
 

@@ -54,9 +54,9 @@ export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
 # Internal variables
 enables=""
 is_static=""
-use_lz4=""
-use_zstd=""
 use_zlib=""
+use_zstd=""
+use_lz4=""
 use_lzma=""
 
 # Development mode
@@ -148,13 +148,13 @@ then
   MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_STDONLY"
 fi
 
-# Enable the lz4 compression feature
-AC_ARG_ENABLE(lz4,
-  AC_HELP_STRING([--enable-lz4], [enable the LZ4 compressin feature]))
-if test "$enable_lz4" = "yes"
+# Enable the zlib compression feature
+AC_ARG_ENABLE(zlib,
+  AC_HELP_STRING([--enable-zlib], [enable the zlib compressin feature]))
+if test "$enable_zlib" = "yes"
 then
-  use_lz4="yes"
-  enables="$enables (lz4)"
+  use_zlib="yes"
+  enables="$enables (zlib)"
 fi
 
 # Enable the zstd compression feature
@@ -166,13 +166,13 @@ then
   enables="$enables (zstd)"
 fi
 
-# Enable the zlib compression feature
-AC_ARG_ENABLE(zlib,
-  AC_HELP_STRING([--enable-zlib], [enable the zlib compressin feature]))
-if test "$enable_zlib" = "yes"
+# Enable the lz4 compression feature
+AC_ARG_ENABLE(lz4,
+  AC_HELP_STRING([--enable-lz4], [enable the LZ4 compressin feature]))
+if test "$enable_lz4" = "yes"
 then
-  use_zlib="yes"
-  enables="$enables (zlib)"
+  use_lz4="yes"
+  enables="$enables (lz4)"
 fi
 
 # Enable the LZMA compression feature
@@ -260,16 +260,16 @@ AC_CHECK_HEADER(regex, true, AC_MSG_ERROR([regex is required]))
 AC_CHECK_HEADER(cstdint, true, AC_MSG_ERROR([cstdint is required]))
 
 # Optional features
-if test "$use_lz4" = "yes" -o "$enable_most_features" = "yes"
+if test "$use_zlib" = "yes" -o "$enable_most_features" = "yes"
 then
-  AC_CHECK_HEADER(lz4.h, has_lz4="yes")
-  if test "$has_lz4" = "yes"
+  AC_CHECK_HEADER(zlib.h, has_zlib="yes")
+  if test "$has_zlib" = "yes"
   then
-    AC_CHECK_LIB(lz4, main)
-    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+    AC_CHECK_LIB(z, main)
+    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
   elif test "$enable_most_features" != "yes"
   then
-    AC_MSG_ERROR([lz4.h is required])
+    AC_MSG_ERROR([zlib.h is required])
   fi
 fi
 if test "$use_zstd" = "yes" -o "$enable_most_features" = "yes"
@@ -284,16 +284,16 @@ then
     AC_MSG_ERROR([zstd.h is required])
   fi
 fi
-if test "$use_zlib" = "yes" -o "$enable_most_features" = "yes"
+if test "$use_lz4" = "yes" -o "$enable_most_features" = "yes"
 then
-  AC_CHECK_HEADER(zlib.h, has_zlib="yes")
-  if test "$has_zlib" = "yes"
+  AC_CHECK_HEADER(lz4.h, has_lz4="yes")
+  if test "$has_lz4" = "yes"
   then
-    AC_CHECK_LIB(z, main)
-    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+    AC_CHECK_LIB(lz4, main)
+    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
   elif test "$enable_most_features" != "yes"
   then
-    AC_MSG_ERROR([zlib.h is required])
+    AC_MSG_ERROR([lz4.h is required])
   fi
 fi
 if test "$use_lzma" = "yes" -o "$enable_most_features" = "yes"
