@@ -72,8 +72,14 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
     if (LZ4Compressor().IsSupported()) {
       compressors.emplace_back("lz4");
     }
+    if (ZStdCompressor().IsSupported()) {
+      compressors.emplace_back("zstd");
+    }
     if (ZLibCompressor().IsSupported()) {
       compressors.emplace_back("zlib");
+    }
+    if (LZMACompressor().IsSupported()) {
+      compressors.emplace_back("lzma");
     }
     if (!compressors.empty()) {
       PrintF("COMPRESSORS: %s\n", StrJoin(compressors, ", ").c_str());

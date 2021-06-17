@@ -162,7 +162,7 @@ window.onload = function(){
 
 <p>To build and install the library, usually, you will run the following commands.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-optarch
+<pre><code class="language-shell-session"><![CDATA[$ ./configure --enable-opt-native --enable-most-features
 $ make
 $ make check
 $ sudo make install
@@ -213,11 +213,11 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  The flags "-llzma", "-lz", "-lzstd", and "-llz4" should be set only if correponding features (LZMA, ZLib, ZStd, and LZ4) are enabled by the configure script.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
   -O2 -Wall helloworld.cc \
-  -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
+  -L/usr/local/lib -ltkrzw -llzma -lz -lzstd -llz4 -lstdc++ -lpthread
 ]]></code></pre>
 
 <p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 <pre><code class="language-shell-session"><![CDATA[$ ./tkrzw_build_util config -i
 -I/usr/local/include
 $ ./tkrzw_build_util config -l
--L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc 
+-L/usr/local/lib -ltkrzw -llzma -lz -lzstd -llz4 -lstdc++ -lrt -lpthread -lm -lc 
 ]]></code></pre>
 
 <p>In some environments, you can also use the "pkg-config" command to list up those flags.</p>
@@ -234,7 +234,7 @@ $ ./tkrzw_build_util config -l
 $ pkg-config --cflags-only-I tkrzw
 -I/usr/local/include
 $ pkg-config --libs tkrzw
--L/usr/local/lib -ltkrzw -lstdc++ -lrt -lpthread -lm -lc
+-L/usr/local/lib -ltkrzw -llzma -lz -lzstd -llz4 -lstdc++ -lrt -lpthread -lm -lc
 ]]></code></pre>
 
 <p>To run the test suite, Google Test is required.  Although testing the library is not necessary for most users, you can do so just in case.</p>
@@ -243,9 +243,11 @@ $ pkg-config --libs tkrzw
 $ make testrun
 ]]></code></pre>
 
-<p>The "--enable-optarch" of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  If you don't need dynamic linking library, run "./configure --disable-shared".  If you want the utility commands with static linking, run "./configure --enable-static".  If you develop Tkrzw itself, run "./configure --enable-devel" or "./configure --enable-debug".</p>
+<p>The "--enable-opt-native" flag of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  
 
-<h3 id="installation_unix">For Windows</h3>
+The "--enable-most-features" flag is to enable as many features as possible on the platform.  Data compression features using external libraries are integrated.  You can enable each of them separately by setting "--enable-lz4", "--enable-zstd", "--enable-zlib", and "--enable-lzma".  If you don't need dynamic linking library, set "--disable-shared".  If you want the utility commands with static linking, set "--enable-static".  If you develop Tkrzw itself, set "--enable-devel" or "--enable-debug".</p>
+
+<h3 id="installation_windows">For Windows</h3>
 
 <p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.</p>
 
