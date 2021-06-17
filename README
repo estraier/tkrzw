@@ -20,7 +20,7 @@ On Unix-like systems, GCC 7.3 or later version is required to build
 the library.  GNU make and other standard tools are also required.
 Then, run these commands.  The files are installed under "/usr/local".
 
-  ./configure
+  ./configure --enable-opt-native --enable-most-features
   make
   make check
   sudo make install
