@@ -267,7 +267,7 @@ then
   then
     AC_CHECK_LIB(lz4, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
-  elif "$enable_most_features" != "yes"
+  elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([lz4.h is required])
   fi
@@ -279,7 +279,7 @@ then
   then
     AC_CHECK_LIB(zstd, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
-  elif "$enable_most_features" != "yes"
+  elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([zstd.h is required])
   fi
@@ -291,7 +291,7 @@ then
   then
     AC_CHECK_LIB(z, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
-  elif "$enable_most_features" != "yes"
+  elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([zlib.h is required])
   fi
@@ -303,7 +303,7 @@ then
   then
     AC_CHECK_LIB(lzma, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZMA"
-  elif "$enable_most_features" != "yes"
+  elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([lzma.h is required])
   fi
