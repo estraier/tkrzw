@@ -369,7 +369,7 @@ int32_t StrSearchMemchr(std::string_view text, std::string_view pattern);
 int32_t StrSearchMemmem(std::string_view text, std::string_view pattern);
 
 /**
- * Searches a text for a pattern, by Knuth–Morris–Pratt algorithm.
+ * Searches a text for a pattern, by Knuth窶溺orris窶撤ratt algorithm.
  * @param text The text to search.
  * @param pattern The pattern to search for.
  * @return The index of the first matched position, or -1 if there's no matches.
@@ -702,6 +702,7 @@ class ScopedStringView {
   /**
    * Constructor.
    * @param buf The pointer to a region allocated by xmalloc.  The ownership of is taken.
+   * @param size The size of the region.
    */
   ScopedStringView(void* buf, size_t size) : buf_(buf), size_(size) {}
 
@@ -729,7 +730,7 @@ class ScopedStringView {
 
   /**
    * Sets the data.
-   * @detail The region of the old data is released.
+   * @details The region of the old data is released.
    */
   void Set(void* buf, size_t size) {
     xfree(buf_);
@@ -739,7 +740,7 @@ class ScopedStringView {
 
   /**
    * Sets the data by a string view.
-   * @detail The region of the old data is released.
+   * @details The region of the old data is released.
    */
   void Set(std::string_view str) {
     xfree(buf_);
