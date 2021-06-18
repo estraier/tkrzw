@@ -221,6 +221,27 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
       record_crc_mode == "crc-32" || record_crc_mode == "32") {
     tuning_params->record_crc_mode = HashDBM::RECORD_CRC_32;
   }
+  const std::string record_comp_mode = StrLowerCase(SearchMap(*params, "record_comp_mode", ""));
+  if (record_comp_mode == "record_comp_none" || record_comp_mode == "comp_none" ||
+      record_comp_mode == "none") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_NONE;
+  }
+  if (record_comp_mode == "record_comp_zlib" || record_comp_mode == "comp_zlib" ||
+      record_comp_mode == "zlib" || record_comp_mode == "deflate") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+  }
+  if (record_comp_mode == "record_comp_zstd" || record_comp_mode == "comp_zstd" ||
+      record_comp_mode == "zstd") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+  }
+  if (record_comp_mode == "record_comp_lz4" || record_comp_mode == "comp_lz4" ||
+      record_comp_mode == "lz4") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+  }
+  if (record_comp_mode == "record_comp_lzma" || record_comp_mode == "comp_lzma" ||
+      record_comp_mode == "lzma" || record_comp_mode == "xz") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+  }
   tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
@@ -237,6 +258,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->cache_buckets = StrToIntOrBool(SearchMap(*params, "cache_buckets", "-1"));
   params->erase("update_mode");
   params->erase("record_crc_mode");
+  params->erase("record_comp_mode");
   params->erase("offset_width");
   params->erase("align_pow");
   params->erase("num_buckets");

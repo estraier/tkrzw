@@ -60,6 +60,7 @@ DBMPERFDIRECTIOFLAGS=@MYDBMPERFDIRECTIOFLAGS@
 FILEPERFMEMLOCKFLAGS=@MYFILEPERFMEMLOCKFLAGS@
 DBMPERFMEMLOCKFLAGS=@MYDBMPERFMEMLOCKFLAGS@
 DBMPERFRECCOMPFLAGS=@MYDBMPERFRECCOMPFLAGS@
+DBMTRANRECCOMPPARAMS=@MYDBMTRANRECCOMPPARAMS@
 POSTCMD := @MYPOSTCMD@
 
 #================================================================
@@ -663,10 +664,10 @@ check-tran :
 	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=8"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
-	  --sync_freq 100 --params "record_crc_mode=16"
+	  --sync_freq 100 --params "record_crc_mode=16,$(DBMTRANRECCOMPPARAMS)"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
-	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=16"
+	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=16,$(DBMTRANRECCOMPPARAMS)"
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000

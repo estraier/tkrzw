@@ -621,6 +621,7 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 MYPOSTCMD
+MYDBMTRANRECCOMPPARAMS
 MYDBMPERFRECCOMPFLAGS
 MYDBMPERFMEMLOCKFLAGS
 MYFILEPERFMEMLOCKFLAGS
@@ -2154,6 +2155,7 @@ MYDBMPERFDIRECTIOFLAGS=""
 MYFILEPERFMEMLOCKFLAGS=""
 MYDBMPERFMEMLOCKFLAGS=""
 MYDBMPERFRECCOMPFLAGS=""
+MYDBMTRANRECCOMPPARAMS=""
 MYPOSTCMD="true"
 
 # Building paths
@@ -4448,6 +4450,7 @@ fi
 
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
     MYDBMPERFRECCOMPFLAGS="--record_comp zlib"
+    MYDBMTRANRECCOMPPARAMS="record_comp_mode=zlib"
   elif test "$enable_most_features" != "yes"
   then
     as_fn_error $? "zlib.h is required" "$LINENO" 5
@@ -4504,6 +4507,7 @@ fi
 
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
     MYDBMPERFRECCOMPFLAGS="--record_comp zstd"
+    MYDBMTRANRECCOMPPARAMS="record_comp_mode=zstd"
   elif test "$enable_most_features" != "yes"
   then
     as_fn_error $? "zstd.h is required" "$LINENO" 5
@@ -4560,6 +4564,7 @@ fi
 
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
     MYDBMPERFRECCOMPFLAGS="--record_comp lz4"
+    MYDBMTRANRECCOMPPARAMS="record_comp_mode=lz4"
   elif test "$enable_most_features" != "yes"
   then
     as_fn_error $? "lz4.h is required" "$LINENO" 5
@@ -4662,6 +4667,7 @@ fi
 #================================================================
 
 # Export variables
+
 
 
 
