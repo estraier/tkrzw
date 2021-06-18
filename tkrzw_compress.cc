@@ -157,6 +157,7 @@ char* ZLibCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
 #if _TKRZW_COMP_ZLIB
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
   size_t zsiz = size * 8 + 32;
+  char* zbuf = static_cast<char*>(xmalloc(zsiz));
   while (true) {
     z_stream zs;
     zs.zalloc = Z_NULL;
@@ -165,21 +166,23 @@ char* ZLibCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
     switch (metadata_mode_) {
       default:
         if (inflateInit2(&zs, -15) != Z_OK) {
+          xfree(zbuf);
           return nullptr;
         }
         break;
       case METADATA_ADLER32:
         if (inflateInit2(&zs, 15) != Z_OK) {
+          xfree(zbuf);
           return nullptr;
         }
         break;
       case METADATA_CRC32:
         if (inflateInit2(&zs, 15 + 16) != Z_OK) {
+          xfree(zbuf);
           return nullptr;
         }
         break;
     }
-    char* zbuf = static_cast<char*>(xmalloc(zsiz));
     zs.next_in = (Bytef*)buf;
     zs.avail_in = size;
     zs.next_out = (Bytef*)zbuf;
@@ -191,13 +194,16 @@ char* ZLibCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
       *sp = zsiz;
       return zbuf;
     } else if (rv == Z_BUF_ERROR) {
-      xfree(zbuf);
+      if (zsiz >= INT32MAX / 2) {
+        break;
+      }
       zsiz *= 2;
+      zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
     } else {
-      xfree(zbuf);
       break;
     }
   }
+  xfree(zbuf);
   return nullptr;
 #else
   return nullptr;
@@ -355,18 +361,21 @@ char* LZMACompressor::Compress(const void* buf, size_t size, size_t* sp) {
   switch (metadata_mode_) {
     default: {
       if (lzma_easy_encoder(&zs, level_, LZMA_CHECK_NONE) != LZMA_OK) {
+        xfree(zbuf);
         return nullptr;
       }
       break;
     }
     case METADATA_CRC32: {
       if (lzma_easy_encoder(&zs, level_, LZMA_CHECK_CRC32) != LZMA_OK) {
+        xfree(zbuf);
         return nullptr;
       }
       break;
     }
     case METADATA_SHA256: {
       if (lzma_easy_encoder(&zs, level_, LZMA_CHECK_SHA256) != LZMA_OK) {
+        xfree(zbuf);
         return nullptr;
       }
       break;
@@ -400,6 +409,7 @@ char* LZMACompressor::Decompress(const void* buf, size_t size, size_t* sp) {
     zs.next_out = (uint8_t*)wp;
     zs.avail_out = zsiz;
     if (lzma_auto_decoder(&zs, 1ULL << 30, 0) != LZMA_OK) {
+      xfree(zbuf);
       return nullptr;
     }
     int32_t rv = lzma_code(&zs, LZMA_FINISH);
@@ -409,13 +419,16 @@ char* LZMACompressor::Decompress(const void* buf, size_t size, size_t* sp) {
       *sp = zsiz;
       return zbuf;
     } else if (rv == LZMA_OK) {
+      if (zsiz >= INT32MAX / 2) {
+        break;
+      }
       zsiz *= 2;
       zbuf = static_cast<char*>(xrealloc(zbuf, zsiz));
     } else {
-      xfree(zbuf);
       break;
     }
   }
+  xfree(zbuf);
   return nullptr;
 #else
   return nullptr;

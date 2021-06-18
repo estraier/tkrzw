@@ -378,8 +378,8 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
 
 Status HashRecord::ReplayOperations(
     File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
-    int64_t record_base, int32_t crc_width, int32_t offset_width,
-    int32_t align_pow, int64_t num_buckets,
+    int64_t record_base, int32_t crc_width, Compressor* compressor,
+    int32_t offset_width, int32_t align_pow, int64_t num_buckets,
     int32_t min_read_size, bool skip_broken_records, int64_t end_offset) {
   assert(file != nullptr && proc != nullptr && offset_width > 0);
   bool unlimited = false;
@@ -390,6 +390,7 @@ Status HashRecord::ReplayOperations(
   end_offset = std::min(end_offset, file->GetSizeSimple());
   int64_t offset = record_base;
   HashRecord rec(file, crc_width, offset_width, align_pow);
+  ScopedStringView comp_data_placeholder;
   while (offset < end_offset) {
     Status status = rec.ReadMetadataKey(offset, min_read_size);
     if (status == Status::SUCCESS) {
@@ -454,6 +455,20 @@ Status HashRecord::ReplayOperations(
             }
             return status;
           }
+        }
+        if (compressor != nullptr) {
+          size_t decomp_size = 0;
+          char* decomp_buf = compressor->Decompress(value.data(), value.size(), &decomp_size);
+          if (decomp_buf == nullptr) {
+            if (skip_broken_records) {
+              offset += rec_size;
+              continue;
+            } else {
+              return Status(Status::BROKEN_DATA_ERROR, "decompression failed");
+            }
+          }
+          comp_data_placeholder.Set(decomp_buf, decomp_size);
+          value = comp_data_placeholder.Get();
         }
         res = proc->ProcessFull(key, value);
         break;
@@ -688,6 +703,52 @@ void FreeBlockPool::Deserialize(std::string_view str, int32_t offset_width, int3
     }
     data_.emplace(FreeBlock(offset, size));
   }
+}
+
+std::string_view CallRecordProcessFull(
+    DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    Compressor* compressor, ScopedStringView* comp_data_placeholder) {
+  if (compressor != nullptr) {
+    size_t decomp_size = 0;
+    char* decomp_buf =
+        compressor->Decompress(old_value.data(), old_value.size(), &decomp_size);
+    if (decomp_buf == nullptr) {
+      return std::string_view();
+    }
+    comp_data_placeholder->Set(decomp_buf, decomp_size);
+    old_value = comp_data_placeholder->Get();
+  }
+  std::string_view new_value = proc->ProcessFull(key, old_value);
+  if (compressor != nullptr && new_value.data() != DBM::RecordProcessor::NOOP.data() &&
+      new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
+    size_t comp_size = 0;
+    char* comp_buf =
+        compressor->Compress(new_value.data(), new_value.size(), &comp_size);
+    if (comp_buf == nullptr) {
+      return std::string_view();
+    }
+    comp_data_placeholder->Set(comp_buf, comp_size);
+    new_value = comp_data_placeholder->Get();
+  }
+  return new_value;
+}
+
+std::string_view CallRecordProcessEmpty(
+    DBM::RecordProcessor* proc, std::string_view key,
+    Compressor* compressor, ScopedStringView* comp_data_placeholder) {
+  std::string_view new_value = proc->ProcessEmpty(key);
+  if (compressor != nullptr && new_value.data() != DBM::RecordProcessor::NOOP.data() &&
+      new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
+    size_t comp_size = 0;
+    char* comp_buf =
+        compressor->Compress(new_value.data(), new_value.size(), &comp_size);
+    if (comp_buf == nullptr) {
+      return std::string_view();
+    }
+    comp_data_placeholder->Set(comp_buf, comp_size);
+    new_value = comp_data_placeholder->Get();
+  }
+  return new_value;
 }
 
 }  // namespace tkrzw

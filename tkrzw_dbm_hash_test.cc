@@ -151,26 +151,34 @@ void HashDBMTest::HashDBMLargeRecordTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {3};
   const std::vector<int32_t> nums_buckets = {64};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            LargeRecordTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              LargeRecordTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -185,26 +193,34 @@ void HashDBMTest::HashDBMBasicTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {3, 4, 5};
   const std::vector<int32_t> align_pows = {0, 1, 2, 3, 9, 10};
   const std::vector<int32_t> nums_buckets = {1, 8, 64, 512};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            BasicTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              BasicTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -219,26 +235,34 @@ void HashDBMTest::HashDBMSequenceTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0, 1, 2, 10};
   const std::vector<int32_t> nums_buckets = {64, 512};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            SequenceTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              SequenceTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -253,26 +277,34 @@ void HashDBMTest::HashDBMAppendTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0};
   const std::vector<int32_t> nums_buckets = {100};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            AppendTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              AppendTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -287,25 +319,33 @@ void HashDBMTest::HashDBMProcessTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {3, 4, 5};
   const std::vector<int32_t> align_pows = {0, 1, 2, 3, 9, 10};
   const std::vector<int32_t> nums_buckets = {1, 8, 64, 512};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            ProcessTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              ProcessTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -320,25 +360,33 @@ void HashDBMTest::HashDBMProcessMultiTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0};
   const std::vector<int32_t> nums_buckets = {5000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            ProcessMultiTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              ProcessMultiTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -353,25 +401,33 @@ void HashDBMTest::HashDBMProcessEachTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0, 3, 9};
   const std::vector<int32_t> nums_buckets = {1000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            ProcessEachTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              ProcessEachTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -386,26 +442,34 @@ void HashDBMTest::HashDBMRandomTestOne(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {3, 4};
   const std::vector<int32_t> align_pows = {0, 2, 4, 8, 10};
   const std::vector<int32_t> nums_buckets = {10000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            RandomTest(dbm, 1);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              RandomTest(dbm, 1);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -420,26 +484,34 @@ void HashDBMTest::HashDBMRandomTestThread(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0, 2, 4, 10};
   const std::vector<int32_t> nums_buckets = {10000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            RandomTestThread(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              RandomTestThread(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -455,20 +527,28 @@ void HashDBMTest::HashDBMRecordMigrationTest(tkrzw::HashDBM* dbm, tkrzw::File* f
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      tkrzw::HashDBM::TuningParameters tuning_params;
-      tuning_params.update_mode = update_mode;
-      tuning_params.record_crc_mode = record_crc_mode;
-      tuning_params.num_buckets = 1000;
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-      tuning_params.lock_mem_buckets = 1;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(flat_file_path, true));
-      RecordMigrationTest(dbm, file);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        tkrzw::HashDBM::TuningParameters tuning_params;
+        tuning_params.update_mode = update_mode;
+        tuning_params.record_crc_mode = record_crc_mode;
+        tuning_params.record_comp_mode = record_comp_mode;
+        tuning_params.num_buckets = 1000;
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+        tuning_params.lock_mem_buckets = 1;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(flat_file_path, true));
+        RecordMigrationTest(dbm, file);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      }
     }
   }
 }
@@ -991,23 +1071,31 @@ void HashDBMTest::HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {3, 4};
   const std::vector<int32_t> align_pows = {0, 2, 4};
   const std::vector<int32_t> nums_buckets = {1000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            HashDBMRebuildStaticTestOne(dbm, tuning_params);
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              HashDBMRebuildStaticTestOne(dbm, tuning_params);
+            }
           }
         }
       }
@@ -1022,26 +1110,34 @@ void HashDBMTest::HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> offset_widths = {4};
   const std::vector<int32_t> align_pows = {0, 2};
   const std::vector<int32_t> nums_buckets = {1000};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      for (const auto& offset_width : offset_widths) {
-        for (const auto& align_pow : align_pows) {
-          for (const auto& num_buckets : nums_buckets) {
-            tkrzw::HashDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = record_crc_mode;
-            tuning_params.offset_width = offset_width;
-            tuning_params.align_pow = align_pow;
-            tuning_params.num_buckets = num_buckets;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-            tuning_params.lock_mem_buckets = 1;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            RebuildRandomTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        for (const auto& offset_width : offset_widths) {
+          for (const auto& align_pow : align_pows) {
+            for (const auto& num_buckets : nums_buckets) {
+              tkrzw::HashDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = record_crc_mode;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.offset_width = offset_width;
+              tuning_params.align_pow = align_pow;
+              tuning_params.num_buckets = num_buckets;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+              tuning_params.lock_mem_buckets = 1;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              RebuildRandomTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -1205,107 +1301,114 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_16};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      tkrzw::HashDBM::TuningParameters tuning_params;
-      tuning_params.update_mode = update_mode;
-      tuning_params.record_crc_mode = record_crc_mode;
-      tuning_params.offset_width = 4;
-      tuning_params.align_pow = 0;
-      tuning_params.num_buckets = 3;
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-      tuning_params.cache_buckets = 1;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-      tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-      EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-      EXPECT_FALSE(dbm->IsHealthy());
-      EXPECT_FALSE(dbm->IsAutoRestored());
-      std::string value;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
-      EXPECT_EQ("first", value);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
-      EXPECT_EQ("second", value);
-      EXPECT_EQ(0, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
-      EXPECT_EQ("first", value);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
-      EXPECT_EQ("second", value);
-      EXPECT_EQ(2, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-      file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-      EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_SYNC;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
-      EXPECT_EQ("first", value);
-      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
-      EXPECT_EQ(1, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
-      EXPECT_EQ("third", value);
-      EXPECT_EQ(2, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
-      file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-      EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
-      EXPECT_EQ("first", value);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
-      EXPECT_EQ("second", value);
-      EXPECT_EQ(2, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
-      EXPECT_EQ("third", value);
-      EXPECT_EQ(3, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      auto tmp_file = std::make_unique<tkrzw::MemoryMapParallelFile>();
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Write(9, "\xFF", 1));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
-      EXPECT_EQ("first", value);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
-      EXPECT_EQ("second", value);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
-      EXPECT_EQ("third", value);
-      EXPECT_EQ(3, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
+        tkrzw::HashDBM::TuningParameters tuning_params;
+        tuning_params.update_mode = update_mode;
+        tuning_params.record_crc_mode = record_crc_mode;
+        tuning_params.offset_width = 4;
+        tuning_params.align_pow = 0;
+        tuning_params.num_buckets = 3;
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+        tuning_params.cache_buckets = 1;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+        tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+        EXPECT_FALSE(dbm->IsHealthy());
+        EXPECT_FALSE(dbm->IsAutoRestored());
+        std::string value;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+        EXPECT_EQ("second", value);
+        EXPECT_EQ(0, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_TRUE(dbm->IsAutoRestored());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+        EXPECT_EQ("second", value);
+        EXPECT_EQ(2, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_SYNC;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_TRUE(dbm->IsAutoRestored());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
+        EXPECT_EQ(1, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+        EXPECT_EQ("third", value);
+        EXPECT_EQ(2, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_TRUE(dbm->IsAutoRestored());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+        EXPECT_EQ("second", value);
+        EXPECT_EQ(2, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+        EXPECT_EQ("third", value);
+        EXPECT_EQ(3, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        auto tmp_file = std::make_unique<tkrzw::MemoryMapParallelFile>();
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Write(9, "\xFF", 1));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_TRUE(dbm->IsAutoRestored());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
+        EXPECT_EQ("second", value);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
+        EXPECT_EQ("third", value);
+        EXPECT_EQ(3, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+      }
     }
   }
 }
@@ -1326,6 +1429,9 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
       for (const auto& record_comp_mode : record_comp_modes) {
+        if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+          continue;
+        }
         tkrzw::HashDBM::TuningParameters tuning_params;
         tuning_params.update_mode = update_mode;
         tuning_params.record_crc_mode = record_crc_mode;
@@ -1334,7 +1440,11 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
         tuning_params.align_pow = 0;
         tuning_params.num_buckets = 10;
         tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-        std::string value(256, 'x');
+        std::string value;
+        for (int32_t i = 0; value.size() < 256; i++) {
+          value.append(1, 'a' + i % 26);
+          value.append(1, 'A' + i % 25);
+        }
         std::string garbage(3, '\0');
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             corrupt_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -1351,7 +1461,13 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
         EXPECT_FALSE(dbm->IsAutoRestored());
         EXPECT_EQ(1, dbm->CountSimple());
         std::string rec_value;
-        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
+        if (record_comp_mode == tkrzw::HashDBM::RECORD_COMP_NONE) {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
+        } else {
+          const tkrzw::Status status = dbm->Get("abc", &rec_value);
+          EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
+                      status == tkrzw::Status::BROKEN_DATA_ERROR);
+        }
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
         EXPECT_EQ(tkrzw::Status::SUCCESS,
                   tkrzw::HashDBM::RestoreDatabase(corrupt_file_path, restored_file_path, -1));
@@ -1393,8 +1509,6 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
             break;
         }
         EXPECT_EQ(expected_crc_name, crc_name);
-
-
         const char* expected_comp_name = "";
         switch (record_comp_mode) {
           case tkrzw::HashDBM::RECORD_COMP_NONE:
@@ -1416,12 +1530,11 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
             break;
         }
         EXPECT_EQ(expected_comp_name, comp_name);
-
-
-        
         if (record_crc_mode == tkrzw::HashDBM::RECORD_CRC_NONE) {
-          EXPECT_EQ(1, dbm->CountSimple());
-          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
+          if (record_comp_mode == tkrzw::HashDBM::RECORD_COMP_NONE) {
+            EXPECT_EQ(1, dbm->CountSimple());
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
+          }
         } else {
           EXPECT_EQ(0, dbm->CountSimple());
           EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));

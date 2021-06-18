@@ -689,6 +689,71 @@ std::string SerializeStrMap(const std::map<std::string, std::string>& records);
  */
 std::map<std::string, std::string> DeserializeStrMap(std::string_view serialized);
 
+/**
+ * Wrapper of string_view of allocated memory.
+ */
+class ScopedStringView {
+ public:
+  /**
+   * Constructor.
+   */
+  ScopedStringView() : buf_(nullptr), size_(0) {}
+
+  /**
+   * Constructor.
+   * @param buf The pointer to a region allocated by xmalloc.  The ownership of is taken.
+   */
+  ScopedStringView(void* buf, size_t size) : buf_(buf), size_(size) {}
+
+  /**
+   * Constructor.
+   * @param str A string view object whose data is allocated by xmalloc.  The ownership of the
+   * data is taken.
+   */
+  explicit ScopedStringView(std::string_view str)
+      : buf_(const_cast<char*>(str.data())), size_(str.size()) {}
+
+  /**
+   * Destructor.
+   */
+  ~ScopedStringView() {
+    xfree(buf_);
+  }
+
+  /**
+   * Gets the string view object
+   */
+  std::string_view Get() const {
+    return std::string_view(static_cast<char*>(buf_), size_);
+  }
+
+  /**
+   * Sets the data.
+   * @detail The region of the old data is released.
+   */
+  void Set(void* buf, size_t size) {
+    xfree(buf_);
+    buf_ = buf;
+    size_ = size;
+  }
+
+  /**
+   * Sets the data by a string view.
+   * @detail The region of the old data is released.
+   */
+  void Set(std::string_view str) {
+    xfree(buf_);
+    buf_ = const_cast<char*>(str.data());
+    size_ = str.size();
+  }
+
+ private:
+  /** The allocated buffer. */
+  void* buf_;
+  /** The buffer size. */
+  size_t size_;
+};
+
 }  // namespace tkrzw
 
 #endif  // _TKRZW_STR_UTIL_H

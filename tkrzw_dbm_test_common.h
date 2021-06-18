@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_file.h"

@@ -621,6 +621,7 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 MYPOSTCMD
+MYDBMPERFRECCOMPFLAGS
 MYDBMPERFMEMLOCKFLAGS
 MYFILEPERFMEMLOCKFLAGS
 MYDBMPERFDIRECTIOFLAGS
@@ -707,9 +708,9 @@ enable_opt_native
 enable_static
 enable_shared
 enable_stdonly
-enable_lz4
-enable_zstd
 enable_zlib
+enable_zstd
+enable_lz4
 enable_lzma
 enable_most_features
 '
@@ -1353,9 +1354,9 @@ Optional Features:
   --enable-static         build by static linking
   --disable-shared        avoid to build shared libraries
   --enable-stdonly        use the standard library only
-  --enable-lz4            enable the LZ4 compressin feature
-  --enable-zstd           enable the zstd compressin feature
   --enable-zlib           enable the zlib compressin feature
+  --enable-zstd           enable the zstd compressin feature
+  --enable-lz4            enable the LZ4 compressin feature
   --enable-lzma           enable the LZMA compressin feature
   --enable-most-features  enable as many features as poissble
 
@@ -2152,6 +2153,7 @@ MYFILEPERFDIRECTIOFLAGS=""
 MYDBMPERFDIRECTIOFLAGS=""
 MYFILEPERFMEMLOCKFLAGS=""
 MYDBMPERFMEMLOCKFLAGS=""
+MYDBMPERFRECCOMPFLAGS=""
 MYPOSTCMD="true"
 
 # Building paths
@@ -2169,9 +2171,9 @@ export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
 # Internal variables
 enables=""
 is_static=""
-use_lz4=""
-use_zstd=""
 use_zlib=""
+use_zstd=""
+use_lz4=""
 use_lzma=""
 
 # Development mode
@@ -2287,16 +2289,16 @@ then
   MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_STDONLY"
 fi
 
-# Enable the lz4 compression feature
-# Check whether --enable-lz4 was given.
-if test "${enable_lz4+set}" = set; then :
-  enableval=$enable_lz4;
+# Enable the zlib compression feature
+# Check whether --enable-zlib was given.
+if test "${enable_zlib+set}" = set; then :
+  enableval=$enable_zlib;
 fi
 
-if test "$enable_lz4" = "yes"
+if test "$enable_zlib" = "yes"
 then
-  use_lz4="yes"
-  enables="$enables (lz4)"
+  use_zlib="yes"
+  enables="$enables (zlib)"
 fi
 
 # Enable the zstd compression feature
@@ -2311,16 +2313,16 @@ then
   enables="$enables (zstd)"
 fi
 
-# Enable the zlib compression feature
-# Check whether --enable-zlib was given.
-if test "${enable_zlib+set}" = set; then :
-  enableval=$enable_zlib;
+# Enable the lz4 compression feature
+# Check whether --enable-lz4 was given.
+if test "${enable_lz4+set}" = set; then :
+  enableval=$enable_lz4;
 fi
 
-if test "$enable_zlib" = "yes"
+if test "$enable_lz4" = "yes"
 then
-  use_zlib="yes"
-  enables="$enables (zlib)"
+  use_lz4="yes"
+  enables="$enables (lz4)"
 fi
 
 # Enable the LZMA compression feature
@@ -4395,23 +4397,23 @@ fi
 
 
 # Optional features
-if test "$use_lz4" = "yes" -o "$enable_most_features" = "yes"
+if test "$use_zlib" = "yes" -o "$enable_most_features" = "yes"
 then
-  ac_fn_cxx_check_header_mongrel "$LINENO" "lz4.h" "ac_cv_header_lz4_h" "$ac_includes_default"
-if test "x$ac_cv_header_lz4_h" = xyes; then :
-  has_lz4="yes"
+  ac_fn_cxx_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_zlib_h" = xyes; then :
+  has_zlib="yes"
 fi
 
 
-  if test "$has_lz4" = "yes"
+  if test "$has_zlib" = "yes"
   then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -llz4" >&5
-$as_echo_n "checking for main in -llz4... " >&6; }
-if ${ac_cv_lib_lz4_main+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lz" >&5
+$as_echo_n "checking for main in -lz... " >&6; }
+if ${ac_cv_lib_z_main+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-llz4  $LIBS"
+LIBS="-lz  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4425,29 +4427,30 @@ return main ();
 }
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_lib_lz4_main=yes
+  ac_cv_lib_z_main=yes
 else
-  ac_cv_lib_lz4_main=no
+  ac_cv_lib_z_main=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lz4_main" >&5
-$as_echo "$ac_cv_lib_lz4_main" >&6; }
-if test "x$ac_cv_lib_lz4_main" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_main" >&5
+$as_echo "$ac_cv_lib_z_main" >&6; }
+if test "x$ac_cv_lib_z_main" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBLZ4 1
+#define HAVE_LIBZ 1
 _ACEOF
 
-  LIBS="-llz4 $LIBS"
+  LIBS="-lz $LIBS"
 
 fi
 
-    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+    MYDBMPERFRECCOMPFLAGS="--record_comp zlib"
   elif test "$enable_most_features" != "yes"
   then
-    as_fn_error $? "lz4.h is required" "$LINENO" 5
+    as_fn_error $? "zlib.h is required" "$LINENO" 5
   fi
 fi
 if test "$use_zstd" = "yes" -o "$enable_most_features" = "yes"
@@ -4500,28 +4503,29 @@ _ACEOF
 fi
 
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
+    MYDBMPERFRECCOMPFLAGS="--record_comp zstd"
   elif test "$enable_most_features" != "yes"
   then
     as_fn_error $? "zstd.h is required" "$LINENO" 5
   fi
 fi
-if test "$use_zlib" = "yes" -o "$enable_most_features" = "yes"
+if test "$use_lz4" = "yes" -o "$enable_most_features" = "yes"
 then
-  ac_fn_cxx_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
-if test "x$ac_cv_header_zlib_h" = xyes; then :
-  has_zlib="yes"
+  ac_fn_cxx_check_header_mongrel "$LINENO" "lz4.h" "ac_cv_header_lz4_h" "$ac_includes_default"
+if test "x$ac_cv_header_lz4_h" = xyes; then :
+  has_lz4="yes"
 fi
 
 
-  if test "$has_zlib" = "yes"
+  if test "$has_lz4" = "yes"
   then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lz" >&5
-$as_echo_n "checking for main in -lz... " >&6; }
-if ${ac_cv_lib_z_main+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -llz4" >&5
+$as_echo_n "checking for main in -llz4... " >&6; }
+if ${ac_cv_lib_lz4_main+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lz  $LIBS"
+LIBS="-llz4  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4535,29 +4539,30 @@ return main ();
 }
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_lib_z_main=yes
+  ac_cv_lib_lz4_main=yes
 else
-  ac_cv_lib_z_main=no
+  ac_cv_lib_lz4_main=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_main" >&5
-$as_echo "$ac_cv_lib_z_main" >&6; }
-if test "x$ac_cv_lib_z_main" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_lz4_main" >&5
+$as_echo "$ac_cv_lib_lz4_main" >&6; }
+if test "x$ac_cv_lib_lz4_main" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBZ 1
+#define HAVE_LIBLZ4 1
 _ACEOF
 
-  LIBS="-lz $LIBS"
+  LIBS="-llz4 $LIBS"
 
 fi
 
-    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+    MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+    MYDBMPERFRECCOMPFLAGS="--record_comp lz4"
   elif test "$enable_most_features" != "yes"
   then
-    as_fn_error $? "zlib.h is required" "$LINENO" 5
+    as_fn_error $? "lz4.h is required" "$LINENO" 5
   fi
 fi
 if test "$use_lzma" = "yes" -o "$enable_most_features" = "yes"
@@ -4657,6 +4662,7 @@ fi
 #================================================================
 
 # Export variables
+
 
 
 

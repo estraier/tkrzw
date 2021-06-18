@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  The flags "-llzma", "-llz4", "-lzstd", and "-lz" should be set only if correponding features (LZMA, LZ4, ZStd, and ZLib) are enabled by the configure script.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  The flags "-llzma", "-llz4", "-lzstd", and "-lz" should be set only if correponding features (<a href="https://tukaani.org/xz/">LZMA</a>, <a href="https://lz4.github.io/lz4/">LZ4</a>, <a href="https://facebook.github.io/zstd/">ZStd</a>, and <a href="https://zlib.net/">ZLib</a>) are enabled by the configure script.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
   -O2 -Wall helloworld.cc \
@@ -1029,6 +1029,8 @@ int main(int argc, char** argv) {
 <p>The 1-byte padding size can represent 0 to 255.  If the padding size is 238 (0xEE) or more, the first 4 bytes of the padding data indicates the actual size of the padding data in big endian.  The first byte of the actual padding data is 0xDD and the remaining bytes are 0x00.</p>
 
 <p>The CRC value is optional.  If it exists, the value is the result of CRC-8, CRC-16, or CRC-32 applied to the concatenated data of the key and the value.  The CRC value is used to detect inconsistency when the database is restored.</p>
+
+<p>The key data is stored as-is.  The value data is also stored as-is by default.  If the record compression is enabled, compressed data by the algorithm is stored.</p>
 
 <p>With the default 4-byte offset width and small-sized (less than 128 bytes) keys and medium-sized (less than 16384 bytes) values, the footprint for each record is 1 + 4 + 1 + 2 + 1 = 9 bytes.  However, due to alignment, padding bytes can be added.  With the default 8-byte alignment, average padding size is about 4 bytes.</p>
 
@@ -2643,6 +2645,7 @@ int main(int argc, char** argv) {
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583 or -1)</dd>
@@ -2650,6 +2653,7 @@ int main(int argc, char** argv) {
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 10 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101 or -1)</dd>
@@ -2751,6 +2755,7 @@ applet  A small application.
 <dt>Options for HashDBM:</dt>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583)</dd>
@@ -3678,6 +3683,23 @@ one    first
 <p>In short, if you store in a database mission-critical data which shouldn't be lost, you should use the appending update mode (UPDATE_APPENDING).  If data consistency is of the utmost importance, you should set the synced restore mode (RESTORE_SYNC) too and call the Synchronize method periodically or for each transaction.  Meanwhile, if performance and throughput are of the utmost importance but consistency is also important, you should use the default restore mode (RESTORE_DEFAULT) and set the record CRC mode for CRC-8 (RECORD_CRC_8) or CRC-16 (RECORD_CRC_16).  If you are an extreme worrywart, combining RESTORE_SYNC and RECORD_CRC_32 is possible.</p>
 
 <p>The database file of SkipDBM never breaks even if the process crashes during the Synchronize method.  The update operations are done to a temporary file, which replaces the existing database file atomically by the rename system call.  Therefore, the restoring operation does nothing even with an unhealthy database due to the missing "closed" flag.  If the file size is inconsitent to the meta data, actual restoration is done.  RESTORE_DEFAULT and RESTORE_SYNC have no difference on SkipDBM.</p>
+
+<h3 id="tips_compression">Data Compression</h3>
+
+<p>Data compression can be applied to the record value so that the size of the database file becomes smaller at the cost of processing time.  In general, using data compression decreases performance and throughput.  However, if the database file is large and I/O is the bottle neck, data compression sometimes increases performance and throughput because of lower amount of data transmission with the storage.</p>
+
+<p>You can integrate the following compression libraries when you build Tkrzw.</p>
+
+<ul>
+<li><strong>ZLib</strong> : Probably the most popular compression library, which is used in GZip.  It combines good compression ratio and good processing speed.</li>
+<li><strong>ZStd</strong> : Probably the most useful compression library.  As compression ratio is almost the same as ZLib, the processing speed is much faster.</li>
+<li><strong>LZ4</strong> : A very fast compression library.  Though compression ratio is worse than ZLib and ZStd, processing speed is much faster.</li>
+<li><strong>LZMA</strong> : A library known for the best compression.  Though compression ratio is better than ZLib and ZStd, the processing speed is much slower.</li>
+</ul>
+
+<p>If you tune the database to enable one of those algorithms, record data stored in the database is compressed.  When you retrieve the record, the data is decompressed automatically.  In HashDBM, compression is done for each record and only the record value is compressed.  Thus, compression is useful only if the record value is large.  In TreeDBM, compression is done for each page which includes multiple records.  Thus, compression is more useful in TreeDBM.</p>
+
+<p>Which algorithm is the best suited should be determined according to the data size, the data content, and the access pattern.  However, ZStd is the one you should try first.  If ZStd is not available on your platform, you use ZLib instead.  If you prefer faster speed, try LZ4.  If the database is almost read-only for archival usage, try LZMA.</p>
 
 <h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
 

@@ -2535,6 +2535,17 @@ Status TreeDBM::RestoreDatabase(
   } else if (record_crc_expr == "crc-32") {
     record_crc_mode = HashDBM::RECORD_CRC_32;
   }
+  const std::string& record_comp_expr = SearchMap(meta_map, "record_comp_mode", "");
+  HashDBM::RecordCompressionMode record_comp_mode = HashDBM::RECORD_COMP_NONE;
+  if (record_comp_expr == "zlib") {
+    record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+  } else if (record_comp_expr == "zstd") {
+    record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+  } else if (record_comp_expr == "lz4") {
+    record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+  } else if (record_comp_expr == "lzma") {
+    record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+  }
   int32_t offset_width = StrToInt(SearchMap(meta_map, "offset_width", "-1"));
   int32_t align_pow = StrToInt(SearchMap(meta_map, "align_pow", "-1"));
   int64_t num_buckets = StrToInt(SearchMap(meta_map, "hash_num_buckets", "-1"));
@@ -2566,6 +2577,7 @@ Status TreeDBM::RestoreDatabase(
   TuningParameters params;
   params.update_mode = tmp_dbm.GetUpdateMode();
   params.record_crc_mode = record_crc_mode;
+  params.record_comp_mode = record_comp_mode;
   params.offset_width = offset_width;
   params.align_pow = align_pow;
   params.num_buckets = num_buckets;

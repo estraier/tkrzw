@@ -59,6 +59,7 @@ FILEPERFDIRECTIOFLAGS=@MYFILEPERFDIRECTIOFLAGS@
 DBMPERFDIRECTIOFLAGS=@MYDBMPERFDIRECTIOFLAGS@
 FILEPERFMEMLOCKFLAGS=@MYFILEPERFMEMLOCKFLAGS@
 DBMPERFMEMLOCKFLAGS=@MYDBMPERFMEMLOCKFLAGS@
+DBMPERFRECCOMPFLAGS=@MYDBMPERFRECCOMPFLAGS@
 POSTCMD := @MYPOSTCMD@
 
 #================================================================
@@ -256,10 +257,11 @@ check-file-perf :
 check-hashdbm-perf :
 	rm -Rf casket*
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFMEMLOCKFLAGS)
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS)
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFMEMLOCKFLAGS) \
-	  --append --record_crc 8
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) --append --record_crc 8
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
@@ -271,16 +273,20 @@ check-hashdbm-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 100000 --threads 1 --size 8 --buckets 10000 --random_key --random_value --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 100000 --threads 1 --size 8 --buckets 10000 $(DBMPERFMEMLOCKFLAGS) \
+	  --iter 100000 --threads 1 --size 8 --buckets 10000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --random_key --random_value --keys 10000 --rebuild --append --record_crc 8
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 $(DBMPERFMEMLOCKFLAGS) \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFMEMLOCKFLAGS) \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFMEMLOCKFLAGS) \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --append  --record_crc 32 --iterator --clear --rebuild
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm hash --file pos-para --path casket.tkh \
 	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
@@ -364,7 +370,8 @@ check-treedbm-perf :
 	  --max_cached_pages 256 --random_key --random_value --keys 10000 --rebuild \
 	  --append --record_crc 8
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf parallel --dbm tree --file mmap-para --path casket.tkt \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 $(DBMPERFMEMLOCKFLAGS) \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
+	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_perf wicked --dbm tree --file mmap-para --path casket.tkt \

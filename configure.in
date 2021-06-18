@@ -37,6 +37,7 @@ MYFILEPERFDIRECTIOFLAGS=""
 MYDBMPERFDIRECTIOFLAGS=""
 MYFILEPERFMEMLOCKFLAGS=""
 MYDBMPERFMEMLOCKFLAGS=""
+MYDBMPERFRECCOMPFLAGS=""
 MYPOSTCMD="true"
 
 # Building paths
@@ -267,6 +268,7 @@ then
   then
     AC_CHECK_LIB(z, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZLIB"
+    MYDBMPERFRECCOMPFLAGS="--record_comp zlib"
   elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([zlib.h is required])
@@ -279,6 +281,7 @@ then
   then
     AC_CHECK_LIB(zstd, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_ZSTD"
+    MYDBMPERFRECCOMPFLAGS="--record_comp zstd"
   elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([zstd.h is required])
@@ -291,6 +294,7 @@ then
   then
     AC_CHECK_LIB(lz4, main)
     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_COMP_LZ4"
+    MYDBMPERFRECCOMPFLAGS="--record_comp lz4"
   elif test "$enable_most_features" != "yes"
   then
     AC_MSG_ERROR([lz4.h is required])
@@ -373,6 +377,7 @@ AC_SUBST(MYFILEPERFDIRECTIOFLAGS)
 AC_SUBST(MYDBMPERFDIRECTIOFLAGS)
 AC_SUBST(MYFILEPERFMEMLOCKFLAGS)
 AC_SUBST(MYDBMPERFMEMLOCKFLAGS)
+AC_SUBST(MYDBMPERFRECCOMPFLAGS)
 AC_SUBST(MYPOSTCMD)
 
 # Targets

@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_hash_impl.h"
 #include "tkrzw_file.h"
@@ -147,7 +148,8 @@ TEST(DBMHashImplTest, HashRecord) {
           int32_t count_ = 0;
         } counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, false, -1));
+            &file, &counter, -1, 0, crc_width, nullptr,
+            offset_width, align_pow, -1, 48, false, -1));
         EXPECT_EQ(count_first, counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -198,14 +200,15 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(first_rec_size, 48));
         Counter broken_counter;
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ReplayOperations(
-            &file, &broken_counter, -1, 0, crc_width, offset_width, align_pow,
-            -1, 48, false, -1));
+            &file, &broken_counter, -1, 0, crc_width, nullptr,
+            offset_width, align_pow, -1, 48, false, -1));
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ExtractOffsets(
             &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
         Counter skip_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &skip_counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, true, -1));
+            &file, &skip_counter, -1, 0, crc_width, nullptr,
+            offset_width, align_pow, -1, 48, true, -1));
         EXPECT_EQ(counter.GetCount() - 2, skip_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -226,8 +229,8 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(0, r1.GetKey().size());
         Counter restore_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &restore_counter, -1, 0, crc_width, offset_width, align_pow,
-            -1, 48, false, -1));
+            &file, &restore_counter, -1, 0, crc_width, nullptr,
+            offset_width, align_pow, -1, 48, false, -1));
         EXPECT_EQ(counter.GetCount(), restore_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -252,7 +255,8 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(file.GetSizeSimple(), off);
         Counter void_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &void_counter, -1, 0, crc_width, offset_width, align_pow, -1, 48, false, -1));
+            &file, &void_counter, -1, 0, crc_width, nullptr,
+            offset_width, align_pow, -1, 48, false, -1));
         EXPECT_EQ(count_void / 2, void_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -327,6 +331,94 @@ TEST(DBMHashImplTest, FreeBlockPool) {
   EXPECT_EQ(6, fbp.Size());
   EXPECT_TRUE(fbp.FetchFreeBlock(8, &fb));
   EXPECT_EQ(32, fb.offset);
+}
+
+TEST(DBMHashImplTest, CallRecordProcess) {
+  class Checker : public tkrzw::DBM::RecordProcessor {
+   public:
+    explicit Checker(std::string_view new_value) : new_value_(new_value) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) {
+      key_ = key;
+      value_ = value;
+      return new_value_;
+    }
+    std::string_view ProcessEmpty(std::string_view key) {
+      key_ = key;
+      value_.clear();
+      return new_value_;
+    }
+    std::string GetKey() const {
+      return key_;
+    }
+    std::string GetValue() const {
+      return value_;
+    }
+    std::string_view new_value_;
+    std::string key_;
+    std::string value_;
+  };
+  tkrzw::DummyCompressor dummy_compressor;
+  tkrzw::ZLibCompressor real_compressor;
+  tkrzw::Compressor* compressor = real_compressor.IsSupported() ?
+      static_cast<tkrzw::Compressor*>(&real_compressor) :
+      static_cast<tkrzw::Compressor*>(&dummy_compressor);
+  tkrzw::ScopedStringView placeholder;
+  {
+    Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
+    std::string_view new_value = tkrzw::CallRecordProcessFull(
+        &proc, "foo", "barbar", nullptr, &placeholder);
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ("foo", proc.GetKey());
+    EXPECT_EQ("barbar", proc.GetValue());
+    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", nullptr, &placeholder);
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ("boo", proc.GetKey());
+    EXPECT_EQ("", proc.GetValue());
+  }
+  {
+    Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
+    size_t comp_size = 0;
+    char* comp_data = compressor->Compress("barbar", 6, &comp_size);
+    std::string_view new_value = tkrzw::CallRecordProcessFull(
+        &proc, "foo", std::string(comp_data, comp_size), compressor, &placeholder);
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ("foo", proc.GetKey());
+    EXPECT_EQ("barbar", proc.GetValue());
+    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", compressor, &placeholder);
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ("boo", proc.GetKey());
+    EXPECT_EQ("", proc.GetValue());
+    tkrzw::xfree(comp_data);
+  }
+  {
+    Checker proc("hello");
+    size_t comp_size = 0;
+    char* comp_data = compressor->Compress("barbar", 6, &comp_size);
+    std::string_view new_value = tkrzw::CallRecordProcessFull(
+        &proc, "foo", std::string(comp_data, comp_size), compressor, &placeholder);
+    EXPECT_NE(nullptr, new_value.data());
+    {
+      size_t decomp_size = 0;
+      char* decomp_data = compressor->Decompress(
+          new_value.data(), new_value.size(), &decomp_size);
+      EXPECT_EQ("hello", std::string_view(decomp_data, decomp_size));
+      tkrzw::xfree(decomp_data);
+    }
+    EXPECT_EQ("foo", proc.GetKey());
+    EXPECT_EQ("barbar", proc.GetValue());
+    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", compressor, &placeholder);
+    EXPECT_NE(nullptr, new_value.data());
+    {
+      size_t decomp_size = 0;
+      char* decomp_data = compressor->Decompress(
+          new_value.data(), new_value.size(), &decomp_size);
+      EXPECT_EQ("hello", std::string_view(decomp_data, decomp_size));
+      tkrzw::xfree(decomp_data);
+    }
+    EXPECT_EQ("boo", proc.GetKey());
+    EXPECT_EQ("", proc.GetValue());
+    tkrzw::xfree(comp_data);
+  }
 }
 
 // END OF FILE

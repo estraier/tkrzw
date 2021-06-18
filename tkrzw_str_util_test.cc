@@ -861,4 +861,30 @@ TEST(StrUtilTest, SerializeStrMap) {
   }
 }
 
+TEST(StrUtilTest, ScopedStringView) {
+  {
+    char* buf = static_cast<char*>(tkrzw::xmalloc(5));
+    std::memcpy(buf, "12345", 5);
+    tkrzw::ScopedStringView scoped_view(buf, 5);
+    EXPECT_EQ(std::string_view("12345", 5), scoped_view.Get());
+    buf = static_cast<char*>(tkrzw::xmalloc(6));
+    std::memcpy(buf, "ABCDEF", 6);
+    scoped_view.Set(buf, 6);
+    EXPECT_EQ(std::string_view("ABCDEF", 6), scoped_view.Get());
+  }
+  {
+    char* buf = static_cast<char*>(tkrzw::xmalloc(6));
+    std::memcpy(buf, "ABCDEF", 6);
+    tkrzw::ScopedStringView scoped_view(std::string_view(buf, 6));
+    EXPECT_EQ(std::string_view("ABCDEF", 6), scoped_view.Get());
+    buf = static_cast<char*>(tkrzw::xmalloc(5));
+    std::memcpy(buf, "12345", 5);
+    scoped_view.Set(std::string_view(buf, 5));
+    EXPECT_EQ(std::string_view("12345", 5), scoped_view.Get());
+  }
+  {
+    tkrzw::ScopedStringView scoped_view;
+  }
+}
+
 // END OF FILE

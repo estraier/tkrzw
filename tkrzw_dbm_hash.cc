@@ -381,6 +381,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     const int64_t end_offset = file_->GetSizeSimple();
     int64_t offset = record_base_;
     HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+    ScopedStringView comp_data_placeholder;
     while (offset < end_offset) {
       Status status = rec.ReadMetadataKey(offset, min_read_size_);
       if (status != Status::SUCCESS) {
@@ -404,7 +405,11 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
           }
           value = rec.GetValue();
         }
-        proc->ProcessFull(key, value);
+        const std::string_view new_value = CallRecordProcessFull(
+            proc, key, value, compressor_.get(), &comp_data_placeholder);
+        if (new_value.data() == nullptr) {
+          return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
+        }
       }
       offset += rec_size;
     }
@@ -425,6 +430,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     std::set<std::string> keys, dead_keys;
     while (current_offset > 0) {
       HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+      ScopedStringView comp_data_placeholder;
       status = rec.ReadMetadataKey(current_offset, min_read_size_);
       if (status != Status::SUCCESS) {
         return status;
@@ -445,7 +451,11 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
               }
               value = rec.GetValue();
             }
-            proc->ProcessFull(key, value);
+            const std::string_view new_value = CallRecordProcessFull(
+                proc, key, value, compressor_.get(), &comp_data_placeholder);
+            if (new_value.data() == nullptr) {
+              return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
+            }
           }
           keys.emplace(std::move(key));
           break;
@@ -1260,6 +1270,9 @@ Status HashDBMImpl::LoadMetadata() {
       !(static_flags_ & STATIC_FLAG_UPDATE_APPENDING)) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid static flags");
   }
+  if (compressor_ != nullptr && !compressor_->IsSupported()) {
+    return Status(Status::NOT_IMPLEMENTED_ERROR, "unsupported compression");
+  }
   if (offset_width_ < MIN_OFFSET_WIDTH || offset_width_ > MAX_OFFSET_WIDTH) {
     return Status(Status::BROKEN_DATA_ERROR, "the offset width is invalid");
   }
@@ -1375,6 +1388,7 @@ Status HashDBMImpl::ProcessImpl(
   int64_t current_offset = top;
   int64_t parent_offset = 0;
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+  ScopedStringView comp_data_placeholder;
   while (current_offset > 0) {
     status = rec.ReadMetadataKey(current_offset, min_read_size_);
     if (status != Status::SUCCESS) {
@@ -1393,9 +1407,14 @@ Status HashDBMImpl::ProcessImpl(
           }
           old_value = rec.GetValue();
         }
-        new_value = proc->ProcessFull(key, old_value);
+        new_value = CallRecordProcessFull(
+            proc, key, old_value, compressor_.get(), &comp_data_placeholder);
       } else {
-        new_value = proc->ProcessEmpty(key);
+        new_value = CallRecordProcessEmpty(
+            proc, key, compressor_.get(), &comp_data_placeholder);
+      }
+      if (new_value.data() == nullptr) {
+        return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
       }
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
         const int64_t child_offset = rec.GetChildOffset();
@@ -1510,7 +1529,11 @@ Status HashDBMImpl::ProcessImpl(
       current_offset = rec.GetChildOffset();
     }
   }
-  const std::string_view new_value = proc->ProcessEmpty(key);
+  const std::string_view new_value = CallRecordProcessEmpty(
+      proc, key, compressor_.get(), &comp_data_placeholder);
+  if (new_value.data() == nullptr) {
+    return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
+  }
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
     rec.SetData(HashRecord::OP_SET, 0, key.data(), key.size(),
@@ -1632,6 +1655,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     record_base = tmp_record_base;
   }
   const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
+  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -1639,11 +1663,6 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
       end_offset = last_sync_size;
     }
   }
-
-  // Check compressor.
-
-
-  
   Status import_status(Status::SUCCESS);
   class Importer final : public DBM::RecordProcessor {
    public:
@@ -1667,7 +1686,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     Status* status_;
   } importer(this, &import_status);
   return HashRecord::ReplayOperations(
-      file, &importer, METADATA_SIZE, record_base, crc_width,
+      file, &importer, METADATA_SIZE, record_base, crc_width, compressor.get(),
       offset_width, align_pow, num_buckets, min_read_size_,
       skip_broken_records, end_offset);
 }
@@ -1692,6 +1711,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     record_base = tmp_record_base;
   }
   const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
+  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -1699,10 +1719,6 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
       end_offset = last_sync_size;
     }
   }
-
-  // check compressor
-
-  
   auto offset_file = file_->MakeFile();
   HashDBM dead_dbm;
   auto CleanUp = [&]() {
@@ -1737,6 +1753,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   status = dead_dbm.OpenAdvanced(dead_path, true, File::OPEN_TRUNCATE, dead_tuning_params);
   OffsetReader reader(offset_file.get(), offset_width, align_pow, true);
   HashRecord rec(file, crc_width, offset_width, align_pow);
+  ScopedStringView comp_data_placeholder;
   while (true) {
     int64_t offset = 0;
     status = reader.ReadOffset(&offset);
@@ -1790,7 +1807,6 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
                 key, offset);
             if (status != Status::SUCCESS) {
               if (skip_broken_records) {
-                offset += rec_size;
                 continue;
               }
               if (status == Status::NOT_FOUND_ERROR) {
@@ -1799,6 +1815,19 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
               CleanUp();
               return status;
             }
+          }
+          if (compressor != nullptr) {
+            size_t decomp_size = 0;
+            char* decomp_buf = compressor->Decompress(value.data(), value.size(), &decomp_size);
+            if (decomp_buf == nullptr) {
+              if (skip_broken_records) {
+                continue;
+              } else {
+                return Status(Status::BROKEN_DATA_ERROR, "decompression failed");
+              }
+            }
+            comp_data_placeholder.Set(decomp_buf, decomp_size);
+            value = comp_data_placeholder.Get();
           }
           Status set_status(Status::SUCCESS);
           DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
@@ -2252,10 +2281,10 @@ Status HashDBM::FindRecordBase(
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1) != 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
-  }
   if (!meta_ok) {
+    if (std::memcmp(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1) != 0) {
+      return Status(Status::BROKEN_DATA_ERROR, "bad magic data");
+    }
     *static_flags = ReadFixNum(head + RECHEAD_OFFSET_STATIC_FLAGS, 1);
     *offset_width = ReadFixNum(head + RECHEAD_OFFSET_OFFSET_WIDTH, 1);
     *align_pow = ReadFixNum(head + RECHEAD_OFFSET_ALIGN_POW, 1);
@@ -2293,6 +2322,26 @@ std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(int32_t stati
       return std::make_unique<LZMACompressor>();
   }
   return nullptr;
+}
+
+bool HashDBM::CheckRecordCompressionModeIsSupported(RecordCompressionMode mode) {
+  switch (mode) {
+    case RECORD_COMP_ZLIB: {
+      return ZLibCompressor().IsSupported();
+    }
+    case RECORD_COMP_ZSTD: {
+      return ZStdCompressor().IsSupported();
+    }
+    case RECORD_COMP_LZ4: {
+      return LZ4Compressor().IsSupported();
+    }
+    case RECORD_COMP_LZMA: {
+      return LZMACompressor().IsSupported();
+    }
+    default:
+      break;
+  }
+  return true;
 }
 
 Status HashDBM::RestoreDatabase(

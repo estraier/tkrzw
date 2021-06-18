@@ -743,6 +743,13 @@ class HashDBM final : public DBM {
   static std::unique_ptr<Compressor> MakeCompressorFromStaticFlags(int32_t static_flags);
 
   /**
+   * Checks whether a record compression mode is supported on the platform.
+   * @param mode The record compression mode.
+   * @return True if the record compression mode is supported on the platform.
+   */
+  static bool CheckRecordCompressionModeIsSupported(RecordCompressionMode mode);
+
+  /**
    * Restores a broken database as a new healthy database.
    * @param old_file_path The path of the broken database.
    * @param new_file_path The path of the new database to be created.

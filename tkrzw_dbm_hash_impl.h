@@ -25,9 +25,11 @@
 #include <cinttypes>
 #include <cstdarg>
 
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_str_util.h"
 
 namespace tkrzw {
 
@@ -166,6 +168,7 @@ class HashRecord final {
    * @param bucket_base The bucket base offset.
    * @param record_base The record base offset.
    * @param crc_width The width of the CRC value.
+   * @param compressor The compressor object.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
    * @param num_buckets The number of buckets.
@@ -180,8 +183,8 @@ class HashRecord final {
    */
   static Status ReplayOperations(
       File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
-      int64_t record_base, int32_t crc_width, int32_t offset_width,
-      int32_t align_pow, int64_t num_buckets,
+      int64_t record_base, int32_t crc_width, Compressor* compressor,
+      int32_t offset_width, int32_t align_pow, int64_t num_buckets,
       int32_t min_read_size, bool skip_broken_records, int64_t end_offset);
 
   /**
@@ -416,6 +419,33 @@ class FreeBlockPool final {
   /** Mutex for the data set. */
   std::mutex mutex_;
 };
+
+/**
+ * Calls the ProcessFull method of a record processor with compression and decompression.
+ * @param proc The record processor, which takes a decompressed value.
+ * @param key The key of a record.
+ * @param old_value The old value of the record.
+ * @param compressor The compressor object for compression and decompression.  nullptr is OK.
+ * @param comp_data_placeholder The praceholder to manage the compression data.
+ * @return The value returned from the record processor.  If it is a normal value, compression is
+ * done implicitly.
+ */
+std::string_view CallRecordProcessFull(
+    DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    Compressor* compressor, ScopedStringView* comp_data_placeholder);
+
+/**
+ * Calls the ProcessEmpty method of a record processor with compression.
+ * @param proc The record processor.
+ * @param key The key of a record.
+ * @param compressor The compressor object for compression and decompression.  nullptr is OK.
+ * @param comp_data_placeholder The praceholder to manage the compression data.
+ * @return The value returned from the record processor.  If it is a normal value, compression is
+ * done implicitly.
+ */
+std::string_view CallRecordProcessEmpty(
+    DBM::RecordProcessor* proc, std::string_view key,
+    Compressor* compressor, ScopedStringView* comp_data_placeholder);
 
 }  // namespace tkrzw
 
