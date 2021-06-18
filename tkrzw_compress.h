@@ -70,6 +70,15 @@ class Compressor {
    * @return The new Compressor object.
    */
   virtual std::unique_ptr<Compressor> MakeCompressor() const = 0;
+
+  /**
+   * Gets the type information of the actual class.
+   * @return The type information of the actual class.
+   */
+  const std::type_info& GetType() const {
+    const auto& entity = *this;
+    return typeid(entity);
+  }
 };
 
 /**

@@ -1319,98 +1319,132 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_8,
        tkrzw::HashDBM::RECORD_CRC_16, tkrzw::HashDBM::RECORD_CRC_32};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZLIB,
+       tkrzw::HashDBM::RECORD_COMP_ZSTD, tkrzw::HashDBM::RECORD_COMP_LZ4,
+       tkrzw::HashDBM::RECORD_COMP_LZMA};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
-      tkrzw::HashDBM::TuningParameters tuning_params;
-      tuning_params.update_mode = update_mode;
-      tuning_params.record_crc_mode = record_crc_mode;
-      tuning_params.offset_width = 4;
-      tuning_params.align_pow = 0;
-      tuning_params.num_buckets = 10;
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
-      std::string value(256, 'x');
-      std::string garbage(3, '\0');
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-          corrupt_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", value));
-      EXPECT_EQ(value, dbm->GetSimple("abc"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      auto file = dbm->GetInternalFile()->MakeFile();
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(corrupt_file_path, true));
-      EXPECT_EQ(tkrzw::Status::SUCCESS,
-                file->Write(file->GetSizeSimple() - 100, garbage.data(), garbage.size()));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(corrupt_file_path,true));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_FALSE(dbm->IsAutoRestored());
-      EXPECT_EQ(1, dbm->CountSimple());
-      std::string rec_value;
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS,
-                tkrzw::HashDBM::RestoreDatabase(corrupt_file_path, restored_file_path, -1));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(restored_file_path, true));
-      EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_FALSE(dbm->IsAutoRestored());
-      const auto& meta = dbm->Inspect();
-      const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
-      const std::string& update_name = tkrzw::SearchMap(meta_map, "update_mode", "");
-      const std::string& crc_name = tkrzw::SearchMap(meta_map, "record_crc_mode", "");
-      const char* expected_update_name = "";
-      switch (update_mode) {
-        case tkrzw::HashDBM::UPDATE_IN_PLACE:
-          expected_update_name = "in-place";
-          break;
-        case tkrzw::HashDBM::UPDATE_APPENDING:
-          expected_update_name = "appending";
-          break;
-        default:
-          break;
-      }
-      EXPECT_EQ(expected_update_name, update_name);
-      const char* expected_crc_name = "";
-      switch (record_crc_mode) {
-        case tkrzw::HashDBM::RECORD_CRC_NONE:
-          expected_crc_name = "none";
-          break;
-        case tkrzw::HashDBM::RECORD_CRC_8:
-          expected_crc_name = "crc-8";
-          break;
-        case tkrzw::HashDBM::RECORD_CRC_16:
-          expected_crc_name = "crc-16";
-          break;
-        case tkrzw::HashDBM::RECORD_CRC_32:
-          expected_crc_name = "crc-32";
-          break;
-        default:
-          break;
-      }
-      EXPECT_EQ(expected_crc_name, crc_name);
-      if (record_crc_mode == tkrzw::HashDBM::RECORD_CRC_NONE) {
+      for (const auto& record_comp_mode : record_comp_modes) {
+        tkrzw::HashDBM::TuningParameters tuning_params;
+        tuning_params.update_mode = update_mode;
+        tuning_params.record_crc_mode = record_crc_mode;
+        tuning_params.record_comp_mode = record_comp_mode;
+        tuning_params.offset_width = 4;
+        tuning_params.align_pow = 0;
+        tuning_params.num_buckets = 10;
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+        std::string value(256, 'x');
+        std::string garbage(3, '\0');
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            corrupt_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", value));
+        EXPECT_EQ(value, dbm->GetSimple("abc"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        auto file = dbm->GetInternalFile()->MakeFile();
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(corrupt_file_path, true));
+        EXPECT_EQ(tkrzw::Status::SUCCESS,
+                  file->Write(file->GetSizeSimple() - 100, garbage.data(), garbage.size()));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(corrupt_file_path,true));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_FALSE(dbm->IsAutoRestored());
         EXPECT_EQ(1, dbm->CountSimple());
+        std::string rec_value;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
-      } else {
-        EXPECT_EQ(0, dbm->CountSimple());
-        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS,
+                  tkrzw::HashDBM::RestoreDatabase(corrupt_file_path, restored_file_path, -1));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(restored_file_path, true));
+        EXPECT_TRUE(dbm->IsHealthy());
+        EXPECT_FALSE(dbm->IsAutoRestored());
+        const auto& meta = dbm->Inspect();
+        const std::map<std::string, std::string> meta_map(meta.begin(), meta.end());
+        const std::string& update_name = tkrzw::SearchMap(meta_map, "update_mode", "");
+        const std::string& crc_name = tkrzw::SearchMap(meta_map, "record_crc_mode", "");
+        const std::string& comp_name = tkrzw::SearchMap(meta_map, "record_comp_mode", "");
+        const char* expected_update_name = "";
+        switch (update_mode) {
+          case tkrzw::HashDBM::UPDATE_IN_PLACE:
+            expected_update_name = "in-place";
+            break;
+          case tkrzw::HashDBM::UPDATE_APPENDING:
+            expected_update_name = "appending";
+            break;
+          default:
+            break;
+        }
+        EXPECT_EQ(expected_update_name, update_name);
+        const char* expected_crc_name = "";
+        switch (record_crc_mode) {
+          case tkrzw::HashDBM::RECORD_CRC_NONE:
+            expected_crc_name = "none";
+            break;
+          case tkrzw::HashDBM::RECORD_CRC_8:
+            expected_crc_name = "crc-8";
+            break;
+          case tkrzw::HashDBM::RECORD_CRC_16:
+            expected_crc_name = "crc-16";
+            break;
+          case tkrzw::HashDBM::RECORD_CRC_32:
+            expected_crc_name = "crc-32";
+            break;
+          default:
+            break;
+        }
+        EXPECT_EQ(expected_crc_name, crc_name);
+
+
+        const char* expected_comp_name = "";
+        switch (record_comp_mode) {
+          case tkrzw::HashDBM::RECORD_COMP_NONE:
+            expected_comp_name = "none";
+            break;
+          case tkrzw::HashDBM::RECORD_COMP_ZLIB:
+            expected_comp_name = "zlib";
+            break;
+          case tkrzw::HashDBM::RECORD_COMP_ZSTD:
+            expected_comp_name = "zstd";
+            break;
+          case tkrzw::HashDBM::RECORD_COMP_LZ4:
+            expected_comp_name = "lz4";
+            break;
+          case tkrzw::HashDBM::RECORD_COMP_LZMA:
+            expected_comp_name = "lzma";
+            break;
+          default:
+            break;
+        }
+        EXPECT_EQ(expected_comp_name, comp_name);
+
+
+        
+        if (record_crc_mode == tkrzw::HashDBM::RECORD_CRC_NONE) {
+          EXPECT_EQ(1, dbm->CountSimple());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
+        } else {
+          EXPECT_EQ(0, dbm->CountSimple());
+          EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
+        }
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", "12345"));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("xyz", "67890"));
+        EXPECT_EQ(2, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rebuild());
+        const auto& rebuilt_meta = dbm->Inspect();
+        const std::map<std::string, std::string> rebuilt_meta_map(
+            rebuilt_meta.begin(), rebuilt_meta.end());
+        const std::string& rebuilt_update_name =
+            tkrzw::SearchMap(rebuilt_meta_map, "update_mode", "");
+        EXPECT_EQ(expected_update_name, rebuilt_update_name);
+        const std::string& rebuilt_crc_name =
+            tkrzw::SearchMap(rebuilt_meta_map, "record_crc_mode", "");
+        EXPECT_EQ(expected_crc_name, rebuilt_crc_name);
+        EXPECT_EQ("12345", dbm->GetSimple("abc"));
+        EXPECT_EQ("67890", dbm->GetSimple("xyz"));
+        EXPECT_EQ(2, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(restored_file_path));
       }
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", "12345"));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("xyz", "67890"));
-      EXPECT_EQ(2, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rebuild());
-      const auto& rebuilt_meta = dbm->Inspect();
-      const std::map<std::string, std::string> rebuilt_meta_map(
-          rebuilt_meta.begin(), rebuilt_meta.end());
-      const std::string& rebuilt_update_name =
-          tkrzw::SearchMap(rebuilt_meta_map, "update_mode", "");
-      EXPECT_EQ(expected_update_name, rebuilt_update_name);
-      const std::string& rebuilt_crc_name =
-          tkrzw::SearchMap(rebuilt_meta_map, "record_crc_mode", "");
-      EXPECT_EQ(expected_crc_name, rebuilt_crc_name);
-      EXPECT_EQ("12345", dbm->GetSimple("abc"));
-      EXPECT_EQ("67890", dbm->GetSimple("xyz"));
-      EXPECT_EQ(2, dbm->CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(restored_file_path));
     }
   }
 }

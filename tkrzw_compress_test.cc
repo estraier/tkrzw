@@ -68,9 +68,7 @@ void CompressorTest::BasicTest(tkrzw::Compressor* compressor) {
     tkrzw::xfree(comp_data);
   }
   auto copy_compressor = compressor->MakeCompressor();
-  const auto& orig_entity = *compressor;
-  const auto& copy_entity = *copy_compressor;
-  EXPECT_EQ(typeid(orig_entity), typeid(copy_entity));
+  EXPECT_EQ(compressor->GetType(), copy_compressor->GetType());
 }
 
 TEST_F(CompressorTest, DummyCompressorDefault) {

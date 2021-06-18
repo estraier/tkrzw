@@ -104,6 +104,7 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   for (int i = 0; i < 4; i++) {
     auto tmp_dbm = dbm->MakeDBM();
+    EXPECT_EQ(dbm->GetType(), tmp_dbm->GetType());
     EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_dbm->Open(export_path, i % 2 == 0));
   }
 }

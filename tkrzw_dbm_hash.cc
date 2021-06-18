@@ -169,6 +169,7 @@ class HashDBMImpl final {
   int32_t pkg_minor_version_;
   int32_t static_flags_;
   int32_t crc_width_;
+  std::unique_ptr<Compressor> compressor_;
   int32_t offset_width_;
   int32_t align_pow_;
   int32_t closure_flags_;
@@ -189,7 +190,6 @@ class HashDBMImpl final {
   std::shared_timed_mutex mutex_;
   HashMutex record_mutex_;
   std::mutex file_mutex_;
-  std::unique_ptr<Compressor> compressor_;
 };
 
 class HashDBMIteratorImpl final {
@@ -213,7 +213,7 @@ class HashDBMIteratorImpl final {
 HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
     : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
       cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
-      static_flags_(STATIC_FLAG_NONE), crc_width_(0),
+      static_flags_(STATIC_FLAG_NONE), crc_width_(0), compressor_(nullptr),
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
       num_buckets_(HashDBM::DEFAULT_NUM_BUCKETS),
@@ -224,7 +224,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       lock_mem_buckets_(false), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
-      file_mutex_(), compressor_(nullptr) {}
+      file_mutex_() {}
 
 HashDBMImpl::~HashDBMImpl() {
   if (open_) {
@@ -558,6 +558,20 @@ Status HashDBMImpl::Rebuild(
   } else if (crc_width_ == 4) {
     tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_32;
   }
+  if (tuning_params.record_comp_mode != HashDBM::RECORD_COMP_DEFAULT) {
+    tmp_tuning_params.record_comp_mode = tuning_params.record_comp_mode;
+  } else if (compressor_ != nullptr) {
+    const auto& comp_type = compressor_->GetType();
+    if (comp_type == typeid(ZLibCompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+    } else if (comp_type == typeid(ZStdCompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+    } else if (comp_type == typeid(LZ4Compressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+    } else if (comp_type == typeid(LZMACompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+    }
+  }
   tmp_tuning_params.offset_width = tuning_params.offset_width > 0 ?
       tuning_params.offset_width : offset_width_;
   tmp_tuning_params.align_pow = tuning_params.align_pow >= 0 ?
@@ -770,6 +784,22 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
       record_crc_mode = "crc-32";
     }
     Add("record_crc_mode", record_crc_mode);
+    const char* record_comp_mode = "none";
+    if (compressor_ != nullptr) {
+      const auto& comp_type = compressor_->GetType();
+      if (comp_type == typeid(ZLibCompressor)) {
+        record_comp_mode = "zlib";
+      } else if (comp_type == typeid(ZStdCompressor)) {
+        record_comp_mode = "zstd";
+      } else if (comp_type == typeid(LZ4Compressor)) {
+        record_comp_mode = "lz4";
+      } else if (comp_type == typeid(LZMACompressor)) {
+        record_comp_mode = "lzma";
+      } else {
+        record_comp_mode = "unknown";
+      }
+    }
+    Add("record_comp_mode", record_comp_mode);
   }
   return meta;
 }
@@ -1029,6 +1059,15 @@ void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
   } else if (tuning_params.record_crc_mode == HashDBM::RECORD_CRC_32) {
     static_flags_ |= STATIC_FLAG_RECORD_CRC_32;
   }
+  if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_ZLIB) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_ZLIB;
+  } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_ZSTD) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_ZSTD;
+  } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_LZ4) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_LZ4;
+  } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_LZMA) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_LZMA;
+  }
   if (tuning_params.offset_width >= 0) {
     offset_width_ =
         std::min(std::max(tuning_params.offset_width, MIN_OFFSET_WIDTH), MAX_OFFSET_WIDTH);
@@ -1211,6 +1250,7 @@ Status HashDBMImpl::LoadMetadata() {
     return status;
   }
   crc_width_ = HashDBM::GetCRCWidthFromStaticFlags(static_flags_);
+  compressor_ = HashDBM::MakeCompressorFromStaticFlags(static_flags_);
   num_records_.store(num_records);
   eff_data_size_.store(eff_data_size);
   if (pkg_major_version_ < 1 && pkg_minor_version_ < 1) {
@@ -1599,6 +1639,11 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
       end_offset = last_sync_size;
     }
   }
+
+  // Check compressor.
+
+
+  
   Status import_status(Status::SUCCESS);
   class Importer final : public DBM::RecordProcessor {
    public:
@@ -1654,6 +1699,10 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
       end_offset = last_sync_size;
     }
   }
+
+  // check compressor
+
+  
   auto offset_file = file_->MakeFile();
   HashDBM dead_dbm;
   auto CleanUp = [&]() {
@@ -2232,6 +2281,20 @@ int32_t HashDBM::GetCRCWidthFromStaticFlags(int32_t static_flags) {
   return 0;
 }
 
+std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(int32_t static_flags) {
+  switch (static_flags & STATIC_FLAG_RECORD_COMP_EXTRA) {
+    case STATIC_FLAG_RECORD_COMP_ZLIB:
+      return std::make_unique<ZLibCompressor>();
+    case STATIC_FLAG_RECORD_COMP_ZSTD:
+      return std::make_unique<ZStdCompressor>();
+    case STATIC_FLAG_RECORD_COMP_LZ4:
+      return std::make_unique<LZ4Compressor>();
+    case STATIC_FLAG_RECORD_COMP_LZMA:
+      return std::make_unique<LZMACompressor>();
+  }
+  return nullptr;
+}
+
 Status HashDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
   PositionalParallelFile old_file;
@@ -2249,6 +2312,7 @@ Status HashDBM::RestoreDatabase(
   }
   UpdateMode update_mode = UPDATE_DEFAULT;
   RecordCRCMode record_crc_mode = RECORD_CRC_DEFAULT;
+  RecordCompressionMode record_comp_mode = RECORD_COMP_DEFAULT;
   int32_t db_type = 0;
   std::string opaque;
   int64_t record_base = 0;
@@ -2278,6 +2342,21 @@ Status HashDBM::RestoreDatabase(
     case 4:
       record_crc_mode = RECORD_CRC_32;
       break;
+  }
+  {
+    auto tmp_compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
+    if (tmp_compressor != nullptr) {
+      const auto& comp_type = tmp_compressor->GetType();
+      if (comp_type == typeid(ZLibCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+      } else if (comp_type == typeid(ZStdCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+      } else if (comp_type == typeid(LZ4Compressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+      } else if (comp_type == typeid(LZMACompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+      }
+    }
   }
   int32_t old_cyclic_magic = 0;
   int32_t old_pkg_major_version = 0;
@@ -2315,6 +2394,19 @@ Status HashDBM::RestoreDatabase(
         record_crc_mode = RECORD_CRC_32;
         break;
     }
+    auto old_compressor = HashDBM::MakeCompressorFromStaticFlags(old_static_flags);
+    if (old_compressor != nullptr) {
+      const auto& comp_type = old_compressor->GetType();
+      if (comp_type == typeid(ZLibCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+      } else if (comp_type == typeid(ZStdCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+      } else if (comp_type == typeid(LZ4Compressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+      } else if (comp_type == typeid(LZMACompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+      }
+    }
     offset_width = old_offset_width;
     align_pow = old_align_pow;
     num_buckets = old_num_buckets;
@@ -2334,6 +2426,7 @@ Status HashDBM::RestoreDatabase(
   TuningParameters tuning_params;
   tuning_params.update_mode = update_mode;
   tuning_params.record_crc_mode = record_crc_mode;
+  tuning_params.record_comp_mode = record_comp_mode;
   tuning_params.offset_width = offset_width;
   tuning_params.align_pow = align_pow;
   tuning_params.num_buckets = num_buckets;

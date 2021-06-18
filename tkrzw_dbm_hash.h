@@ -22,6 +22,7 @@
 
 #include <cinttypes>
 
+#include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
@@ -195,15 +196,17 @@ class HashDBM final : public DBM {
    */
   enum RecordCompressionMode : int32_t {
     /** The default behavior: no compression or to succeed the current mode. */
-    RECORD_COMPRESSION_DEFAULT = 0,
+    RECORD_COMP_DEFAULT = 0,
+    /** To do no compression. */
+    RECORD_COMP_NONE = 1,
     /** To compress with ZLib. */
-    RECORD_COMPRESSION_ZLIB = 1,
+    RECORD_COMP_ZLIB = 2,
     /** To compress with ZStd. */
-    RECORD_COMPRESSION_ZSTD = 2,
+    RECORD_COMP_ZSTD = 3,
     /** To compress with LZ4. */
-    RECORD_COMPRESSION_LZ4 = 3,
+    RECORD_COMP_LZ4 = 4,
     /** To compress with LZMA. */
-    RECORD_COMPRESSION_LZMA = 4,
+    RECORD_COMP_LZMA = 5,
   };
 
   /**
@@ -242,7 +245,7 @@ class HashDBM final : public DBM {
      * value is large.  Because compression is implemented with external libraries, available
      * algorithms are limited to the ones which were enabled when the database librarry was built.
      */
-    RecordCompressionMode record_compression_mode = RECORD_COMPRESSION_DEFAULT;
+    RecordCompressionMode record_comp_mode = RECORD_COMP_DEFAULT;
     /**
      * The width to represent the offset of records.
      * @details This determines the maximum size of the database and the footprint.  -1 means
@@ -731,6 +734,13 @@ class HashDBM final : public DBM {
    * @return the record CRC width.
    */
   static int32_t GetCRCWidthFromStaticFlags(int32_t static_flags);
+
+  /**
+   * Makes the compressor from the static flags.
+   * @param static_flags The static flags.
+   * @return the compressor object or nullptr for no compression.
+   */
+  static std::unique_ptr<Compressor> MakeCompressorFromStaticFlags(int32_t static_flags);
 
   /**
    * Restores a broken database as a new healthy database.

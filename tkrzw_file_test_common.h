@@ -64,7 +64,7 @@ void CommonFileTest::EmptyFileTest(tkrzw::File* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
   EXPECT_EQ(0, tkrzw::GetFileSize(file_path));
   auto tmp_file = file->MakeFile();
-  EXPECT_EQ(typeid(*file), typeid(*tmp_file));
+  EXPECT_EQ(file->GetType(), tmp_file->GetType());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->CopyProperties(tmp_file.get()));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
