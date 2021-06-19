@@ -1,3 +1,16 @@
+2021-06-19  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.30
+	- Library version: 1.19.0
+
+	- Data compression features are added.
+
+	- Confirmed compatibility of the compression libraries
+	- zlib 1.2.11
+	- libzstd 1.4.5
+	- liblz4 1.9.2
+	- liblzma 5.2.4
+
 2021-06-14  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.29
