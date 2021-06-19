@@ -84,7 +84,7 @@ TEST(SysConfigTest, FixNumRandom) {
   constexpr int32_t num_iterations = 10;
   constexpr uint64_t max_number = 1ULL << 60;
   std::mt19937 mt(1);
-  std::uniform_int_distribution<uint8_t> dist(0, 10);
+  std::uniform_int_distribution<int32_t> dist(0, 10);
   for (int32_t i = 0; i < num_iterations; i++) {
     uint64_t num = 0;
     while (num <= max_number) {
@@ -193,7 +193,7 @@ TEST(SysConfigTest, VarNumRandom) {
   constexpr int32_t num_iterations = 40;
   constexpr uint64_t max_number = 1ULL << 60;
   std::mt19937 mt(1);
-  std::uniform_int_distribution<uint8_t> dist(0, 10);
+  std::uniform_int_distribution<int32_t> dist(0, 10);
   for (int32_t i = 0; i < num_iterations; i++) {
     uint64_t num = 0;
     while (num <= max_number) {

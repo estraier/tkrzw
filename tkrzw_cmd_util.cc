@@ -311,7 +311,7 @@ void PrintDBMRecordsInTSV(DBM* dbm) {
 
 std::string MakeCyclishText(size_t size, int32_t seed) {
   std::mt19937 mt(seed);
-  std::uniform_int_distribution<uint8_t> space_dist(0, 7);
+  std::uniform_int_distribution<int32_t> space_dist(0, 7);
   std::string text;
   text.reserve(size);
   for (size_t i = 0; i < size; i++) {
@@ -329,11 +329,11 @@ std::string MakeNaturalishText(size_t size, int32_t seed) {
   const char all_chars[] = "abcdefghijklmnopqrstuvwzyz";
   const char freq_chars[] = "aeiou";
   std::mt19937 mt(seed);
-  std::uniform_int_distribution<uint8_t> space_dist(0, 7);
-  std::uniform_int_distribution<uint8_t> mode_dist(0, 2);
+  std::uniform_int_distribution<int32_t> space_dist(0, 7);
+  std::uniform_int_distribution<int32_t> mode_dist(0, 2);
   std::normal_distribution<double> norm_dist(std::size(all_chars) / 2.0, sizeof(all_chars) / 4.0);
-  std::uniform_int_distribution<uint8_t> all_dist(0, sizeof(all_chars) - 2);
-  std::uniform_int_distribution<uint8_t> freq_dist(0, sizeof(freq_chars) - 2);
+  std::uniform_int_distribution<int32_t> all_dist(0, sizeof(all_chars) - 2);
+  std::uniform_int_distribution<int32_t> freq_dist(0, sizeof(freq_chars) - 2);
   std::string text;
   text.reserve(size);
   for (size_t i = 0; i < size; i++) {

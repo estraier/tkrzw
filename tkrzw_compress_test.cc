@@ -49,7 +49,7 @@ void CompressorTest::BasicTest(tkrzw::Compressor* compressor) {
     inputs.emplace_back(cycle_str);
     std::string random_str;
     std::mt19937 mt(size);
-    std::uniform_int_distribution<uint8_t> dist(0, tkrzw::UINT8MAX);
+    std::uniform_int_distribution<int32_t> dist(0, tkrzw::UINT8MAX);
     for (int32_t i = 0; i < size; i++) {
       random_str.append(1, dist(mt));
     }
