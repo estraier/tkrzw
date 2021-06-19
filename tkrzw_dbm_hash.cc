@@ -91,7 +91,7 @@ class HashDBMImpl final {
               int32_t options, const HashDBM::TuningParameters& tuning_params);
   Status Close();
   Status Process(
-      std::string_view key, DBM::RecordProcessor* proc, bool writable);
+      std::string_view key, DBM::RecordProcessor* proc, bool readable, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -147,7 +147,8 @@ class HashDBMImpl final {
   Status SaveFBP();
   Status LoadFBP();
   Status ProcessImpl(
-      std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc, bool writable);
+      std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc,
+      bool readable, bool writable);
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
   Status SetBucketValue(int64_t bucket_index, int64_t value);
   Status ReadNextBucketRecords(HashDBMIteratorImpl* iter);
@@ -311,7 +312,7 @@ Status HashDBMImpl::Close() {
 }
 
 Status HashDBMImpl::Process(
-    std::string_view key, DBM::RecordProcessor* proc, bool writable) {
+    std::string_view key, DBM::RecordProcessor* proc, bool readable, bool writable) {
   std::shared_lock<std::shared_timed_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
@@ -326,7 +327,7 @@ Status HashDBMImpl::Process(
   }
   ScopedHashLock record_lock(record_mutex_, key, writable);
   const int64_t bucket_index = record_lock.GetBucketIndex();
-  return ProcessImpl(key, bucket_index, proc, writable);
+  return ProcessImpl(key, bucket_index, proc, readable, writable);
 }
 
 Status HashDBMImpl::ProcessMulti(
@@ -354,7 +355,8 @@ Status HashDBMImpl::ProcessMulti(
   for (size_t i = 0; i < key_proc_pairs.size(); i++) {
     const auto& key_proc = key_proc_pairs[i];
     const int64_t bucket_index = bucket_indices[i];
-    const Status status = ProcessImpl(key_proc.first, bucket_index, key_proc.second, writable);
+    const Status status =
+        ProcessImpl(key_proc.first, bucket_index, key_proc.second, true, writable);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -468,7 +470,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     }
     if (writable) {
       for (const auto& key : keys) {
-        status = ProcessImpl(key, bucket_index, proc, true);
+        status = ProcessImpl(key, bucket_index, proc, true, true);
         if (status != Status::SUCCESS) {
           return status;
         }
@@ -1378,7 +1380,8 @@ Status HashDBMImpl::LoadFBP() {
 }
 
 Status HashDBMImpl::ProcessImpl(
-    std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc, bool writable) {
+    std::string_view key, int64_t bucket_index, DBM::RecordProcessor* proc,
+    bool readable, bool writable) {
   const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
   int64_t top = 0;
   Status status = GetBucketValue(bucket_index, &top);
@@ -1390,7 +1393,9 @@ Status HashDBMImpl::ProcessImpl(
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   ScopedStringView comp_data_placeholder;
   while (current_offset > 0) {
-    status = rec.ReadMetadataKey(current_offset, min_read_size_);
+    const int32_t min_read_size =
+        readable ? HashRecord::META_UNREADABLE_READ_SIZE : min_read_size_;
+    status = rec.ReadMetadataKey(current_offset, min_read_size);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -1400,12 +1405,16 @@ Status HashDBMImpl::ProcessImpl(
       const bool old_is_set = rec.GetOperationType() == HashRecord::OP_SET;
       std::string_view old_value = rec.GetValue();
       if (old_is_set) {
-        if (old_value.data() == nullptr) {
-          status = rec.ReadBody();
-          if (status != Status::SUCCESS) {
-            return status;
+        if (readable) {
+          if (old_value.data() == nullptr) {
+            status = rec.ReadBody();
+            if (status != Status::SUCCESS) {
+              return status;
+            }
+            old_value = rec.GetValue();
           }
-          old_value = rec.GetValue();
+        } else {
+          old_value = std::string_view(nullptr, old_value.size());
         }
         new_value = CallRecordProcessFull(
             proc, key, old_value, compressor_.get(), &comp_data_placeholder);
@@ -1670,14 +1679,14 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       Status set_status(Status::SUCCESS);
       DBM::RecordProcessorSet setter(&set_status, value, true, nullptr);
-      *status_ = impl_->Process(key, &setter, true);
+      *status_ = impl_->Process(key, &setter, false, true);
       *status_ |= set_status;
       return NOOP;
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       Status remove_status(Status::SUCCESS);
       DBM::RecordProcessorRemove remover(&remove_status, nullptr);
-      *status_ = impl_->Process(key, &remover, true);
+      *status_ = impl_->Process(key, &remover, false, true);
       *status_ |= remove_status;
       return NOOP;
     }
@@ -1831,7 +1840,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
           }
           Status set_status(Status::SUCCESS);
           DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
-          status = Process(key, &setter, true);
+          status = Process(key, &setter, false, true);
           if (status != Status::SUCCESS) {
             CleanUp();
             return status;
@@ -1846,7 +1855,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
         bool setted = false;
         Status get_status(Status::SUCCESS);
         DBM::RecordProcessorGet getter(&get_status, nullptr);
-        status = Process(key, &getter, false);
+        status = Process(key, &getter, false, false);
         if (status != Status::SUCCESS) {
           CleanUp();
           return status;
@@ -1961,7 +1970,8 @@ Status HashDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   {
     ScopedHashLock record_lock(dbm_->record_mutex_, first_key, writable);
     const int64_t bucket_index = record_lock.GetBucketIndex();
-    const Status status = dbm_->ProcessImpl(first_key, bucket_index, &proc_wrapper, writable);
+    const Status status =
+        dbm_->ProcessImpl(first_key, bucket_index, &proc_wrapper, true, writable);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -2016,7 +2026,38 @@ Status HashDBM::Close() {
 
 Status HashDBM::Process(std::string_view key, RecordProcessor* proc, bool writable) {
   assert(proc != nullptr);
-  return impl_->Process(key, proc, writable);
+  return impl_->Process(key, proc, true, writable);
+}
+
+Status HashDBM::Get(std::string_view key, std::string* value) {
+  Status impl_status(Status::SUCCESS);
+  RecordProcessorGet proc(&impl_status, value);
+  const Status status = impl_->Process(key, &proc, value != nullptr, false);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  return impl_status;
+}
+
+Status HashDBM::Set(std::string_view key, std::string_view value, bool overwrite,
+                    std::string* old_value) {
+  Status impl_status(Status::SUCCESS);
+  RecordProcessorSet proc(&impl_status, value, overwrite, old_value);
+  const Status status = impl_->Process(key, &proc, old_value != nullptr, true);
+  if (status != Status::SUCCESS) {
+      return status;
+  }
+  return impl_status;
+}
+
+Status HashDBM::Remove(std::string_view key, std::string* old_value) {
+  Status impl_status(Status::SUCCESS);
+  RecordProcessorRemove proc(&impl_status, old_value);
+  const Status status = impl_->Process(key, &proc, old_value != nullptr, true);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  return impl_status;
 }
 
 Status HashDBM::ProcessMulti(

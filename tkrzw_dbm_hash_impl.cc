@@ -708,7 +708,9 @@ void FreeBlockPool::Deserialize(std::string_view str, int32_t offset_width, int3
 std::string_view CallRecordProcessFull(
     DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
     Compressor* compressor, ScopedStringView* comp_data_placeholder) {
-  if (compressor != nullptr) {
+  if (old_value.data() == nullptr) {
+    old_value = std::string_view("", 0);
+  } else if (compressor != nullptr) {
     size_t decomp_size = 0;
     char* decomp_buf =
         compressor->Decompress(old_value.data(), old_value.size(), &decomp_size);

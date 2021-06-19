@@ -40,6 +40,8 @@ class HashRecord final {
  public:
   /** The range to check the hash chain for restoration. */
   static constexpr int64_t RESTORE_CHECK_CHAIN_RANGE = 1024 * 1024;
+  /** The size to read the meta data for unreadable operations. */
+  static constexpr int32_t META_UNREADABLE_READ_SIZE = 24;
 
   /**
    * Enumeration for operation types.

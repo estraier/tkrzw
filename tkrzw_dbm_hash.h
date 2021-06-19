@@ -382,6 +382,38 @@ class HashDBM final : public DBM {
   Status Process(std::string_view key, RecordProcessor* proc, bool writable) override;
 
   /**
+   * Gets the value of a record of a key.
+   * @param key The key of the record.
+   * @param value The pointer to a string object to contain the result value.  If it is nullptr,
+   * the value data is ignored.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
+   */
+  Status Get(std::string_view key, std::string* value = nullptr) override;
+
+  /**
+   * Sets a record of a key and a value.
+   * @param key The key of the record.
+   * @param value The value of the record.
+   * @param overwrite Whether to overwrite the existing value if there's a record with the same
+   * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+   * is given up and an error status is returned.
+   * @param old_value The pointer to a string object to contain the old value.  Assignment is done
+   * even on the duplication error.  If it is nullptr, it is ignored.
+   * @return The result status.  If overwriting is abandoned, DUPLICATION_ERROR is returned.
+   */
+  Status Set(std::string_view key, std::string_view value, bool overwrite = true,
+             std::string* old_value = nullptr) override;
+
+  /**
+   * Removes a record of a key.
+   * @param key The key of the record.
+   * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
+   * it is ignored.
+   * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
+   */
+  Status Remove(std::string_view key, std::string* old_value = nullptr) override;
+
+  /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects.
    * @param writable True if the processors can edit the records.
