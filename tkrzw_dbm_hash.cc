@@ -1846,7 +1846,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
         bool setted = false;
         Status get_status(Status::SUCCESS);
         DBM::RecordProcessorGet getter(&get_status, nullptr);
-        status = Process(key, &getter, true);
+        status = Process(key, &getter, false);
         if (status != Status::SUCCESS) {
           CleanUp();
           return status;
