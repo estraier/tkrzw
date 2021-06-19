@@ -492,6 +492,15 @@ class ShardDBM final : public ParamDBM {
   DBM* GetInternalDBM() const;
 
   /**
+   * Gets the number of shards of a database.
+   * @param path The database path.
+   * @param num_shards The pointer to a variable to store the result.
+   * @return The result status.
+   * @details If there are multiple candidates, this function report a failure.
+   */
+  static Status GetNumberOfShards(const std::string& path, int32_t* num_shards);
+
+  /**
    * Restores a broken database as a new healthy database.
    * @param old_file_path The path of the broken database.
    * @param new_file_path The path of the new database to be created.

@@ -381,6 +381,9 @@ TEST_F(ShardDBMTest, ShardRestoreAndRename) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, value));
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  int32_t num_shards = 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ShardDBM::GetNumberOfShards(file_path, &num_shards));
+  EXPECT_EQ(3, num_shards);
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ShardDBM::RestoreDatabase(file_path, new_file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(new_file_path, false));
   for (int32_t i = 1; i <= 100; i++) {

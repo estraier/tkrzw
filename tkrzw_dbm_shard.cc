@@ -50,23 +50,13 @@ Status ShardDBM::OpenAdvanced(
   }
   int32_t num_shards = StrToInt(SearchMap(params, "num_shards", "0"));
   if (num_shards < 1) {
-    const std::string dir_path = tkrzw::PathToDirectoryName(path);
-    const std::string base_name = tkrzw::PathToBaseName(path);
-    const std::string zero_name = base_name + "-00000-of-";
-    std::vector<std::string> child_names;
-    const Status status = tkrzw::ReadDirectory(dir_path, &child_names);
+    const Status status = GetNumberOfShards(path, &num_shards);
     if (status != Status::SUCCESS) {
-      return status;
-    }
-    std::sort(child_names.begin(), child_names.end());
-    for (const auto& child_name : child_names) {
-      if (tkrzw::StrBeginsWith(child_name, zero_name)) {
-        num_shards = StrToInt(child_name.substr(zero_name.size()));
-        break;
+      if (status == Status::NOT_FOUND_ERROR) {
+        num_shards = 1;
+      } else {
+        return status;
       }
-    }
-    if (num_shards < 1) {
-      num_shards = 1;
     }
   }
   dbms_.reserve(num_shards);
@@ -819,26 +809,40 @@ Status ShardDBM::Iterator::Remove() {
   return status;
 }
 
-Status ShardDBM::RestoreDatabase(
-    const std::string& old_file_path, const std::string& new_file_path,
-    const std::string& class_name, int64_t end_offset) {
-  const std::string dir_path = tkrzw::PathToDirectoryName(old_file_path);
-  const std::string base_name = tkrzw::PathToBaseName(old_file_path);
+Status ShardDBM::GetNumberOfShards(const std::string& path, int32_t* num_shards) {
+  assert(num_shards != nullptr);
+  const std::string dir_path = tkrzw::PathToDirectoryName(path);
+  const std::string base_name = tkrzw::PathToBaseName(path);
   const std::string zero_name = base_name + "-00000-of-";
   std::vector<std::string> child_names;
-  Status status = tkrzw::ReadDirectory(dir_path, &child_names);
+  Status status = ReadDirectory(dir_path, &child_names);
   if (status != Status::SUCCESS) {
     return status;
   }
   std::sort(child_names.begin(), child_names.end());
-  int32_t num_shards = 0;
+  int32_t cand_num_shards = 0;
   for (const auto& child_name : child_names) {
     if (tkrzw::StrBeginsWith(child_name, zero_name)) {
-      num_shards = StrToInt(child_name.substr(zero_name.size()));
+      if (cand_num_shards > 0) {
+        return Status(Status::DUPLICATION_ERROR, "multiple candidates");
+      }
+      cand_num_shards = StrToInt(child_name.substr(zero_name.size()));
     }
   }
-  if (num_shards < 1) {
-    return Status(Status::NOT_FOUND_ERROR);
+  if (cand_num_shards < 1) {
+    return Status(Status::NOT_FOUND_ERROR, "no matching files");
+  }
+  *num_shards = cand_num_shards;
+  return Status(Status::SUCCESS);
+}
+
+Status ShardDBM::RestoreDatabase(
+    const std::string& old_file_path, const std::string& new_file_path,
+    const std::string& class_name, int64_t end_offset) {
+  int32_t num_shards = 0;
+  Status status = GetNumberOfShards(old_file_path, &num_shards);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   for (int32_t i = 0; i < num_shards; i++) {
     const std::string old_join_path = old_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
@@ -850,23 +854,10 @@ Status ShardDBM::RestoreDatabase(
 
 Status ShardDBM::RenameDatabase(
     const std::string& old_file_path, const std::string& new_file_path) {
-  const std::string dir_path = tkrzw::PathToDirectoryName(old_file_path);
-  const std::string base_name = tkrzw::PathToBaseName(old_file_path);
-  const std::string zero_name = base_name + "-00000-of-";
-  std::vector<std::string> child_names;
-  Status status = tkrzw::ReadDirectory(dir_path, &child_names);
+  int32_t num_shards = 0;
+  Status status = GetNumberOfShards(old_file_path, &num_shards);
   if (status != Status::SUCCESS) {
     return status;
-  }
-  std::sort(child_names.begin(), child_names.end());
-  int32_t num_shards = 0;
-  for (const auto& child_name : child_names) {
-    if (tkrzw::StrBeginsWith(child_name, zero_name)) {
-      num_shards = StrToInt(child_name.substr(zero_name.size()));
-    }
-  }
-  if (num_shards < 1) {
-    return Status(Status::NOT_FOUND_ERROR);
   }
   for (int32_t i = 0; i < num_shards; i++) {
     const std::string old_join_path = old_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
