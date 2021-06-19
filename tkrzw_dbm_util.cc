@@ -476,6 +476,17 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     } else if (record_crc == 32) {
       tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_32;
     }
+    if (record_comp == "none") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_NONE;
+    } else if (record_comp == "zlib") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_ZLIB;
+    } else if (record_comp == "zstd") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_ZSTD;
+    } else if (record_comp == "lz4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
+    } else if (record_comp == "lzma") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
