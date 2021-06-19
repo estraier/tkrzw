@@ -367,4 +367,36 @@ TEST_F(ShardDBMTest, ShardIteratorBound) {
   }
 }
 
+TEST_F(ShardDBMTest, ShardRestoreAndRename) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  const std::string new_file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::ShardDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE,
+      {{"num_shards", "3"}, {"num_buckets", "10"}}));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::SPrintF("%08d", i);
+    const std::string value = tkrzw::ToString(i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, value));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ShardDBM::RestoreDatabase(file_path, new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(new_file_path, false));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::SPrintF("%08d", i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Get(key));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  const std::string zero_file_path = file_path + "-00000-of-00003";
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(zero_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ShardDBM::RenameDatabase(new_file_path, file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, false));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::SPrintF("%08d", i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Get(key));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
 // END OF FILE

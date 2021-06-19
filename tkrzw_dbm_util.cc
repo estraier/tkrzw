@@ -36,7 +36,7 @@ static void PrintUsageAndDie() {
   P("    : Lists up records and prints them.\n");
   P("  %s rebuild [common_options] [tuning_options] file\n", progname);
   P("    : Rebuilds a database file for optimization.\n");
-  P("  %s restore [common_options] old_file new_file\n", progname);
+  P("  %s restore [common_options] old_file [new_file]\n", progname);
   P("    : Restores a broken database file.\n");
   P("  %s merge [common_options] dest_file src_files...\n", progname);
   P("    : Merges database files.\n");
@@ -994,7 +994,7 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
 // Processes the restore subcommand.
 static int32_t ProcessRestore(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 2}, {"--dbm", 1}, {"--end_offset", 1}, {"--class", 1},
+    {"--dbm", 1}, {"--end_offset", 1}, {"--class", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1003,55 +1003,74 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
     PrintUsageAndDie();
   }
   const std::string old_file_path = GetStringArgument(cmd_args, "", 0, "");
-  const std::string new_file_path = GetStringArgument(cmd_args, "", 1, "");
+  std::string new_file_path = GetStringArgument(cmd_args, "", 1, "");
   const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
   const int64_t end_offset = GetIntegerArgument(cmd_args, "--end_offset", 0, -1);
   const std::string class_name = GetStringArgument(cmd_args, "--class", 0, "");
   if (old_file_path.empty()) {
     Die("The old file path must be specified");
   }
-  if (new_file_path.empty()) {
-    Die("The new file path must be specified");
-  }
   if (old_file_path == new_file_path) {
     Die("The old file and the new file must be different");
+  }
+  bool in_place = false;
+  if (new_file_path.empty()) {
+    in_place = true;
+    new_file_path = old_file_path + ".restore." + ToString(static_cast<uint64_t>(GetWallTime()));
   }
   bool has_error = false;
   const std::string dbm_impl_mod = GetDBMImplName(dbm_impl, old_file_path);
   if (dbm_impl_mod == "hash") {
     const Status status = HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
     if (status != Status::SUCCESS) {
-      EPrintL("RestoreDabase failed: ", status);
+      EPrintL("RestoreDatabase failed: ", status);
       has_error = true;
     }
   } else if (dbm_impl_mod == "tree") {
     const Status status = TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
     if (status != Status::SUCCESS) {
-      EPrintL("RestoreDabase failed: ", status);
+      EPrintL("RestoreDatabase failed: ", status);
       has_error = true;
     }
   } else if (dbm_impl_mod == "skip") {
     const Status status = SkipDBM::RestoreDatabase(old_file_path, new_file_path);
     if (status != Status::SUCCESS) {
-      EPrintL("RestoreDabase failed: ", status);
+      EPrintL("RestoreDatabase failed: ", status);
       has_error = true;
     }
   } else if (dbm_impl_mod == "poly") {
     const Status status = PolyDBM::RestoreDatabase(
         old_file_path, new_file_path, class_name, end_offset);
     if (status != Status::SUCCESS) {
-      EPrintL("RestoreDabase failed: ", status);
+      EPrintL("RestoreDatabase failed: ", status);
       has_error = true;
     }
   } else if (dbm_impl_mod == "shard") {
     const Status status = ShardDBM::RestoreDatabase(
         old_file_path, new_file_path, class_name, end_offset);
     if (status != Status::SUCCESS) {
-      EPrintL("RestoreDabase failed: ", status);
+      EPrintL("RestoreDatabase failed: ", status);
       has_error = true;
     }
   } else {
     Die("Unknown DBM implementation: ", dbm_impl);
+  }
+  if (in_place) {
+    if (has_error) {
+      RemoveFile(new_file_path);
+    } else if (dbm_impl_mod == "shard") {
+      const Status status = ShardDBM::RenameDatabase(new_file_path, old_file_path);
+      if (status != Status::SUCCESS) {
+        EPrintL("RenameDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      const Status status = RenameFile(new_file_path, old_file_path);
+      if (status != Status::SUCCESS) {
+        EPrintL("RenameFile failed: ", status);
+        has_error = true;
+      }
+    }
   }
   return has_error ? 1 : 0;
 }

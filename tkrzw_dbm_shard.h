@@ -505,6 +505,15 @@ class ShardDBM final : public ParamDBM {
     const std::string& old_file_path, const std::string& new_file_path,
     const std::string& class_name = "", int64_t end_offset = -1);
 
+  /**
+   * Renames all files of a database to ones of another name.
+   * @param old_file_path The path of the database.
+   * @param new_file_path The path of the new database.
+   * @return The result status.
+   */
+  static Status RenameDatabase(
+    const std::string& old_file_path, const std::string& new_file_path);
+
  private:
   /** The internal database objects. */
   std::vector<std::shared_ptr<PolyDBM>> dbms_;

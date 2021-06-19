@@ -324,6 +324,8 @@ check-hashdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm hash casket-new.tkh four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm hash casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm hash casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm hash casket-new.tkh casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm hash --file pos-para \
@@ -415,6 +417,8 @@ check-treedbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm tree casket-new.tkt four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm tree casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm tree casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm tree casket-new.tkt casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm tree --file pos-atom \
@@ -480,6 +484,8 @@ check-skipdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm skip casket-new.tks four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-new.tks one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm skip casket-new.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm skip casket-new.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-new.tks one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm skip --reducer last casket-new.tks casket.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm skip --file pos-atom \
@@ -592,6 +598,8 @@ check-polydbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm poly casket-new.tkh four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm poly casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm poly casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm poly casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm poly casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm poly casket-new.tkh
 
 check-sharddbm-perf :
@@ -636,6 +644,8 @@ check-sharddbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm shard casket-new.tkt four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm shard casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm shard casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm shard casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm shard casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm shard casket-new.tkt
 
 check-index-perf :

@@ -1,3 +1,10 @@
+2021-06-22  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.31
+	- Library version: 1.20.0
+
+	- "tkrzw_dbm_util restore" supports in-place restoration.
+
 2021-06-19  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.30

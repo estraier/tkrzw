@@ -2599,7 +2599,7 @@ int main(int argc, char** argv) {
 <dd>Lists up records and prints them.</dd>
 <dt><code>tkrzw_dbm_util rebuild [<var>common_options</var>] [<var>tuning_options</var>] <var>file</var></code></dt>
 <dd>Rebuilds a database file for optimization.</dd>
-<dt><code>tkrzw_dbm_util restore [<var>common_options</var>] <var>old_file</var> <var>new_file</var></code></dt>
+<dt><code>tkrzw_dbm_util restore [<var>common_options</var>] <var>old_file</var> [<var>new_file</var></code>]</dt>
 <dd>Restores a broken database file.</dd>
 <dt><code>tkrzw_dbm_util merge [<var>common_options</var>] <var>dest_file</var> <var>src_files</var>...</code></dt>
 <dd>Merges database files.</dd>
@@ -3641,7 +3641,7 @@ Should be Rebuilt: true
 
 <p>In contrast to the default API setting, the command line tool doesn't restore the database implicitly.  If you want to do the restore operation explicitly, you'll run a command like this.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh casket-restored.tkh
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh
 ]]></code></pre>
 
 <p>If you want to set tuning parameters to the new restored database, you can prepare the new database with the tuning parameters and set it as the destination.  This operation can be done even for a healthy database to rebuild it.</p>
@@ -3653,7 +3653,7 @@ Should be Rebuilt: true
 
 <p>To restore sharded database files like (casket.tkh-00000-of-00002 and casket.tkh-00001-of-00002), you'll run a command like this.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore --dbm shard --class hash casket.tkh casket-restored.tkh
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore --dbm shard --class hash casket.tkh
 ]]></code></pre>
 
 <p>HashDBM and TreeDBM support the appending update mode.  Databases in the appending mode can utilize an interesting feature called snapshot reproduction.  As all updating operations are recorded in the database, you can consider the database as a list of REDO logs.  You can replay them until a certain moment.  And, the moment is represented as the then size of the database file.  Given that you know the file size at a moment by calling the GetFileSize method, you can restore the database to the state at the moment.  You'll check the behavior by commands like this.</p>

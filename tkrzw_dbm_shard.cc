@@ -848,6 +848,34 @@ Status ShardDBM::RestoreDatabase(
   return status;
 }
 
+Status ShardDBM::RenameDatabase(
+    const std::string& old_file_path, const std::string& new_file_path) {
+  const std::string dir_path = tkrzw::PathToDirectoryName(old_file_path);
+  const std::string base_name = tkrzw::PathToBaseName(old_file_path);
+  const std::string zero_name = base_name + "-00000-of-";
+  std::vector<std::string> child_names;
+  Status status = tkrzw::ReadDirectory(dir_path, &child_names);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::sort(child_names.begin(), child_names.end());
+  int32_t num_shards = 0;
+  for (const auto& child_name : child_names) {
+    if (tkrzw::StrBeginsWith(child_name, zero_name)) {
+      num_shards = StrToInt(child_name.substr(zero_name.size()));
+    }
+  }
+  if (num_shards < 1) {
+    return Status(Status::NOT_FOUND_ERROR);
+  }
+  for (int32_t i = 0; i < num_shards; i++) {
+    const std::string old_join_path = old_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
+    const std::string new_join_path = new_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
+    status |= RenameFile(old_join_path, new_join_path);
+  }
+  return status;
+}
+
 }  // namespace tkrzw
 
 // END OF FILE
