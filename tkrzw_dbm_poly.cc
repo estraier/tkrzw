@@ -249,8 +249,8 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   if (restore_mode == "restore_sync" || restore_mode == "sync") {
     tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
   }
-  if (restore_mode == "restore_noop" || restore_mode == "noop") {
-    tuning_params->restore_mode = HashDBM::RESTORE_NOOP;
+  if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
+    tuning_params->restore_mode = HashDBM::RESTORE_READ_ONLY;
   }
   tuning_params->fbp_capacity = StrToInt(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToInt(SearchMap(*params, "min_read_size", "-1"));
@@ -291,8 +291,8 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   if (restore_mode == "restore_sync" || restore_mode == "sync") {
     tuning_params->restore_mode = SkipDBM::RESTORE_SYNC;
   }
-  if (restore_mode == "restore_noop" || restore_mode == "noop") {
-    tuning_params->restore_mode = SkipDBM::RESTORE_NOOP;
+  if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
+    tuning_params->restore_mode = SkipDBM::RESTORE_READ_ONLY;
   }
   tuning_params->sort_mem_size = StrToInt(SearchMap(*params, "sort_mem_size", "-1"));
   tuning_params->insert_in_order = StrToBool(SearchMap(*params, "insert_in_order", "false"));

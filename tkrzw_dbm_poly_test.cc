@@ -154,7 +154,7 @@ TEST_F(PolyDBMTest, PolyBasicTest) {
   const std::vector<Config> configs = {
     {"HashDBM", "casket",
      {{"dbm", "hash"}, {"file", "mmap-para"}, {"record_crc_mode", "8"}, {"num_buckets", "50"},
-      {"restore_mode", "noop"}}, {}, {{"offset_width", "3"}}},
+      {"restore_mode", "read_only"}}, {}, {{"offset_width", "3"}}},
     {"HashDBM", "casket.tkh",
      {{"file", "mmap-atom"}, {"update_mode", "update_appending"}, {"offset_width", "3"},
       {"align_pow", "1"}, {"num_buckets", "50"}, {"lock_mem_buckets", "true"}}, {}, {}},
@@ -171,7 +171,7 @@ TEST_F(PolyDBMTest, PolyBasicTest) {
     {"SkipDBM", "casket",
      {{"dbm", "skip"}, {"step_unit", "3"}}, {{"reducer", "last"}}, {{"max_level", "5"}}},
     {"SkipDBM", "casket.tks",
-     {{"insert_in_order", "true"}, {"step_unit", "8"}, {"restore_mode", "noop"}}, {}, {}},
+     {{"insert_in_order", "true"}, {"step_unit", "8"}, {"restore_mode", "read_only"}}, {}, {}},
     {"TinyDBM", "",
      {{"dbm", "tiny"}, {"num_buckets", "50"}}, {}, {{"num_buckets", "30"}}},
     {"TinyDBM", "casket.tiny",

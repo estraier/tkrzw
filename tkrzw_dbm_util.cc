@@ -308,7 +308,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.lock_mem_buckets = -1;
     tuning_params.cache_buckets = -1;
     const Status status = hash_dbm->OpenAdvanced(path, writable, open_options, tuning_params);
@@ -348,7 +348,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.lock_mem_buckets = -1;
     tuning_params.cache_buckets = -1;
     tuning_params.max_page_size = max_page_size;
@@ -368,7 +368,7 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
     tuning_params.offset_width = offset_width;
     tuning_params.step_unit = step_unit;
     tuning_params.max_level = max_level;
-    tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
     tuning_params.sort_mem_size = sort_mem_size;
     tuning_params.insert_in_order = insert_in_order;
     const Status status = skip_dbm->OpenAdvanced(path, writable, open_options, tuning_params);

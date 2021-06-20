@@ -270,7 +270,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.min_read_size = min_read_size;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
@@ -310,7 +310,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
     tuning_params.num_buckets = num_buckets;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.min_read_size = min_read_size;
     tuning_params.lock_mem_buckets = lock_mem_buckets;
@@ -331,7 +331,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.offset_width = offset_width;
     tuning_params.step_unit = step_unit;
     tuning_params.max_level = max_level;
-    tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
     tuning_params.sort_mem_size = sort_mem_size;
     tuning_params.insert_in_order = insert_in_order;
     tuning_params.max_cached_records = max_cached_records;

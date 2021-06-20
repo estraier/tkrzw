@@ -3621,7 +3621,7 @@ $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard -
 
 <p>An opened database should be closed properly.  Otherwise, the database file might be broken.  When a database is opened, a field in the metadata section is marked as "opened".  When the database is closed, the field is marked as "closed".  If the process opening a database crashes without closing the database, the field is still marked as "opened".  When the database file is opened the next time, the library detects the past incident and the database is considered "unhealthy".</p>
 
-<p>By default, an unhealthy database is restored automatically when you open the database.  The whole database file is scanned and as many records as possible are salvaged.  This behavior can be changed by setting the restore_mode tuning parameter.  If it is RESTORE_SYNC, the database is restored to the state at the time when the Synchronized method was called last time.  If it is RESTORE_NOOP, no restore operations are done and the database becomes read-only to avoid further inconsistency.</p>
+<p>By default, an unhealthy database is restored automatically when you open the database.  The whole database file is scanned and as many records as possible are salvaged.  This behavior can be changed by setting the restore_mode tuning parameter.  If it is RESTORE_SYNC, the database is restored to the state at the time when the Synchronized method was called last time.  If it is RESTORE_READ_ONLY, no restore operations are done and the database becomes read-only to avoid further inconsistency.  If it is RESTORE_NOOP, the database is treated healthy without any restore operation.</p>
 
 <p>You can check whether a database is healthy or not by a command like this.</p>
 

@@ -179,8 +179,10 @@ class SkipDBM final : public DBM {
     RESTORE_DEFAULT = 0,
     /** To restore to the last synchronized state. */
     RESTORE_SYNC = 1,
-    /** To do nothing make the database read-only. */
-    RESTORE_NOOP = 2,
+    /** To make the database read-only. */
+    RESTORE_READ_ONLY = 2,
+    /** To do nothing. */
+    RESTORE_NOOP = 3,
   };
 
   /**

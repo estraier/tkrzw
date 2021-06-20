@@ -292,8 +292,8 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     }
   }
   auto_restored_ = false;
-  if (writable && !healthy && (tuning_params.restore_mode != SkipDBM::RESTORE_NOOP)) {
-    if (invalid_file_size) {
+  if (writable && !healthy && tuning_params.restore_mode != SkipDBM::RESTORE_READ_ONLY) {
+    if (invalid_file_size && tuning_params.restore_mode != SkipDBM::RESTORE_NOOP) {
       file_->Close();
       const std::string tmp_path = norm_path + ".tmp.restore";
       status = SkipDBM::RestoreDatabase(norm_path, tmp_path);

@@ -286,8 +286,8 @@ class PolyDBM final : public ParamDBM {
    *   - align_pow (int): The power to align records.
    *   - num_buckets (int): The number of buckets for hashing.
    *   - restore_mode (string): How to restore the database file: "RESTORE_SYNC" to restore to
-   *     the last synchronized state or "RESTORE_NOOP" to do nothing make the database read-only.
-   *     By default, as many records as possible are restored.
+   *     the last synchronized state, "RESTORE_READ_ONLY" to make the database read-only, or
+   *     "RESTORE_NOOP" to do nothing.  By default, as many records as possible are restored.
    *   - fbp_capacity (int): The capacity of the free block pool.
    *   - min_read_size (int): The minimum reading size to read a record.
    *   - lock_mem_buckets (int): Positive to lock the memory for the hash buckets.
@@ -307,8 +307,8 @@ class PolyDBM final : public ParamDBM {
    *   - step_unit (int): The step unit of the skip list.
    *   - max_level (int): The maximum level of the skip list.
    *   - restore_mode (string): How to restore the database file: "RESTORE_SYNC" to restore to
-   *     the last synchronized state or "RESTORE_NOOP" to do nothing make the database read-only.
-   *     By default, as many records as possible are restored.
+   *     the last synchronized state, "RESTORE_READ_ONLY" to make the database read-only, or
+   *     "RESTORE_NOOP" to do nothing.  By default, as many records as possible are restored.
    *   - sort_mem_size (int): The memory size used for sorting to build the database in the
    *     at-random mode.
    *   - insert_in_order (bool): If true, records are assumed to be inserted in ascending

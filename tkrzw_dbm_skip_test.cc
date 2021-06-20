@@ -143,7 +143,7 @@ void SkipDBMTest::SkipDBMLargeRecordTest(tkrzw::SkipDBM* dbm) {
         tuning_params.offset_width = offset_width;
         tuning_params.step_unit = step_unit;
         tuning_params.max_level = max_level;
-        tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+        tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
         tuning_params.sort_mem_size = 128 * 128 * 128 * 10;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -160,7 +160,7 @@ void SkipDBMTest::SkipDBMBackIteratorTest(tkrzw::SkipDBM* dbm) {
   tkrzw::SkipDBM::TuningParameters tuning_params;
   tuning_params.step_unit = 3;
   tuning_params.max_level = 4;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   BackIteratorTest(dbm);
@@ -173,7 +173,7 @@ void SkipDBMTest::SkipDBMIteratorBoundTest(tkrzw::SkipDBM* dbm) {
   tkrzw::SkipDBM::TuningParameters tuning_params;
   tuning_params.step_unit = 2;
   tuning_params.max_level = 4;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   IteratorBoundTest(dbm);
@@ -366,7 +366,7 @@ void SkipDBMTest::SkipDBMBasicTestAll(tkrzw::SkipDBM* dbm) {
           tuning_params.offset_width = offset_width;
           tuning_params.step_unit = step_unit;
           tuning_params.max_level = max_level;
-          tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
           tuning_params.sort_mem_size = 3000;
           tuning_params.insert_in_order = insert_in_order;
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -387,7 +387,7 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
   tuning_params.offset_width = 5;
   tuning_params.step_unit = 5;
   tuning_params.max_level = 15;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   tuning_params.sort_mem_size = 3000;
   tuning_params.insert_in_order = false;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -695,7 +695,7 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.step_unit = 3;
   tuning_params.max_level = 5;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
@@ -783,7 +783,7 @@ void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {
   }
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::SkipDBM::TuningParameters tuning_params;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   tuning_params.sort_mem_size = 1000;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -824,7 +824,7 @@ void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
   tkrzw::SkipDBM::TuningParameters tuning_params;
   tuning_params.step_unit = 2;
   tuning_params.max_level = 5;
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   for (int32_t i = 1; i <= 100; i++) {

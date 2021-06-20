@@ -134,7 +134,7 @@ void TreeDBMTest::TreeDBMLargeRecordTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -171,7 +171,7 @@ void TreeDBMTest::TreeDBMBasicTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -208,7 +208,7 @@ void TreeDBMTest::TreeDBMAppendTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -245,7 +245,7 @@ void TreeDBMTest::TreeDBMProcessTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -282,7 +282,7 @@ void TreeDBMTest::TreeDBMProcessMultiTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -319,7 +319,7 @@ void TreeDBMTest::TreeDBMProcessEachTest(tkrzw::TreeDBM* dbm) {
             tuning_params.update_mode = update_mode;
             tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
             tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
             tuning_params.max_page_size = max_page_size;
             tuning_params.max_branches = max_branches;
             tuning_params.max_cached_pages = max_cached_pages;
@@ -349,7 +349,7 @@ void TreeDBMTest::TreeDBMRandomTestOne(tkrzw::TreeDBM* dbm) {
           tkrzw::TreeDBM::TuningParameters tuning_params;
           tuning_params.update_mode = update_mode;
           tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
           tuning_params.max_page_size = max_page_size;
           tuning_params.max_branches = max_branches;
           tuning_params.max_cached_pages = max_cached_pages;
@@ -378,7 +378,7 @@ void TreeDBMTest::TreeDBMRandomTestThread(tkrzw::TreeDBM* dbm) {
           tkrzw::TreeDBM::TuningParameters tuning_params;
           tuning_params.update_mode = update_mode;
           tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
           tuning_params.max_page_size = max_page_size;
           tuning_params.max_branches = max_branches;
           tuning_params.max_cached_pages = max_cached_pages;
@@ -403,7 +403,7 @@ void TreeDBMTest::TreeDBMRecordMigrationTest(tkrzw::TreeDBM* dbm, tkrzw::File* f
     tuning_params.update_mode = update_mode;
     tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
     tuning_params.num_buckets = 1000;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
         file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
     EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(flat_file_path, true));
@@ -417,7 +417,7 @@ void TreeDBMTest::TreeDBMBackIteratorTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::TreeDBM::TuningParameters tuning_params;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.max_page_size = 100;
   tuning_params.max_branches = 2;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -430,7 +430,7 @@ void TreeDBMTest::TreeDBMIteratorBoundTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::TreeDBM::TuningParameters tuning_params;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.max_page_size = 1;
   tuning_params.max_branches = 2;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -498,7 +498,7 @@ void TreeDBMTest::TreeDBMReorganizeTestAll(tkrzw::TreeDBM* dbm) {
           tkrzw::TreeDBM::TuningParameters tuning_params;
           tuning_params.update_mode = update_mode;
           tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
           tuning_params.max_page_size = max_page_size;
           tuning_params.max_branches = max_branches;
           tuning_params.max_cached_pages = max_cached_pages;
@@ -516,7 +516,7 @@ void TreeDBMTest::TreeDBMIteratorTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::TreeDBM::TuningParameters tuning_params;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.max_page_size = 100;
   tuning_params.max_branches = 2;
   tuning_params.max_cached_pages = 1;
@@ -619,7 +619,7 @@ void TreeDBMTest::TreeDBMKeyComparatorTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   tkrzw::TreeDBM::TuningParameters tuning_params;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.key_comparator = tkrzw::LexicalCaseKeyComparator;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -764,7 +764,7 @@ void TreeDBMTest::TreeDBMRebuildStaticTestAll(tkrzw::TreeDBM* dbm) {
           tkrzw::TreeDBM::TuningParameters tuning_params;
           tuning_params.update_mode = update_mode;
           tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
           tuning_params.max_page_size = max_page_size;
           tuning_params.max_branches = max_branches;
           tuning_params.max_cached_pages = max_cached_pages;
@@ -790,7 +790,7 @@ void TreeDBMTest::TreeDBMRebuildRandomTest(tkrzw::TreeDBM* dbm) {
           tkrzw::TreeDBM::TuningParameters tuning_params;
           tuning_params.update_mode = update_mode;
           tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+          tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
           tuning_params.max_page_size = max_page_size;
           tuning_params.max_branches = max_branches;
           tuning_params.max_cached_pages = max_cached_pages;
@@ -819,7 +819,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     tuning_params.offset_width = 3;
     tuning_params.align_pow = 1;
     tuning_params.num_buckets = 1234;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.max_page_size = 100;
     tuning_params.max_branches = 3;
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -858,7 +858,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
     tuning_params.offset_width = 3;
     tuning_params.num_buckets = 1234;
-    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
     tuning_params.max_page_size = 200;
     tuning_params.max_branches = 5;
     tkrzw::TreeDBM second_dbm;
@@ -930,7 +930,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
       tuning_params.offset_width = 4;
       tuning_params.align_pow = 0;
       tuning_params.num_buckets = 3;
-      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+      tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
       tuning_params.cache_buckets = 1;
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
           file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
@@ -1040,7 +1040,7 @@ void TreeDBMTest::TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm) {
         tuning_params.offset_width = 4;
         tuning_params.align_pow = 0;
         tuning_params.num_buckets = 10;
-        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
         std::string value;
         for (int32_t i = 0; value.size() < 256; i++) {
           value.append(1, 'a' + i % 26);
@@ -1172,7 +1172,7 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   tuning_params.offset_width = 4;
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 3;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.cache_buckets = true;
   tuning_params.max_page_size = 1;
   tuning_params.max_branches = 2;

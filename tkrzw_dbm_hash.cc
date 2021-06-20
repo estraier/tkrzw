@@ -259,10 +259,14 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     return status;
   }
   auto_restored_ = false;
-  if (writable && !healthy_ && (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
-    if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-        file_size_ == file_->GetSizeSimple()) {
+  if (writable && !healthy_ && tuning_params.restore_mode != HashDBM::RESTORE_READ_ONLY) {
+    if (tuning_params.restore_mode == HashDBM::RESTORE_NOOP) {
       healthy_ = true;
+      closure_flags_ |= CLOSURE_FLAG_CLOSE;
+    } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
+               file_size_ == file_->GetSizeSimple()) {
+      healthy_ = true;
+      closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else {
       CloseImpl();
       file_->Close();
@@ -2519,7 +2523,7 @@ Status HashDBM::RestoreDatabase(
   tuning_params.offset_width = offset_width;
   tuning_params.align_pow = align_pow;
   tuning_params.num_buckets = num_buckets;
-  tuning_params.restore_mode = HashDBM::RESTORE_NOOP;
+  tuning_params.restore_mode = HashDBM::RESTORE_READ_ONLY;
   HashDBM new_dbm(std::move(new_file));
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {

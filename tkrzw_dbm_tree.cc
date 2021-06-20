@@ -417,7 +417,8 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   }
   auto_restored_ = false;
   if (writable && hash_dbm_->IsAutoRestored() &&
-      (tuning_params.restore_mode != HashDBM::RESTORE_NOOP)) {
+      tuning_params.restore_mode != HashDBM::RESTORE_READ_ONLY &&
+      tuning_params.restore_mode != HashDBM::RESTORE_NOOP) {
     hash_dbm_->Close();
     const std::string tmp_path = norm_path + ".tmp.restore";
     const int64_t end_offset =
