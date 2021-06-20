@@ -377,15 +377,13 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
 }
 
 Status HashRecord::ReplayOperations(
-    File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
+    File* file, DBM::RecordProcessor* proc,
     int64_t record_base, int32_t crc_width, Compressor* compressor,
-    int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+    int32_t offset_width, int32_t align_pow,
     int32_t min_read_size, bool skip_broken_records, int64_t end_offset) {
   assert(file != nullptr && proc != nullptr && offset_width > 0);
-  bool unlimited = false;
   if (end_offset < 0) {
     end_offset = INT64MAX;
-    unlimited = true;
   }
   end_offset = std::min(end_offset, file->GetSizeSimple());
   int64_t offset = record_base;
@@ -441,21 +439,6 @@ Status HashRecord::ReplayOperations(
           }
           value = rec.GetValue();
         }
-        if (unlimited && num_buckets > 0 &&
-            offset + rec_size >= end_offset - RESTORE_CHECK_CHAIN_RANGE) {
-          status = CheckHashChain(
-              file, bucket_base, crc_width, offset_width, align_pow, num_buckets, key, offset);
-          if (status != Status::SUCCESS) {
-            if (skip_broken_records) {
-              offset += rec_size;
-              continue;
-            }
-            if (status == Status::NOT_FOUND_ERROR) {
-              status = Status(Status::BROKEN_DATA_ERROR, "unreachable record");
-            }
-            return status;
-          }
-        }
         if (compressor != nullptr) {
           size_t decomp_size = 0;
           char* decomp_buf = compressor->Decompress(value.data(), value.size(), &decomp_size);
@@ -488,32 +471,6 @@ Status HashRecord::ReplayOperations(
     offset += rec_size;
   }
   return Status(Status::SUCCESS);
-}
-
-Status HashRecord::CheckHashChain(
-    File* file, int64_t bucket_base,
-    int32_t crc_width, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
-    std::string_view key, int64_t offset) {
-  const uint64_t bucket_index = PrimaryHash(key, num_buckets);
-  char bucket_buf[sizeof(uint64_t)];
-  const int64_t bucket_offset = bucket_base + bucket_index * offset_width;
-  Status status = file->Read(bucket_offset, bucket_buf, offset_width);
-  if (status != Status::SUCCESS) {
-    return status;
-  }
-  int64_t current_offset = ReadFixNum(bucket_buf, offset_width) << align_pow;
-  while (current_offset > 0) {
-    if (current_offset == offset) {
-      return Status(Status::SUCCESS);
-    }
-    HashRecord rec(file, crc_width, offset_width, align_pow);
-    status = rec.ReadMetadataKey(current_offset, META_MIN_READ_SIZE);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    current_offset = rec.GetChildOffset();
-  }
-  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status HashRecord::ExtractOffsets(

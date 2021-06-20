@@ -751,7 +751,6 @@ class HashDBM final : public DBM {
    * @param static_flags The pointer to an integer to store the static flags.
    * @param offset_width The pointer to an integer to store the offset width.
    * @param align_pow The pointer to an integer to store the alignment power.
-   * @param num_buckets The pointer to an integer to store the number of buckets.
    * @param last_sync_size The pointer to an integer to store the file size when the database
    * was synched or closed properly at the last time.  This size is zero, if the metadata is
    * broken.
@@ -760,7 +759,7 @@ class HashDBM final : public DBM {
   static Status FindRecordBase(
       File* file, int64_t *record_base,
       int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
-      int64_t* num_buckets, int64_t* last_sync_size);
+      int64_t* last_sync_size);
 
   /**
    * Gets the record CRC width from the static flags.

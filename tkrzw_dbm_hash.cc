@@ -1655,11 +1655,9 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
   int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
-  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base,
-      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      file, &tmp_record_base, &static_flags, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1698,9 +1696,8 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     Status* status_;
   } importer(this, &import_status);
   return HashRecord::ReplayOperations(
-      file, &importer, METADATA_SIZE, record_base, crc_width, compressor.get(),
-      offset_width, align_pow, num_buckets, min_read_size_,
-      skip_broken_records, end_offset);
+      file, &importer, record_base, crc_width, compressor.get(),
+      offset_width, align_pow, min_read_size_, skip_broken_records, end_offset);
 }
 
 Status HashDBMImpl::ImportFromFileBackwardImpl(
@@ -1711,11 +1708,9 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
-  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   Status status = HashDBM::FindRecordBase(
-      file, &tmp_record_base,
-      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      file, &tmp_record_base, &static_flags, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1751,11 +1746,10 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     CleanUp();
     return status;
   }
-  bool unlimited = false;
   if (end_offset < 0) {
-    end_offset = file->GetSizeSimple();
-    unlimited = true;
+    end_offset = INT64MAX;
   }
+  end_offset = std::min(end_offset, file->GetSizeSimple());
   const int64_t num_offsets = offset_file->GetSizeSimple() / offset_width_;
   const int64_t dead_num_buckets = std::min(num_offsets, num_buckets_);
   HashDBM::TuningParameters dead_tuning_params;
@@ -1802,7 +1796,6 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
           }
           value = rec.GetValue();
         }
-        int64_t rec_size = rec.GetWholeSize();
         bool removed = false;
         status = dead_dbm.Get(key, nullptr);
         if (status == Status::SUCCESS) {
@@ -1812,22 +1805,6 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
           return status;
         }
         if (!removed) {
-          if (unlimited && num_buckets > 0 &&
-              offset + rec_size >= end_offset - HashRecord::RESTORE_CHECK_CHAIN_RANGE) {
-            status = HashRecord::CheckHashChain(
-                file, METADATA_SIZE, crc_width, offset_width, align_pow, num_buckets,
-                key, offset);
-            if (status != Status::SUCCESS) {
-              if (skip_broken_records) {
-                continue;
-              }
-              if (status == Status::NOT_FOUND_ERROR) {
-                status = Status(Status::BROKEN_DATA_ERROR, "unreachable record");
-              }
-              CleanUp();
-              return status;
-            }
-          }
           if (compressor != nullptr) {
             size_t decomp_size = 0;
             char* decomp_buf = compressor->Decompress(value.data(), value.size(), &decomp_size);
@@ -2270,14 +2247,13 @@ Status HashDBM::ReadMetadata(
 Status HashDBM::FindRecordBase(
     File* file, int64_t *record_base,
     int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
-    int64_t* num_buckets, int64_t* last_sync_size) {
+    int64_t* last_sync_size) {
   assert(file != nullptr && record_base != nullptr &&
          static_flags != nullptr && offset_width != nullptr && align_pow != nullptr &&
-         num_buckets != nullptr && last_sync_size != nullptr);
+         last_sync_size != nullptr);
   *record_base = 0;
   *offset_width = 0;
   *align_pow = 0;
-  *num_buckets = 0;
   *last_sync_size = 0;
   bool meta_ok = false;
   char meta[METADATA_SIZE];
@@ -2287,11 +2263,11 @@ Status HashDBM::FindRecordBase(
     *static_flags = ReadFixNum(meta + META_OFFSET_STATIC_FLAGS, 1);
     *offset_width = ReadFixNum(meta + META_OFFSET_OFFSET_WIDTH, 1);
     *align_pow = ReadFixNum(meta + META_OFFSET_ALIGN_POW, 1);
-    *num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
+    const int64_t num_buckets = ReadFixNum(meta + META_OFFSET_NUM_BUCKETS, 8);
     if ((*offset_width >= MIN_OFFSET_WIDTH && *offset_width <= MAX_OFFSET_WIDTH) &&
-        *align_pow <= MAX_ALIGN_POW && *num_buckets <= MAX_NUM_BUCKETS) {
+        *align_pow <= MAX_ALIGN_POW && num_buckets <= MAX_NUM_BUCKETS) {
       const int32_t align = std::max(RECORD_BASE_ALIGN, 1 << *align_pow);
-      *record_base = METADATA_SIZE + *num_buckets * *offset_width +
+      *record_base = METADATA_SIZE + num_buckets * *offset_width +
           FBP_SECTION_SIZE + RECORD_BASE_HEADER_SIZE;
       *record_base = AlignNumber(*record_base, align);
       meta_ok = true;
@@ -2412,11 +2388,9 @@ Status HashDBM::RestoreDatabase(
   int32_t static_flags = 0;
   int32_t offset_width = 0;
   int32_t align_pow = 0;
-  int64_t num_buckets = 0;
   int64_t last_sync_size = 0;
   status = FindRecordBase(
-      &old_file, &record_base,
-      &static_flags, &offset_width, &align_pow, &num_buckets, &last_sync_size);
+      &old_file, &record_base, &static_flags, &offset_width, &align_pow, &last_sync_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -2425,6 +2399,7 @@ Status HashDBM::RestoreDatabase(
   } else if (static_flags & STATIC_FLAG_UPDATE_APPENDING) {
     update_mode = HashDBM::UPDATE_APPENDING;
   }
+  int64_t num_buckets = (record_base - METADATA_SIZE) / offset_width;
   switch (HashDBM::GetCRCWidthFromStaticFlags(static_flags)) {
     case 1:
       record_crc_mode = RECORD_CRC_8;

@@ -148,8 +148,8 @@ TEST(DBMHashImplTest, HashRecord) {
           int32_t count_ = 0;
         } counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &counter, -1, 0, crc_width, nullptr,
-            offset_width, align_pow, -1, 48, false, -1));
+            &file, &counter, 0, crc_width, nullptr,
+            offset_width, align_pow, 48, false, -1));
         EXPECT_EQ(count_first, counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -200,15 +200,15 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(first_rec_size, 48));
         Counter broken_counter;
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ReplayOperations(
-            &file, &broken_counter, -1, 0, crc_width, nullptr,
-            offset_width, align_pow, -1, 48, false, -1));
+            &file, &broken_counter, 0, crc_width, nullptr,
+            offset_width, align_pow, 48, false, -1));
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, tkrzw::HashRecord::ExtractOffsets(
             &file, &offset_file, 0, crc_width, offset_width, align_pow, false, -1));
         Counter skip_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &skip_counter, -1, 0, crc_width, nullptr,
-            offset_width, align_pow, -1, 48, true, -1));
+            &file, &skip_counter, 0, crc_width, nullptr,
+            offset_width, align_pow, 48, true, -1));
         EXPECT_EQ(counter.GetCount() - 2, skip_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -229,8 +229,8 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(0, r1.GetKey().size());
         Counter restore_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &restore_counter, -1, 0, crc_width, nullptr,
-            offset_width, align_pow, -1, 48, false, -1));
+            &file, &restore_counter, 0, crc_width, nullptr,
+            offset_width, align_pow, 48, false, -1));
         EXPECT_EQ(counter.GetCount(), restore_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(
@@ -255,8 +255,8 @@ TEST(DBMHashImplTest, HashRecord) {
         EXPECT_EQ(file.GetSizeSimple(), off);
         Counter void_counter;
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ReplayOperations(
-            &file, &void_counter, -1, 0, crc_width, nullptr,
-            offset_width, align_pow, -1, 48, false, -1));
+            &file, &void_counter, 0, crc_width, nullptr,
+            offset_width, align_pow, 48, false, -1));
         EXPECT_EQ(count_void / 2, void_counter.GetCount());
         EXPECT_EQ(tkrzw::Status::SUCCESS, offset_file.Truncate(0));
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::HashRecord::ExtractOffsets(

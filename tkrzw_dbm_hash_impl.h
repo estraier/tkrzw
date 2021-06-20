@@ -167,13 +167,11 @@ class HashRecord final {
    * Replays operations applied on a hash database file.
    * @param file A file object having opened the database file.
    * @param proc The pointer to the processor object.
-   * @param bucket_base The bucket base offset.
    * @param record_base The record base offset.
    * @param crc_width The width of the CRC value.
    * @param compressor The compressor object.
    * @param offset_width The offset width.
    * @param align_pow The alignment power.
-   * @param num_buckets The number of buckets.
    * @param min_read_size The minimum reading size.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
@@ -184,27 +182,10 @@ class HashRecord final {
    * than NOOP, the iteration is cancelled.
    */
   static Status ReplayOperations(
-      File* file, DBM::RecordProcessor* proc, int64_t bucket_base,
+      File* file, DBM::RecordProcessor* proc,
       int64_t record_base, int32_t crc_width, Compressor* compressor,
-      int32_t offset_width, int32_t align_pow, int64_t num_buckets,
+      int32_t offset_width, int32_t align_pow,
       int32_t min_read_size, bool skip_broken_records, int64_t end_offset);
-
-  /**
-   * Checks whether a record is reachable from the hash table.
-   * @param file A file object having opened the database file.
-   * @param bucket_base The bucket base offset.
-   * @param crc_width The width of the CRC value.
-   * @param offset_width The offset width.
-   * @param align_pow The alignment power.
-   * @param num_buckets The number of buckets.
-   * @param key The key of the record to find.
-   * @param offset The offset of the record to find.
-   * @return The result status.
-   */
-  static Status CheckHashChain(
-      File* file, int64_t bucket_base,
-      int32_t crc_width, int32_t offset_width, int32_t align_pow, int64_t num_buckets,
-      std::string_view key, int64_t offset);
 
   /**
    * Extracts a sequence of offsets from a file.
