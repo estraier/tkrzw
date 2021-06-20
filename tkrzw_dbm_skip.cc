@@ -296,6 +296,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     if (invalid_file_size && tuning_params.restore_mode != SkipDBM::RESTORE_NOOP) {
       file_->Close();
       const std::string tmp_path = norm_path + ".tmp.restore";
+      RemoveFile(tmp_path);
       status = SkipDBM::RestoreDatabase(norm_path, tmp_path);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);

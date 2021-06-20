@@ -40,6 +40,9 @@ static void PrintUsageAndDie() {
   P("  --rebuild : Rebuilds the database occasionally.\n");
   P("  --abort : Aborts the process at the end.\n");
   P("\n");
+  P("Options for the build subcommand:\n");
+  P("  --restore : Restores the database and validate it.\n");
+  P("\n");
   std::exit(1);
 }
 
@@ -160,6 +163,11 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   for (auto& thread : threads) {
     thread.join();
   }
+  status = dbm.SynchronizeAdvanced(sync_hard, nullptr, sync_params);
+  if (status != Status::SUCCESS) {
+    EPrintL("Synchronize failed: ", status);
+    has_error = true;
+  }
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm.CountSimple();
@@ -179,7 +187,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
 // Processes the check subcommand.
 static int32_t ProcessCheck(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 1}, {"--params", 1}, {"--incr", 1}
+    {"", 1}, {"--params", 1}, {"--incr", 1}, {"--restore", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -187,17 +195,40 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
     EPrint("Invalid command: ", cmd_error, "\n\n");
     PrintUsageAndDie();
   }
-  const std::string path = GetStringArgument(cmd_args, "", 0, "");
+  std::string path = GetStringArgument(cmd_args, "", 0, "");
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   const int32_t num_increments = GetIntegerArgument(cmd_args, "--incr", 0, 3);
+  const bool with_restore = CheckMap(cmd_args, "--restore");
   bool has_error = false;
-  tkrzw::PolyDBM dbm;
+  std::string restored_path;
+  if (with_restore) {
+    const std::string base = PathToBaseName(path);
+    const std::string ext = PathToExtension(path);
+    restored_path = base + ".tmp.restore";
+    if (!ext.empty()) {
+      restored_path += "." + ext;
+    }
+    tkrzw::RemoveFile(restored_path);
+    static tkrzw::Status status = tkrzw::PolyDBM::RestoreDatabase(path, restored_path);
+    if (status != Status::SUCCESS) {
+      PrintL("RestoreDatabase failed: ", status);
+      has_error = true;
+    }
+  }
+  tkrzw::PolyDBM dbm, restored_dbm;
   const std::map<std::string, std::string> tuning_params =
       tkrzw::StrSplitIntoMap(poly_params, ",", "=");
   Status status = dbm.OpenAdvanced(path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {
     PrintL("Open failed: ", status);
     has_error = true;
+  }
+  if (!restored_path.empty()) {
+    status = restored_dbm.OpenAdvanced(restored_path, false, File::OPEN_DEFAULT, tuning_params);
+    if (status != Status::SUCCESS) {
+      PrintL("Open failed: ", status);
+      has_error = true;
+    }
   }
   PrintL("Healthy: ", dbm.IsHealthy());
   bool restored = false;
@@ -214,8 +245,14 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
     restored = skip_dbm->IsAutoRestored();
   }
   PrintL("Restored: ", restored);
-  int64_t num_records = dbm.CountSimple();
+  const int64_t num_records = dbm.CountSimple();
   PrintL("Records: ", num_records);
+  if (restored_dbm.IsOpen()) {
+    const int64_t restored_num_records = restored_dbm.CountSimple();
+    if (restored_num_records != num_records) {
+      PrintL("Inconsistent count: ", num_records, " vs ", restored_num_records);
+    }
+  }
   const int64_t log_freq = std::max<int64_t>(num_records / 25, 10);
   int64_t count = 0;
   auto iter = dbm.MakeIterator();
@@ -233,6 +270,18 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
         has_error = true;
       }
       break;
+    }
+    if (restored_dbm.IsOpen()) {
+      std::string restored_value;
+      status = restored_dbm.Get(key, &restored_value);
+      if (status != Status::SUCCESS) {
+        EPrintL("Get failed: ", status, " key=", key);
+        has_error = true;
+      }
+      if (restored_value != value) {
+        EPrintL("Inconsistent value: key=", key);
+        has_error = true;
+      }
     }
     count++;
     if (count % log_freq == 0) {
@@ -254,10 +303,24 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
       has_error = true;
     }
   }
+  if (restored_dbm.IsOpen()) {
+    status = restored_dbm.Close();
+    if (status != tkrzw::Status::SUCCESS) {
+      EPrintL("Close failed: ", status);
+      has_error = true;
+    }
+  }
   status = dbm.Close();
   if (status != tkrzw::Status::SUCCESS) {
     EPrintL("Close failed: ", status);
     has_error = true;
+  }
+  if (!restored_path.empty()) {
+    status = tkrzw::RemoveFile(restored_path);
+    if (status != tkrzw::Status::SUCCESS) {
+      EPrintL("RemoveFile failed: ", status);
+      has_error = true;
+    }
   }
   if (!has_error) {
     PrintL("All OK");

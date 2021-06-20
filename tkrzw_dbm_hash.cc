@@ -272,6 +272,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       file_->Close();
       const std::string tmp_path = path_ + ".tmp.restore";
       const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+      RemoveFile(tmp_path);
       status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);

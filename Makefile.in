@@ -669,22 +669,22 @@ check-tran :
 	rm -Rf casket*
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkh --iter 50000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=8"
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkh --iter 50000 --threads 4 \
 	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=8"
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=16,$(DBMTRANRECCOMPPARAMS)"
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tkt --iter 50000 --threads 4 \
 	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=16,$(DBMTRANRECCOMPPARAMS)"
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000 --rebuild --remove
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tks
 
 check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
 

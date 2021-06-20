@@ -127,7 +127,7 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
   const std::string lower_name = StrLowerCase(func_name);
   if (lower_name == "reduceremove" || func_name == "remove") {
     return SkipDBM::ReduceRemove;
-  } else if (lower_name == "reducetoFfrst" || lower_name == "first") {
+  } else if (lower_name == "reducetofirst" || lower_name == "first") {
     return SkipDBM::ReduceToFirst;
   } else if (lower_name == "reducetosecond" || lower_name == "second") {
     return SkipDBM::ReduceToSecond;
@@ -143,7 +143,8 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
     return SkipDBM::ReduceConcatWithLine;
   } else if (lower_name == "reducetototal" || lower_name == "total") {
     return SkipDBM::ReduceToTotal;
-  } else if (lower_name == "reducetototalbigendian" || lower_name == "totalbe") {
+  } else if (lower_name == "reducetototalbigendian" || lower_name == "totalbigendian" ||
+             lower_name == "totalbe") {
     return SkipDBM::ReduceToTotalBigEndian;
   }
   return nullptr;

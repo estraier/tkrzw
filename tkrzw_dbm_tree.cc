@@ -423,6 +423,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     const std::string tmp_path = norm_path + ".tmp.restore";
     const int64_t end_offset =
         tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? INT64MAX : INT64MIN;
+    RemoveFile(tmp_path);
     status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset);
     if (status != Status::SUCCESS) {
       RemoveFile(tmp_path);
