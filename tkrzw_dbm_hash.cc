@@ -749,9 +749,14 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   file_size_ = file_->GetSizeSimple();
   mod_time_ = GetWallTime() * 1000000;
   Status status(Status::SUCCESS);
-  status |= file_->Synchronize(hard, record_base_, 0);
-  status |= SaveMetadata(true);
-  status |= file_->Synchronize(hard, 0, record_base_);
+  if (hard) {
+    status |= file_->Synchronize(true, record_base_, 0);
+    status |= SaveMetadata(true);
+    status |= file_->Synchronize(true, 0, record_base_);
+  } else {
+    status |= SaveMetadata(true);
+    status |= file_->Synchronize(false);
+  }
   if (proc != nullptr) {
     proc->Process(path_);
   }

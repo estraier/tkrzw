@@ -476,6 +476,7 @@ MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
     }
     if (off > file->file_size_.load()) {
       status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
+      std::cout << "off=" << off << " size=" << file->file_size_.load() << std::endl;
       return;
     }
     size = std::min(static_cast<int64_t>(size), file->file_size_.load() - off);
