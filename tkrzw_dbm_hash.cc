@@ -1393,8 +1393,7 @@ Status HashDBMImpl::ProcessImpl(
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   ScopedStringView comp_data_placeholder;
   while (current_offset > 0) {
-    const int32_t min_read_size =
-        readable ? HashRecord::META_UNREADABLE_READ_SIZE : min_read_size_;
+    const int32_t min_read_size = readable ? HashRecord::META_MIN_READ_SIZE : min_read_size_;
     status = rec.ReadMetadataKey(current_offset, min_read_size);
     if (status != Status::SUCCESS) {
       return status;

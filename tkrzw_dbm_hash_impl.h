@@ -38,10 +38,10 @@ namespace tkrzw {
  */
 class HashRecord final {
  public:
+  /** The minimum size to read the meta data. */
+  static constexpr int32_t META_MIN_READ_SIZE = 48;
   /** The range to check the hash chain for restoration. */
   static constexpr int64_t RESTORE_CHECK_CHAIN_RANGE = 1024 * 1024;
-  /** The size to read the meta data for unreadable operations. */
-  static constexpr int32_t META_UNREADABLE_READ_SIZE = 24;
 
   /**
    * Enumeration for operation types.
@@ -227,8 +227,6 @@ class HashRecord final {
  private:
   /** The size of the stack buffer to read the meta data. */
   static constexpr int32_t META_BUFFER_SIZE = 512;
-  /** The minimum size to read the meta data. */
-  static constexpr int32_t META_MIN_READ_SIZE = 48;
   /** The size of the stack buffer to write the record. */
   static constexpr int32_t WRITE_BUFFER_SIZE = 4096;
   /** The magic number at the top of the void record. */
