@@ -1610,16 +1610,6 @@ std::string ConvertWideToUTF8(const std::wstring& wstr) {
   return utf;
 }
 
-std::string MakeRandomCharacterText(int32_t length, uint8_t first_char, uint8_t last_char) {
-  std::string text;
-  const int32_t range = last_char - first_char + 1;
-  text.resize(length);
-  for (int32_t i = 0; i < length; i++) {
-    text[i] = MakeRandomInt() % range + first_char;
-  }
-  return text;
-}
-
 std::string SerializeStrPair(std::string_view first, std::string_view second) {
   const size_t size = SizeVarNum(first.size()) + first.size() +
       SizeVarNum(second.size()) + second.size();

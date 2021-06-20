@@ -180,53 +180,6 @@ TEST(LibCommonTest, HashCRC32) {
   EXPECT_EQ(0x4A17B156U, crc);
 }
 
-TEST(LibCommonTest, MakeRandomInt) {
-  constexpr int32_t num_brackets = 10;
-  constexpr int32_t num_iterations = 1000;
-  int32_t range_counts[num_brackets], div_counts[num_brackets];
-  for (int32_t i = 0; i < num_brackets; i++) {
-    range_counts[i] = 0;
-    div_counts[i] = 0;
-  }
-  for (int32_t i = 0; i < 1000; i++) {
-    const uint64_t value = tkrzw::MakeRandomInt();
-    const int32_t range_index = std::min(static_cast<int32_t>(
-        value * 1.0 / tkrzw::UINT64MAX * num_brackets), num_brackets - 1);
-    range_counts[range_index]++;
-    const int32_t div_index = value % num_brackets;
-    div_counts[div_index]++;
-  }
-  for (const auto& count : range_counts) {
-    EXPECT_GT(count, num_iterations / num_brackets / 2);
-  }
-  for (const auto& count : div_counts) {
-    EXPECT_GT(count, num_iterations / num_brackets / 2);
-  }
-}
-
-TEST(LibCommonTest, MakeRandomDouble) {
-  constexpr int32_t num_brackets = 10;
-  constexpr int32_t num_iterations = 1000;
-  int32_t range_counts[num_brackets], div_counts[num_brackets];
-  for (int32_t i = 0; i < num_brackets; i++) {
-    range_counts[i] = 0;
-    div_counts[i] = 0;
-  }
-  for (int32_t i = 0; i < 1000; i++) {
-    const double value = tkrzw::MakeRandomDouble();
-    const int32_t range_index = std::min<int32_t>(value * num_brackets, num_brackets - 1);
-    range_counts[range_index]++;
-    const int32_t div_index = static_cast<uint64_t>(value * tkrzw::UINT32MAX) % num_brackets;
-    div_counts[div_index]++;
-  }
-  for (const auto& count : range_counts) {
-    EXPECT_GT(count, num_iterations / num_brackets / 2);
-  }
-  for (const auto& count : div_counts) {
-    EXPECT_GT(count, num_iterations / num_brackets / 2);
-  }
-}
-
 TEST(LibCommonTest, Status) {
   tkrzw::Status s1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, s1.GetCode());

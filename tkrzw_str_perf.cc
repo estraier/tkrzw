@@ -50,6 +50,19 @@ static void PrintUsageAndDie() {
   std::exit(1);
 }
 
+// Make a text of random characters.
+std::string MakeRandomCharacterText(int32_t length, uint8_t first_char, uint8_t last_char) {
+  static std::mt19937 mt(19780211);
+  std::uniform_int_distribution<int32_t> dist(0, INT32MAX);
+  std::string text;
+  const int32_t range = last_char - first_char + 1;
+  text.resize(length);
+  for (int32_t i = 0; i < length; i++) {
+    text[i] = dist(mt) % range + first_char;
+  }
+  return text;
+}
+
 // Processes the search subcommand.
 static int32_t ProcessSearch(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {

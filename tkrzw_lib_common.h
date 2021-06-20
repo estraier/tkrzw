@@ -371,18 +371,6 @@ inline uint32_t HashCRC32(std::string_view str) {
 }
 
 /**
- * Makes a random integer from a hidden seed.
- * @return the random integer in a range [0, UINT64MAX] with the inclusive end.
- */
-uint64_t MakeRandomInt();
-
-/**
- * Makes a random real number from a hidden seed.
- * @return the random real number in a range [0.0, 1.0) with the exclusive end.
- */
-double MakeRandomDouble();
-
-/**
  * Status of operations.
  */
 class Status final {

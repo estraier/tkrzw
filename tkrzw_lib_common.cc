@@ -201,21 +201,6 @@ uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t
   return crc;
 }
 
-std::mt19937 hidden_random_generator(19780211);
-std::mutex hidden_random_generator_mutex;
-
-uint64_t MakeRandomInt() {
-  std::uniform_int_distribution<uint64_t> dist(0, UINT64MAX);
-  std::lock_guard<std::mutex> lock(hidden_random_generator_mutex);
-  return dist(hidden_random_generator);
-}
-
-double MakeRandomDouble() {
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
-  std::lock_guard<std::mutex> lock(hidden_random_generator_mutex);
-  return dist(hidden_random_generator);
-}
-
 const Status& Status::OrDie() const {
   if (code_ != SUCCESS) {
     throw StatusException(*this);
