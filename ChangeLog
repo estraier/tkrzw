@@ -5,6 +5,7 @@
 
 	- A restore mode "RESTORE_READ_ONLY" is added.
 	- Abolish the ChechHashChain feature.
+	- Fix a bug of race condition between ProcessMulti and Rebuild.
 
 2021-06-19  Mikio Hirabayashi  <hirarin@gmail.com>
 
