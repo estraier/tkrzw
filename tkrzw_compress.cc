@@ -14,6 +14,7 @@
 #include "tkrzw_sys_config.h"
 
 #include "tkrzw_compress.h"
+#include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 
 #if _TKRZW_COMP_ZLIB

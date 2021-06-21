@@ -15,6 +15,7 @@
 
 #include "tkrzw_file.h"
 #include "tkrzw_file_util.h"
+#include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"

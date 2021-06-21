@@ -76,6 +76,7 @@ namespace tkrzw {}
 /**
  * @file tkrzw_lib_common.h Common library features.
  * @file tkrzw_str_util.h String utilities.
+ * @file tkrzw_hash_util.h Hash utilities.
  * @file tkrzw_cmd_util.h Command-line utilities.
  * @file tkrzw_thread_util.h Threading utilities.
  * @file tkrzw_compress.h Data compression functions.

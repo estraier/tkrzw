@@ -21,6 +21,7 @@
 #include <cstdarg>
 
 #include "tkrzw_dbm.h"
+#include "tkrzw_hash_util.h"
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
 

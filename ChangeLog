@@ -1,3 +1,11 @@
+2021-06-21  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.33
+	- Library version: 1.22.0
+
+	- Hash functions are moved from tkrzw_lib_common.h to tkrzw_hash_util.h.
+	- Performance of CRC-32 is improved if zlib is enabled.
+
 2021-06-20  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.32

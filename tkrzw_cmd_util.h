@@ -50,6 +50,7 @@
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
+#include "tkrzw_hash_util.h"
 #include "tkrzw_index.h"
 #include "tkrzw_key_comparators.h"
 #include "tkrzw_lib_common.h"
