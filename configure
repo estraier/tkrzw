@@ -4045,7 +4045,7 @@ fi
 $as_echo "$ac_cv_c_bigendian" >&6; }
  case $ac_cv_c_bigendian in #(
    yes)
-     MYCPPFLAGS="$MYCPPFLAGS -D_TKRWX_BIGEND";; #(
+     MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_BIGEND";; #(
    no)
       ;; #(
    universal)

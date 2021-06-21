@@ -236,6 +236,9 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   auto fnv = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashFNV(sv);
                 };
+  auto crc4 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashCRC4(sv);
+                };
   auto crc8 = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashCRC8(sv);
                 };
@@ -248,6 +251,7 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
     {murmur, "Murmur"},
     {fnv, "FNV"},
+    {crc4, "CRC-4"},
     {crc8, "CRC-8"},
     {crc16, "CRC-16"},
     {crc32, "CRC-32"},

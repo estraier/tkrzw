@@ -58,6 +58,35 @@ inline uint64_t HashFNV(std::string_view str) {
 }
 
 /**
+ * Gets the hash value by CRC-4, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC4Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
+
+/**
+ * Gets the hash value by CRC-4.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC4(const void* buf, size_t size) {
+  return HashCRC4Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-4.
+ * @see HashCRC4
+ */
+inline uint32_t HashCRC4(std::string_view str) {
+  return HashCRC4Continuous(str.data(), str.size(), true);
+}
+
+/**
  * Gets the hash value by CRC-8, in a continuous way.
  * @param buf The source buffer.
  * @param size The size of the source buffer.
@@ -91,11 +120,11 @@ inline uint32_t HashCRC8(std::string_view str) {
  * @param buf The source buffer.
  * @param size The size of the source buffer.
  * @param finish True if the cycle is to be finished.
- * @param seed A seed value.  This should be 0xFFFF for the frist call of the cycle.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
  * @return The hash value.
  */
 uint32_t HashCRC16Continuous(
-    const void* buf, size_t size, bool finish, uint32_t seed = 0xFFFF);
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
 
 /**
  * Gets the hash value by CRC-16.
@@ -108,7 +137,7 @@ inline uint32_t HashCRC16(const void* buf, size_t size) {
 }
 
 /**
- * Gets the hash value by CRC-8.
+ * Gets the hash value by CRC-16.
  * @see HashCRC8
  */
 inline uint32_t HashCRC16(std::string_view str) {
@@ -146,6 +175,6 @@ inline uint32_t HashCRC32(std::string_view str) {
 
 }  // namespace tkrzw
 
-#endif  // _TKRZW_STR_UTIL_H
+#endif  // _TKRZW_HASH_UTIL_H
 
 // END OF FILE
