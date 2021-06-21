@@ -315,7 +315,7 @@ constexpr bool _IS_POSIX = true;
 constexpr bool _IS_POSIX = false;
 #endif
 
-#if defined(_TKRWX_BIGEND)
+#if defined(_TKRZW_BIGEND)
 constexpr bool _IS_BIG_ENDIAN = true;
 #else
 constexpr bool _IS_BIG_ENDIAN = false;
