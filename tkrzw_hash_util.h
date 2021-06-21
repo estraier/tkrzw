@@ -1,0 +1,151 @@
+/*************************************************************************************************
+ * Hash utilities
+ *
+ * Copyright 2020 Google LLC
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License.  You may obtain a copy of the License at
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific language governing permissions
+ * and limitations under the License.
+ *************************************************************************************************/
+
+#ifndef _TKRZW_HASH_UTIL_H
+#define _TKRZW_HASH_UTIL_H
+
+#include <map>
+#include <string>
+#include <vector>
+
+#include <cinttypes>
+
+#include "tkrzw_lib_common.h"
+
+namespace tkrzw {
+
+/**
+ * Gets the hash value by Murmur hashing.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param seed The seed value.
+ * @return The hash value.
+ */
+uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed);
+
+/**
+ * Gets the hash value by Murmur hashing.
+ * @see HashMurmur
+ */
+inline uint64_t HashMurmur(std::string_view str, uint64_t seed) {
+  return HashMurmur(str.data(), str.size(), seed);
+}
+
+/**
+ * Gets the hash value by FNV hashing.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+uint64_t HashFNV(const void* buf, size_t size);
+
+/**
+ * Gets the hash value by FNV hashing.
+ * @see HashFNV
+ */
+inline uint64_t HashFNV(std::string_view str) {
+  return HashFNV(str.data(), str.size());
+}
+
+/**
+ * Gets the hash value by CRC-8, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC8Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
+
+/**
+ * Gets the hash value by CRC-8.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC8(const void* buf, size_t size) {
+  return HashCRC8Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-8.
+ * @see HashCRC8
+ */
+inline uint32_t HashCRC8(std::string_view str) {
+  return HashCRC8Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by CRC-16, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0xFFFF for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC16Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0xFFFF);
+
+/**
+ * Gets the hash value by CRC-16.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC16(const void* buf, size_t size) {
+  return HashCRC16Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-8.
+ * @see HashCRC8
+ */
+inline uint32_t HashCRC16(std::string_view str) {
+  return HashCRC16Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by CRC-32, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0xFFFFFFFF for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashCRC32Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0xFFFFFFFF);
+
+/**
+ * Gets the hash value by CRC-32.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashCRC32(const void* buf, size_t size) {
+  return HashCRC32Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by CRC-32.
+ * @see HashCRC32
+ */
+inline uint32_t HashCRC32(std::string_view str) {
+  return HashCRC32Continuous(str.data(), str.size(), true);
+}
+
+}  // namespace tkrzw
+
+#endif  // _TKRZW_STR_UTIL_H
+
+// END OF FILE
