@@ -58,6 +58,180 @@ inline uint64_t HashFNV(std::string_view str) {
 }
 
 /**
+ * Gets the hash value by Checksum-6, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashChecksum6Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
+
+/**
+ * Gets the hash value by Checksum-6.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashChecksum6(const void* buf, size_t size) {
+  return HashChecksum6Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by Checksum-6.
+ * @see HashChecksum6
+ */
+inline uint32_t HashChecksum6(std::string_view str) {
+  return HashChecksum6Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by checksum-8, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 0 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashChecksum8Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 0);
+
+/**
+ * Gets the hash value by checksum-8.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashChecksum8(const void* buf, size_t size) {
+  return HashChecksum8Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by checksum-8.
+ * @see HashChecksum8
+ */
+inline uint32_t HashChecksum8(std::string_view str) {
+  return HashChecksum8Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by Adler-6, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 1 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashAdler6Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 1);
+
+/**
+ * Gets the hash value by Adler-6.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashAdler6(const void* buf, size_t size) {
+  return HashAdler6Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by Adler-6.
+ * @see HashAdler6
+ */
+inline uint32_t HashAdler6(std::string_view str) {
+  return HashAdler6Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by adler-8, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 1 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashAdler8Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 1);
+
+/**
+ * Gets the hash value by adler-8.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashAdler8(const void* buf, size_t size) {
+  return HashAdler8Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by adler-8.
+ * @see HashAdler8
+ */
+inline uint32_t HashAdler8(std::string_view str) {
+  return HashAdler8Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by Adler-16, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 1 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashAdler16Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 1);
+
+/**
+ * Gets the hash value by Adler-16.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashAdler16(const void* buf, size_t size) {
+  return HashAdler16Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by Adler-16.
+ * @see HashAdler16
+ */
+inline uint32_t HashAdler16(std::string_view str) {
+  return HashAdler16Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by Adler-32, in a continuous way.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @param finish True if the cycle is to be finished.
+ * @param seed A seed value.  This should be 1 for the frist call of the cycle.
+ * @return The hash value.
+ */
+uint32_t HashAdler32Continuous(
+    const void* buf, size_t size, bool finish, uint32_t seed = 1);
+
+/**
+ * Gets the hash value by Adler-32.
+ * @param buf The source buffer.
+ * @param size The size of the source buffer.
+ * @return The hash value.
+ */
+inline uint32_t HashAdler32(const void* buf, size_t size) {
+  return HashAdler32Continuous(buf, size, true);
+}
+
+/**
+ * Gets the hash value by Adler-32.
+ * @see HashAdler32
+ */
+inline uint32_t HashAdler32(std::string_view str) {
+  return HashAdler32Continuous(str.data(), str.size(), true);
+}
+
+/**
  * Gets the hash value by CRC-4, in a continuous way.
  * @param buf The source buffer.
  * @param size The size of the source buffer.

@@ -236,6 +236,24 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   auto fnv = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashFNV(sv);
                 };
+  auto checksum6 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashChecksum6(sv);
+                };
+  auto checksum8 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashChecksum8(sv);
+                };
+  auto adler6 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashAdler6(sv);
+                };
+  auto adler8 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashAdler8(sv);
+                };
+  auto adler16 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashAdler16(sv);
+                };
+  auto adler32 = [](std::string_view sv) -> uint32_t {
+                  return tkrzw::HashAdler32(sv);
+                };
   auto crc4 = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashCRC4(sv);
                 };
@@ -251,6 +269,12 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
     {murmur, "Murmur"},
     {fnv, "FNV"},
+    {checksum6, "Checksum-6"},
+    {checksum8, "Checksum-8"},
+    {adler6, "Adler-6"},
+    {adler8, "Adler-8"},
+    {adler16, "Adler-16"},
+    {adler32, "Adler-32"},
     {crc4, "CRC-4"},
     {crc8, "CRC-8"},
     {crc16, "CRC-16"},

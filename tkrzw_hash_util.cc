@@ -25,7 +25,7 @@ extern "C" {
 namespace tkrzw {
 
 uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed) {
-  assert(buf != nullptr && size <= (1 << 30));
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   const uint64_t mul = 0xc6a4a7935bd1e995ULL;
   const int32_t rtt = 47;
   uint64_t hash = seed ^ (size * mul);
@@ -59,18 +59,124 @@ uint64_t HashMurmur(const void* buf, size_t size, uint64_t seed) {
 }
 
 uint64_t HashFNV(const void* buf, size_t size) {
-  assert(buf != nullptr && size <= (1 << 30));
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   uint64_t hash = 14695981039346656037ULL;
-  const unsigned char* rp = (unsigned char*)buf;
-  const unsigned char* ep = rp + size;
-  while (rp < ep) {
-    hash = (hash ^ *(rp++)) * 109951162811ULL;
+  const unsigned char* rp = (const unsigned char*)buf;
+  while (size) {
+    hash = (hash ^ *rp++) * 109951162811ULL;
+    size--;
   }
   return hash;
 }
 
+uint32_t HashChecksum6Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  const unsigned char* rp = (const unsigned char*)buf;
+  while (size) {
+    seed += *rp++;
+    size--;
+  }
+  if (finish) {
+    seed = seed % 61 + 3;
+  }
+  return seed;
+}
+
+uint32_t HashChecksum8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  const unsigned char* rp = (const unsigned char*)buf;
+  while (size) {
+    seed += *rp++;
+    size--;
+  }
+  if (finish) {
+    seed = seed % 251 + 4;
+  }
+  return seed;
+}
+
+uint32_t HashAdler6Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 7;
+  const unsigned char* rp = (const unsigned char*)buf;
+  uint32_t sum = seed >> 3;
+  seed &= 0x7;
+  while (size) {
+    size_t batch_size = std::min<size_t>(4096, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+      sum += seed;
+    } while (--batch_size);
+    seed %= modulo;
+    sum %= modulo;
+  }
+  return (sum << 3) | seed;
+}
+
+uint32_t HashAdler8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 13;
+  const unsigned char* rp = (const unsigned char*)buf;
+  uint32_t sum = seed >> 4;
+  seed &= 0xF;
+  while (size) {
+    size_t batch_size = std::min<size_t>(4096, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+      sum += seed;
+    } while (--batch_size);
+    seed %= modulo;
+    sum %= modulo;
+  }
+  return (sum << 4) | seed;
+}
+
+uint32_t HashAdler16Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 251;
+  const unsigned char* rp = (const unsigned char*)buf;
+  uint32_t sum = seed >> 8;
+  seed &= 0xFF;
+  while (size) {
+    size_t batch_size = std::min<size_t>(4096, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+      sum += seed;
+    } while (--batch_size);
+    seed %= modulo;
+    sum %= modulo;
+  }
+  return (sum << 8) | seed;
+}
+
+uint32_t HashAdler32Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+#if _TKRZW_COMP_ZLIB && !defined(_TKRZW_STDONLY)
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  return adler32(seed, (Bytef*)buf, size);
+#else
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 65521;
+  const unsigned char* rp = (const unsigned char*)buf;
+  uint32_t sum = seed >> 16;
+  seed &= 0xFFFF;
+  while (size) {
+    size_t batch_size = std::min<size_t>(4096, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+      sum += seed;
+    } while (--batch_size);
+    seed %= modulo;
+    sum %= modulo;
+  }
+  return (sum << 16) | seed;
+#endif
+}
+
 uint32_t HashCRC4Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
 #if !defined(_TKRZW_BIGEND) && !defined(_TKRZW_STDONLY)
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint32_t[]> uniq_table0, uniq_table1, uniq_table2, uniq_table3;
   static uint32_t* table0 = nullptr;
   static uint32_t* table1 = nullptr;
@@ -118,6 +224,7 @@ uint32_t HashCRC4Continuous(const void* buf, size_t size, bool finish, uint32_t 
   }
   return crc;
 #else
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint8_t[]> uniq_table;
   static uint8_t* table = nullptr;
   static std::once_flag table_once_flag;
@@ -135,7 +242,7 @@ uint32_t HashCRC4Continuous(const void* buf, size_t size, bool finish, uint32_t 
   uint32_t crc = seed;
   const uint8_t* rp = (uint8_t*)buf;
   while (size--) {
-    crc = table[(crc ^ *(rp++))];
+    crc = table[(crc ^ *rp++)];
   }
   return crc;
 #endif
@@ -143,6 +250,7 @@ uint32_t HashCRC4Continuous(const void* buf, size_t size, bool finish, uint32_t 
 
 uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
 #if !defined(_TKRZW_BIGEND) && !defined(_TKRZW_STDONLY)
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint32_t[]> uniq_table0, uniq_table1, uniq_table2, uniq_table3;
   static uint32_t* table0 = nullptr;
   static uint32_t* table1 = nullptr;
@@ -190,6 +298,7 @@ uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t 
   }
   return crc;
 #else
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint8_t[]> uniq_table;
   static uint8_t* table = nullptr;
   static std::once_flag table_once_flag;
@@ -207,13 +316,14 @@ uint32_t HashCRC8Continuous(const void* buf, size_t size, bool finish, uint32_t 
   uint32_t crc = seed;
   const uint8_t* rp = (uint8_t*)buf;
   while (size--) {
-    crc = table[(crc ^ *(rp++))];
+    crc = table[(crc ^ *rp++)];
   }
   return crc;
 #endif
 }
 
 uint32_t HashCRC16Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint16_t[]> uniq_table;
   static uint16_t* table = nullptr;
   static std::once_flag table_once_flag;
@@ -231,19 +341,21 @@ uint32_t HashCRC16Continuous(const void* buf, size_t size, bool finish, uint32_t
   uint32_t crc = seed;
   const uint8_t* rp = (uint8_t*)buf;
   while (size--) {
-    crc = table[((crc >> 8) ^ *(rp++)) & 0xFF] ^ (crc << 8);
+    crc = table[((crc >> 8) ^ *rp++) & 0xFF] ^ (crc << 8);
   }
   return crc & 0xFFFF;
 }
 
 uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
 #if _TKRZW_COMP_ZLIB && !defined(_TKRZW_STDONLY)
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   uint32_t crc = crc32(seed ^ 0xFFFFFFFF, (Bytef*)buf, size);
   if (!finish) {
     crc ^= 0xFFFFFFFF;
   }
   return crc;
 #elif !defined(_TKRZW_BIGEND) && !defined(_TKRZW_STDONLY)
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint32_t[]> uniq_table0, uniq_table1, uniq_table2, uniq_table3;
   static uint32_t* table0 = nullptr;
   static uint32_t* table1 = nullptr;
@@ -294,6 +406,7 @@ uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t
   }
   return crc;
 #else
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   static std::unique_ptr<uint32_t[]> uniq_table;
   static uint32_t* table = nullptr;
   static std::once_flag table_once_flag;
@@ -311,7 +424,7 @@ uint32_t HashCRC32Continuous(const void* buf, size_t size, bool finish, uint32_t
   uint32_t crc = seed;
   const uint8_t* rp = (uint8_t*)buf;
   while (size--) {
-    crc = (crc >> 8) ^ table[(crc & 0xFF) ^ *(rp++)];
+    crc = (crc >> 8) ^ table[(crc & 0xFF) ^ *rp++];
   }
   if (finish) {
     crc ^= 0xFFFFFFFF;
