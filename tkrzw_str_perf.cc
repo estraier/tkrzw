@@ -46,6 +46,8 @@ static void PrintUsageAndDie() {
   P("Options of the compress subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --text num : The size of each text to search. (default: 10000)\n");
+  P("  --error_type str : The type of errors to detect: zero, random, alpha.\n");
+  P("  --error_size num : The size of each error section. (default: 1)\n");
   P("\n");
   std::exit(1);
 }
@@ -208,7 +210,7 @@ static int32_t ProcessSearch(int32_t argc, const char** args) {
 // Processes the hash subcommand.
 static int32_t ProcessHash(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"--iter", 1}, {"--text", 1},
+    {"--iter", 1}, {"--text", 1}, {"--error_type", 1}, {"--error_size", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -218,6 +220,8 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   }
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t text_size = GetIntegerArgument(cmd_args, "--text", 0, 10000);
+  const std::string error_type = GetStringArgument(cmd_args, "--error_type", 0, "");
+  const int32_t error_size = GetIntegerArgument(cmd_args, "--error_size", 0, 1);
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
   }
@@ -266,31 +270,138 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
   auto crc32 = [](std::string_view sv) -> uint32_t {
                   return tkrzw::HashCRC32(sv);
                 };
-  const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
-    {murmur, "Murmur"},
-    {fnv, "FNV"},
-    {checksum6, "Checksum-6"},
-    {checksum8, "Checksum-8"},
-    {adler6, "Adler-6"},
-    {adler8, "Adler-8"},
-    {adler16, "Adler-16"},
-    {adler32, "Adler-32"},
-    {crc4, "CRC-4"},
-    {crc8, "CRC-8"},
-    {crc16, "CRC-16"},
-    {crc32, "CRC-32"},
-  };
-  for (const auto& test_set : test_sets) {
-    const uint32_t expected_value = test_set.first(text);
-    const auto start_time = tkrzw::GetWallTime();
-    for (int32_t i = 0; i < num_iterations; i++) {
-      if (test_set.first(text) != expected_value) {
-        Die("Inconsistent result");
+  auto checksum6_crc8 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashChecksum6(sv) << 16) + tkrzw::HashCRC8(sv);
+                };
+  auto checksum6_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashChecksum6(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  auto checksum8_crc8 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashChecksum8(sv) << 16) + tkrzw::HashCRC8(sv);
+                };
+  auto checksum8_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashChecksum8(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  auto adler6_crc8 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashAdler6(sv) << 16) + tkrzw::HashCRC8(sv);
+                };
+  auto adler6_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashAdler6(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  auto adler8_crc8 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashAdler8(sv) << 16) + tkrzw::HashCRC8(sv);
+                };
+  auto adler8_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashAdler8(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  auto crc4_crc8 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashCRC4(sv) << 16) + tkrzw::HashCRC8(sv);
+                };
+  auto crc4_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashCRC4(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  auto crc8_crc16 = [](std::string_view sv) -> uint32_t {
+                  return (tkrzw::HashCRC8(sv) << 16) + tkrzw::HashCRC16(sv);
+                };
+  if (error_type.empty()) {
+    const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
+      {murmur, "Murmur"},
+      {fnv, "FNV"},
+      {checksum6, "Checksum-6"},
+      {checksum8, "Checksum-8"},
+      {adler6, "Adler-6"},
+      {adler8, "Adler-8"},
+      {adler16, "Adler-16"},
+      {adler32, "Adler-32"},
+      {crc4, "CRC-4"},
+      {crc8, "CRC-8"},
+      {crc16, "CRC-16"},
+      {crc32, "CRC-32"},
+    };
+    for (const auto& test_set : test_sets) {
+      const uint32_t expected_value = test_set.first(text);
+      const auto start_time = tkrzw::GetWallTime();
+      for (int32_t i = 0; i < num_iterations; i++) {
+        if (test_set.first(text) != expected_value) {
+          Die("Inconsistent result");
+        }
       }
+      const auto end_time = tkrzw::GetWallTime();
+      const auto elapsed_time = end_time - start_time;
+      PrintL("func=", test_set.second, " time=", elapsed_time, " value=", expected_value);
     }
-    const auto end_time = tkrzw::GetWallTime();
-    const auto elapsed_time = end_time - start_time;
-    PrintL("func=", test_set.second, " time=", elapsed_time, " value=", expected_value);
+  } else {
+    const std::vector<std::pair<uint32_t(*)(std::string_view), const char*>> test_sets = {
+      {checksum6, "Checksum-6"},
+      {checksum8, "Checksum-8"},
+      {adler6, "Adler-6"},
+      {adler8, "Adler-8"},
+      {adler16, "Adler-16"},
+      {adler32, "Adler-32"},
+      {crc4, "CRC-4"},
+      {crc8, "CRC-8"},
+      {crc16, "CRC-16"},
+      {crc32, "CRC-32"},
+      {checksum6_crc8, "Checksum-6+CRC-8"},
+      {checksum6_crc16, "Checksum-6+CRC-16"},
+      {checksum8_crc8, "Checksum-8+CRC-8"},
+      {checksum8_crc16, "Checksum-8+CRC-16"},
+      {adler6_crc8, "Adler-6+CRC-8"},
+      {adler6_crc16, "Adler-6+CRC-16"},
+      {adler8_crc8, "Adler-8+CRC-8"},
+      {adler8_crc16, "Adler-8+CRC-16"},
+      {crc4_crc8, "CRC-4+CRC-8"},
+      {crc4_crc16, "CRC-4+CRC-16"},
+      {crc8_crc16, "CRC-8+CRC-16"},
+    };
+    bool random = false;
+    bool alpha = false;
+    if (error_type == "random") {
+      random = true;
+    } else if (error_type == "alpha") {
+      alpha = true;
+    } else if (error_type != "zero") {
+      Die("Unknown error type");
+    }
+    for (const auto& test_set : test_sets) {
+      std::vector<std::string> texts;
+      for (int32_t i = 0; i < 1000; i++) {
+        texts.emplace_back(MakeRandomCharacterText(text_size, 0, 255));
+      }
+      std::mt19937 mt(1);
+      std::uniform_int_distribution<int32_t> off_dist(0, text_size);
+      std::uniform_int_distribution<int32_t> char_dist(0, 255);
+      int32_t detected = 0;
+      for (int32_t i = 0; i < num_iterations; i++) {
+        const std::string& text = texts[i % texts.size()];
+        std::string error_text = text;
+        const int32_t off = off_dist(mt);
+        const int32_t end = off + error_size;
+        if (end > error_text.size()) {
+          error_text.resize(end);
+        }
+        for (int32_t j = off; j < end; j++) {
+          uint32_t c = 0;
+          if (alpha) {
+            c = 'a' + char_dist(mt) % 25;
+          } else if (random) {
+            c = char_dist(mt);
+          }
+          if (static_cast<uint8_t>(error_text[j]) == c) {
+            c = (c + 1) % 256;
+          }
+          error_text[j] = c;
+        }
+        if (text == error_text) {
+          EPrintL("wrong text: off=", off, " end=" , end);
+        }
+        if (test_set.first(text) != test_set.first(error_text)) {
+          detected++;
+        }
+      }
+      const double precision = detected * 1.0 / num_iterations;
+      PrintL("func=", test_set.second, " precision= ", precision);
+    }
   }
   return 0;
 }

@@ -178,6 +178,7 @@ check-str-perf :
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf search \
 	  --iter 1000 --text 2000 --pattern 5 --chars 10 --batch 3
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf hash --iter 1000 --text 10000
+	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf hash --iter 100 --text 1000 --error_type random
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_perf compress --iter 200 --text 500
 
 check-file-perf :
