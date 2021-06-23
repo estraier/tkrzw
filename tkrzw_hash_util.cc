@@ -70,25 +70,33 @@ uint64_t HashFNV(const void* buf, size_t size) {
 }
 
 uint32_t HashChecksum6Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 61;
+  constexpr uint32_t batch_cap = 1U << 23;
   const unsigned char* rp = (const unsigned char*)buf;
   while (size) {
-    seed += *rp++;
-    size--;
-  }
-  if (finish) {
-    seed = seed % 61 + 3;
+    size_t batch_size = std::min<size_t>(batch_cap, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+    } while (--batch_size);
+    seed %= modulo;
   }
   return seed;
 }
 
 uint32_t HashChecksum8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
+  constexpr uint32_t modulo = 251;
+  constexpr uint32_t batch_cap = 1U << 23;
   const unsigned char* rp = (const unsigned char*)buf;
   while (size) {
-    seed += *rp++;
-    size--;
-  }
-  if (finish) {
-    seed = seed % 251 + 4;
+    size_t batch_size = std::min<size_t>(batch_cap, size);
+    size -= batch_size;
+    do {
+      seed += *rp++;
+    } while (--batch_size);
+    seed %= modulo;
   }
   return seed;
 }
@@ -96,11 +104,12 @@ uint32_t HashChecksum8Continuous(const void* buf, size_t size, bool finish, uint
 uint32_t HashAdler6Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   constexpr uint32_t modulo = 7;
+  constexpr uint32_t batch_cap = 4096;
   const unsigned char* rp = (const unsigned char*)buf;
   uint32_t sum = seed >> 3;
   seed &= 0x7;
   while (size) {
-    size_t batch_size = std::min<size_t>(4096, size);
+    size_t batch_size = std::min<size_t>(batch_cap, size);
     size -= batch_size;
     do {
       seed += *rp++;
@@ -115,11 +124,12 @@ uint32_t HashAdler6Continuous(const void* buf, size_t size, bool finish, uint32_
 uint32_t HashAdler8Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   constexpr uint32_t modulo = 13;
+  constexpr uint32_t batch_cap = 4096;
   const unsigned char* rp = (const unsigned char*)buf;
   uint32_t sum = seed >> 4;
   seed &= 0xF;
   while (size) {
-    size_t batch_size = std::min<size_t>(4096, size);
+    size_t batch_size = std::min<size_t>(batch_cap, size);
     size -= batch_size;
     do {
       seed += *rp++;
@@ -134,11 +144,12 @@ uint32_t HashAdler8Continuous(const void* buf, size_t size, bool finish, uint32_
 uint32_t HashAdler16Continuous(const void* buf, size_t size, bool finish, uint32_t seed) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   constexpr uint32_t modulo = 251;
+  constexpr uint32_t batch_cap = 4096;
   const unsigned char* rp = (const unsigned char*)buf;
   uint32_t sum = seed >> 8;
   seed &= 0xFF;
   while (size) {
-    size_t batch_size = std::min<size_t>(4096, size);
+    size_t batch_size = std::min<size_t>(batch_cap, size);
     size -= batch_size;
     do {
       seed += *rp++;
@@ -157,11 +168,12 @@ uint32_t HashAdler32Continuous(const void* buf, size_t size, bool finish, uint32
 #else
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
   constexpr uint32_t modulo = 65521;
+  constexpr uint32_t batch_cap = 4096;
   const unsigned char* rp = (const unsigned char*)buf;
   uint32_t sum = seed >> 16;
   seed &= 0xFFFF;
   while (size) {
-    size_t batch_size = std::min<size_t>(4096, size);
+    size_t batch_size = std::min<size_t>(batch_cap, size);
     size -= batch_size;
     do {
       seed += *rp++;
