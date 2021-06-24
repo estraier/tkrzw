@@ -53,7 +53,7 @@ int32_t HashRecord::GetWholeSize() const {
 Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   const int64_t min_record_size =
       sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3 + crc_width_;
-  const int64_t max_read_size = std::min(file_->GetSizeSimple() - offset, MAX_MEMORY_SIZE);
+  const int64_t max_read_size = file_->GetSizeSimple() - offset;
   int64_t record_size = max_read_size;
   if (record_size < min_record_size) {
     return Status(Status::BROKEN_DATA_ERROR, "too short record data");
@@ -107,26 +107,20 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   if (step < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
   }
-  key_size_ = num;
-  if (key_size_ < 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "nagative key size");
-  }
-  if (key_size_ > META_KEY_SIZE || key_size_ > max_read_size) {
+  if (num > MAX_KEY_SIZE || num > static_cast<uint64_t>(max_read_size)) {
     return Status(Status::BROKEN_DATA_ERROR, "too large key size");
   }
+  key_size_ = num;
   rp += step;
   record_size -= step;
   step = ReadVarNum(rp, record_size, &num);
   if (step < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid value size");
   }
-  value_size_ = num;
-  if (value_size_ < 0) {
-    return Status(Status::BROKEN_DATA_ERROR, "negative value size");
-  }
-  if (value_size_ > max_read_size) {
+  if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
     return Status(Status::BROKEN_DATA_ERROR, "too large value size");
   }
+  value_size_ = num;
   rp += step;
   record_size -= step;
   if (record_size < 1) {
@@ -157,13 +151,14 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     rp += value_size_;
     record_size -= value_size_;
     if (padding_size_ >= PADDING_SIZE_MAGIC && record_size >= 4) {
-      padding_size_ = ReadFixNum(rp, 4);
-      if (padding_size_ < PADDING_SIZE_MAGIC) {
+      num = ReadFixNum(rp, 4);
+      if (num < PADDING_SIZE_MAGIC) {
         return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
       }
-      if (padding_size_ > max_read_size) {
+      if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
         return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
       }
+      padding_size_ = num;
       whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
       rp += 4;
       record_size -= 4;
@@ -193,7 +188,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
 }
 
 Status HashRecord::ReadBody() {
-  int32_t body_size = key_size_ + value_size_;
+  int64_t body_size = key_size_ + value_size_;
   if (whole_size_ == 0) {
     body_size += 6;
   }
@@ -205,12 +200,20 @@ Status HashRecord::ReadBody() {
   key_ptr_ = body_buf_;
   value_ptr_ = body_buf_ + key_size_;
   if (whole_size_ == 0) {
+    const int64_t max_read_size = file_->GetSizeSimple() - body_offset_;
     const char* rp = body_buf_ + key_size_ + value_size_;
-    padding_size_ = ReadFixNum(rp, 4);
-    rp += 4;
-    if (padding_size_ < PADDING_SIZE_MAGIC) {
+    const uint64_t num = ReadFixNum(rp, 4);
+    if (num < PADDING_SIZE_MAGIC) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
     }
+    if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
+      return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
+    }
+    padding_size_ = num;
+
+    //std::cout << "PAD:" << padding_size_ << std::endl;
+    
+    rp += 4;    
     if (*(uint8_t*)rp != PADDING_TOP_MAGIC) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding magic data");
     }

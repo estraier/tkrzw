@@ -117,7 +117,7 @@ static void PrintUsageAndDie() {
     TreeDBM::DEFAULT_MAX_PAGE_SIZE);
   P("  --max_branches num : Sets the maximum number of branches of inner nodes. (default: %d)\n",
     TreeDBM::DEFAULT_MAX_BRANCHES);
-  P("  --max_chached_pages num : Sets the maximum number of cached pages. (default: %d)\n",
+  P("  --max_cached_pages num : Sets the maximum number of cached pages. (default: %d)\n",
     TreeDBM::DEFAULT_MAX_CACHED_PAGES);
   P("\n");
   P("Options for SkipDBM:\n");

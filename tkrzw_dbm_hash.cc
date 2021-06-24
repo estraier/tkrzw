@@ -1415,6 +1415,10 @@ Status HashDBMImpl::ProcessImpl(
       std::string_view old_value = rec.GetValue();
       if (old_is_set) {
         if (readable) {
+
+          //std::cout << "READ:" << rec.GetValue().size() << std::endl;
+
+
           if (old_value.data() == nullptr) {
             status = rec.ReadBody();
             if (status != Status::SUCCESS) {
@@ -1423,6 +1427,9 @@ Status HashDBMImpl::ProcessImpl(
             old_value = rec.GetValue();
           }
         } else {
+
+          //std::cout << "NONN:" << rec.GetValue().size() << std::endl;
+
           old_value = std::string_view(nullptr, old_value.size());
         }
         new_value = CallRecordProcessFull(

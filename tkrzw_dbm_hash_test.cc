@@ -53,6 +53,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMOpenCloseTest(tkrzw::HashDBM* dbm);
   void HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm);
   void HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm);
+  void HashDBMVariousSizeTest(tkrzw::HashDBM* dbm);
   void HashDBMRebuildStaticTestOne(
       tkrzw::HashDBM* dbm, const tkrzw::HashDBM::TuningParameters& tuning_params);
   void HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm);
@@ -986,6 +987,85 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
+void HashDBMTest::HashDBMVariousSizeTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  constexpr int32_t num_iterations = 200;
+  constexpr int32_t max_value_size = 128 * 1024;
+  std::string value_buf;
+  value_buf.reserve(max_value_size);
+  while (value_buf.size() < max_value_size) {
+    value_buf.append(1, 'a' + value_buf.size() % 26);
+    value_buf.append(1, 'a' + value_buf.size() % 25);
+  }
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE};
+  const std::vector<int32_t> align_pows = {0};
+  const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
+      {tkrzw::HashDBM::RECORD_CRC_NONE};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE};
+  for (const auto& update_mode : update_modes) {
+    for (const auto& align_pow : align_pows) {
+      for (const auto& record_crc_mode : record_crc_modes) {
+        for (const auto& record_comp_mode : record_comp_modes) {
+          if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+            continue;
+          }
+          tkrzw::HashDBM::TuningParameters tuning_params;
+          tuning_params.update_mode = update_mode;
+          tuning_params.record_crc_mode = record_crc_mode;
+          tuning_params.record_comp_mode = record_comp_mode;
+          tuning_params.align_pow = align_pow;
+          tuning_params.num_buckets = 100;
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          int64_t value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            value_size = std::ceil((value_size + 1) * 1.2);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            value_size = std::ceil((value_size + 1) * 1.4);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          EXPECT_EQ(num_iterations, dbm->CountSimple());
+          value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            if (i % 2 == 0) {
+              rec_value.clear();
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key, &rec_value));
+              EXPECT_EQ(value, rec_value);
+            }
+            value_size = std::ceil((value_size + 1) * 1.4);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          EXPECT_EQ(num_iterations / 2, dbm->CountSimple());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        }
+      }
+    }
+  }
+}
+
 void HashDBMTest::HashDBMRebuildStaticTestOne(
     tkrzw::HashDBM* dbm, const tkrzw::HashDBM::TuningParameters& tuning_params) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
@@ -1738,6 +1818,11 @@ TEST_F(HashDBMTest, UpdateInPlace) {
 TEST_F(HashDBMTest, UpdateAppending) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMUpdateAppendingTest(&dbm);
+}
+
+TEST_F(HashDBMTest, VariousSize) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMVariousSizeTest(&dbm);
 }
 
 TEST_F(HashDBMTest, RebuildStatic) {

@@ -40,9 +40,11 @@ namespace tkrzw {
 class HashRecord final {
  public:
   /** The maximum key size. */
-  static constexpr int32_t META_KEY_SIZE = 1024 * 1024;
+  static constexpr int64_t MAX_KEY_SIZE = 8 * (1LL << 20) - 1;
+  /** The maximum value size. */
+  static constexpr int64_t MAX_VALUE_SIZE = 2 * (1LL << 30) - 1;
   /** The minimum size to read the meta data. */
-  static constexpr int32_t META_MIN_READ_SIZE = 48;
+  static constexpr int64_t META_MIN_READ_SIZE = 48;
   /** The range to check the hash chain for restoration. */
   static constexpr int64_t RESTORE_CHECK_CHAIN_RANGE = 1024 * 1024;
 
