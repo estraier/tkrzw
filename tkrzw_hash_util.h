@@ -87,6 +87,33 @@ inline uint32_t HashChecksum6(std::string_view str) {
 }
 
 /**
+ * Gets the hash value by Checksum-6.
+ * @see HashChecksum6
+ */
+inline uint32_t HashChecksum6Pair(
+    const void* first_buf, size_t first_size,
+    const void* second_buf, size_t second_size) {
+  constexpr uint32_t modulo = 61;
+  constexpr uint32_t batch_cap = 1U << 23;
+  if (first_size + second_size < batch_cap) {
+    uint32_t sum = 0;
+    const unsigned char* rp = (const unsigned char*)first_buf;
+    while (first_size) {
+      sum += *rp++;
+      first_size--;
+    }
+    rp = (const unsigned char*)second_buf;
+    while (second_size) {
+      sum += *rp++;
+      second_size--;
+    }
+    return sum % modulo;
+  }
+  return HashChecksum6Continuous(
+      second_buf, second_size, true, HashChecksum6Continuous(first_buf, first_size, false, 0));
+}
+
+/**
  * Gets the hash value by checksum-8, in a continuous way.
  * @param buf The source buffer.
  * @param size The size of the source buffer.
@@ -113,6 +140,33 @@ inline uint32_t HashChecksum8(const void* buf, size_t size) {
  */
 inline uint32_t HashChecksum8(std::string_view str) {
   return HashChecksum8Continuous(str.data(), str.size(), true);
+}
+
+/**
+ * Gets the hash value by Checksum-8.
+ * @see HashChecksum8
+ */
+inline uint32_t HashChecksum8Pair(
+    const void* first_buf, size_t first_size,
+    const void* second_buf, size_t second_size) {
+  constexpr uint32_t modulo = 251;
+  constexpr uint32_t batch_cap = 1U << 23;
+  if (first_size + second_size < batch_cap) {
+    uint32_t sum = 0;
+    const unsigned char* rp = (const unsigned char*)first_buf;
+    while (first_size) {
+      sum += *rp++;
+      first_size--;
+    }
+    rp = (const unsigned char*)second_buf;
+    while (second_size) {
+      sum += *rp++;
+      second_size--;
+    }
+    return sum % modulo;
+  }
+  return HashChecksum8Continuous(
+      second_buf, second_size, true, HashChecksum8Continuous(first_buf, first_size, false, 0));
 }
 
 /**

@@ -62,9 +62,11 @@ TEST(LibCommonTest, HashChecksum6) {
   crc = tkrzw::HashChecksum6Continuous("こんにちは", 15, false);
   crc = tkrzw::HashChecksum6Continuous("世界", 6, true, crc);
   EXPECT_EQ(0x04, crc);
+  EXPECT_EQ(0x0F, tkrzw::HashChecksum6Pair("Hello", 5, " World", 6));
+  EXPECT_EQ(0x04, tkrzw::HashChecksum6Pair("こんにちは", 15, "世界", 6));
   for (int i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
-    EXPECT_LT(tkrzw::HashChecksum6(key), 64);
+    EXPECT_LT(tkrzw::HashChecksum6(key), 61);
   }
 }
 
@@ -81,9 +83,11 @@ TEST(LibCommonTest, HashChecksum8) {
   crc = tkrzw::HashChecksum8Continuous("こんにちは", 15, false);
   crc = tkrzw::HashChecksum8Continuous("世界", 6, true, crc);
   EXPECT_EQ(0x96, crc);
+  EXPECT_EQ(0x30, tkrzw::HashChecksum8Pair("Hello", 5, " World", 6));
+  EXPECT_EQ(0x96, tkrzw::HashChecksum8Pair("こんにちは", 15, "世界", 6));
   for (int i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
-    EXPECT_LT(tkrzw::HashChecksum8(key), 256);
+    EXPECT_LT(tkrzw::HashChecksum8(key), 251);
   }
 }
 

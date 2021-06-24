@@ -1458,13 +1458,9 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
         EXPECT_FALSE(dbm->IsAutoRestored());
         EXPECT_EQ(1, dbm->CountSimple());
         std::string rec_value;
-        if (record_comp_mode == tkrzw::HashDBM::RECORD_COMP_NONE) {
-          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
-        } else {
-          const tkrzw::Status status = dbm->Get("abc", &rec_value);
-          EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
-                      status == tkrzw::Status::BROKEN_DATA_ERROR);
-        }
+        const tkrzw::Status status = dbm->Get("abc", &rec_value);
+        EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
+                    status == tkrzw::Status::BROKEN_DATA_ERROR);
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
         EXPECT_EQ(tkrzw::Status::SUCCESS,
                   tkrzw::HashDBM::RestoreDatabase(corrupt_file_path, restored_file_path, -1));
@@ -1527,15 +1523,8 @@ void HashDBMTest::HashDBMCorruptionTest(tkrzw::HashDBM* dbm) {
             break;
         }
         EXPECT_EQ(expected_comp_name, comp_name);
-        if (record_crc_mode == tkrzw::HashDBM::RECORD_CRC_NONE) {
-          if (record_comp_mode == tkrzw::HashDBM::RECORD_COMP_NONE) {
-            EXPECT_EQ(1, dbm->CountSimple());
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
-          }
-        } else {
-          EXPECT_EQ(0, dbm->CountSimple());
-          EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
-        }
+        EXPECT_EQ(0, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", "12345"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("xyz", "67890"));
         EXPECT_EQ(2, dbm->CountSimple());

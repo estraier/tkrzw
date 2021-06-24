@@ -22,25 +22,6 @@
 
 namespace tkrzw {
 
-uint64_t PrimaryHash(std::string_view data, uint64_t num_buckets) {
-  constexpr uint64_t seed = 19780211;
-  uint64_t hash = HashMurmur(data, seed);
-  if (num_buckets <= UINT32MAX) {
-    hash = (((hash & 0xffff000000000000ULL) >> 48) | ((hash & 0x0000ffff00000000ULL) >> 16)) ^
-        (((hash & 0x000000000000ffffULL) << 16) | ((hash & 0x00000000ffff0000ULL) >> 16));
-  }
-  return hash % num_buckets;
-}
-
-uint64_t SecondaryHash(std::string_view data, uint64_t num_shards) {
-  uint64_t hash = HashFNV(data);
-  if (num_shards <= UINT32MAX) {
-    hash = (((hash & 0xffff000000000000ULL) >> 48) | ((hash & 0x0000ffff00000000ULL) >> 16)) ^
-        (((hash & 0x000000000000ffffULL) << 16) | ((hash & 0x00000000ffff0000ULL) >> 16));
-  }
-  return hash % num_shards;
-}
-
 uint64_t IsPrimeNumber(uint64_t num) {
   if (num < 2) {
     return false;

@@ -17,6 +17,7 @@
 #include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_dbm_hash_impl.h"
 #include "tkrzw_file.h"
+#include "tkrzw_hash_util.h"
 
 namespace tkrzw {
 
@@ -70,11 +71,25 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     return status;
   }
   const char* rp = read_buf;
-  if (*(uint8_t*)rp == RECORD_MAGIC_VOID) {
+  uint32_t magic = *(uint8_t*)rp;
+  {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
+    if (magic == 0xFF) {
+      magic = RECORD_MAGIC_VOID | 0x3F;
+    } else if (magic == 0xFE) {
+      magic = RECORD_MAGIC_SET | 0x3F;
+    } else if (magic == 0xFD) {
+      magic = RECORD_MAGIC_REMOVE | 0x3F;
+    }
+  }
+  magic_crc_value_ = magic & ~RECORD_MAGIC_VOID;
+  magic &= RECORD_MAGIC_VOID;
+  if (magic == RECORD_MAGIC_VOID) {
     type_ = OP_VOID;
-  } else if (*(uint8_t*)rp == RECORD_MAGIC_SET) {
+  } else if (magic == RECORD_MAGIC_SET) {
     type_ = OP_SET;
-  } else if (*(uint8_t*)rp == RECORD_MAGIC_REMOVE) {
+  } else if (magic == RECORD_MAGIC_REMOVE) {
     type_ = OP_REMOVE;
   } else {
     return Status(Status::BROKEN_DATA_ERROR, "invalid record magic number");
@@ -93,7 +108,10 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
   }
   key_size_ = num;
-  if (key_size_ > max_read_size) {
+  if (key_size_ < 0) {
+    return Status(Status::BROKEN_DATA_ERROR, "nagative key size");
+  }
+  if (key_size_ > META_KEY_SIZE || key_size_ > max_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "too large key size");
   }
   rp += step;
@@ -103,6 +121,9 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid value size");
   }
   value_size_ = num;
+  if (value_size_ < 0) {
+    return Status(Status::BROKEN_DATA_ERROR, "negative value size");
+  }
   if (value_size_ > max_read_size) {
     return Status(Status::BROKEN_DATA_ERROR, "too large value size");
   }
@@ -117,7 +138,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   if (record_size < crc_width_) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
   }
-  crc_value_ = ReadFixNum(rp, crc_width_);
+  extra_crc_value_ = ReadFixNum(rp, crc_width_);
   rp += crc_width_;
   record_size -= crc_width_;
   header_size_ = rp - read_buf;
@@ -139,6 +160,9 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
       padding_size_ = ReadFixNum(rp, 4);
       if (padding_size_ < PADDING_SIZE_MAGIC) {
         return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+      }
+      if (padding_size_ > max_read_size) {
+        return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
       }
       whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
       rp += 4;
@@ -200,32 +224,43 @@ Status HashRecord::ReadBody() {
 }
 
 Status HashRecord::CheckCRC() {
-  if (crc_width_ == 0) {
-    return Status(Status::SUCCESS);
-  }
   if (value_ptr_ == nullptr) {
     const Status status = ReadBody();
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  uint32_t crc_value = 0;
-  switch (crc_width_) {
-    case 1:
-      crc_value = HashCRC8Continuous(value_ptr_, value_size_, true, HashCRC8Continuous(
-          key_ptr_, key_size_, false));
-      break;
-    case 2:
-      crc_value = HashCRC16Continuous(value_ptr_, value_size_, true, HashCRC16Continuous(
-          key_ptr_, key_size_, false));
-      break;
-    case 4:
-      crc_value = HashCRC32Continuous(value_ptr_, value_size_, true, HashCRC32Continuous(
-          key_ptr_, key_size_, false));
-      break;
+  {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
+    if (magic_crc_value_ == 0x3F) {
+      return Status(Status::SUCCESS);
+    }
   }
-  if (crc_value_ != crc_value) {
-    return Status(Status::BROKEN_DATA_ERROR, "inconcistent CRC");
+  const uint32_t act_magic_crc_value =
+      MagicChecksum(key_ptr_, key_size_, value_ptr_, value_size_);
+  if (magic_crc_value_ != act_magic_crc_value) {
+    return Status(Status::BROKEN_DATA_ERROR, "inconcistent magic CRC");
+  }
+  if (crc_width_ > 0) {
+    uint32_t act_extra_crc_value = 0;
+    switch (crc_width_) {
+      case 1:
+        act_extra_crc_value = HashCRC8Continuous(
+            value_ptr_, value_size_, true, HashCRC8Continuous(key_ptr_, key_size_, false));
+        break;
+      case 2:
+        act_extra_crc_value = HashCRC16Continuous(
+            value_ptr_, value_size_, true, HashCRC16Continuous(key_ptr_, key_size_, false));
+        break;
+      case 4:
+        act_extra_crc_value = HashCRC32Continuous(
+            value_ptr_, value_size_, true, HashCRC32Continuous(key_ptr_, key_size_, false));
+        break;
+    }
+    if (extra_crc_value_ != act_extra_crc_value) {
+      return Status(Status::BROKEN_DATA_ERROR, "inconcistent extra CRC");
+    }
   }
   return Status(Status::SUCCESS);
 }
@@ -244,18 +279,19 @@ void HashRecord::SetData(OperationType type, int32_t ideal_whole_size,
   value_size_ = value_size;
   padding_size_ = whole_size_ - base_size;
   child_offset_ = child_offset;
+  magic_crc_value_ = MagicChecksum(key_ptr, key_size, value_ptr, value_size);
   switch (crc_width_) {
     default:
-      crc_value_ = 0;
+      extra_crc_value_ = 0;
       break;
-    case 1: crc_value_ = HashCRC8Continuous(value_ptr, value_size, true, HashCRC8Continuous(
-        key_ptr, key_size, false));
+    case 1: extra_crc_value_ = HashCRC8Continuous(
+        value_ptr, value_size, true, HashCRC8Continuous(key_ptr, key_size, false));
       break;
-    case 2: crc_value_ = HashCRC16Continuous(value_ptr, value_size, true, HashCRC16Continuous(
-        key_ptr, key_size, false));
+    case 2: extra_crc_value_ = HashCRC16Continuous(
+        value_ptr, value_size, true, HashCRC16Continuous(key_ptr, key_size, false));
       break;
-    case 4: crc_value_ = HashCRC32Continuous(value_ptr, value_size, true, HashCRC32Continuous(
-        key_ptr, key_size, false));
+    case 4: extra_crc_value_ = HashCRC32Continuous(
+        value_ptr, value_size, true, HashCRC32Continuous(key_ptr, key_size, false));
       break;
   }
   key_ptr_ = key_ptr;
@@ -267,17 +303,19 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   char* write_buf = whole_size_ > static_cast<int32_t>(sizeof(stack)) ?
       static_cast<char*>(xmalloc(whole_size_)) : stack;
   char* wp = write_buf;
+  uint32_t magic = magic_crc_value_;
   switch (type_) {
     case OP_SET:
-      *(wp++) = RECORD_MAGIC_SET;
+      magic |= RECORD_MAGIC_SET;
       break;
     case OP_REMOVE:
-      *(wp++) = RECORD_MAGIC_REMOVE;
+      magic |= RECORD_MAGIC_REMOVE;
       break;
     default:
-      *(wp++) = RECORD_MAGIC_VOID;
+      magic |= RECORD_MAGIC_VOID;
       break;
   }
+  *(wp++) = magic;
   WriteFixNum(wp, child_offset_ >> align_pow_, offset_width_);
   wp += offset_width_;
   wp += WriteVarNum(wp, key_size_);
@@ -288,7 +326,7 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
     *(wp++) = padding_size_;
   }
   if (crc_width_ > 0) {
-    WriteFixNum(wp, crc_value_, crc_width_);
+    WriteFixNum(wp, extra_crc_value_, crc_width_);
     wp += crc_width_;
   }
   std::memcpy(wp, key_ptr_, key_size_);

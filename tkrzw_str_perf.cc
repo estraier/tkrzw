@@ -377,7 +377,7 @@ static int32_t ProcessHash(int32_t argc, const char** args) {
         std::string error_text = text;
         const int32_t off = off_dist(mt);
         const int32_t end = off + error_size;
-        if (end > error_text.size()) {
+        if (end > static_cast<int32_t>(error_text.size())) {
           error_text.resize(end);
         }
         for (int32_t j = off; j < end; j++) {

@@ -28,6 +28,7 @@
 #include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_file.h"
+#include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
 
@@ -38,6 +39,8 @@ namespace tkrzw {
  */
 class HashRecord final {
  public:
+  /** The maximum key size. */
+  static constexpr int32_t META_KEY_SIZE = 1024 * 1024;
   /** The minimum size to read the meta data. */
   static constexpr int32_t META_MIN_READ_SIZE = 48;
   /** The range to check the hash chain for restoration. */
@@ -211,11 +214,11 @@ class HashRecord final {
   /** The size of the stack buffer to write the record. */
   static constexpr int32_t WRITE_BUFFER_SIZE = 4096;
   /** The magic number at the top of the void record. */
-  static constexpr uint8_t RECORD_MAGIC_VOID = 0xFF;
+  static constexpr uint8_t RECORD_MAGIC_VOID = 0xC0;
   /** The magic number at the top of the setting record. */
-  static constexpr uint8_t RECORD_MAGIC_SET = 0xFE;
+  static constexpr uint8_t RECORD_MAGIC_SET = 0x80;
   /** The magic number at the top of the removing record. */
-  static constexpr uint8_t RECORD_MAGIC_REMOVE = 0xFD;
+  static constexpr uint8_t RECORD_MAGIC_REMOVE = 0x40;
   /** The magic number at the padding size. */
   static constexpr uint8_t PADDING_SIZE_MAGIC = 0xEE;
   /** The magic number at the top of the padding. */
@@ -246,8 +249,10 @@ class HashRecord final {
   int32_t padding_size_;
   /** The offset of the child record. */
   int64_t child_offset_;
-  /** The CRC value. */
-  uint32_t crc_value_;
+  /** The magic CRC value. */
+  uint32_t magic_crc_value_;
+  /** The extra CRC value. */
+  uint32_t extra_crc_value_;
   /** The pointer to the key region. */
   const char* key_ptr_;
   /** The pointer to the value region. */
@@ -400,6 +405,19 @@ class FreeBlockPool final {
   /** Mutex for the data set. */
   std::mutex mutex_;
 };
+
+/**
+ * Calculate the checksum of the record data to store in the record magic data.
+ * @param key_buf The key buffer.
+ * @param key_size The key size.
+ * @param value_buf The value buffer.
+ * @param value_size The value size.
+ * @return The checksum which uses the lower 6 bits only.
+ */
+inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
+                              const char* value_buf, size_t value_size) {
+  return HashChecksum6Pair(key_buf, key_size, value_buf, value_size);
+}
 
 /**
  * Calls the ProcessFull method of a record processor with compression and decompression.
