@@ -257,7 +257,7 @@ Status HashRecord::ReadBody() {
       return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
     }
     padding_size_ = num;
-    rp += 4;    
+    rp += 4;
     if (*(uint8_t*)rp != PADDING_TOP_MAGIC) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding magic data");
     }
