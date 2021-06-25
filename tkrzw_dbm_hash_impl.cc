@@ -72,15 +72,19 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   }
   const char* rp = read_buf;
   uint32_t magic = *(uint8_t*)rp;
+  bool is_old_format = false;
   {
     // Tentative measure for compatibility with the old format.
     // TODO: remove this.
     if (magic == 0xFF) {
       magic = RECORD_MAGIC_VOID | 0x3F;
+      is_old_format = true;
     } else if (magic == 0xFE) {
       magic = RECORD_MAGIC_SET | 0x3F;
+      is_old_format = true;
     } else if (magic == 0xFD) {
       magic = RECORD_MAGIC_REMOVE | 0x3F;
+      is_old_format = true;
     }
   }
   magic_crc_value_ = magic & ~RECORD_MAGIC_VOID;
@@ -126,9 +130,27 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   if (record_size < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
   }
-  padding_size_ = ReadFixNum(rp, 1);
+  num = ReadFixNum(rp, 1);
   rp++;
   record_size--;
+  if (num >= PADDING_SIZE_MAGIC && !is_old_format) {
+    if (record_size < 4) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid extra padding size");
+    }
+    num = ReadFixNum(rp, 4);
+    if (num < PADDING_SIZE_MAGIC) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+    }
+
+    // Why num -= 4 cannot be here?
+    
+    rp += 4;
+    record_size -= 4;
+  }
+  if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
+    return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
+  }
+  padding_size_ = num;
   if (record_size < crc_width_) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
   }
@@ -136,8 +158,17 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   rp += crc_width_;
   record_size -= crc_width_;
   header_size_ = rp - read_buf;
-  whole_size_ = padding_size_ < PADDING_SIZE_MAGIC ?
-                                header_size_ + key_size_ + value_size_ + padding_size_ : 0;
+  if (is_old_format) {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
+    whole_size_ = padding_size_ < PADDING_SIZE_MAGIC ?
+                                  header_size_ + key_size_ + value_size_ + padding_size_ : 0;
+  } else {
+    whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
+    if (padding_size_ >= PADDING_SIZE_MAGIC) {
+      whole_size_ -= 4;
+    }
+  }
   key_ptr_ = nullptr;
   value_ptr_ = nullptr;
   body_offset_ = offset + header_size_;
@@ -150,27 +181,42 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     }
     rp += value_size_;
     record_size -= value_size_;
-    if (padding_size_ >= PADDING_SIZE_MAGIC && record_size >= 4) {
-      num = ReadFixNum(rp, 4);
-      if (num < PADDING_SIZE_MAGIC) {
-        return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+    if (is_old_format) {
+      // Tentative measure for compatibility with the old format.
+      // TODO: remove this.
+      if (padding_size_ >= PADDING_SIZE_MAGIC && record_size >= 4) {
+        num = ReadFixNum(rp, 4);
+        if (num < PADDING_SIZE_MAGIC) {
+          return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+        }
+        if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
+          return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
+        }
+        padding_size_ = num;
+        whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
+        rp += 4;
+        record_size -= 4;
+        if (record_size >= 1) {
+          if (*(uint8_t*)rp != PADDING_TOP_MAGIC) {
+            return Status(Status::BROKEN_DATA_ERROR, "invalid padding magic number");
+          }
+          rp += 1;
+          record_size -= 1;
+          if (record_size >= 1) {
+            if (*(uint8_t*)rp != 0) {
+              return Status(Status::BROKEN_DATA_ERROR, "invalid padding body data");
+            }
+          }
+        }
       }
-      if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
-        return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
-      }
-      padding_size_ = num;
-      whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
-      rp += 4;
-      record_size -= 4;
-      if (record_size >= 1) {
+    } else {
+      if (padding_size_ > 0 && record_size > 0) {
         if (*(uint8_t*)rp != PADDING_TOP_MAGIC) {
           return Status(Status::BROKEN_DATA_ERROR, "invalid padding magic number");
         }
-        rp += 1;
-        record_size -= 1;
-        if (record_size >= 1) {
-          if (*(uint8_t*)rp != 0) {
-            return Status(Status::BROKEN_DATA_ERROR, "invalid padding body data");
+        if (padding_size_ > 1 && record_size > 1) {
+          if (*(uint8_t*)(rp + 1) != 0) {
+            return Status(Status::BROKEN_DATA_ERROR, "invalid padding content");
           }
         }
       }
@@ -190,6 +236,8 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
 Status HashRecord::ReadBody() {
   int64_t body_size = key_size_ + value_size_;
   if (whole_size_ == 0) {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
     body_size += 6;
   }
   body_buf_ = static_cast<char*>(xrealloc(body_buf_, body_size));
@@ -200,6 +248,8 @@ Status HashRecord::ReadBody() {
   key_ptr_ = body_buf_;
   value_ptr_ = body_buf_ + key_size_;
   if (whole_size_ == 0) {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
     const int64_t max_read_size = file_->GetSizeSimple() - body_offset_;
     const char* rp = body_buf_ + key_size_ + value_size_;
     const uint64_t num = ReadFixNum(rp, 4);
@@ -210,9 +260,6 @@ Status HashRecord::ReadBody() {
       return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
     }
     padding_size_ = num;
-
-    //std::cout << "PAD:" << padding_size_ << std::endl;
-    
     rp += 4;    
     if (*(uint8_t*)rp != PADDING_TOP_MAGIC) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding magic data");
@@ -325,6 +372,8 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   wp += WriteVarNum(wp, value_size_);
   if (padding_size_ >= PADDING_SIZE_MAGIC) {
     *(wp++) = PADDING_SIZE_MAGIC;
+    WriteFixNum(wp, padding_size_, 4);
+    wp += 4;
   } else {
     *(wp++) = padding_size_;
   }
@@ -337,10 +386,10 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   std::memcpy(wp, value_ptr_, value_size_);
   wp += value_size_;
   if (padding_size_ > 0) {
-    std::memset(wp, 0, padding_size_);
     if (padding_size_ >= PADDING_SIZE_MAGIC) {
-      WriteFixNum(wp, padding_size_, 4);
-      wp += 4;
+      std::memset(wp, 0, padding_size_ - 4);
+    } else {
+      std::memset(wp, 0, padding_size_);
     }
     *wp = PADDING_TOP_MAGIC;
   }
@@ -380,6 +429,8 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
         rec.CheckCRC() == Status::SUCCESS) {
       int32_t rec_size = rec.GetWholeSize();
       if (rec_size == 0) {
+        // Tentative measure for compatibility with the old format.
+        // TODO: remove this.
         if (rec.ReadBody() != Status::SUCCESS) {
           break;
         }
@@ -392,6 +443,8 @@ Status HashRecord::FindNextOffset(int64_t offset, int32_t min_read_size, int64_t
              rec.CheckCRC() == Status::SUCCESS) {
         rec_size = rec.GetWholeSize();
         if (rec_size == 0) {
+          // Tentative measure for compatibility with the old format.
+          // TODO: remove this.
           if (rec.ReadBody() != Status::SUCCESS) {
             break;
           }
@@ -449,6 +502,8 @@ Status HashRecord::ReplayOperations(
     }
     int64_t rec_size = rec.GetWholeSize();
     if (rec_size == 0) {
+      // Tentative measure for compatibility with the old format.
+      // TODO: remove this.
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
         if (skip_broken_records) {
@@ -544,6 +599,8 @@ Status HashRecord::ExtractOffsets(
     }
     int64_t rec_size = rec.GetWholeSize();
     if (rec_size == 0) {
+      // Tentative measure for compatibility with the old format.
+      // TODO: remove this.
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
         return status;

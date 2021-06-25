@@ -396,6 +396,8 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       }
       int64_t rec_size = rec.GetWholeSize();
       if (rec_size == 0) {
+        // Tentative measure for compatibility with the old format.
+        // TODO: remove this.
         status = rec.ReadBody();
         if (status != Status::SUCCESS) {
           return status;
@@ -1415,10 +1417,6 @@ Status HashDBMImpl::ProcessImpl(
       std::string_view old_value = rec.GetValue();
       if (old_is_set) {
         if (readable) {
-
-          //std::cout << "READ:" << rec.GetValue().size() << std::endl;
-
-
           if (old_value.data() == nullptr) {
             status = rec.ReadBody();
             if (status != Status::SUCCESS) {
@@ -1427,9 +1425,6 @@ Status HashDBMImpl::ProcessImpl(
             old_value = rec.GetValue();
           }
         } else {
-
-          //std::cout << "NONN:" << rec.GetValue().size() << std::endl;
-
           old_value = std::string_view(nullptr, old_value.size());
         }
         new_value = CallRecordProcessFull(
@@ -1445,6 +1440,8 @@ Status HashDBMImpl::ProcessImpl(
         const int64_t child_offset = rec.GetChildOffset();
         int32_t old_rec_size = rec.GetWholeSize();
         if (old_rec_size == 0) {
+          // Tentative measure for compatibility with the old format.
+          // TODO: remove this.
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
             return status;
