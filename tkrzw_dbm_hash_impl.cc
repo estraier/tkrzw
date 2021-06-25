@@ -127,27 +127,44 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   value_size_ = num;
   rp += step;
   record_size -= step;
-  if (record_size < 1) {
-    return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
-  }
-  num = ReadFixNum(rp, 1);
-  rp++;
-  record_size--;
-  if (num >= PADDING_SIZE_MAGIC && !is_old_format) {
-    if (record_size < 4) {
-      return Status(Status::BROKEN_DATA_ERROR, "invalid extra padding size");
-    }
-    num = ReadFixNum(rp, 4);
-    if (num < PADDING_SIZE_MAGIC) {
+  int32_t extra_padding_size = 0;
+  if (is_old_format) {
+    // Tentative measure for compatibility with the old format.
+    // TODO: remove this.
+    if (record_size < 1) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
     }
-    rp += 4;
-    record_size -= 4;
+    num = ReadFixNum(rp, 1);
+    rp++;
+    record_size--;
+    if (num >= PADDING_SIZE_MAGIC && !is_old_format) {
+      if (record_size < 4) {
+        return Status(Status::BROKEN_DATA_ERROR, "invalid extra padding size");
+      }
+      num = ReadFixNum(rp, 4);
+      if (num < PADDING_SIZE_MAGIC) {
+        return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+      }
+      rp += 4;
+      record_size -= 4;
+    }
+    if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
+      return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
+    }
+    padding_size_ = num;
+  } else {
+    step = ReadVarNum(rp, record_size, &num);
+    if (step < 1) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
+    }
+    if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
+      return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
+    }
+    padding_size_ = num;
+    rp += step;
+    record_size -= step;
+    extra_padding_size  = step - 1;
   }
-  if (num > MAX_VALUE_SIZE || num > static_cast<uint64_t>(max_read_size)) {
-    return Status(Status::BROKEN_DATA_ERROR, "too large padding size");
-  }
-  padding_size_ = num;
   if (record_size < crc_width_) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
   }
@@ -161,10 +178,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     whole_size_ = padding_size_ < PADDING_SIZE_MAGIC ?
                                   header_size_ + key_size_ + value_size_ + padding_size_ : 0;
   } else {
-    whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_;
-    if (padding_size_ >= PADDING_SIZE_MAGIC) {
-      whole_size_ -= 4;
-    }
+    whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_ - extra_padding_size;
   }
   key_ptr_ = nullptr;
   value_ptr_ = nullptr;
@@ -367,13 +381,7 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   wp += offset_width_;
   wp += WriteVarNum(wp, key_size_);
   wp += WriteVarNum(wp, value_size_);
-  if (padding_size_ >= PADDING_SIZE_MAGIC) {
-    *(wp++) = PADDING_SIZE_MAGIC;
-    WriteFixNum(wp, padding_size_, 4);
-    wp += 4;
-  } else {
-    *(wp++) = padding_size_;
-  }
+  wp += WriteVarNum(wp, padding_size_);
   if (crc_width_ > 0) {
     WriteFixNum(wp, extra_crc_value_, crc_width_);
     wp += crc_width_;
@@ -383,11 +391,7 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   std::memcpy(wp, value_ptr_, value_size_);
   wp += value_size_;
   if (padding_size_ > 0) {
-    if (padding_size_ >= PADDING_SIZE_MAGIC) {
-      std::memset(wp, 0, padding_size_ - 4);
-    } else {
-      std::memset(wp, 0, padding_size_);
-    }
+    std::memset(wp, 0, padding_size_ - SizeVarNum(padding_size_) + 1);
     *wp = PADDING_TOP_MAGIC;
   }
   Status status(Status::SUCCESS);

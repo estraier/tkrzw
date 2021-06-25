@@ -55,6 +55,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMReorganizeTestAll(tkrzw::TreeDBM* dbm);
   void TreeDBMIteratorTest(tkrzw::TreeDBM* dbm);
   void TreeDBMKeyComparatorTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMVariousSizeTest(tkrzw::TreeDBM* dbm);
   void TreeDBMRebuildStaticTestOne(
       tkrzw::TreeDBM* dbm, const tkrzw::TreeDBM::TuningParameters& tuning_params);
   void TreeDBMRebuildStaticTestAll(tkrzw::TreeDBM* dbm);
@@ -673,6 +674,152 @@ void TreeDBMTest::TreeDBMKeyComparatorTest(tkrzw::TreeDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("\t9", "nine2"));
   EXPECT_EQ("nine2", dbm->GetSimple("9"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
+void TreeDBMTest::TreeDBMVariousSizeTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  constexpr int32_t num_iterations = 300;
+  constexpr int32_t max_value_size = 0x20000;
+  std::string value_buf;
+  value_buf.reserve(max_value_size);
+  while (value_buf.size() < max_value_size) {
+    value_buf.append(1, 'a' + value_buf.size() % 26);
+    value_buf.append(1, 'a' + value_buf.size() % 25);
+  }
+  const int32_t value_sizes[] = {
+    0, 1, 0x7D, 0x7E, 0x7F, 0x80, 0xEC, 0xED, 0xEE, 0xEF, 0xFD, 0xFE, 0xFF, 0x100,
+    0x3FFE, 0x3FFF, 0x4000};
+  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
+      {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
+  const std::vector<int32_t> align_pows = {0, 4, 10};
+  const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
+      {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_32};
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
+  for (const auto& update_mode : update_modes) {
+    for (const auto& align_pow : align_pows) {
+      for (const auto& record_crc_mode : record_crc_modes) {
+        for (const auto& record_comp_mode : record_comp_modes) {
+          if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+            continue;
+          }
+          tkrzw::TreeDBM::TuningParameters tuning_params;
+          tuning_params.update_mode = update_mode;
+          tuning_params.record_crc_mode = record_crc_mode;
+          tuning_params.record_comp_mode = record_comp_mode;
+          tuning_params.align_pow = align_pow;
+          tuning_params.num_buckets = 100;
+          tuning_params.max_page_size = 65536;
+          tuning_params.max_cached_pages = 64;
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          for (int32_t value_size : value_sizes) {
+            const std::string key = tkrzw::ToString(value_size);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, ""));
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ("", rec_value);
+          }
+          EXPECT_EQ(std::size(value_sizes), dbm->CountSimple());
+          auto iter = dbm->MakeIterator();
+          EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+          int32_t count = 0;
+          while (true) {
+            std::string key, value;
+            const tkrzw::Status status = iter->Get(&key, &value);
+            if (status != tkrzw::Status::SUCCESS) {
+              EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+              break;
+            }
+            EXPECT_EQ("", value);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+            EXPECT_EQ("", value);
+            count++;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
+          }
+          EXPECT_EQ(std::size(value_sizes), count);
+          for (int32_t value_size : value_sizes) {
+            const std::string key = tkrzw::ToString(value_size);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            const std::string_view value_wide(value_buf.data(), value_size * 2);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value_wide));
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value_wide, rec_value);
+          }
+          EXPECT_EQ(std::size(value_sizes), dbm->CountSimple());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+              file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+          int64_t value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            value_size = std::ceil((value_size + 1) * 1.2);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            value_size = std::ceil((value_size + 1) * 1.4);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          EXPECT_EQ(num_iterations, dbm->CountSimple());
+          value_size = 0;
+          for (int32_t i = 1; i <= num_iterations; i++) {
+            const std::string key = tkrzw::ToString(i * i * i);
+            const std::string_view value(value_buf.data(), value_size);
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            if (i % 2 == 0) {
+              rec_value.clear();
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key, &rec_value));
+              EXPECT_EQ(value, rec_value);
+            }
+            value_size = std::ceil((value_size + 1) * 1.4);
+            if (static_cast<size_t>(value_size) > value_buf.size()) {
+              value_size = 0;
+            }
+          }
+          EXPECT_EQ(num_iterations / 2, dbm->CountSimple());
+          iter = dbm->MakeIterator();
+          EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+          count = 0;
+          while (true) {
+            std::string key, value;
+            const tkrzw::Status status = iter->Get(&key, &value);
+            if (status != tkrzw::Status::SUCCESS) {
+              EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+              break;
+            }
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            count++;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
+          }
+          EXPECT_EQ(num_iterations / 2, count);
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        }
+      }
+    }
+  }
 }
 
 void TreeDBMTest::TreeDBMRebuildStaticTestOne(
@@ -1358,6 +1505,11 @@ TEST_F(TreeDBMTest, Iterator) {
 TEST_F(TreeDBMTest, KeyComparator) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMKeyComparatorTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, VariousSize) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  TreeDBMVariousSizeTest(&dbm);
 }
 
 TEST_F(TreeDBMTest, RebuildStatic) {

@@ -991,7 +991,7 @@ void HashDBMTest::HashDBMVariousSizeTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   constexpr int32_t num_iterations = 300;
-  constexpr int32_t max_value_size = 128 * 1024;
+  constexpr int32_t max_value_size = 0x20000;
   std::string value_buf;
   value_buf.reserve(max_value_size);
   while (value_buf.size() < max_value_size) {
@@ -1000,7 +1000,7 @@ void HashDBMTest::HashDBMVariousSizeTest(tkrzw::HashDBM* dbm) {
   }
   const int32_t value_sizes[] = {
     0, 1, 0x7D, 0x7E, 0x7F, 0x80, 0xEC, 0xED, 0xEE, 0xEF, 0xFD, 0xFE, 0xFF, 0x100,
-    0x3FFFE, 0x3FFFF, 0x4000};
+    0x3FFE, 0x3FFF, 0x4000};
   const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<int32_t> align_pows = {0, 4, 10};
@@ -1027,7 +1027,12 @@ void HashDBMTest::HashDBMVariousSizeTest(tkrzw::HashDBM* dbm) {
             const std::string key = tkrzw::ToString(value_size);
             const std::string_view value(value_buf.data(), value_size);
             EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
             EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, ""));
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ("", rec_value);
           }
           EXPECT_EQ(std::size(value_sizes), dbm->CountSimple());
           auto iter = dbm->MakeIterator();
@@ -1047,6 +1052,19 @@ void HashDBMTest::HashDBMVariousSizeTest(tkrzw::HashDBM* dbm) {
             EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
           }
           EXPECT_EQ(std::size(value_sizes), count);
+          for (int32_t value_size : value_sizes) {
+            const std::string key = tkrzw::ToString(value_size);
+            const std::string_view value(value_buf.data(), value_size);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+            std::string rec_value;
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value, rec_value);
+            const std::string_view value_wide(value_buf.data(), value_size * 2);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value_wide));
+            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &rec_value));
+            EXPECT_EQ(value_wide, rec_value);
+          }
+          EXPECT_EQ(std::size(value_sizes), dbm->CountSimple());
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
           EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
               file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));

@@ -1009,28 +1009,28 @@ int main(int argc, char** argv) {
 <dt>The value size</dt>
 <dd>A byte delta encoded integer.</dd>
 <dt>The padding size</dt>
-<dd>A 1-byte integer.</dd>
+<dd>A byte delta encoded integer.</dd>
 <dt>The CRC value</dt>
 <dd>Optional: A 1-byte, 2-byte, or 4-byte integer.</dd>
 <dt>The key data</dt>
-<dd>Arbitrary string data.</dd>
+<dd>Optional: Arbitrary string data.</dd>
 <dt>The value data</dt>
-<dd>Arbitrary string data.</dd>
+<dd>Optional: Arbitrary string data.</dd>
 <dt>The padding data</dt>
-<dd>Structural data.</dd>
+<dd>Optional: A magic data and null data.</dd>
 </dl>
 
 <p>The magic data is composed of the operation type part and the checksum part.  The upper 2 bits are the operation type part.  0xC0 (0x3 &lt;&lt; 6) indicates that the operation is to do nothing.  0x80 (0x2 &lt;&lt; 6) is to set a record.  0x40 (0x1 &lt;&lt; 6) is to remove a record.  The lower 6 bits are the checksum part.  The checksum is a total value of each byte of a concatenated sequence of the record key and the record value in modulo 61.  The checksum helps us detect data corruption.</p>
 
 <p>The child offset indicates the offset of the next record data in the linked list of the bucket.  When a new record data of the same bucket is added, the bucket points to the new record data and the new record data points to the top one of the existing linked list, or zero if it doesn't exist.</p>
 
-<p>The key size and the value size are represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16,383 takes 2 bytes. A value between 16,384 and 2,097,151 takes 3 bytes.  A value between 268,435,456 and 34,359,738,367 takes 4 bytes.</p>
-
-<p>The 1-byte padding size can represent 0 to 255.  If the padding size is 238 (0xEE) or more, the first 4 bytes of the padding data indicates the actual size of the padding data in big endian.  The first byte of the actual padding data is 0xDD and the remaining bytes are 0x00.</p>
+<p>The key size, the value size, and the padding size are represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16,383 takes 2 bytes. A value between 16,384 and 2,097,151 takes 3 bytes.  A value between 268,435,456 and 34,359,738,367 takes 4 bytes.</p>
 
 <p>The CRC value is optional.  If it exists, the value is the result of CRC-8, CRC-16, or CRC-32 applied to the concatenated data of the key and the value.  The CRC value is used to detect inconsistency when the database is restored.</p>
 
-<p>The key data is stored as-is.  The value data is also stored as-is by default.  If the record compression is enabled, compressed data by the algorithm is stored.</p>
+<p>The key data and the value data are optional, which means an empty key and an empty value respectively.  The key data is stored as-is.  The value data is also stored as-is by default.  If the record compression is enabled, compressed data by the algorithm is stored.</p>
+
+<p>The padding data is optional.  If it exists, it begins with a byte of 0xDD.  The remaining data is null codes.  The actual padding size includes additional size of the metadata for the padding size.  That is, if the padding size in the record metadata is more than 127, the actual padding size is less by one byte.  Likewise, langer than 16383 means less by two bytes, largher than 2097151 means less by three bytes.</p>
 
 <p>With the default 4-byte offset width and small-sized (less than 128 bytes) keys and medium-sized (less than 16384 bytes) values, the footprint for each record is 1 + 4 + 1 + 2 + 1 = 9 bytes.  However, due to alignment, padding bytes can be added.  With the default 8-byte alignment, average padding size is about 4 bytes.</p>
 
@@ -1665,9 +1665,9 @@ int main(int argc, char** argv) {
 <dd>A byte delta encoded integer.</dd>
 <dt>The value size</dt>
 <dd>A byte delta encoded integer.</dd>
-<dt>The key data</dt>
+<dt>Optional: The key data</dt>
 <dd>Arbitrary string data.</dd>
-<dt>The value data</dt>
+<dt>Optional: The value data</dt>
 <dd>Arbitrary string data.</dd>
 </dl>
 
@@ -1676,6 +1676,8 @@ int main(int argc, char** argv) {
 <p>The offsets of the forward records are composed of big-endian integers whose number is the same as the level of the record.  The level is determined by how many times the index of the record can be divided by the step unit without a remainder.  Given the step unit S and the index C, the destination of the first level link is the record whose index is C + S^1.  The destination of the second level link is the record whose index is C + S^2.</p>
 
 <p>The key size and the value size are represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16,383 takes 2 bytes. A value between 16,384 and 2,097,151 takes 3 bytes.  A value between 268,435,456 and 34,359,738,367 takes 4 bytes.</p>
+
+<p>The key data and the value data are optional, which means an empty key and an empty value respectively.  The key data and the value data are stored as-is.</p>
 
 <p>As long as the meta data for the file size indicates the actual content size, padding data of null codes can be appended at the end of the file.  This is useful to align the file size to the requirement of direct I/O.</p>
 
