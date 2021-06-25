@@ -141,9 +141,6 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
     if (num < PADDING_SIZE_MAGIC) {
       return Status(Status::BROKEN_DATA_ERROR, "invalid padding size");
     }
-
-    // Why num -= 4 cannot be here?
-    
     rp += 4;
     record_size -= 4;
   }

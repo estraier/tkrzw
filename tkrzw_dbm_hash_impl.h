@@ -240,15 +240,15 @@ class HashRecord final {
   /** The type of operation. */
   OperationType type_;
   /** The whole size of the record. */
-  int32_t whole_size_;
+  uint32_t whole_size_;
   /** The header size of the record. */
-  int32_t header_size_;
+  uint32_t header_size_;
   /** The size of the key. */
-  int32_t key_size_;
+  uint32_t key_size_;
   /** The size of the value */
-  int32_t value_size_;
+  uint32_t value_size_;
   /** The size of the padding */
-  int32_t padding_size_;
+  uint32_t padding_size_;
   /** The offset of the child record. */
   int64_t child_offset_;
   /** The magic CRC value. */
