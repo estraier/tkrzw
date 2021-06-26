@@ -680,6 +680,7 @@ void SkipDBMTest::SkipDBMRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(123, new_dbm.GetDatabaseType());
   EXPECT_EQ("0123456789", new_dbm.GetOpaqueMetadata().substr(0, 10));
   EXPECT_EQ(num_records, new_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.ValidateRecords());
   for (int32_t i = 0; i < 100; i++) {
     const std::string key = tkrzw::ToString(i * i);
     const std::string value = tkrzw::ToString(i);
@@ -724,6 +725,7 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
   EXPECT_TRUE(dbm->IsAutoRestored());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
   EXPECT_EQ("first", value);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
@@ -738,17 +740,14 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ("third", value);
   EXPECT_EQ(3, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Write(9, "\xFF", 1));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
-
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
   EXPECT_TRUE(dbm->IsAutoRestored());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
   EXPECT_EQ("first", value);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("two", &value));
@@ -757,9 +756,6 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ("third", value);
   EXPECT_EQ(3, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-
-
-
 }
 
 void SkipDBMTest::SkipDBMMergeTest(tkrzw::SkipDBM* dbm) {

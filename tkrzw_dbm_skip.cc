@@ -104,6 +104,7 @@ class SkipDBMImpl final {
   Status Revert();
   bool IsUpdated();
   Status MergeSkipDatabase(const std::string& src_path);
+  Status ValidateRecords();
 
  private:
   void CancelIterators();
@@ -970,6 +971,44 @@ Status SkipDBMImpl::MergeSkipDatabase(const std::string& src_path) {
   return Status(Status::SUCCESS);
 }
 
+Status SkipDBMImpl::ValidateRecords() {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  const int64_t end_offset = file_->GetSizeSimple();
+  int64_t offset = METADATA_SIZE;
+  int64_t index = 0;
+  tkrzw::SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
+  std::string last_key;
+  while (offset < end_offset) {
+    Status status = rec.ReadMetadataKey(offset, index);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    const std::string_view key = rec.GetKey();
+    std::string_view value = rec.GetValue();
+    if (value.data() == nullptr) {
+      status = rec.ReadBody();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      value = rec.GetValue();
+    }
+    if (offset == end_offset || last_key != key) {
+      std::string tmp_key(key);
+      status = rec.Search(METADATA_SIZE, cache_.get(), tmp_key, false);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+    last_key = key;
+    offset += rec.GetWholeSize();
+    index++;
+  }
+  return Status(Status::SUCCESS);
+}
+
 void SkipDBMImpl::CancelIterators() {
   for (auto* iterator : iterators_) {
     iterator->ClearPosition();
@@ -1742,6 +1781,10 @@ bool SkipDBM::IsUpdated() {
 
 Status SkipDBM::MergeSkipDatabase(const std::string& src_path) {
   return impl_->MergeSkipDatabase(src_path);
+}
+
+Status SkipDBM::ValidateRecords() {
+  return impl_->ValidateRecords();
 }
 
 SkipDBM::Iterator::Iterator(SkipDBMImpl* dbm_impl) {

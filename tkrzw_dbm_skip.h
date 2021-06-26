@@ -623,6 +623,12 @@ class SkipDBM final : public DBM {
   Status MergeSkipDatabase(const std::string& src_path);
 
   /**
+   * Validates records.
+   * @return The result status.
+   */
+  Status ValidateRecords();
+
+  /**
    * Reduces the values of records of the same key by removing REMOVING_VALUE and past values.
    * @param key The common key of the records.
    * @param values The values of the records of the same key.
