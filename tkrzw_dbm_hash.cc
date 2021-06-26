@@ -133,6 +133,7 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
   Status ValidateRecords(int64_t record_base, int64_t end_offset);
+  Status CheckHashChain(int64_t offset, const HashRecord& rec);
 
  private:
   void SetTuning(const HashDBM::TuningParameters& tuning_params);
@@ -1073,7 +1074,7 @@ Status HashDBMImpl::ImportFromFileBackward(
 }
 
 Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1909,6 +1910,12 @@ Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset)
     if (status != Status::SUCCESS) {
       return status;
     }
+    if (rec.GetOperationType() != HashRecord::OP_VOID) {
+      status = CheckHashChain(offset, rec);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
     int64_t rec_size = rec.GetWholeSize();
     if (rec_size == 0) {
       // Tentative measure for compatibility with the old format.
@@ -1924,6 +1931,35 @@ Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset)
     return Status(Status::BROKEN_DATA_ERROR, "inconsistent end offset");
   }
   return Status(Status::SUCCESS);
+}
+
+Status HashDBMImpl::CheckHashChain(int64_t offset, const HashRecord& rec) {
+  const auto key = rec.GetKey();
+  const int64_t bucket_index = PrimaryHash(key, num_buckets_);
+  ScopedHashLock record_lock(record_mutex_, rec.GetKey(), false);
+  const bool appending = static_flags_ & STATIC_FLAG_UPDATE_APPENDING;
+  int64_t chain_offset = 0;
+  Status status = GetBucketValue(bucket_index, &chain_offset);
+  HashRecord chain_rec(file_.get(), crc_width_, offset_width_, align_pow_);
+  while (chain_offset > 0) {
+    if (chain_offset == offset) {
+      return Status(Status::SUCCESS);
+    }
+    status = chain_rec.ReadMetadataKey(chain_offset, HashRecord::META_MIN_READ_SIZE);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    const auto chain_key = chain_rec.GetKey();
+    const int64_t chain_bucket_index = PrimaryHash(chain_key, num_buckets_);
+    if (chain_bucket_index != bucket_index) {
+      return Status(Status::BROKEN_DATA_ERROR, "inconsistent bucket index");
+    }
+    if (appending && chain_offset > offset && chain_key == key) {
+      return Status(Status::SUCCESS);
+    }
+    chain_offset = chain_rec.GetChildOffset();
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 HashDBMIteratorImpl::HashDBMIteratorImpl(HashDBMImpl* dbm)
