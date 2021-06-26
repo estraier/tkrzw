@@ -87,7 +87,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
       is_old_format = true;
     }
   }
-  magic_crc_value_ = magic & ~RECORD_MAGIC_VOID;
+  magic_checksum_ = magic & ~RECORD_MAGIC_VOID;
   magic &= RECORD_MAGIC_VOID;
   if (magic == RECORD_MAGIC_VOID) {
     type_ = OP_VOID;
@@ -168,7 +168,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   if (record_size < crc_width_) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
   }
-  extra_crc_value_ = ReadFixNum(rp, crc_width_);
+  crc_value_ = ReadFixNum(rp, crc_width_);
   rp += crc_width_;
   record_size -= crc_width_;
   header_size_ = rp - read_buf;
@@ -294,32 +294,32 @@ Status HashRecord::CheckCRC() {
   {
     // Tentative measure for compatibility with the old format.
     // TODO: remove this.
-    if (magic_crc_value_ == 0x3F) {
+    if (magic_checksum_ == 0x3F) {
       return Status(Status::SUCCESS);
     }
   }
   const uint32_t act_magic_crc_value =
       MagicChecksum(key_ptr_, key_size_, value_ptr_, value_size_);
-  if (magic_crc_value_ != act_magic_crc_value) {
+  if (magic_checksum_ != act_magic_crc_value) {
     return Status(Status::BROKEN_DATA_ERROR, "inconcistent magic CRC");
   }
   if (crc_width_ > 0) {
-    uint32_t act_extra_crc_value = 0;
+    uint32_t act_crc_value = 0;
     switch (crc_width_) {
       case 1:
-        act_extra_crc_value = HashCRC8Continuous(
+        act_crc_value = HashCRC8Continuous(
             value_ptr_, value_size_, true, HashCRC8Continuous(key_ptr_, key_size_, false));
         break;
       case 2:
-        act_extra_crc_value = HashCRC16Continuous(
+        act_crc_value = HashCRC16Continuous(
             value_ptr_, value_size_, true, HashCRC16Continuous(key_ptr_, key_size_, false));
         break;
       case 4:
-        act_extra_crc_value = HashCRC32Continuous(
+        act_crc_value = HashCRC32Continuous(
             value_ptr_, value_size_, true, HashCRC32Continuous(key_ptr_, key_size_, false));
         break;
     }
-    if (extra_crc_value_ != act_extra_crc_value) {
+    if (crc_value_ != act_crc_value) {
       return Status(Status::BROKEN_DATA_ERROR, "inconcistent extra CRC");
     }
   }
@@ -340,18 +340,18 @@ void HashRecord::SetData(OperationType type, int32_t ideal_whole_size,
   value_size_ = value_size;
   padding_size_ = whole_size_ - base_size;
   child_offset_ = child_offset;
-  magic_crc_value_ = MagicChecksum(key_ptr, key_size, value_ptr, value_size);
+  magic_checksum_ = MagicChecksum(key_ptr, key_size, value_ptr, value_size);
   switch (crc_width_) {
     default:
-      extra_crc_value_ = 0;
+      crc_value_ = 0;
       break;
-    case 1: extra_crc_value_ = HashCRC8Continuous(
+    case 1: crc_value_ = HashCRC8Continuous(
         value_ptr, value_size, true, HashCRC8Continuous(key_ptr, key_size, false));
       break;
-    case 2: extra_crc_value_ = HashCRC16Continuous(
+    case 2: crc_value_ = HashCRC16Continuous(
         value_ptr, value_size, true, HashCRC16Continuous(key_ptr, key_size, false));
       break;
-    case 4: extra_crc_value_ = HashCRC32Continuous(
+    case 4: crc_value_ = HashCRC32Continuous(
         value_ptr, value_size, true, HashCRC32Continuous(key_ptr, key_size, false));
       break;
   }
@@ -364,7 +364,7 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   char* write_buf = whole_size_ > static_cast<int32_t>(sizeof(stack)) ?
       static_cast<char*>(xmalloc(whole_size_)) : stack;
   char* wp = write_buf;
-  uint32_t magic = magic_crc_value_;
+  uint32_t magic = magic_checksum_;
   switch (type_) {
     case OP_SET:
       magic |= RECORD_MAGIC_SET;
@@ -383,7 +383,7 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   wp += WriteVarNum(wp, value_size_);
   wp += WriteVarNum(wp, padding_size_);
   if (crc_width_ > 0) {
-    WriteFixNum(wp, extra_crc_value_, crc_width_);
+    WriteFixNum(wp, crc_value_, crc_width_);
     wp += crc_width_;
   }
   std::memcpy(wp, key_ptr_, key_size_);

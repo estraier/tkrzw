@@ -717,6 +717,16 @@ class HashDBM final : public DBM {
       int64_t record_base, int64_t end_offset);
 
   /**
+   * Validates records in a region.
+   * @param record_base The beginning offset of records to check.  Negative means the beginning
+   * of the record section.
+   * @param end_offset The exclusive end offset of records to check.  Negative means unlimited.
+   * 0 means the size when the database is synched or closed properly.
+   * @return The result status.
+   */
+  Status ValidateRecords(int64_t record_base, int64_t end_offset);
+
+  /**
    * Reads metadata from a database file.
    * @param file A file object having opened the database file.
    * @param cyclic_magic The pointer to a variable to store the cyclic magic data.

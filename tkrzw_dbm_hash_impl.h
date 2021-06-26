@@ -45,8 +45,6 @@ class HashRecord final {
   static constexpr int64_t MAX_VALUE_SIZE = 2 * (1LL << 30) - 1;
   /** The minimum size to read the meta data. */
   static constexpr int64_t META_MIN_READ_SIZE = 48;
-  /** The range to check the hash chain for restoration. */
-  static constexpr int64_t RESTORE_CHECK_CHAIN_RANGE = 1024 * 1024;
 
   /**
    * Enumeration for operation types.
@@ -251,10 +249,10 @@ class HashRecord final {
   uint32_t padding_size_;
   /** The offset of the child record. */
   int64_t child_offset_;
-  /** The magic CRC value. */
-  uint32_t magic_crc_value_;
+  /** The magic checksum value. */
+  uint32_t magic_checksum_;
   /** The extra CRC value. */
-  uint32_t extra_crc_value_;
+  uint32_t crc_value_;
   /** The pointer to the key region. */
   const char* key_ptr_;
   /** The pointer to the value region. */

@@ -132,6 +132,7 @@ class HashDBMImpl final {
   Status ImportFromFileBackward(
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
+  Status ValidateRecords(int64_t record_base, int64_t end_offset);
 
  private:
   void SetTuning(const HashDBM::TuningParameters& tuning_params);
@@ -159,6 +160,7 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset,
       const std::string& offset_path, const std::string& dead_path);
+  Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset);
 
   bool open_;
   bool writable_;
@@ -258,13 +260,14 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     file_->Close();
     return status;
   }
+  const int64_t actual_file_size = file_->GetSizeSimple();
   auto_restored_ = false;
   if (writable && !healthy_ && tuning_params.restore_mode != HashDBM::RESTORE_READ_ONLY) {
     if (tuning_params.restore_mode == HashDBM::RESTORE_NOOP) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-               file_size_ == file_->GetSizeSimple()) {
+               file_size_ == actual_file_size) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else {
@@ -1067,6 +1070,14 @@ Status HashDBMImpl::ImportFromFileBackward(
   }
   return ImportFromFileBackwardImpl(file, skip_broken_records, record_base, end_offset,
                                     offset_path, dead_path);
+}
+
+Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return ValidateRecordsImpl(record_base, end_offset);
 }
 
 void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
@@ -1877,6 +1888,44 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   return status;
 }
 
+Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset) {
+  if (record_base < 0) {
+    record_base = record_base_;
+  }
+  if (end_offset < 0) {
+    end_offset = file_->GetSizeSimple();
+  }  else if (end_offset == 0) {
+    end_offset = file_size_;
+  }
+  end_offset = std::min(end_offset, file_->GetSizeSimple());
+  int64_t offset = record_base;
+  HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+  while (offset < end_offset) {
+    Status status = rec.ReadMetadataKey(offset, min_read_size_);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    status = rec.CheckCRC();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    int64_t rec_size = rec.GetWholeSize();
+    if (rec_size == 0) {
+      // Tentative measure for compatibility with the old format.
+      // TODO: remove this.
+      status = rec.ReadBody();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+    offset += rec_size;
+  }
+  if (offset != end_offset) {
+    return Status(Status::BROKEN_DATA_ERROR, "inconsistent end offset");
+  }
+  return Status(Status::SUCCESS);
+}
+
 HashDBMIteratorImpl::HashDBMIteratorImpl(HashDBMImpl* dbm)
     : dbm_(dbm), bucket_index_(-1), keys_() {
   std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
@@ -2186,6 +2235,10 @@ Status HashDBM::ImportFromFileBackward(
     File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
   assert(file != nullptr);
   return impl_->ImportFromFileBackward(file, skip_broken_records, record_base, end_offset);
+}
+
+Status HashDBM::ValidateRecords(int64_t record_base, int64_t end_offset) {
+  return impl_->ValidateRecords(record_base, end_offset);
 }
 
 HashDBM::Iterator::Iterator(HashDBMImpl* dbm_impl) {
