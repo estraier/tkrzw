@@ -137,6 +137,7 @@ class TreeDBMImpl final {
   std::string GetOpaqueMetadata();
   Status SetOpaqueMetadata(const std::string& opaque);
   KeyComparator GetKeyComparator();
+  Status ValidateRecords(int64_t record_base, int64_t end_offset);
 
  private:
   Status SaveMetadata();
@@ -951,6 +952,14 @@ KeyComparator TreeDBMImpl::GetKeyComparator() {
     return nullptr;
   }
   return key_comparator_;
+}
+
+Status TreeDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return hash_dbm_->ValidateRecords(record_base, end_offset);
 }
 
 Status TreeDBMImpl::SaveMetadata() {
@@ -2430,6 +2439,10 @@ Status TreeDBM::SetOpaqueMetadata(const std::string& opaque) {
 
 KeyComparator TreeDBM::GetKeyComparator() const {
   return impl_->GetKeyComparator();
+}
+
+Status TreeDBM::ValidateRecords(int64_t record_base, int64_t end_offset) {
+  return impl_->ValidateRecords(record_base, end_offset);
 }
 
 TreeDBM::Iterator::Iterator(TreeDBMImpl* dbm_impl) {

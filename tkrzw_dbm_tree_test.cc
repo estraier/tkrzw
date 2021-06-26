@@ -989,6 +989,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ(123, new_dbm.GetDatabaseType());
     EXPECT_EQ("0123456789", new_dbm.GetOpaqueMetadata().substr(0, 10));
     EXPECT_EQ(num_records, new_dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.ValidateRecords(-1, -1));
     for (int32_t i = 0; i < 100; i++) {
       const std::string key = tkrzw::ToString(i * i);
       const std::string value = tkrzw::ToString(i);
@@ -1037,6 +1038,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Open(second_file_path, false));
     EXPECT_TRUE(second_dbm.IsHealthy());
     EXPECT_EQ(dbm->CountSimple(), second_dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
     int64_t count = 0;
     auto iter = second_dbm.MakeIterator();
     EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
@@ -1090,6 +1092,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_FALSE(dbm->IsHealthy());
       EXPECT_FALSE(dbm->IsAutoRestored());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       std::string value;
       EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->Get("one", &value));
       EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->Get("two", &value));
@@ -1101,6 +1104,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_TRUE(dbm->IsHealthy());
       EXPECT_TRUE(dbm->IsAutoRestored());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one", &value));
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
       EXPECT_EQ(0, dbm->CountSimple());
@@ -1118,6 +1122,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_TRUE(dbm->IsHealthy());
       EXPECT_TRUE(dbm->IsAutoRestored());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
       EXPECT_EQ("first", value);
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
@@ -1135,6 +1140,7 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_TRUE(dbm->IsHealthy());
       EXPECT_TRUE(dbm->IsAutoRestored());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
       EXPECT_EQ("first", value);
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
@@ -1149,31 +1155,15 @@ void TreeDBMTest::TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string corrupt_file_path = tmp_dir.MakeUniquePath();
   const std::string restored_file_path = tmp_dir.MakeUniquePath();
-
-/*
   const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
       {tkrzw::HashDBM::UPDATE_IN_PLACE, tkrzw::HashDBM::UPDATE_APPENDING};
   const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
       {tkrzw::HashDBM::RECORD_CRC_NONE, tkrzw::HashDBM::RECORD_CRC_8,
        tkrzw::HashDBM::RECORD_CRC_16, tkrzw::HashDBM::RECORD_CRC_32};
-
-
   const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
       {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZLIB,
        tkrzw::HashDBM::RECORD_COMP_ZSTD, tkrzw::HashDBM::RECORD_COMP_LZ4,
        tkrzw::HashDBM::RECORD_COMP_LZMA};
-*/
-
-  const std::vector<tkrzw::HashDBM::UpdateMode> update_modes =
-      {tkrzw::HashDBM::UPDATE_IN_PLACE};
-  const std::vector<tkrzw::HashDBM::RecordCRCMode> record_crc_modes =
-      {tkrzw::HashDBM::RECORD_CRC_32};
-  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
-      {tkrzw::HashDBM::RECORD_COMP_LZMA};
-
-
-
-
   for (const auto& update_mode : update_modes) {
     for (const auto& record_crc_mode : record_crc_modes) {
       for (const auto& record_comp_mode : record_comp_modes) {
@@ -1278,15 +1268,8 @@ void TreeDBMTest::TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm) {
             break;
         }
         EXPECT_EQ(expected_comp_name, comp_name);
-        if (record_crc_mode == tkrzw::HashDBM::RECORD_CRC_NONE) {
-          if (record_comp_mode == tkrzw::HashDBM::RECORD_COMP_NONE) {
-            EXPECT_EQ(1, dbm->CountSimple());
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("abc", &rec_value));
-          }
-        } else {
-          EXPECT_EQ(0, dbm->CountSimple());
-          EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
-        }
+        EXPECT_EQ(0, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("abc"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("abc", "12345"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("xyz", "67890"));
         EXPECT_EQ(2, dbm->CountSimple());

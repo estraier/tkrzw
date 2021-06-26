@@ -490,6 +490,16 @@ class TreeDBM final : public DBM {
   KeyComparator GetKeyComparator() const;
 
   /**
+   * Validates records in a region.
+   * @param record_base The beginning offset of records to check.  Negative means the beginning
+   * of the record section.
+   * @param end_offset The exclusive end offset of records to check.  Negative means unlimited.
+   * 0 means the size when the database is synched or closed properly.
+   * @return The result status.
+   */
+  Status ValidateRecords(int64_t record_base, int64_t end_offset);
+
+  /**
    * Parses metadata on an opaque data sequence.
    * @param opaque The opaque data from the underlying database.
    * @param num_records The pointer to a variable to store the number of buckets.
