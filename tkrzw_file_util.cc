@@ -445,16 +445,11 @@ Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
   if (src_fd < 0) {
     return GetErrnoStatus("open", errno);
   }
+  RemoveFile(dest_path);
   const int32_t dest_fd = open(dest_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, FILEPERM);
   if (dest_fd < 0) {
     const Status status = GetErrnoStatus("open", errno);
     close(src_fd);
-    return status;
-  }
-  if (ftruncate(dest_fd, 0) != 0) {
-    const Status status = GetErrnoStatus("open", errno);
-    close(src_fd);
-    close(dest_fd);
     return status;
   }
   Status status(Status::SUCCESS);
