@@ -199,6 +199,7 @@ Status RenameFile(const std::string& src_path, const std::string& dest_path);
  * @param src_path The source path of the file.
  * @param dest_path The destination path of the file.
  * @return The result status.
+ * @detail Copying is done in the fastest way available on the platform.
  */
 Status CopyFileData(const std::string& src_path, const std::string& dest_path);
 

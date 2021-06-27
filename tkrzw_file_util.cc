@@ -59,6 +59,7 @@ const char* const TMP_DIR_CANDIDATES[] = {
 
 #if defined(_SYS_LINUX_)
 #include <sys/sendfile.h>
+#include <linux/fs.h>
 #endif
 
 std::string MakeTemporaryName() {
@@ -395,28 +396,42 @@ Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
   if (src_fd < 0) {
     return GetErrnoStatus("open", errno);
   }
-  int64_t file_size = lseek(src_fd, 0, SEEK_END);
-  if (file_size < 0) {
-    return GetErrnoStatus("lseek", errno);
-  }
-  if (lseek(src_fd, 0, SEEK_SET)) {
-    return GetErrnoStatus("lseek", errno);
-  }
   const int32_t dest_fd = open(dest_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, FILEPERM);
   if (dest_fd < 0) {
     const Status status = GetErrnoStatus("open", errno);
     close(src_fd);
     return status;
   }
+  int64_t file_size = lseek(src_fd, 0, SEEK_END);
+  if (file_size < 0) {
+    const Status status = GetErrnoStatus("lseek", errno);
+    close(dest_fd);
+    close(src_fd);
+    return status;
+  }
+  if (lseek(src_fd, 0, SEEK_SET) != 0) {
+    const Status status = GetErrnoStatus("lseek", errno);
+    close(dest_fd);
+    close(src_fd);
+    return status;
+  }
+  if (ftruncate(dest_fd, 0) != 0) {
+    const Status status = GetErrnoStatus("open", errno);
+    close(src_fd);
+    close(dest_fd);
+    return status;
+  }
   Status status(Status::SUCCESS);
-  while (file_size > 0) {
-    const int64_t sent_size =
-        sendfile(dest_fd, src_fd, nullptr, std::min<int64_t>(file_size, 65536));
-    if (sent_size < 0) {
-      status |= GetErrnoStatus("read", errno);
-      break;
+  if (ioctl(dest_fd, FICLONE, src_fd) != 0) {
+    while (file_size > 0) {
+      const int64_t sent_size =
+          sendfile(dest_fd, src_fd, nullptr, std::min<int64_t>(file_size, 65536));
+      if (sent_size < 0) {
+        status |= GetErrnoStatus("read", errno);
+        break;
+      }
+      file_size -= sent_size;
     }
-    file_size -= sent_size;
   }
   if (close(dest_fd) != 0) {
     status |= GetErrnoStatus("close", errno);
@@ -436,8 +451,14 @@ Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
     close(src_fd);
     return status;
   }
+  if (ftruncate(dest_fd, 0) != 0) {
+    const Status status = GetErrnoStatus("open", errno);
+    close(src_fd);
+    close(dest_fd);
+    return status;
+  }
   Status status(Status::SUCCESS);
-  constexpr size_t bufsiz = 8192;
+  constexpr size_t bufsiz = 65536;
   char buf[bufsiz];
   while (true) {
     int32_t size = read(src_fd, buf, bufsiz);

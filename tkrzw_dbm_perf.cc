@@ -62,6 +62,7 @@ static void PrintUsageAndDie() {
   P("  --get_only : Does only getting.\n");
   P("  --remove_only : Does only removing.\n");
   P("  --validate : Validates records.\n");
+  P("  --copy str : Copies the database file.\n");
   P("\n");
   P("Options for the parallel subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -392,13 +393,18 @@ SkipDBM::ReducerType GetReducerOrDier(const std::string& reducer_name) {
 }
 
 // Synchronizes a DBM object.
-bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
+bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name, const std::string& copy_path) {
   bool has_error = false;
+  Status copy_status;
+  std::unique_ptr<DBM::FileProcessorCopyFileData> copy_proc;
+  if (!copy_path.empty()) {
+    copy_proc = std::make_unique<DBM::FileProcessorCopyFileData>(&copy_status, copy_path);
+  }
   const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     const Status status = skip_dbm->SynchronizeAdvanced(
-        false, nullptr, GetReducerOrDier(reducer_name));
+        false, copy_proc.get(), GetReducerOrDier(reducer_name));
     if (status != Status::SUCCESS) {
       EPrintL("SynchronizeAdvanced failed: ", status);
       has_error = true;
@@ -410,13 +416,13 @@ bool SynchronizeDBM(DBM* dbm, const std::string& reducer_name) {
       params.emplace("reducer", reducer_name);
     }
     const Status status = param_dbm->SynchronizeAdvanced(
-        false, nullptr, params);
+        false, copy_proc.get(), params);
     if (status != Status::SUCCESS) {
       EPrintL("SynchronizeAdvanced failed: ", status);
       has_error = true;
     }
   } else {
-    const Status status = dbm->Synchronize(false);
+    const Status status = dbm->Synchronize(false, copy_proc.get());
     if (status != Status::SUCCESS) {
       EPrintL("Synchronize failed: ", status);
       has_error = true;
@@ -568,7 +574,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0},
-    {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0}, {"--validate", 0},
+    {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0}, {"--validate", 0}, {"--copy", 1},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
@@ -599,6 +605,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool is_set_only = CheckMap(cmd_args, "--set_only");
   const bool is_remove_only = CheckMap(cmd_args, "--remove_only");
   const bool with_validate = CheckMap(cmd_args, "--validate");
+  const std::string copy_path = GetStringArgument(cmd_args, "--copy", 0, "");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -704,7 +711,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     Print("Synchronizing: ... ");
     const double sync_start_time = GetWallTime();
-    if (!SynchronizeDBM(dbm.get(), reducer_name)) {
+    if (!SynchronizeDBM(dbm.get(), reducer_name, copy_path)) {
       has_error = true;
     }
     const double sync_end_time = GetWallTime();
@@ -841,7 +848,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     Print("Synchronizing: ... ");
     const double sync_start_time = GetWallTime();
-    if (!SynchronizeDBM(dbm.get(), reducer_name)) {
+    if (!SynchronizeDBM(dbm.get(), reducer_name, copy_path)) {
       has_error = true;
     }
     const double sync_end_time = GetWallTime();
@@ -1052,7 +1059,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   }
   Print("Synchronizing: ... ");
   const double sync_start_time = GetWallTime();
-  if (!SynchronizeDBM(dbm.get(), reducer_name)) {
+  if (!SynchronizeDBM(dbm.get(), reducer_name, "")) {
     has_error = true;
   }
   const double sync_end_time = GetWallTime();
@@ -1358,7 +1365,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   }
   Print("Synchronizing: ... ");
   const double sync_start_time = GetWallTime();
-  if (!SynchronizeDBM(dbm.get(), reducer_name)) {
+  if (!SynchronizeDBM(dbm.get(), reducer_name, "")) {
     has_error = true;
   }
   const double sync_end_time = GetWallTime();
