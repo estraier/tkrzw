@@ -66,6 +66,9 @@ static void PrintUsageAndDie() {
   P("Options for the create subcommand:\n");
   P("  --truncate : Truncates an existing database file.\n");
   P("\n");
+  P("Options for the inspect subcommand:\n");
+  P("  --validate : Validates records.\n");
+  P("\n");
   P("Options for the set subcommand:\n");
   P("  --no_overwrite : Fails if there's an existing record wit the same key.\n");
   P("  --reducer func : Sets the reducer for the skip database:"
@@ -597,6 +600,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
+    {"--validate", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -616,6 +620,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
+  const bool with_validate = CheckMap(cmd_args, "--validate");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -636,10 +641,42 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
   PrintF("Actual File Size: %lld\n", dbm->GetFileSizeSimple());
   PrintF("Number of Records: %lld\n", dbm->CountSimple());
   PrintF("Should be Rebuilt: %s\n", dbm->ShouldBeRebuiltSimple() ? "true" : "false");
+  bool has_error = false;
+  if (with_validate) {
+    Print("Validating records: ... ");
+    const double valid_start_time = GetWallTime();
+    const auto& dbm_type = dbm->GetType();
+    if (dbm_type == typeid(HashDBM)) {
+      HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm.get());
+      const Status status = hash_dbm->ValidateRecords(-1, -1);
+      if (status != Status::SUCCESS) {
+        EPrintL("VaridateRecords failed: ", status);
+        has_error = true;
+      }
+    }
+    if (dbm_type == typeid(TreeDBM)) {
+      TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm.get());
+      const Status status = tree_dbm->ValidateRecords(-1, -1);
+      if (status != Status::SUCCESS) {
+        EPrintL("VaridateRecords failed: ", status);
+        has_error = true;
+      }
+    }
+    if (dbm_type == typeid(SkipDBM)) {
+      SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
+      const Status status = skip_dbm->ValidateRecords();
+      if (status != Status::SUCCESS) {
+        EPrintL("VaridateRecords failed: ", status);
+        has_error = true;
+      }
+    }
+    const double valid_end_time = GetWallTime();
+    PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
+  }
   if (!CloseDBM(dbm.get())) {
     return 1;
   }
-  return 0;
+  return has_error ? 1 : 0;
 }
 
 // Processes the get subcommand.

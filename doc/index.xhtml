@@ -983,7 +983,7 @@ int main(int argc, char** argv) {
 
 <p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
 
-<p>The static flags specifies flags which are not changed during lifetime of the database.  The first bit and the second bit represent the update mode.  10 means the in-place update mode.  01 means the appending update mode.  00 and 11 are invalid.  The third bit and the fourth bit represent the record CRC mode. 00 means no checksum.  01 means CRC-8.  10 means CRC-16.  11 means CRC-32.  The fifth bit, the sixth, and the seventh bit represent compression mode.  000 means no compression.  001 means ZLib.  010 means ZStd.  011 means LZ4.  100 means LZMA.</p>
+<p>The static flags specifies flags which are not changed during lifetime of the database.  The first bit and the second bit represent the update mode.  0x1 means the in-place update mode.  0x2 means the appending update mode.  0x0 and 0x3 are invalid.  The third bit and the fourth bit represent the record CRC mode. 0x0 means no checksum.  0x1 means CRC-8.  0x2 means CRC-16.  0x3 means CRC-32.  The fifth bit, the sixth, and the seventh bit represent compression mode.  0x0 means no compression.  0x1 means ZLib.  0x2 means ZStd.  0x3 means LZ4.  0x4 means LZMA.</p>
 
 <p>The offset width specifies how many bytes are used to store an offset value.  Given the offset width W, the maximum value is 2^(W*8).  So, W=3 sets the maximum value 16,777,216 and W=4 sets it 4,294,967,296.  The offset width affects the size of the buckets and the footprint of each record.  The alignment power specifies the alignment of the offset value.  Given the alignment power P, the alignment is 2^P.  So, P=2 sets the alignment 4 and P=3 sets it 8.  The alignment affects the size of space for each record.  The maximum database size is determined as 2^(W*8+P).   The default value of the offset width is 4 and the default value of the alignment power is 3.  So, the maximum database size is 32GiB by default.</p>
 
@@ -2626,6 +2626,8 @@ int main(int argc, char** argv) {
 <dd><code>--pagecache</code> : Enables the mini page cache in the process.</dd>
 <dt>Options for the create subcommand:</dt>
 <dd><code>--truncate</code> : Truncates an existing database file.</dd>
+<dt>Options for the inspect subcommand:</dt>
+<dd><code>--validate</code> : Validates records.</dd>
 <dt>Options for the set subcommand:</dt>
 <dd><code>--no_overwrite</code> : Fails if there's an existing record wit the same key.</dd>
 <dd><code>--reducer <var>func</var></code> : Sets the reducer for the skip database: none, first, second, last, concat, concatnull, concattab, concatline, total. (default: none)</dd>
@@ -2740,16 +2742,19 @@ applet  A small application.
 <dd><code>--set_only</code> : Does only setting.</dd>
 <dd><code>--get_only</code> : Does only getting.</dd>
 <dd><code>--remove_only</code> : Does only removing.</dd>
+<dd><code>--validate</code> : Validates records.</dd>
 <dt>Options for the parallel subcommand:</dt>
 <dd><code>--random_key</code> : Uses random keys rather than sequential ones.</dd>
 <dd><code>--random_value</code> : Uses random length values rather than fixed ones.</dd>
 <dd><code>--keys</code> : The number of unique keys.</dd>
 <dd><code>--rebuild</code> : Rebuilds the database occasionally.</dd>
 <dd><code>--sleep <var>num</var></code> : The duration to sleep between iterations. (default: 0)</dd>
+<dd><code>--validate</code> : Validates records.</dd>
 <dt>Options for the wicked subcommand:</dt>
 <dd><code>--iterator</code> : Uses iterators occasionally.</dd>
 <dd><code>--clear</code> : Clears the database occasionally.</dd>
 <dd><code>--rebuild</code> : Rebuilds the database occasionally.</dd>
+<dd><code>--validate</code> : Validates records.</dd>
 <dt>Options for the index subcommand:</dt>
 <dd><code>--type <var>expr</var></code> : The types of the key and value of the index: file, mem, n2n, n2s, s2n, s2s, str. (default: file)</dd>
 <dd><code>--random_key</code> : Uses random keys rather than sequential ones.</dd>

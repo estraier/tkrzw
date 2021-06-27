@@ -61,7 +61,7 @@ static void PrintUsageAndDie() {
   P("  --set_only : Does only setting.\n");
   P("  --get_only : Does only getting.\n");
   P("  --remove_only : Does only removing.\n");
-  P("  --validate : Validates records at the end.\n");
+  P("  --validate : Validates records.\n");
   P("\n");
   P("Options for the parallel subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -69,13 +69,13 @@ static void PrintUsageAndDie() {
   P("  --keys : The number of unique keys.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
   P("  --sleep num : The duration to sleep between iterations. (default: 0)\n");
-  P("  --validate : Validates records at the end.\n");
+  P("  --validate : Validates records.\n");
   P("\n");
   P("Options for the wicked subcommand:\n");
   P("  --iterator : Uses iterators occasionally.\n");
   P("  --clear : Clears the database occasionally.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
-  P("  --validate : Validates records at the end.\n");
+  P("  --validate : Validates records.\n");
   P("\n");
   P("Options for the index subcommand:\n");
   P("  --type expr : The types of the key and value of the index:"

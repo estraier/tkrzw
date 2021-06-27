@@ -234,12 +234,12 @@ check-hashdbm-util :
 	tkrzw_dbm_util.exe import --dbm hash --tsv casket-3.tkh casket.tsv
 	tkrzw_dbm_util.exe get --dbm hash casket-3.tkh three
 	tkrzw_dbm_util.exe rebuild --dbm hash casket.tkh
-	tkrzw_dbm_util.exe inspect --dbm hash casket.tkh
+	tkrzw_dbm_util.exe inspect --dbm hash --validate casket.tkh
 	tkrzw_dbm_util.exe restore --dbm hash casket.tkh casket-new.tkh
 	tkrzw_dbm_util.exe set --dbm hash casket-new.tkh four fourth
 	tkrzw_dbm_util.exe get --dbm hash casket-new.tkh one
 	tkrzw_dbm_util.exe list --dbm hash casket-new.tkh
-	tkrzw_dbm_util.exe inspect --dbm hash casket-new.tkh
+	tkrzw_dbm_util.exe inspect --dbm hash --validate casket-new.tkh
 	tkrzw_dbm_util.exe merge --dbm hash casket-new.tkh casket.tkh
 	tkrzw_dbm_util.exe create --dbm hash --file pos-para \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
@@ -328,12 +328,12 @@ check-treedbm-util :
 	tkrzw_dbm_util.exe import --dbm tree --tsv casket-3.tkt casket.tsv
 	tkrzw_dbm_util.exe get --dbm tree casket-3.tkt three
 	tkrzw_dbm_util.exe rebuild --dbm tree casket.tkt
-	tkrzw_dbm_util.exe inspect --dbm tree casket.tkt
+	tkrzw_dbm_util.exe inspect --dbm tree --validate casket.tkt
 	tkrzw_dbm_util.exe restore --dbm tree casket.tkt casket-new.tkt
 	tkrzw_dbm_util.exe set --dbm tree casket-new.tkt four fourth
 	tkrzw_dbm_util.exe get --dbm tree casket-new.tkt one
 	tkrzw_dbm_util.exe list --dbm tree casket-new.tkt
-	tkrzw_dbm_util.exe inspect --dbm tree casket-new.tkt
+	tkrzw_dbm_util.exe inspect --dbm tree --validate casket-new.tkt
 	tkrzw_dbm_util.exe merge --dbm tree casket-new.tkt casket.tkt
 	tkrzw_dbm_util.exe create --dbm tree --file pos-atom \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
@@ -394,12 +394,12 @@ check-skipdbm-util :
 	tkrzw_dbm_util.exe import --dbm skip --tsv casket-3.tks casket.tsv
 	tkrzw_dbm_util.exe get --dbm skip casket-3.tks three
 	tkrzw_dbm_util.exe rebuild --dbm skip casket.tks
-	tkrzw_dbm_util.exe inspect --dbm skip casket.tks
+	tkrzw_dbm_util.exe inspect --dbm skip --validate casket.tks
 	tkrzw_dbm_util.exe restore --dbm skip casket.tks casket-new.tks
 	tkrzw_dbm_util.exe set --dbm skip casket-new.tks four fourth
 	tkrzw_dbm_util.exe get --dbm skip casket-new.tks one
 	tkrzw_dbm_util.exe list --dbm skip casket-new.tks
-	tkrzw_dbm_util.exe inspect --dbm skip casket-new.tks
+	tkrzw_dbm_util.exe inspect --dbm skip --validate casket-new.tks
 	tkrzw_dbm_util.exe merge --dbm skip --reducer last casket-new.tks casket.tks
 	tkrzw_dbm_util.exe create --dbm skip --file pos-atom \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \

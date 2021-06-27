@@ -320,14 +320,14 @@ check-hashdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util import --dbm hash --tsv casket-3.tkh casket.tsv
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-3.tkh three
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm hash casket.tkh
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash casket.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash --validate casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm hash casket.tkh casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm hash casket-new.tkh four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-new.tkh one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm hash casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm hash casket-new.tkh one
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash casket-new.tkh
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm hash --validate casket-new.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm hash casket-new.tkh casket.tkh
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm hash --file pos-para \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
@@ -413,14 +413,14 @@ check-treedbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util import --dbm tree --tsv casket-3.tkt casket.tsv
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-3.tkt three
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm tree casket.tkt
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree casket.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree --validate casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm tree casket.tkt casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm tree casket-new.tkt four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-new.tkt one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm tree casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm tree casket-new.tkt one
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree casket-new.tkt
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm tree --validate casket-new.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm tree casket-new.tkt casket.tkt
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm tree --file pos-atom \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
@@ -481,14 +481,14 @@ check-skipdbm-util :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util import --dbm skip --tsv casket-3.tks casket.tsv
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-3.tks three
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util rebuild --dbm skip casket.tks
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip casket.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip --validate casket.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm skip casket.tks casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util set --dbm skip casket-new.tks four fourth
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-new.tks one
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util list --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util restore --dbm skip casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util get --dbm skip casket-new.tks one
-	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip casket-new.tks
+	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util inspect --dbm skip --validate casket-new.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util merge --dbm skip --reducer last casket-new.tks casket.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_util create --dbm skip --file pos-atom \
 	  --alloc_init 1 --alloc_inc 1.2 --buckets 10 --block_size 8192 --padding \
