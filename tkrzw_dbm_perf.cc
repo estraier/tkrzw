@@ -61,6 +61,7 @@ static void PrintUsageAndDie() {
   P("  --set_only : Does only setting.\n");
   P("  --get_only : Does only getting.\n");
   P("  --remove_only : Does only removing.\n");
+  P("  --validate : Validates records at the end.\n");
   P("\n");
   P("Options for the parallel subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -68,11 +69,13 @@ static void PrintUsageAndDie() {
   P("  --keys : The number of unique keys.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
   P("  --sleep num : The duration to sleep between iterations. (default: 0)\n");
+  P("  --validate : Validates records at the end.\n");
   P("\n");
   P("Options for the wicked subcommand:\n");
   P("  --iterator : Uses iterators occasionally.\n");
   P("  --clear : Clears the database occasionally.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
+  P("  --validate : Validates records at the end.\n");
   P("\n");
   P("Options for the index subcommand:\n");
   P("  --type expr : The types of the key and value of the index:"
@@ -527,13 +530,45 @@ bool TearDownDBM(DBM* dbm, const std::string& file_path, bool is_verbose) {
   return !has_error;
 }
 
+// Validates records of a DBM object.
+bool ValidateDBM(DBM* dbm) {
+  bool has_error = false;
+  const auto& dbm_type = dbm->GetType();
+  if (dbm_type == typeid(HashDBM)) {
+    HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
+    const Status status = hash_dbm->ValidateRecords(-1, -1);
+    if (status != Status::SUCCESS) {
+      EPrintL("VaridateRecords failed: ", status);
+      has_error = true;
+    }
+  }
+  if (dbm_type == typeid(TreeDBM)) {
+    TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
+    const Status status = tree_dbm->ValidateRecords(-1, -1);
+    if (status != Status::SUCCESS) {
+      EPrintL("VaridateRecords failed: ", status);
+      has_error = true;
+    }
+  }
+  if (dbm_type == typeid(SkipDBM)) {
+    SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
+    const Status status = skip_dbm->ValidateRecords();
+    if (status != Status::SUCCESS) {
+      EPrintL("VaridateRecords failed: ", status);
+      has_error = true;
+    }
+  }
+  return !has_error;
+}
+
+
 // Processes the sequence subcommand.
 static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0},
-    {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
+    {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0}, {"--validate", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
@@ -563,6 +598,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool is_get_only = CheckMap(cmd_args, "--get_only");
   const bool is_set_only = CheckMap(cmd_args, "--set_only");
   const bool is_remove_only = CheckMap(cmd_args, "--remove_only");
+  const bool with_validate = CheckMap(cmd_args, "--validate");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -673,6 +709,15 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     const double sync_end_time = GetWallTime();
     PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+    if (with_validate) {
+      Print("Validating records: ... ");
+      const double valid_start_time = GetWallTime();
+      if (!ValidateDBM(dbm.get())) {
+        has_error = true;
+      }
+      const double valid_end_time = GetWallTime();
+      PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
+    }
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = dbm->CountSimple();
@@ -801,6 +846,15 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     const double sync_end_time = GetWallTime();
     PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+    if (with_validate) {
+      Print("Validating records: ... ");
+      const double valid_start_time = GetWallTime();
+      if (!ValidateDBM(dbm.get())) {
+        has_error = true;
+      }
+      const double valid_end_time = GetWallTime();
+      PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
+    }
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = dbm->CountSimple();
@@ -821,7 +875,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
-    {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1}, {"--rebuild", 0}, {"--sleep", 1},
+    {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1},
+    {"--rebuild", 0}, {"--sleep", 1}, {"--validate", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
@@ -851,6 +906,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t num_keys = GetIntegerArgument(cmd_args, "--keys", 0, 0);
   const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
   const double time_sleep = GetDoubleArgument(cmd_args, "--sleep", 0, 0);
+  const bool with_validate = CheckMap(cmd_args, "--validate");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -1001,6 +1057,15 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   }
   const double sync_end_time = GetWallTime();
   PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+  if (with_validate) {
+    Print("Validating records: ... ");
+    const double valid_start_time = GetWallTime();
+    if (!ValidateDBM(dbm.get())) {
+      has_error = true;
+    }
+    const double valid_end_time = GetWallTime();
+    PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
+  }
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm->CountSimple();
@@ -1020,7 +1085,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
-    {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0},
+    {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0}, {"--validate", 0},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
@@ -1049,6 +1114,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const bool with_sync = CheckMap(cmd_args, "--sync");
   const bool with_clear = CheckMap(cmd_args, "--clear");
   const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
+  const bool with_validate = CheckMap(cmd_args, "--validate");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -1297,6 +1363,15 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   }
   const double sync_end_time = GetWallTime();
   PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+  if (with_validate) {
+    Print("Validating records: ... ");
+    const double valid_start_time = GetWallTime();
+    if (!ValidateDBM(dbm.get())) {
+        has_error = true;
+    }
+    const double valid_end_time = GetWallTime();
+    PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
+  }
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm->CountSimple();

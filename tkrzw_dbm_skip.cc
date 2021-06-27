@@ -995,6 +995,8 @@ Status SkipDBMImpl::ValidateRecords() {
       }
       value = rec.GetValue();
     }
+    offset += rec.GetWholeSize();
+    index++;
     if (offset == end_offset || last_key != key) {
       std::string tmp_key(key);
       status = rec.Search(METADATA_SIZE, cache_.get(), tmp_key, false);
@@ -1003,8 +1005,6 @@ Status SkipDBMImpl::ValidateRecords() {
       }
     }
     last_key = key;
-    offset += rec.GetWholeSize();
-    index++;
   }
   return Status(Status::SUCCESS);
 }
