@@ -4,6 +4,7 @@
 	- Library version: 1.23.0
 
 	- HashDBM::VaridateRecords is added.
+	- CopyFileData supports copy-on-write backup on BtrFS and XFS.
 
 2021-06-21  Mikio Hirabayashi  <hirarin@gmail.com>
 
