@@ -1094,8 +1094,8 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
       EXPECT_FALSE(dbm->IsAutoRestored());
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       std::string value;
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->Get("one", &value));
-      EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->Get("two", &value));
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one", &value));
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
       EXPECT_EQ(0, dbm->CountSimple());
       EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
@@ -1103,7 +1103,11 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
+      if (update_mode == tkrzw::HashDBM::UPDATE_APPENDING) {
+        EXPECT_FALSE(dbm->IsAutoRestored());
+      } else {
+        EXPECT_TRUE(dbm->IsAutoRestored());
+      }
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one", &value));
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
@@ -1121,7 +1125,11 @@ void TreeDBMTest::TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm) {
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
           file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
       EXPECT_TRUE(dbm->IsHealthy());
-      EXPECT_TRUE(dbm->IsAutoRestored());
+      if (update_mode == tkrzw::HashDBM::UPDATE_APPENDING) {
+        EXPECT_FALSE(dbm->IsAutoRestored());
+      } else {
+        EXPECT_TRUE(dbm->IsAutoRestored());
+      }
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
       EXPECT_EQ("first", value);

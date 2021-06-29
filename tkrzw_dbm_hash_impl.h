@@ -52,10 +52,12 @@ class HashRecord final {
   enum OperationType : int32_t {
     /** Operation to do nothing. */
     OP_VOID = 0,
-    /** Operation to set a record. */
+    /** Operation to set the value of an existing record. */
     OP_SET = 1,
-    /** Operation to remove a record. */
+    /** Operation to remove an existing record. */
     OP_REMOVE = 2,
+    /** Operation to add a new record. */
+    OP_ADD = 3,
   };
 
   /**

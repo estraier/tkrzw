@@ -96,7 +96,7 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   } else if (magic == RECORD_MAGIC_REMOVE) {
     type_ = OP_REMOVE;
   } else {
-    return Status(Status::BROKEN_DATA_ERROR, "invalid record magic number");
+    type_ = OP_ADD;
   }
   rp++;
   record_size--;
@@ -366,6 +366,9 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
   char* wp = write_buf;
   uint32_t magic = magic_checksum_;
   switch (type_) {
+    case OP_VOID:
+      magic |= RECORD_MAGIC_VOID;
+      break;
     case OP_SET:
       magic |= RECORD_MAGIC_SET;
       break;
@@ -373,7 +376,6 @@ Status HashRecord::Write(int64_t offset, int64_t* new_offset) const {
       magic |= RECORD_MAGIC_REMOVE;
       break;
     default:
-      magic |= RECORD_MAGIC_VOID;
       break;
   }
   *(wp++) = magic;
@@ -523,7 +525,8 @@ Status HashRecord::ReplayOperations(
     const std::string_view key = rec.GetKey();
     std::string_view res;
     switch (rec.GetOperationType()) {
-      case OP_SET: {
+      case OP_SET:
+      case OP_ADD: {
         std::string_view value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();

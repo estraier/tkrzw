@@ -302,8 +302,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
         file_->Close();
         return status;
       }
+      auto_restored_ = true;
     }
-    auto_restored_ = true;
   }
   return Status(Status::SUCCESS);
 }
@@ -410,7 +410,8 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         rec_size = rec.GetWholeSize();
       }
       const std::string_view key = rec.GetKey();
-      if (rec.GetOperationType() == HashRecord::OP_SET) {
+      if (rec.GetOperationType() == HashRecord::OP_SET ||
+          rec.GetOperationType() == HashRecord::OP_ADD) {
         std::string_view value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();
@@ -456,6 +457,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       }
       switch (rec.GetOperationType()) {
         case HashRecord::OP_SET:
+        case HashRecord::OP_ADD:
           if (!writable) {
             std::string_view value = rec.GetValue();
             if (value.data() == nullptr) {
@@ -1098,12 +1100,12 @@ Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
   if (status != Status::SUCCESS) {
     return status;
   }
-  if ((static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
-      record_base == record_base_ && end_offset == act_file_size) {
+  if (record_base == record_base_ && end_offset == act_file_size) {
     if (act_count != num_records_.load()) {
       return Status(Status::BROKEN_DATA_ERROR,"inconsistent number of records");
     }
-    if (act_eff_data_size != eff_data_size_.load()) {
+    if ((static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
+        act_eff_data_size != eff_data_size_.load()) {
       return Status(Status::BROKEN_DATA_ERROR,"inconsistent effective data size");
     }
   }
@@ -1290,8 +1292,8 @@ Status HashDBMImpl::SaveMetadata(bool finish) {
   }
   WriteFixNum(meta + META_OFFSET_CLOSURE_FLAGS, closure_flags, 1);
   WriteFixNum(meta + META_OFFSET_NUM_BUCKETS, num_buckets_, 8);
-  WriteFixNum(meta + META_OFFSET_NUM_RECORDS, num_records_.load(), 8);
-  WriteFixNum(meta + META_OFFSET_EFF_DATA_SIZE, eff_data_size_.load(), 8);
+  WriteFixNum(meta + META_OFFSET_NUM_RECORDS, std::max<int64_t>(0, num_records_.load()), 8);
+  WriteFixNum(meta + META_OFFSET_EFF_DATA_SIZE, std::max<int64_t>(0, eff_data_size_.load()), 8);
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
   WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
@@ -1314,9 +1316,6 @@ Status HashDBMImpl::LoadMetadata() {
   if (status != Status::SUCCESS) {
     return status;
   }
-
-  //std::cout << "LOAD:" << num_records << std::endl;
-
   crc_width_ = HashDBM::GetCRCWidthFromStaticFlags(static_flags_);
   compressor_ = HashDBM::MakeCompressorFromStaticFlags(static_flags_);
   num_records_.store(num_records);
@@ -1457,7 +1456,8 @@ Status HashDBMImpl::ProcessImpl(
     const auto rec_key = rec.GetKey();
     if (key == rec_key) {
       std::string_view new_value;
-      const bool old_is_set = rec.GetOperationType() == HashRecord::OP_SET;
+      const bool old_is_set = rec.GetOperationType() == HashRecord::OP_SET ||
+          rec.GetOperationType() == HashRecord::OP_ADD;
       std::string_view old_value = rec.GetValue();
       if (old_is_set) {
         if (readable) {
@@ -1498,7 +1498,8 @@ Status HashDBMImpl::ProcessImpl(
             rec.SetData(HashRecord::OP_VOID, old_rec_size, "", 0, "", 0, 0);
             new_rec_size = rec.GetWholeSize();
           } else {
-            rec.SetData(HashRecord::OP_SET, old_rec_size, key.data(), key.size(),
+            rec.SetData(old_is_set ? HashRecord::OP_SET : HashRecord::OP_ADD,
+                        old_rec_size, key.data(), key.size(),
                         new_value.data(), new_value.size(), child_offset);
             new_rec_size = rec.GetWholeSize();
           }
@@ -1531,7 +1532,8 @@ Status HashDBMImpl::ProcessImpl(
             rec.SetData(HashRecord::OP_REMOVE, 0, key.data(), key.size(), "", 0, new_child_offset);
             new_rec_size = rec.GetWholeSize();
           } else {
-            rec.SetData(HashRecord::OP_SET, 0, key.data(), key.size(),
+            rec.SetData(old_is_set ? HashRecord::OP_SET : HashRecord::OP_ADD,
+                        0, key.data(), key.size(),
                         new_value.data(), new_value.size(), new_child_offset);
             new_rec_size = rec.GetWholeSize();
           }
@@ -1602,7 +1604,7 @@ Status HashDBMImpl::ProcessImpl(
   }
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
-    rec.SetData(HashRecord::OP_SET, 0, key.data(), key.size(),
+    rec.SetData(HashRecord::OP_ADD, 0, key.data(), key.size(),
                 new_value.data(), new_value.size(), top);
     int32_t new_rec_size = rec.GetWholeSize();
     int64_t new_offset = 0;
@@ -1610,7 +1612,7 @@ Status HashDBMImpl::ProcessImpl(
       FreeBlock fb;
       if (fbp_.FetchFreeBlock(new_rec_size, &fb)) {
         new_rec_size = fb.size;
-        rec.SetData(HashRecord::OP_SET, new_rec_size, key.data(), key.size(),
+        rec.SetData(HashRecord::OP_ADD, new_rec_size, key.data(), key.size(),
                     new_value.data(), new_value.size(), top);
         new_offset = fb.offset;
       }
@@ -1684,6 +1686,7 @@ Status HashDBMImpl::ReadNextBucketRecords(HashDBMIteratorImpl* iter) {
         }
         switch (rec.GetOperationType()) {
           case HashRecord::OP_SET:
+          case HashRecord::OP_ADD:
             iter->keys_.emplace(std::move(key));
             break;
           case HashRecord::OP_REMOVE:
@@ -1837,7 +1840,8 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     }
     std::string_view key = rec.GetKey();
     switch (rec.GetOperationType()) {
-      case HashRecord::OP_SET: {
+      case HashRecord::OP_SET:
+      case HashRecord::OP_ADD: {
         std::string_view value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();
@@ -1923,6 +1927,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
 
 Status HashDBMImpl::ValidateRecordsImpl(
     int64_t record_base, int64_t end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
+  const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
   int64_t offset = record_base;
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   HashRecord child_rec(file_.get(), crc_width_, offset_width_, align_pow_);
@@ -1954,6 +1959,12 @@ Status HashDBMImpl::ValidateRecordsImpl(
       }
       switch (rec.GetOperationType()) {
         case HashRecord::OP_SET:
+          if (in_place) {
+            *(act_count) += 1;
+            *(act_eff_data_size) += rec.GetKey().size() + rec.GetValue().size();
+          }
+          break;
+        case HashRecord::OP_ADD:
           *(act_count) += 1;
           *(act_eff_data_size) += rec.GetKey().size() + rec.GetValue().size();
           break;

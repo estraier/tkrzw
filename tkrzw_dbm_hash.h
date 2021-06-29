@@ -583,7 +583,8 @@ class HashDBM final : public DBM {
    * Gets the effective data size.
    * @return The effective data size, or -1 on failure.
    * @details Precondition: The database is opened.
-   * @details The effective data size means the total size of the keys and the values.
+   * @details The effective data size means the total size of the keys and the values.  This
+   * figure might deviate if auto restore happens.
    */
   int64_t GetEffectiveDataSize();
 

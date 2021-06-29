@@ -194,8 +194,10 @@ TEST(DBMHashImplTest, HashRecord) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, r1.ReadBody());
           second_rec_size = r1.GetWholeSize();
         }
-        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(0, "", 1));
-        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(first_rec_size, "", 1));
+        const std::string dummy_data(1 + offset_width + 3, 0xFF);
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file.Write(0, dummy_data.data(), dummy_data.size()));
+        EXPECT_EQ(tkrzw::Status::SUCCESS,
+                  file.Write(first_rec_size, dummy_data.data(), dummy_data.size()));
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(0, 48));
         EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, r1.ReadMetadataKey(first_rec_size, 48));
         Counter broken_counter;

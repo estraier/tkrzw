@@ -456,6 +456,11 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     first_id_ = leaf_node->id;
     last_id_ = leaf_node->id;
     tree_level_ = 1;
+    status = FlushLeafCache(false);
+    if (status != Status::SUCCESS) {
+      hash_dbm_->Close();
+      return status;
+    }
     status = SaveMetadata();
     if (status != Status::SUCCESS) {
       hash_dbm_->Close();

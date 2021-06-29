@@ -1477,11 +1477,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_FALSE(dbm->IsHealthy());
         EXPECT_FALSE(dbm->IsAutoRestored());
-        if (update_mode == tkrzw::HashDBM::UPDATE_IN_PLACE) {
-          EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->ValidateRecords(-1, -1));
-        } else {
-          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
-        }
+        EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->ValidateRecords(-1, -1));
         std::string value;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
         EXPECT_EQ("first", value);
@@ -1537,7 +1533,11 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_TRUE(dbm->IsHealthy());
-        EXPECT_TRUE(dbm->IsAutoRestored());
+        if (update_mode == tkrzw::HashDBM::UPDATE_APPENDING) {
+          EXPECT_FALSE(dbm->IsAutoRestored());
+        } else {
+          EXPECT_TRUE(dbm->IsAutoRestored());
+        }
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
         EXPECT_EQ("first", value);
