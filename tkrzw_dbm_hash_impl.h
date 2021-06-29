@@ -119,6 +119,11 @@ class HashRecord final {
   Status ReadBody();
 
   /**
+   * Sets the body data with the value filled with null codes.
+   */
+  void SetBodyWithNullValue();
+
+  /**
    * Check the CRC.
    * @return The result status.
    */

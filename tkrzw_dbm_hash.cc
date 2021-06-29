@@ -133,7 +133,7 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
   Status ValidateRecords(int64_t record_base, int64_t end_offset);
-  Status CheckHashChain(int64_t offset, const HashRecord& rec);
+  Status CheckHashChain(int64_t offset, const HashRecord& rec, int64_t bucket_index);
 
  private:
   void SetTuning(const HashDBM::TuningParameters& tuning_params);
@@ -161,7 +161,8 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset,
       const std::string& offset_path, const std::string& dead_path);
-  Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset);
+Status ValidateRecordsImpl(
+    int64_t record_base, int64_t end_offset, int64_t* count, int64_t* eff_data_size);
 
   bool open_;
   bool writable_;
@@ -1078,7 +1079,35 @@ Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
-  return ValidateRecordsImpl(record_base, end_offset);
+  if (record_base < 0) {
+    record_base = record_base_;
+  } else if (record_base == 0) {
+    record_base = file_size_;
+  }
+  if (end_offset < 0) {
+    end_offset = INT64MAX;
+  }  else if (end_offset == 0) {
+    end_offset = file_size_;
+  }
+  const int64_t act_file_size = file_->GetSizeSimple();
+  end_offset = std::min(end_offset, act_file_size);
+  int64_t act_count = 0;
+  int64_t act_eff_data_size = 0;
+  const Status status =
+      ValidateRecordsImpl(record_base, end_offset, &act_count, &act_eff_data_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if ((static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
+      record_base == record_base_ && end_offset == act_file_size) {
+    if (act_count != num_records_.load()) {
+      return Status(Status::BROKEN_DATA_ERROR,"inconsistent number of records");
+    }
+    if (act_eff_data_size != eff_data_size_.load()) {
+      return Status(Status::BROKEN_DATA_ERROR,"inconsistent effective data size");
+    }
+  }
+  return Status(Status::SUCCESS);
 }
 
 void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
@@ -1285,6 +1314,9 @@ Status HashDBMImpl::LoadMetadata() {
   if (status != Status::SUCCESS) {
     return status;
   }
+
+  //std::cout << "LOAD:" << num_records << std::endl;
+
   crc_width_ = HashDBM::GetCRCWidthFromStaticFlags(static_flags_);
   compressor_ = HashDBM::MakeCompressorFromStaticFlags(static_flags_);
   num_records_.store(num_records);
@@ -1889,18 +1921,11 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   return status;
 }
 
-Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset) {
-  if (record_base < 0) {
-    record_base = record_base_;
-  }
-  if (end_offset < 0) {
-    end_offset = file_->GetSizeSimple();
-  }  else if (end_offset == 0) {
-    end_offset = file_size_;
-  }
-  end_offset = std::min(end_offset, file_->GetSizeSimple());
+Status HashDBMImpl::ValidateRecordsImpl(
+    int64_t record_base, int64_t end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
   int64_t offset = record_base;
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+  HashRecord child_rec(file_.get(), crc_width_, offset_width_, align_pow_);
   while (offset < end_offset) {
     Status status = rec.ReadMetadataKey(offset, min_read_size_);
     if (status != Status::SUCCESS) {
@@ -1910,10 +1935,34 @@ Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset)
     if (status != Status::SUCCESS) {
       return status;
     }
+    const int64_t bucket_index = PrimaryHash(rec.GetKey(), num_buckets_);
     if (rec.GetOperationType() != HashRecord::OP_VOID) {
-      status = CheckHashChain(offset, rec);
+      status = CheckHashChain(offset, rec, bucket_index);
       if (status != Status::SUCCESS) {
         return status;
+      }
+      const int64_t child_offset = rec.GetChildOffset();
+      if (child_offset > 0) {
+        status = child_rec.ReadMetadataKey(child_offset, HashDBM::DEFAULT_MIN_READ_SIZE);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+        const int64_t child_bucket_index = PrimaryHash(child_rec.GetKey(), num_buckets_);
+        if (child_bucket_index != bucket_index) {
+          return Status(Status::BROKEN_DATA_ERROR, "inconsistent bucket index");
+        }
+      }
+      switch (rec.GetOperationType()) {
+        case HashRecord::OP_SET:
+          *(act_count) += 1;
+          *(act_eff_data_size) += rec.GetKey().size() + rec.GetValue().size();
+          break;
+        case HashRecord::OP_REMOVE:
+          *(act_count) -= 1;
+          *(act_eff_data_size) -= rec.GetKey().size() + rec.GetValue().size();
+          break;
+        default:
+          break;
       }
     }
     int64_t rec_size = rec.GetWholeSize();
@@ -1933,10 +1982,9 @@ Status HashDBMImpl::ValidateRecordsImpl(int64_t record_base, int64_t end_offset)
   return Status(Status::SUCCESS);
 }
 
-Status HashDBMImpl::CheckHashChain(int64_t offset, const HashRecord& rec) {
+Status HashDBMImpl::CheckHashChain(int64_t offset, const HashRecord& rec, int64_t bucket_index) {
   const auto key = rec.GetKey();
-  const int64_t bucket_index = PrimaryHash(key, num_buckets_);
-  ScopedHashLock record_lock(record_mutex_, rec.GetKey(), false);
+  ScopedHashLock record_lock(record_mutex_, key, false);
   const bool appending = static_flags_ & STATIC_FLAG_UPDATE_APPENDING;
   int64_t chain_offset = 0;
   Status status = GetBucketValue(bucket_index, &chain_offset);

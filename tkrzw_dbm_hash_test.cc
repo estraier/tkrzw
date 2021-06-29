@@ -1477,7 +1477,11 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_FALSE(dbm->IsHealthy());
         EXPECT_FALSE(dbm->IsAutoRestored());
-        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
+        if (update_mode == tkrzw::HashDBM::UPDATE_IN_PLACE) {
+          EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, dbm->ValidateRecords(-1, -1));
+        } else {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
+        }
         std::string value;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
         EXPECT_EQ("first", value);

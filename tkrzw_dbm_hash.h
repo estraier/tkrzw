@@ -719,7 +719,7 @@ class HashDBM final : public DBM {
   /**
    * Validates records in a region.
    * @param record_base The beginning offset of records to check.  Negative means the beginning
-   * of the record section.
+   * of the record section.  0 means the size when the database is synched or closed properly.
    * @param end_offset The exclusive end offset of records to check.  Negative means unlimited.
    * 0 means the size when the database is synched or closed properly.
    * @return The result status.
