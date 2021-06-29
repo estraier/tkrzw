@@ -298,10 +298,10 @@ Status HashRecord::CheckCRC() {
       return Status(Status::SUCCESS);
     }
   }
-  const uint32_t act_magic_crc_value =
+  const uint32_t act_magic_checksum =
       MagicChecksum(key_ptr_, key_size_, value_ptr_, value_size_);
-  if (magic_checksum_ != act_magic_crc_value) {
-    return Status(Status::BROKEN_DATA_ERROR, "inconcistent magic CRC");
+  if (magic_checksum_ != act_magic_checksum) {
+    return Status(Status::BROKEN_DATA_ERROR, "inconsistent magic CRC");
   }
   if (crc_width_ > 0) {
     uint32_t act_crc_value = 0;
@@ -320,7 +320,7 @@ Status HashRecord::CheckCRC() {
         break;
     }
     if (crc_value_ != act_crc_value) {
-      return Status(Status::BROKEN_DATA_ERROR, "inconcistent extra CRC");
+      return Status(Status::BROKEN_DATA_ERROR, "inconsistent extra CRC");
     }
   }
   return Status(Status::SUCCESS);

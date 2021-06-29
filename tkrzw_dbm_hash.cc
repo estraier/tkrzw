@@ -263,6 +263,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     return status;
   }
   const int64_t actual_file_size = file_->GetSizeSimple();
+  int64_t act_count = 0;
+  int64_t act_eff_data_size = 0;
   auto_restored_ = false;
   if (writable && !healthy_ && tuning_params.restore_mode != HashDBM::RESTORE_READ_ONLY) {
     if (tuning_params.restore_mode == HashDBM::RESTORE_NOOP) {
@@ -272,6 +274,16 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
                file_size_ == actual_file_size) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
+    } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+               (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
+               file_size_ < actual_file_size && ValidateRecordsImpl(
+                   file_size_, actual_file_size, &act_count, &act_eff_data_size) ==
+               Status::SUCCESS) {
+      num_records_.fetch_add(act_count);
+      eff_data_size_.fetch_add(act_eff_data_size);
+      healthy_ = true;
+      closure_flags_ |= CLOSURE_FLAG_CLOSE;
+      auto_restored_ = true;
     } else {
       CloseImpl();
       file_->Close();
