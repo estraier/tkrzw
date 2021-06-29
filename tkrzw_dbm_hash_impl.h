@@ -421,7 +421,7 @@ class FreeBlockPool final {
  */
 inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
                               const char* value_buf, size_t value_size) {
-  return HashChecksum6Pair(key_buf, key_size, value_buf, value_size);
+  return HashChecksum6Pair(key_buf, key_size, value_buf, value_size, 7);
 }
 
 /**

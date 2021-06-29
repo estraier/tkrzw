@@ -92,25 +92,24 @@ inline uint32_t HashChecksum6(std::string_view str) {
  */
 inline uint32_t HashChecksum6Pair(
     const void* first_buf, size_t first_size,
-    const void* second_buf, size_t second_size) {
+    const void* second_buf, size_t second_size, uint32_t seed = 0) {
   constexpr uint32_t modulo = 61;
   constexpr uint32_t batch_cap = 1U << 23;
   if (first_size + second_size < batch_cap) {
-    uint32_t sum = 0;
     const unsigned char* rp = (const unsigned char*)first_buf;
     while (first_size) {
-      sum += *rp++;
+      seed += *rp++;
       first_size--;
     }
     rp = (const unsigned char*)second_buf;
     while (second_size) {
-      sum += *rp++;
+      seed += *rp++;
       second_size--;
     }
-    return sum % modulo;
+    return seed % modulo;
   }
   return HashChecksum6Continuous(
-      second_buf, second_size, true, HashChecksum6Continuous(first_buf, first_size, false, 0));
+      second_buf, second_size, true, HashChecksum6Continuous(first_buf, first_size, false, seed));
 }
 
 /**
@@ -148,25 +147,24 @@ inline uint32_t HashChecksum8(std::string_view str) {
  */
 inline uint32_t HashChecksum8Pair(
     const void* first_buf, size_t first_size,
-    const void* second_buf, size_t second_size) {
+    const void* second_buf, size_t second_size, uint32_t seed = 0) {
   constexpr uint32_t modulo = 251;
   constexpr uint32_t batch_cap = 1U << 23;
   if (first_size + second_size < batch_cap) {
-    uint32_t sum = 0;
     const unsigned char* rp = (const unsigned char*)first_buf;
     while (first_size) {
-      sum += *rp++;
+      seed += *rp++;
       first_size--;
     }
     rp = (const unsigned char*)second_buf;
     while (second_size) {
-      sum += *rp++;
+      seed += *rp++;
       second_size--;
     }
-    return sum % modulo;
+    return seed % modulo;
   }
   return HashChecksum8Continuous(
-      second_buf, second_size, true, HashChecksum8Continuous(first_buf, first_size, false, 0));
+      second_buf, second_size, true, HashChecksum8Continuous(first_buf, first_size, false, seed));
 }
 
 /**
