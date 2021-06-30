@@ -73,6 +73,9 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   const char* rp = read_buf;
   uint32_t magic = *(uint8_t*)rp;
   magic_checksum_ = magic & ~RECORD_MAGIC_VOID;
+  if (magic_checksum_ < 3) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid magic checksum");
+  }
   magic &= RECORD_MAGIC_VOID;
   if (magic == RECORD_MAGIC_VOID) {
     type_ = OP_VOID;
@@ -188,7 +191,7 @@ Status HashRecord::CheckCRC() {
   const uint32_t act_magic_checksum =
       MagicChecksum(key_ptr_, key_size_, value_ptr_, value_size_);
   if (magic_checksum_ != act_magic_checksum) {
-    return Status(Status::BROKEN_DATA_ERROR, "inconsistent magic CRC");
+    return Status(Status::BROKEN_DATA_ERROR, "inconsistent magic checksum");
   }
   if (crc_width_ > 0) {
     uint32_t act_crc_value = 0;

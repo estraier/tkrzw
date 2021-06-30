@@ -54,7 +54,7 @@ constexpr int64_t MIN_SORT_MEM_SIZE = 1LL << 10;
 constexpr int64_t MAX_SORT_MEM_SIZE = 8LL << 30;
 constexpr int32_t MIN_MAX_CACHED_RECORDS = 1;
 constexpr int32_t MAX_MAX_CACHED_RECORDS = 1 << 24;
-constexpr int64_t MINIMUM_DIO_BLOCK_SIZE = 512;
+constexpr int64_t MIN_DIO_BLOCK_SIZE = 512;
 const char* REBUILD_FILE_SUFFIX = ".tmp.rebuild";
 const char* SORTER_FILE_SUFFIX = ".tmp.sorter";
 const char* SORTED_FILE_SUFFIX = ".tmp.sorted";
@@ -1082,7 +1082,7 @@ Status SkipDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
   if (pos_file != nullptr && pos_file->IsDirectIO()) {
     const int64_t file_size = tkrzw::GetFileSize(path);
     const int64_t block_size = pos_file->GetBlockSize();
-    if (block_size % MINIMUM_DIO_BLOCK_SIZE != 0) {
+    if (block_size % MIN_DIO_BLOCK_SIZE != 0) {
       return Status(Status::INFEASIBLE_ERROR, "Invalid block size for Direct I/O");
     }
     if (!writable && file_size > 0 && file_size % block_size != 0) {
