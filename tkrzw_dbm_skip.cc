@@ -42,8 +42,8 @@ constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 32;
 constexpr int32_t META_OFFSET_FILE_SIZE = 40;
 constexpr int32_t META_OFFSET_MOD_TIME = 48;
 constexpr int32_t META_OFFSET_DB_TYPE = 56;
-constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 63;
-constexpr int32_t META_OFFSET_OPAQUE = 64;
+constexpr int32_t META_OFFSET_OPAQUE = 62;
+constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 127;
 constexpr int32_t MIN_OFFSET_WIDTH = 3;
 constexpr int32_t MAX_OFFSET_WIDTH = 6;
 constexpr int32_t MIN_STEP_UNIT = 2;
@@ -1036,10 +1036,9 @@ Status SkipDBMImpl::SaveMetadata(File* file, bool finish) {
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
   WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
-  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, cyclic_magic_, 1);
-  const int32_t opaque_size =
-      std::min<int32_t>(opaque_.size(), METADATA_SIZE - META_OFFSET_OPAQUE);
+  const int32_t opaque_size = std::min<int32_t>(opaque_.size(), SkipDBM::OPAQUE_METADATA_SIZE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
+  WriteFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, cyclic_magic_, 1);
   return file->Write(0, meta, METADATA_SIZE);
 }
 
@@ -1934,8 +1933,8 @@ Status SkipDBM::ReadMetadata(
   *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
   *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
   *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
+  *opaque = std::string(meta + META_OFFSET_OPAQUE, SkipDBM::OPAQUE_METADATA_SIZE);
   const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
-  *opaque = std::string(meta + META_OFFSET_OPAQUE, METADATA_SIZE - META_OFFSET_OPAQUE);
   if (*cyclic_magic != cyclic_magic_back) {
     *cyclic_magic = -1;
   }

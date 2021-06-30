@@ -975,10 +975,10 @@ int main(int argc, char** argv) {
 <dd>From the offset 48.  An 8-byte big-endian integer.</dd>
 <dt>The database type</dt>
 <dd>From the offset 56.  A 4-byte big-endian integer.</dd>
-<dt>The back cyclic magic data.</dt>
-<dd>From the offset 63.  A 1-byte integer.</dd>
 <dt>The opaque data</dt>
-<dd>From the offset 64.  Arbitrary string data.</dd>
+<dd>From the offset 62.  Arbitrary string data.</dd>
+<dt>The back cyclic magic data.</dt>
+<dd>From the offset 127.  A 1-byte integer.</dd>
 </dl>
 
 <p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
@@ -1642,10 +1642,10 @@ int main(int argc, char** argv) {
 <dd>From the offset 48.  An 8-byte big-endian integer.</dd>
 <dt>The database type</dt>
 <dd>From the offset 56.  A 4-byte big-endian integer.</dd>
-<dt>The back cyclic magic data.</dt>
-<dd>From the offset 63.  A 1-byte integer.</dd>
 <dt>The opaque data</dt>
-<dd>From the offset 64.  Arbitrary string data.</dd>
+<dd>From the offset 62.  Arbitrary string data.</dd>
+<dt>The back cyclic magic data.</dt>
+<dd>From the offset 127.  A 1-byte integer.</dd>
 </dl>
 
 <p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
