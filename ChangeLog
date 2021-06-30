@@ -1,9 +1,16 @@
+2021-07-01  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.36
+	- Library version: 1.25.0
+
+	- Effective data size is not modified when restoring DB in the updating mode.
+
 2021-06-29  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.35
 	- Library version: 1.24.0
 
-	- Auto restore featore of HashDBM  becomes more efficient.
+	- Auto restore feature of HashDBM becomes more efficient.
 	- The database format of HashDBM is changed to be more resilient to I/O failures.
 	- The database format of SkipDBM is changed to be more resilient to I/O failures.
 

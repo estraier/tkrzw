@@ -295,7 +295,6 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
                    file_size_, actual_file_size, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
       num_records_.fetch_add(act_count);
-      eff_data_size_.fetch_add(act_eff_data_size);
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
       auto_restored_ = true;
