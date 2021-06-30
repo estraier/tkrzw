@@ -414,7 +414,7 @@ class FreeBlockPool final {
 };
 
 /**
- * Calculate the checksum of the record data to store in the record magic data.
+ * Calculates the checksum of the record data to store in the record magic data.
  * @param key_buf The key buffer.
  * @param key_size The key size.
  * @param value_buf The value buffer.
@@ -423,7 +423,7 @@ class FreeBlockPool final {
  */
 inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
                               const char* value_buf, size_t value_size) {
-  return HashChecksum6Pair(key_buf, key_size, value_buf, value_size, 7);
+  return HashChecksum6Pair(key_buf, key_size, value_buf, value_size, 11) + 3;
 }
 
 /**

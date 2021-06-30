@@ -1020,7 +1020,7 @@ int main(int argc, char** argv) {
 <dd>Optional: A magic data and null data.</dd>
 </dl>
 
-<p>The magic data is composed of the operation type part and the checksum part.  The upper 2 bits are the operation type part.  0xC0 (0x3 &lt;&lt; 6) indicates that the operation is to do nothing.  0x80 (0x2 &lt;&lt; 6) is to set the value of an existing record.  0x40 (0x1 &lt;&lt; 6) is to remove an existing record.  0x00 (0x1 &lt;&lt; 6) is to add a new record.  The lower 6 bits are the checksum part.  The checksum is a total value of the seed value 7 and each byte of a concatenated sequence of the record key and the record value in modulo 61.  The checksum helps us detect data corruption.</p>
+<p>The magic data is composed of the operation type part and the checksum part.  The upper 2 bits are the operation type part.  0xC0 (0x3 &lt;&lt; 6) indicates that the operation is to do nothing.  0x80 (0x2 &lt;&lt; 6) is to set the value of an existing record.  0x40 (0x1 &lt;&lt; 6) is to remove an existing record.  0x00 (0x1 &lt;&lt; 6) is to add a new record.  The lower 6 bits are the checksum part.  The checksum is a total value of the seed value 11 and each byte of a concatenated sequence of the record key and the record value in modulo 61.  And, the final value is added to 3 so that the range is between 3 and 63 inclusive.  The checksum helps us detect data corruption.</p>
 
 <p>The child offset indicates the offset of the next record data in the linked list of the bucket.  When a new record data of the same bucket is added, the bucket points to the new record data and the new record data points to the top one of the existing linked list, or zero if it doesn't exist.</p>
 

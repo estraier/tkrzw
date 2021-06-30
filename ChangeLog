@@ -5,6 +5,7 @@
 
 	- HashDBM::VaridateRecords is added.
 	- CopyFileData supports copy-on-write backup on BtrFS and XFS.
+	- The database format of HashDBM is changed to be more resilient to I/O failures.
 
 2021-06-21  Mikio Hirabayashi  <hirarin@gmail.com>
 

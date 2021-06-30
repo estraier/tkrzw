@@ -411,16 +411,6 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       if (status != Status::SUCCESS) {
         return status;
       }
-      int64_t rec_size = rec.GetWholeSize();
-      if (rec_size == 0) {
-        // Tentative measure for compatibility with the old format.
-        // TODO: remove this.
-        status = rec.ReadBody();
-        if (status != Status::SUCCESS) {
-          return status;
-        }
-        rec_size = rec.GetWholeSize();
-      }
       const std::string_view key = rec.GetKey();
       if (rec.GetOperationType() == HashRecord::OP_SET ||
           rec.GetOperationType() == HashRecord::OP_ADD) {
@@ -438,7 +428,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
           return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
         }
       }
-      offset += rec_size;
+      offset += rec.GetWholeSize();
     }
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     return Status(Status::SUCCESS);
@@ -1494,16 +1484,7 @@ Status HashDBMImpl::ProcessImpl(
       }
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
         const int64_t child_offset = rec.GetChildOffset();
-        int32_t old_rec_size = rec.GetWholeSize();
-        if (old_rec_size == 0) {
-          // Tentative measure for compatibility with the old format.
-          // TODO: remove this.
-          status = rec.ReadBody();
-          if (status != Status::SUCCESS) {
-            return status;
-          }
-          old_rec_size = rec.GetWholeSize();
-        }
+        const int32_t old_rec_size = rec.GetWholeSize();
         int32_t new_rec_size = 0;
         if (in_place) {
           if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
@@ -1988,16 +1969,7 @@ Status HashDBMImpl::ValidateRecordsImpl(
           break;
       }
     }
-    int64_t rec_size = rec.GetWholeSize();
-    if (rec_size == 0) {
-      // Tentative measure for compatibility with the old format.
-      // TODO: remove this.
-      status = rec.ReadBody();
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-    }
-    offset += rec_size;
+    offset += rec.GetWholeSize();
   }
   if (offset != end_offset) {
     return Status(Status::BROKEN_DATA_ERROR, "inconsistent end offset");

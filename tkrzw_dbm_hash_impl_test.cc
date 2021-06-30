@@ -335,6 +335,17 @@ TEST(DBMHashImplTest, FreeBlockPool) {
   EXPECT_EQ(32, fb.offset);
 }
 
+TEST(DBMHashImplTest, MagicChecksum) {
+  EXPECT_EQ(14, tkrzw::MagicChecksum("", 0, "", 0));
+  EXPECT_EQ(15, tkrzw::MagicChecksum("\x01", 1, "", 0));
+  EXPECT_EQ(15, tkrzw::MagicChecksum("", 0, "\x01", 1));
+  for (int32_t i = 0; i < 256; i++) {
+    const uint32_t sum = tkrzw::MagicChecksum(reinterpret_cast<char*>(&i), sizeof(i), "", 0);
+    EXPECT_GE(sum, 3);
+    EXPECT_LT(sum, 64);
+  }
+}
+
 TEST(DBMHashImplTest, CallRecordProcess) {
   class Checker : public tkrzw::DBM::RecordProcessor {
    public:
