@@ -61,7 +61,6 @@ constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
 constexpr int32_t REBUILD_NONBLOCKING_MAX_TRIES = 3;
 constexpr int64_t REBUILD_BLOCKING_ALLOWANCE = 65536;
 constexpr int64_t MIN_DIO_BLOCK_SIZE = 512;
-constexpr double MAX_VALIDATION_RESTORE_RATIO = 0.3;
 
 enum StaticFlag : uint8_t {
   STATIC_FLAG_NONE = 0,
@@ -162,8 +161,8 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset,
       const std::string& offset_path, const std::string& dead_path);
-Status ValidateRecordsImpl(
-    int64_t record_base, int64_t end_offset, int64_t* count, int64_t* eff_data_size);
+Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
+                           int64_t* null_end_offset, int64_t* count, int64_t* eff_data_size);
 
   bool open_;
   bool writable_;
@@ -264,6 +263,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     return status;
   }
   const int64_t actual_file_size = file_->GetSizeSimple();
+  int64_t null_end_offset = 0;
   int64_t act_count = 0;
   int64_t act_eff_data_size = 0;
   auto_restored_ = false;
@@ -275,26 +275,38 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
                file_size_ == actual_file_size) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
-    } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+    } else if (false && tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
                file_size_ < actual_file_size &&
-               file_size_ * 1.0 / actual_file_size >= 1 - MAX_VALIDATION_RESTORE_RATIO &&
-               ValidateRecordsImpl(
-                   record_base_, actual_file_size, &act_count, &act_eff_data_size) ==
+               ValidateRecordsImpl(record_base_, actual_file_size,
+                                   &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
       num_records_.store(act_count);
       eff_data_size_.store(act_eff_data_size);
+      if (null_end_offset > 0) {
+        status = file_->Truncate(null_end_offset);
+        if (status != Status::SUCCESS) {
+          file_->Close();
+          return status;
+        }
+      }
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
       auto_restored_ = true;
     } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ < actual_file_size &&
-               file_size_ * 1.0 / actual_file_size >= 1 - MAX_VALIDATION_RESTORE_RATIO &&
-               ValidateRecordsImpl(
-                   file_size_, actual_file_size, &act_count, &act_eff_data_size) ==
+               ValidateRecordsImpl(file_size_, actual_file_size,
+                                   &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
       num_records_.fetch_add(act_count);
+      if (null_end_offset > 0) {
+        status = file_->Truncate(null_end_offset);
+        if (status != Status::SUCCESS) {
+          file_->Close();
+          return status;
+        }
+      }
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
       auto_restored_ = true;
@@ -1109,10 +1121,11 @@ Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
   }
   const int64_t act_file_size = file_->GetSizeSimple();
   end_offset = std::min(end_offset, act_file_size);
+  int64_t null_end_offset = 0;
   int64_t act_count = 0;
   int64_t act_eff_data_size = 0;
-  const Status status =
-      ValidateRecordsImpl(record_base, end_offset, &act_count, &act_eff_data_size);
+  const Status status = ValidateRecordsImpl(
+      record_base, end_offset, &null_end_offset, &act_count, &act_eff_data_size);
   if (status != Status::SUCCESS) {
     return status;
   }
@@ -1932,14 +1945,38 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
 }
 
 Status HashDBMImpl::ValidateRecordsImpl(
-    int64_t record_base, int64_t end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
+    int64_t record_base, int64_t end_offset,
+    int64_t* null_end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
   const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
+  *null_end_offset =-1;
   int64_t offset = record_base;
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   HashRecord child_rec(file_.get(), crc_width_, offset_width_, align_pow_);
   while (offset < end_offset) {
     Status status = rec.ReadMetadataKey(offset, min_read_size_);
     if (status != Status::SUCCESS) {
+      bool only_zeros = true;
+      char buf[PAGE_SIZE];
+      int64_t zero_offset = offset;
+      int64_t zero_end_offset = std::min<int64_t>(zero_offset + PAGE_SIZE * 32, end_offset);
+      while (zero_offset < zero_end_offset) {
+        const int32_t read_size = std::min<int32_t>(zero_end_offset - zero_offset, sizeof(buf));
+        const Status zero_status = file_->Read(zero_offset, buf, read_size);
+        if (zero_status != Status::SUCCESS) {
+          return zero_status;
+        }
+        for (int32_t i = 0; i < read_size; i++) {
+          if (buf[i] != 0) {
+            only_zeros = false;
+            break;
+          }
+        }
+        zero_offset += read_size;
+      }
+      if (only_zeros) {
+        *null_end_offset = offset;
+        return Status(Status::SUCCESS);
+      }
       return status;
     }
     status = rec.CheckCRC();

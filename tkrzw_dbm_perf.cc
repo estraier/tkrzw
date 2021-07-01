@@ -544,7 +544,7 @@ bool ValidateDBM(DBM* dbm) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
     const Status status = hash_dbm->ValidateRecords(-1, -1);
     if (status != Status::SUCCESS) {
-      EPrintL("VaridateRecords failed: ", status);
+      EPrintL("ValidateRecords failed: ", status);
       has_error = true;
     }
   }
@@ -552,7 +552,7 @@ bool ValidateDBM(DBM* dbm) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
     const Status status = tree_dbm->ValidateRecords(-1, -1);
     if (status != Status::SUCCESS) {
-      EPrintL("VaridateRecords failed: ", status);
+      EPrintL("ValidateRecords failed: ", status);
       has_error = true;
     }
   }
@@ -560,13 +560,12 @@ bool ValidateDBM(DBM* dbm) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
     const Status status = skip_dbm->ValidateRecords();
     if (status != Status::SUCCESS) {
-      EPrintL("VaridateRecords failed: ", status);
+      EPrintL("ValidateRecords failed: ", status);
       has_error = true;
     }
   }
   return !has_error;
 }
-
 
 // Processes the sequence subcommand.
 static int32_t ProcessSequence(int32_t argc, const char** args) {

@@ -84,7 +84,10 @@ static void PrintUsageAndDie() {
   P("  --restore : Skips broken records to restore a broken database.\n");
   P("\n");
   P("Options for the restore subcommand:\n");
+  P("  --auto str : The restore mode automatically done: none, default, sync."
+    " (default: none)\n");
   P("  --end_offset : The exclusive end offset of records to read. (default: -1)\n");
+  P("  --class : The class name given to PolyDBM or ShardDBM.\n");
   P("\n");
   P("Options for the merge subcommand:\n");
   P("  --reducer func : Sets the reducer for the skip database:"
@@ -650,7 +653,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm.get());
       const Status status = hash_dbm->ValidateRecords(-1, -1);
       if (status != Status::SUCCESS) {
-        EPrintL("VaridateRecords failed: ", status);
+        EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
@@ -658,7 +661,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm.get());
       const Status status = tree_dbm->ValidateRecords(-1, -1);
       if (status != Status::SUCCESS) {
-        EPrintL("VaridateRecords failed: ", status);
+        EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
@@ -666,7 +669,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
       const Status status = skip_dbm->ValidateRecords();
       if (status != Status::SUCCESS) {
-        EPrintL("VaridateRecords failed: ", status);
+        EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
@@ -1031,7 +1034,8 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
 // Processes the restore subcommand.
 static int32_t ProcessRestore(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"--dbm", 1}, {"--end_offset", 1}, {"--class", 1},
+    {"--dbm", 1}, {"--auto", 1}, {"--end_offset", 1},
+    {"--class", 1}, {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1042,8 +1046,10 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
   const std::string old_file_path = GetStringArgument(cmd_args, "", 0, "");
   std::string new_file_path = GetStringArgument(cmd_args, "", 1, "");
   const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
+  const std::string auto_mode = GetStringArgument(cmd_args, "--auto", 0, "none");
   const int64_t end_offset = GetIntegerArgument(cmd_args, "--end_offset", 0, -1);
   const std::string class_name = GetStringArgument(cmd_args, "--class", 0, "");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (old_file_path.empty()) {
     Die("The old file path must be specified");
   }
@@ -1051,43 +1057,123 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
     Die("The old file and the new file must be different");
   }
   bool in_place = false;
-  if (new_file_path.empty()) {
+  if (new_file_path.empty() && auto_mode == "none") {
     in_place = true;
     new_file_path = old_file_path + ".restore." + ToString(static_cast<uint64_t>(GetWallTime()));
   }
   bool has_error = false;
   const std::string dbm_impl_mod = GetDBMImplName(dbm_impl, old_file_path);
   if (dbm_impl_mod == "hash") {
-    const Status status = HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
-    if (status != Status::SUCCESS) {
-      EPrintL("RestoreDatabase failed: ", status);
-      has_error = true;
+    if(auto_mode == "none") {
+      const Status status = HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
+      if (status != Status::SUCCESS) {
+        EPrintL("RestoreDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      HashDBM dbm;
+      tkrzw::HashDBM::TuningParameters tuning_params;
+      if (auto_mode == "default") {
+        tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "sync") {
+        tuning_params.restore_mode = HashDBM::RESTORE_SYNC;
+      } else {
+        Die("Unknown auto restore mode: ", auto_mode);
+      }
+      const Status status =
+          dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
+      if (status != Status::SUCCESS) {
+        EPrintL("OpenAdvanced failed: ", status);
+        has_error = true;
+      }
     }
   } else if (dbm_impl_mod == "tree") {
-    const Status status = TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
-    if (status != Status::SUCCESS) {
-      EPrintL("RestoreDatabase failed: ", status);
-      has_error = true;
+    if(auto_mode == "none") {
+      const Status status = TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
+      if (status != Status::SUCCESS) {
+        EPrintL("RestoreDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      TreeDBM dbm;
+      tkrzw::TreeDBM::TuningParameters tuning_params;
+      if (auto_mode == "default") {
+        tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "sync") {
+        tuning_params.restore_mode = HashDBM::RESTORE_SYNC;
+      } else {
+        Die("Unknown auto restore mode: ", auto_mode);
+      }
+      const Status status =
+          dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
+      if (status != Status::SUCCESS) {
+        EPrintL("OpenAdvanced failed: ", status);
+        has_error = true;
+      }
     }
   } else if (dbm_impl_mod == "skip") {
-    const Status status = SkipDBM::RestoreDatabase(old_file_path, new_file_path);
-    if (status != Status::SUCCESS) {
-      EPrintL("RestoreDatabase failed: ", status);
-      has_error = true;
+    if(auto_mode == "none") {
+      const Status status = SkipDBM::RestoreDatabase(old_file_path, new_file_path);
+      if (status != Status::SUCCESS) {
+        EPrintL("RestoreDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      SkipDBM dbm;
+      tkrzw::SkipDBM::TuningParameters tuning_params;
+      if (auto_mode == "default") {
+        tuning_params.restore_mode = SkipDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "sync") {
+        tuning_params.restore_mode = SkipDBM::RESTORE_SYNC;
+      } else {
+        Die("Unknown auto restore mode: ", auto_mode);
+      }
+      const Status status =
+          dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
+      if (status != Status::SUCCESS) {
+        EPrintL("OpenAdvanced failed: ", status);
+        has_error = true;
+      }
     }
   } else if (dbm_impl_mod == "poly") {
-    const Status status = PolyDBM::RestoreDatabase(
-        old_file_path, new_file_path, class_name, end_offset);
-    if (status != Status::SUCCESS) {
-      EPrintL("RestoreDatabase failed: ", status);
-      has_error = true;
+    if(auto_mode == "none") {
+      const Status status = PolyDBM::RestoreDatabase(
+          old_file_path, new_file_path, class_name, end_offset);
+      if (status != Status::SUCCESS) {
+        EPrintL("RestoreDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      PolyDBM dbm;
+      std::map<std::string, std::string> tuning_params =
+          tkrzw::StrSplitIntoMap(poly_params, ",", "=");
+      tuning_params["restore_mode"] = auto_mode;
+      const Status status =
+          dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
+      if (status != Status::SUCCESS) {
+        EPrintL("OpenAdvanced failed: ", status);
+        has_error = true;
+      }
     }
   } else if (dbm_impl_mod == "shard") {
-    const Status status = ShardDBM::RestoreDatabase(
-        old_file_path, new_file_path, class_name, end_offset);
-    if (status != Status::SUCCESS) {
-      EPrintL("RestoreDatabase failed: ", status);
-      has_error = true;
+    if(auto_mode == "none") {
+      const Status status = ShardDBM::RestoreDatabase(
+          old_file_path, new_file_path, class_name, end_offset);
+      if (status != Status::SUCCESS) {
+        EPrintL("RestoreDatabase failed: ", status);
+        has_error = true;
+      }
+    } else {
+      ShardDBM dbm;
+      std::map<std::string, std::string> tuning_params =
+          tkrzw::StrSplitIntoMap(poly_params, ",", "=");
+      tuning_params["restore_mode"] = auto_mode;
+      const Status status =
+          dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
+      if (status != Status::SUCCESS) {
+        EPrintL("OpenAdvanced failed: ", status);
+        has_error = true;
+      }
     }
   } else {
     Die("Unknown DBM implementation: ", dbm_impl);

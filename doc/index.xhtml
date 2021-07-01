@@ -2640,7 +2640,9 @@ int main(int argc, char** argv) {
 <dt>Options for the merge subcommand:</dt>
 <dd><code>--reducer <var>func</var></code> : Sets the reducer for the skip database: none, first, second, last, concat, concatnull, concattab, concatline, total. (default: none)</dd>
 <dt>Options for the restore subcommand:</dt>
+<dd><code>--auto <var>str</var></code> : The restore mode automatically done: none, default, sync. (default: none)</dd>
 <dd><code>--end_offset</code> : The exclusive end offset of records to read. (default: -1)</dd>
+<dd><code>--class</code> : The class name given to PolyDBM or ShardDBM.</dd>
 <dt>Options for the export and import subcommands:</dt>
 <dd><code>--tsv</code> : The record file is in TSV format instead of flat record.</dd>
 <dd><code>--escape</code> : C-style escape/unescape is applied to the TSV data.</dd>
