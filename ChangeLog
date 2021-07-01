@@ -3,7 +3,7 @@
 	- Release: 0.9.36
 	- Library version: 1.25.0
 
-	- Effective data size is not modified when restoring DB in the updating mode.
+	- Efficiency of auto restore is improved.
 
 2021-06-29  Mikio Hirabayashi  <hirarin@gmail.com>
 
