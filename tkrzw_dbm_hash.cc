@@ -133,6 +133,7 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
   Status ValidateRecords(int64_t record_base, int64_t end_offset);
+  Status CheckZeroRegion(int64_t offset, int64_t end_offset);
   Status CheckHashChain(int64_t offset, const HashRecord& rec, int64_t bucket_index);
 
  private:
@@ -262,7 +263,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     file_->Close();
     return status;
   }
-  const int64_t actual_file_size = file_->GetSizeSimple();
+  const int64_t act_file_size = file_->GetSizeSimple();
   int64_t null_end_offset = 0;
   int64_t act_count = 0;
   int64_t act_eff_data_size = 0;
@@ -272,13 +273,13 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-               file_size_ == actual_file_size) {
+               file_size_ == act_file_size) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if (false && tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
-               file_size_ < actual_file_size &&
-               ValidateRecordsImpl(record_base_, actual_file_size,
+               file_size_ < act_file_size &&
+               ValidateRecordsImpl(record_base_, act_file_size,
                                    &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
       num_records_.store(act_count);
@@ -295,8 +296,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       auto_restored_ = true;
     } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-               file_size_ < actual_file_size &&
-               ValidateRecordsImpl(file_size_, actual_file_size,
+               file_size_ < act_file_size &&
+               ValidateRecordsImpl(file_size_, act_file_size,
                                    &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
       num_records_.fetch_add(act_count);
@@ -1217,26 +1218,12 @@ Status HashDBMImpl::OpenImpl(bool writable) {
     return status;
   }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
-  const int64_t actual_file_size = file_->GetSizeSimple();
-  if (file_size_ != actual_file_size) {
-    if (file_size_ > actual_file_size) {
+  const int64_t act_file_size = file_->GetSizeSimple();
+  if (file_size_ != act_file_size) {
+    if (file_size_ > act_file_size) {
       healthy = false;
     } else if (file_size_ > 0) {
-      const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
-      char* buf = new char[remainder];
-      status = file_->Read(file_size_, buf, remainder);
-      if (status != Status::SUCCESS) {
-        delete[] buf;
-        return status;
-      }
-      bool only_zeros = true;
-      for (int32_t i = 0; i < remainder; i++) {
-        if (buf[i] != 0) {
-          only_zeros = false;
-        }
-      }
-      delete[] buf;
-      if (only_zeros) {
+      if (CheckZeroRegion(file_size_, act_file_size) == Status::SUCCESS) {
         status = writable ? file_->Truncate(file_size_) : file_->TruncateFakely(file_size_);
         if (status != Status::SUCCESS) {
           healthy = false;
@@ -1955,25 +1942,7 @@ Status HashDBMImpl::ValidateRecordsImpl(
   while (offset < end_offset) {
     Status status = rec.ReadMetadataKey(offset, min_read_size_);
     if (status != Status::SUCCESS) {
-      bool only_zeros = true;
-      char buf[PAGE_SIZE];
-      int64_t zero_offset = offset;
-      int64_t zero_end_offset = std::min<int64_t>(zero_offset + PAGE_SIZE * 32, end_offset);
-      while (zero_offset < zero_end_offset) {
-        const int32_t read_size = std::min<int32_t>(zero_end_offset - zero_offset, sizeof(buf));
-        const Status zero_status = file_->Read(zero_offset, buf, read_size);
-        if (zero_status != Status::SUCCESS) {
-          return zero_status;
-        }
-        for (int32_t i = 0; i < read_size; i++) {
-          if (buf[i] != 0) {
-            only_zeros = false;
-            break;
-          }
-        }
-        zero_offset += read_size;
-      }
-      if (only_zeros) {
+      if (CheckZeroRegion(offset, end_offset) == Status::SUCCESS) {
         *null_end_offset = offset;
         return Status(Status::SUCCESS);
       }
@@ -1981,6 +1950,11 @@ Status HashDBMImpl::ValidateRecordsImpl(
     }
     status = rec.CheckCRC();
     if (status != Status::SUCCESS) {
+      if (!in_place &&
+          CheckZeroRegion(offset + rec.GetWholeSize(), end_offset) == Status::SUCCESS) {
+        *null_end_offset = offset;
+        return Status(Status::SUCCESS);
+      }
       return status;
     }
     const int64_t bucket_index = PrimaryHash(rec.GetKey(), num_buckets_);
@@ -2023,6 +1997,26 @@ Status HashDBMImpl::ValidateRecordsImpl(
   }
   if (offset != end_offset) {
     return Status(Status::BROKEN_DATA_ERROR, "inconsistent end offset");
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status HashDBMImpl::CheckZeroRegion(int64_t offset, int64_t end_offset) {
+  const int64_t max_check_size = PAGE_SIZE * 32;
+  char buf[PAGE_SIZE];
+  end_offset = std::min<int64_t>(offset + max_check_size, end_offset);
+  while (offset < end_offset) {
+    const int32_t read_size = std::min<int32_t>(end_offset - offset, sizeof(buf));
+    const Status status = file_->Read(offset, buf, read_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    for (int32_t i = 0; i < read_size; i++) {
+      if (buf[i] != 0) {
+        return Status(Status::BROKEN_DATA_ERROR, "non-zero region");
+      }
+    }
+    offset += read_size;
   }
   return Status(Status::SUCCESS);
 }
