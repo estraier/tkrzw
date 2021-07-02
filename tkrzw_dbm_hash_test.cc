@@ -1584,7 +1584,26 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("three", &value));
         EXPECT_EQ("third", value);
         EXPECT_EQ(3, dbm->CountSimple());
-        EXPECT_EQ(3, dbm->CountSimple());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+        tuning_params.num_buckets = 1;
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+            file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+        char bucket_buf[4];
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(128, bucket_buf, 4));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(
+            "two", "This is a pen. I am a boy. They have three dogs."));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(128, bucket_buf, 4));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(
+            file->GetSizeSimple() - 10, "\xFF\xEE", 2));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+        EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(file_path, true));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("one", &value));
+        EXPECT_EQ("first", value);
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two", &value));
+        EXPECT_EQ(1, dbm->CountSimple());
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
       }
     }
