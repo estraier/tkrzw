@@ -29,6 +29,7 @@
 #include "tkrzw_langc.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_thread_util.h"
 
 using namespace tkrzw;
 
@@ -82,9 +83,17 @@ int32_t tkrzw_last_status_code() {
   return last_status.GetCode();
 }
 
+const char* tkrzw_status_code_name(int32_t code) {
+  return Status::CodeName(static_cast<Status::Code>(code));
+}
+
 const char* tkrzw_last_status_message() {
   last_message = last_status.GetMessage();
   return last_message.c_str();
+}
+
+double tkrzw_get_wall_time() {
+  return GetWallTime();
 }
 
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {

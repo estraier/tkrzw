@@ -1,7 +1,7 @@
 # Makefile for Tkrzw for Windows
 
-PKG_VERSION = 0.9.37
-LIB_VERSION = 1.26.0
+PKG_VERSION = 0.9.38
+LIB_VERSION = 1.27.0
 
 VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
@@ -21,7 +21,7 @@ HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_hash_util.h tkrzw_cmd_ut
 IMPLHEADERFILES = tkrzw_sys_config.h tkrzw_sys_util_windows.h tkrzw_sys_file_mmap_std.h tkrzw_sys_file_mmap_windows.h tkrzw_sys_file_pos_std.h tkrzw_sys_file_pos_windows.h
 LIBRARYFILES = tkrzw.lib
 LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_hash_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_compress.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj tkrzw_langc.obj
-COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe tkrzw_dbm_tran.exe
+COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe tkrzw_dbm_tran.exe tkrzw_langc_check.exe
 
 CL = cl
 LIB = lib
@@ -77,7 +77,7 @@ install :
 uninstall :
 	-rd /S "$(BASEDIR)"
 
-check : check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran
+check : check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-langc
 	-del casket* /F /Q > NUL: 2>&1
 	@echo #
 	@echo #================================================================
@@ -579,6 +579,7 @@ check-index-perf :
 	  --iter 20000 --threads 5 --random_key --random_value
 
 check-tran :
+	-del casket* /F /Q > NUL: 2>&1
 	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
@@ -597,6 +598,12 @@ check-tran :
 	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000 --rebuild --remove
 	tkrzw_dbm_tran.exe check casket.tks
+
+check-langc :
+	-del casket* /F /Q > NUL: 2>&1
+	tkrzw_langc_check.exe "casket.tkh" "truncate=true,num_buckets=10000" 20000
+	tkrzw_langc_check.exe "casket.tkt" "truncate=true,num_buckets=1000" 20000
+	tkrzw_langc_check.exe "casket.tks" "truncate=true" 20000
 
 check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
 
@@ -700,5 +707,8 @@ tkrzw_dbm_perf.exe : tkrzw_dbm_perf.obj tkrzw.lib
 
 tkrzw_dbm_tran.exe : tkrzw_dbm_tran.obj tkrzw.lib
 	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_tran.obj tkrzw.lib
+
+tkrzw_langc_check.exe : tkrzw_langc_check.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_langc_check.obj tkrzw.lib
 
 $(COMMANDFILES) : $(HEADERFILES) tkrzw.lib

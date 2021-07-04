@@ -139,10 +139,23 @@ typedef void (*tkrzw_file_processor)(void* arg, const char*);
 int32_t tkrzw_last_status_code();
 
 /**
+ * Gets the string name of a status code.
+ * @param code The status code.
+ * @return The name of the status code.
+ */
+const char* tkrzw_status_code_name(int32_t code);
+
+/**
  * Gets the status message of the last database operation.
  * @return the status message of the last database operation.
  */
 const char* tkrzw_last_status_message();
+
+/**
+ * Gets the number of seconds since the UNIX epoch.
+ * @return The number of seconds since the UNIX epoch with microsecond precision.
+ */
+double tkrzw_get_wall_time();
 
 /**
  * Opens a database file and makes a database object.

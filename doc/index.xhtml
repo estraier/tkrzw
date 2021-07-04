@@ -2567,9 +2567,18 @@ int main(int argc, char** argv) {
 
 <h2 id="langc_overview">C Language Interface</h2>
 
-<p>The C++ API cannot be use directly in C code.  So, the C interface is provided as a wrapper of PolyDBM and ShardDBM.  Those adapter classes absorb differences among concrete database classes so you can use HashDBM, TreeDBM, SkipDBM and other databases in C code.</p>
+<p>The C++ API cannot be use directly in C code.  So, the C interface is provided as a wrapper of PolyDBM and ShardDBM.  Those adapter classes absorb differences among concrete database classes so you can use HashDBM, TreeDBM, SkipDBM and other databases in C code.  The C interface is useful to embed the functionality to other languages which provide bridging interface for C but not for C++.  As the name mangling feature of C++ sometimes hinders simple integration.</p>
 
-<p>You can create the database object and open a database by calling the tkrzw_dbm_open function.  It returns the pointer to a TkrzwDBM object.  Most methods of PolyDBM and ShardDBM have their counterparts in the C interface.  For methods of the database object, there are functions whose name begins with "tkrzw_dbm_" and they receive the pointer to a TkrzwDBM object as the first parameter.  An iterator object is created by calling the tkrzw_dbm_make_iterator function.  For methods of the iterator object, there are functions whose name begins with "tkrzw_dbm_iter_" and they receive the pointer to a TkrzwDBMIter object as the first parameter.  See <a href="https://dbmx.net/tkrzw/api/tkrzw__langc_8h.html">the API document</a> for details.</p>
+<p>You can create the database object and open a database by calling the tkrzw_dbm_open function.  It returns the pointer to a TkrzwDBM object.  Most methods of PolyDBM and ShardDBM have their counterparts in the C interface.  For methods of the database object, there are conterpart functions whose name begins with "tkrzw_dbm_" and they receive the pointer to a TkrzwDBM object as the first parameter.  An iterator object is created by calling the tkrzw_dbm_make_iterator function.  For methods of the iterator object, there are counterpart functions whose name begins with "tkrzw_dbm_iter_" and they receive the pointer to a TkrzwDBMIter object as the first parameter.</p>
+
+<p>The library header is based on the C99 standard.  Typically, your program is built like this:</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ gcc -std=c99 -pthread -I/usr/local/include \
+  -O2 -Wall helloworld.c \
+  -L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lpthread
+]]></code></pre>
+
+<p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/tkrzw__langc_8h.html">the API document</a> for details.</p>
 
 <h3 id="langc_example">Example Code</h3>
 

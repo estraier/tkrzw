@@ -155,6 +155,7 @@ check :
 	$(MAKE) check-sharddbm-util
 	$(MAKE) check-index-perf
 	$(MAKE) check-tran
+	$(MAKE) check-langc
 	rm -Rf casket*
 	@printf '\n'
 	@printf '#================================================================\n'
@@ -688,6 +689,12 @@ check-tran :
 	  --sync_freq 10000 --rebuild --remove
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tks
 
+check-langc :
+	rm -Rf casket*
+	$(RUNENV) $(RUNCMD) ./tkrzw_langc_check "casket.tkh" "truncate=true,num_buckets=10000" 20000
+	$(RUNENV) $(RUNCMD) ./tkrzw_langc_check "casket.tkt" "truncate=true,num_buckets=1000" 20000
+	$(RUNENV) $(RUNCMD) ./tkrzw_langc_check "casket.tks" "truncate=true" 20000
+
 check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
 
 check-direct-hashdbm :
@@ -878,6 +885,9 @@ tkrzw_dbm_perf : tkrzw_dbm_perf.o $(LIBRARYFILES)
 tkrzw_dbm_tran : tkrzw_dbm_tran.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
+tkrzw_langc_check : tkrzw_langc_check.o $(LIBRARYFILES)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
+
 #================================================================
 # Building tests
 #================================================================
@@ -964,6 +974,6 @@ tkrzw_index_test : tkrzw_index_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_langc_test : tkrzw_langc_test.o $(LIBRARYFILES)
-	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+	$(CXX) $(CFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 # END OF FILE

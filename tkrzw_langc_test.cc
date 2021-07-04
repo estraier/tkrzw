@@ -50,8 +50,12 @@ TEST(LangCTest, ConstantTest) {
   EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, TKRZW_STATUS_DUPLICATION_ERROR);
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR, TKRZW_STATUS_BROKEN_DATA_ERROR);
   EXPECT_EQ(tkrzw::Status::APPLICATION_ERROR, TKRZW_STATUS_APPLICATION_ERROR);
+  EXPECT_STREQ("SUCCESS", tkrzw_status_code_name(TKRZW_STATUS_SUCCESS));
+  EXPECT_STREQ("UNKNOWN_ERROR", tkrzw_status_code_name(TKRZW_STATUS_UNKNOWN_ERROR));
+  EXPECT_STREQ("APPLICATION_ERROR", tkrzw_status_code_name(TKRZW_STATUS_APPLICATION_ERROR));
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_last_status_code());
   EXPECT_STREQ("", tkrzw_last_status_message());
+  EXPECT_GT(tkrzw_get_wall_time(), 0);
 };
 
 void file_proc_check(void* arg, const char* path) {
