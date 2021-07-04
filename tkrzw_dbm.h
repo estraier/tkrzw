@@ -64,7 +64,7 @@ class DBM {
      * Processes an existing record.
      * @param key The key of the existing record.
      * @param value The value of the existing record.
-     * @return A string reference to NOOP, REMOVE, or a strint of new value.
+     * @return A string reference to NOOP, REMOVE, or a string of a new value.
      * @details The memory referred to by the return value must be alive until the end of
      * the life-span of this object or until this function is called next time.
      */

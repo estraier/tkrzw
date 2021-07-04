@@ -102,6 +102,7 @@ namespace tkrzw {}
  * @file tkrzw_dbm_poly.h Polymorphic database manager adapter.
  * @file tkrzw_dbm_shard.h Sharding database manager adapter.
  * @file tkrzw_index.h Secondary index implementations.
+ * @file tkrzw_langc.h C language binding of Tkrzw.
  */
 
 // END OF FILE

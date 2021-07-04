@@ -796,6 +796,7 @@ testrun :
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_poly_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_shard_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_index_test
+	$(RUNENV) $(RUNCMD) ./tkrzw_langc_test
 
 apidoc :
 	$(MAKE) apidocclean
@@ -960,6 +961,9 @@ tkrzw_dbm_shard_test : tkrzw_dbm_shard_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_index_test : tkrzw_index_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_langc_test : tkrzw_langc_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 # END OF FILE

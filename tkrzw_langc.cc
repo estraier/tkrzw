@@ -1,0 +1,637 @@
+/*************************************************************************************************
+ * C language binding of Tkrzw
+ *
+ * Copyright 2020 Google LLC
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License.  You may obtain a copy of the License at
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific language governing permissions
+ * and limitations under the License.
+ *************************************************************************************************/
+
+#include "tkrzw_sys_config.h"
+
+#include <string>
+#include <string_view>
+#include <map>
+#include <memory>
+#include <vector>
+
+#include <cstddef>
+#include <cstdint>
+
+#include "tkrzw_dbm.h"
+#include "tkrzw_dbm_common_impl.h"
+#include "tkrzw_dbm_poly.h"
+#include "tkrzw_dbm_shard.h"
+#include "tkrzw_langc.h"
+#include "tkrzw_lib_common.h"
+#include "tkrzw_str_util.h"
+
+using namespace tkrzw;
+
+extern "C" {
+
+const char* const TKRZW_PACKAGE_VERSION = PACKAGE_VERSION;
+
+const char* const TKRZW_LIBRARY_VERSION = LIBRARY_VERSION;
+
+const int64_t TKRZW_INT64MIN = INT64MIN;
+
+const int64_t TKRZW_INT64MAX = INT64MAX;
+
+thread_local Status last_status(Status::SUCCESS);
+thread_local std::string last_message;
+
+const char* TKRZW_REC_PROC_NOOP = (char*)-1;
+
+const char* TKRZW_REC_PROC_REMOVE = (char*)-2;
+
+struct RecordProcessorWrapper : public DBM::RecordProcessor {
+ public:
+  tkrzw_record_processor proc = nullptr;
+  void* arg = nullptr;
+  std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+    int32_t new_value_size = 0;
+    const char* new_value_ptr =
+        proc(arg, key.data(), key.size(), value.data(), value.size(), &new_value_size);
+    if (new_value_ptr == TKRZW_REC_PROC_NOOP) {
+      return NOOP;
+    }
+    if (new_value_ptr == TKRZW_REC_PROC_REMOVE) {
+      return REMOVE;
+    }
+    return std::string_view(new_value_ptr, new_value_size);
+  }
+  std::string_view ProcessEmpty(std::string_view key) override {
+    int32_t new_value_size = 0;
+    const char* new_value_ptr = proc(arg, key.data(), key.size(), nullptr, -1, &new_value_size);
+    if (new_value_ptr == TKRZW_REC_PROC_NOOP) {
+      return NOOP;
+    }
+    if (new_value_ptr == TKRZW_REC_PROC_REMOVE) {
+      return REMOVE;
+    }
+    return std::string_view(new_value_ptr, new_value_size);
+  }
+};
+
+int32_t tkrzw_last_status_code() {
+  return last_status.GetCode();
+}
+
+const char* tkrzw_last_status_message() {
+  last_message = last_status.GetMessage();
+  return last_message.c_str();
+}
+
+TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
+  assert(path != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  const int32_t num_shards = tkrzw::StrToInt(tkrzw::SearchMap(xparams, "num_shards", "-1"));
+  xparams.erase("num_shards");
+  int32_t open_options = 0;
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "truncate", "false"))) {
+    open_options |= tkrzw::File::OPEN_TRUNCATE;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_create", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_CREATE;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_wait", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_WAIT;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_lock", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_LOCK;
+  }
+  xparams.erase("truncate");
+  xparams.erase("no_create");
+  xparams.erase("no_wait");
+  xparams.erase("no_lock");
+  ParamDBM* dbm = nullptr;
+  if (num_shards >= 0) {
+    dbm = new tkrzw::ShardDBM();
+  } else {
+    dbm = new tkrzw::PolyDBM();
+  }
+  last_status = dbm->OpenAdvanced(path, writable, open_options, xparams);
+  if (last_status != Status::SUCCESS) {
+    delete dbm;
+    return nullptr;
+  }
+  return reinterpret_cast<TkrzwDBM*>(dbm);
+}
+
+bool tkrzw_dbm_close(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Close();
+  bool rv = last_status == Status::SUCCESS;
+  delete xdbm;
+  return rv;
+}
+
+bool tkrzw_dbm_process(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, tkrzw_record_processor proc,
+    void* proc_arg, bool writable) {
+  assert(dbm != nullptr && key_ptr != nullptr && proc != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  RecordProcessorWrapper xproc;
+  xproc.proc = proc;
+  xproc.arg = proc_arg;
+  last_status = xdbm->Process(std::string_view(key_ptr, key_size), &xproc, writable);
+  return last_status == Status::SUCCESS;
+}
+
+char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_t* value_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::string value;
+  last_status = xdbm->Get(std::string_view(key_ptr, key_size), &value);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  char* value_ptr = reinterpret_cast<char*>(xmalloc(value.size() + 1));
+  std::memcpy(value_ptr, value.c_str(), value.size() + 1);
+  if (value_size != nullptr) {
+    *value_size = value.size();
+  }
+  return value_ptr;
+}
+
+bool tkrzw_dbm_set(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size, bool overwrite) {
+  assert(dbm != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Set(
+      std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size), overwrite);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Remove(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_append(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size,
+    const char* delim_ptr, int32_t delim_size) {
+  assert(dbm != nullptr && key_ptr != nullptr && value_ptr != nullptr && delim_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  if (delim_size < 0) {
+    delim_size = std::strlen(delim_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Append(
+      std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size),
+      std::string_view(delim_ptr, delim_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_compare_exchange(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* expected_ptr, int32_t expected_size,
+    const char* desired_ptr, int32_t desired_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (expected_ptr != nullptr && expected_size < 0) {
+    expected_size = std::strlen(expected_ptr);
+  }
+  if (desired_ptr != nullptr && desired_size < 0) {
+    desired_size = std::strlen(desired_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->CompareExchange(
+      std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
+      std::string_view(desired_ptr, desired_size));
+  return last_status == Status::SUCCESS;
+}
+
+int64_t tkrzw_dbm_increment(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    int64_t increment, int64_t initial) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  int64_t current = 0;
+  last_status =
+      xdbm->Increment(std::string_view(key_ptr, key_size), increment, &current, initial);
+  if (last_status != Status::SUCCESS) {
+    return INT64MIN;
+  }
+  return current;
+}
+
+bool tkrzw_dbm_process_multi(
+    TkrzwDBM* dbm, TkrzwKeyProcPair* key_proc_pairs, int32_t num_pairs, bool writable) {
+  assert(dbm != nullptr && key_proc_pairs != nullptr);
+  std::vector<RecordProcessorWrapper> xprocs(num_pairs);
+  std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> xkey_proc_pairs(num_pairs);
+  for (int32_t i = 0; i < num_pairs; i++) {
+    auto& key_proc_pair = key_proc_pairs[i];
+    auto& xproc = xprocs[i];
+    xproc.proc = key_proc_pair.proc;
+    xproc.arg = key_proc_pair.proc_arg;
+    auto& xpair = xkey_proc_pairs[i];
+    const int32_t key_size =
+        key_proc_pair.key_size < 0 ? strlen(key_proc_pair.key_ptr) : key_proc_pair.key_size;
+    xpair.first = std::string_view(key_proc_pair.key_ptr, key_size);
+    xpair.second = &xproc;
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->ProcessMulti(xkey_proc_pairs, writable);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_compare_exchange_multi(
+    TkrzwDBM* dbm, TkrzwKeyValuePair* expected, int32_t num_expected,
+    TkrzwKeyValuePair* desired, int32_t num_desired) {
+  assert(dbm != nullptr && expected != nullptr && desired != nullptr);
+  std::vector<std::pair<std::string_view, std::string_view>> expected_vec(num_expected);
+  for (int32_t i = 0; i < num_expected; i++) {
+    auto& key_value_pair = expected[i];
+    auto& xpair = expected_vec[i];
+    const int32_t key_size =
+        key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
+    xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
+    const int32_t value_size =
+        key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
+        strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
+    xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+  }
+  std::vector<std::pair<std::string_view, std::string_view>> desired_vec(num_desired);
+  for (int32_t i = 0; i < num_desired; i++) {
+    auto& key_value_pair = desired[i];
+    auto& xpair = desired_vec[i];
+    const int32_t key_size =
+        key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
+    xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
+    const int32_t value_size =
+        key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
+        strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
+    xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->CompareExchangeMulti(expected_vec, desired_vec);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_process_each(
+    TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable) {
+  assert(dbm != nullptr && proc != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  RecordProcessorWrapper xproc;
+  xproc.proc = proc;
+  xproc.arg = proc_arg;
+  last_status = xdbm->ProcessEach(&xproc, writable);
+  return last_status == Status::SUCCESS;
+}
+
+int64_t tkrzw_dbm_count(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  int64_t count = 0;
+  last_status = xdbm->Count(&count);
+  if (last_status != Status::SUCCESS) {
+    return -1;
+  }
+  return count;
+}
+
+int64_t tkrzw_dbm_get_file_size(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  int64_t file_size = 0;
+  last_status = xdbm->GetFileSize(&file_size);
+  if (last_status != Status::SUCCESS) {
+    return -1;
+  }
+  return file_size;
+}
+
+char* tkrzw_dbm_get_file_path(TkrzwDBM* dbm) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::string path;
+  last_status = xdbm->GetFilePath(&path);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  char* path_ptr = reinterpret_cast<char*>(xmalloc(path.size() + 1));
+  std::memcpy(path_ptr, path.c_str(), path.size() + 1);
+  return path_ptr;
+}
+
+bool tkrzw_dbm_clear(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Clear();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_rebuild(TkrzwDBM* dbm, const char* params) {
+  assert(dbm != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->RebuildAdvanced(xparams);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_should_be_rebuilt(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  bool tobe = false;
+  last_status = xdbm->ShouldBeRebuilt(&tobe);
+  return last_status == Status::SUCCESS && tobe;
+}
+
+bool tkrzw_dbm_synchronize(
+    TkrzwDBM* dbm, bool hard, tkrzw_file_processor proc, void* proc_arg, const char* params) {
+  assert(dbm != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  class Proc : public DBM::FileProcessor {
+   public:
+    Proc(tkrzw_file_processor proc, void* arg) : proc_(proc), arg_(arg) {}
+    void Process(const std::string& path) override {
+      if (proc_ != nullptr) {
+        proc_(arg_, path.c_str());
+      }
+    }
+   private:
+    tkrzw_file_processor proc_;
+    void* arg_;
+  };
+  Proc xproc(proc, proc_arg);
+  last_status = xdbm->SynchronizeAdvanced(hard, &xproc, xparams);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path) {
+  assert(dbm != nullptr && dest_path != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->CopyFileData(dest_path);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm) {
+  assert(dbm != nullptr && dest_dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  ParamDBM* dest_xdbm = reinterpret_cast<ParamDBM*>(dest_dbm);
+  last_status = xdbm->Export(dest_xdbm);
+  return last_status == Status::SUCCESS;
+}
+
+char* tkrzw_dbm_inspect(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  const auto& result = xdbm->Inspect();
+  size_t result_size = 0;
+  for (const auto& rec : result) {
+    result_size += rec.first.size() + rec.second.size() + 2;
+  }
+  char* result_ptr = static_cast<char*>(xmalloc(result_size + 1));
+  char* wp = result_ptr;
+  for (const auto& rec : result) {
+    std::memcpy(wp, rec.first.data(), rec.first.size());
+    wp += rec.first.size();
+    *wp++ = '\t';
+    std::memcpy(wp, rec.second.data(), rec.second.size());
+    wp += rec.second.size();
+    *wp++ = '\n';
+  }
+  *wp = '\0';
+  return result_ptr;
+}
+
+bool tkrzw_dbm_is_writable(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  return xdbm->IsWritable();
+}
+
+bool tkrzw_dbm_is_healthy(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  return xdbm->IsHealthy();
+}
+
+bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  return xdbm->IsOrdered();
+}
+
+TkrzwDBMIter* tkrzw_dbm_make_iterator(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  return reinterpret_cast<TkrzwDBMIter*>(xdbm->MakeIterator().release());
+}
+
+void tkrzw_dbm_iter_free(TkrzwDBMIter* iter) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  delete xiter;
+}
+
+bool tkrzw_dbm_iter_first(TkrzwDBMIter* iter) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->First();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_last(TkrzwDBMIter* iter) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->Last();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_jump(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size) {
+  assert(iter != nullptr && key_ptr != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  last_status = xiter->Jump(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size) {
+  assert(iter != nullptr && key_ptr != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  last_status = xiter->JumpLower(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size) {
+  assert(iter != nullptr && key_ptr != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  last_status = xiter->JumpUpper(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_next(TkrzwDBMIter* iter) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->Next();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_previous(TkrzwDBMIter* iter) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->Previous();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_process(
+    TkrzwDBMIter* iter, tkrzw_record_processor proc, void* proc_arg, bool writable) {
+  assert(iter != nullptr && proc != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  RecordProcessorWrapper xproc;
+  xproc.proc = proc;
+  xproc.arg = proc_arg;
+  last_status = xiter->Process(&xproc, writable);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_get(
+    TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
+    char** value_ptr, int32_t* value_size) {
+  assert(iter != nullptr && proc != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  bool rv = false;
+  if (key_ptr == nullptr && value_ptr == nullptr) {
+    last_status = xiter->Get();
+    rv = last_status == Status::SUCCESS;
+  } else if (value_ptr == nullptr) {
+    std::string key;
+    last_status = xiter->Get(&key);
+    if (last_status == Status::SUCCESS) {
+      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+      if (key_size != nullptr) {
+        *key_size = key.size();
+      }
+      rv = true;
+    }
+  } else if (key_ptr == nullptr) {
+    std::string value;
+    last_status = xiter->Get(nullptr, &value);
+    if (last_status == Status::SUCCESS) {
+      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+      if (value_size != nullptr) {
+        *value_size = value.size();
+      }
+      rv = true;
+    }
+  } else {
+    std::string key, value;
+    last_status = xiter->Get(&key, &value);
+    if (last_status == Status::SUCCESS) {
+      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+      if (key_size != nullptr) {
+        *key_size = key.size();
+      }
+      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+      if (value_size != nullptr) {
+        *value_size = value.size();
+      }
+      rv = true;
+    }
+  }
+  return rv;
+}
+
+char* tkrzw_dbm_iter_get_key(TkrzwDBMIter* iter, int32_t* key_size) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  std::string key;
+  last_status = xiter->Get(&key);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  char* key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+  std::memcpy(key_ptr, key.c_str(), key.size() + 1);
+  if (key_size != nullptr) {
+    *key_size = key.size();
+  }
+  return key_ptr;
+}
+
+char* tkrzw_dbm_iter_get_value(TkrzwDBMIter* iter, int32_t* value_size) {
+  assert(iter != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  std::string value;
+  last_status = xiter->Get(nullptr, &value);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  char* value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+  std::memcpy(value_ptr, value.c_str(), value.size() + 1);
+  if (value_size != nullptr) {
+    *value_size = value.size();
+  }
+  return value_ptr;
+}
+
+bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value_size) {
+  assert(dbm != nullptr && value_ptr != nullptr);
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->Set(std::string_view(value_ptr, value_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter) {
+  assert(dbm != nullptr);
+  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
+  last_status = xiter->Remove();
+  return last_status == Status::SUCCESS;
+}
+
+}  // extern "C"
+
+// END OF FILE
