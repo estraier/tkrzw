@@ -18,7 +18,8 @@ MYBINS = helloworld accesscounter transfer \
   stdtreedbm_ex1 stdtreedbm_ex2 \
   polydbm_ex1 sharddbm_ex1 \
   fileindex_ex1 stdindex_ex1 \
-  invindex_ex1
+  invindex_ex1 \
+  langc_ex1
 
 # Building binaries
 CC = gcc
@@ -137,5 +138,8 @@ stdindex_ex1 : stdindex_ex1.o
 
 invindex_ex1 : invindex_ex1.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+langc_ex1 : langc_ex1.o
+	$(LDENV) $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 # END OF FILE

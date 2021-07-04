@@ -128,7 +128,7 @@ window.onload = function(){
 
 <p>Tkrzw adopts dependency injection for file implementations.  Bundled implementations support memory mapping I/O, normal read/write I/O, and direct block I/O.  You can inject your own implemenations to support specific data storages and file systems.  Whereas such file implementations use APIs (system calls) of the underlying operating systems, the upper layer for database algorithms doesn't depend on them so that the maximum portability is achieved.  Tkrzw supports any Unix-like systems and Windows.</p>
 
-<p>You can use some bridging interfaces to use Tkrzw in other programming languages than C++.  Currently, Java, Python, and Ruby interfaces are provided.</p>
+<p>You can use some bridging interfaces to use Tkrzw in other programming languages than C++.  Currently, C, Java, Python, and Ruby interfaces are provided.  <a href="#langc_overview">The C interface</a> is bundled in the main package.  The other interfaces are packaged separately.</p>
 
 <p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
 
@@ -723,7 +723,7 @@ int main(int argc, char** argv) {
 
 <div class="dbstructure"><img src="hashdbm.svg"/></div>
 
-<p>See the tips of <a href="#tips_hashdbm_tune">Tuning HashDBM</a> too.  Tuning has a significant influence on performance.</p>
+<p>See the tips of <a href="#tips_hashdbm_tune">Tuning HashDBM</a> too.  Tuning has a significant influence on performance.  For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1HashDBM.html">the API document</a>.</p>
 
 <h3 id="hashdbm_example">Example Code</h3>
 
@@ -1052,7 +1052,7 @@ int main(int argc, char** argv) {
 
 <div class="dbstructure"><img src="treedbm.svg"/></div>
 
-<p>See the tips of <a href="#tips_treedbm_tune">Tuning TreeDBM</a> too.  Tuning has a significant influence on performance.</p>
+<p>See the tips of <a href="#tips_treedbm_tune">Tuning TreeDBM</a> too.  Tuning has a significant influence on performance.  For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1TreeDBM.html">the API document</a>.</p>
 
 <h3 id="treedbm_example">Example Code</h3>
 
@@ -1375,7 +1375,7 @@ int main(int argc, char** argv) {
 
 <div class="dbstructure"><img src="skipdbm.svg"/></div>
 
-<p>See the tips of <a href="#tips_skipdbm_tune">Tuning SkipDBM</a> too.  Tuning has a significant influence on performance.</p>
+<p>See the tips of <a href="#tips_skipdbm_tune">Tuning SkipDBM</a> too.  Tuning has a significant influence on performance.  For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1SkipDBM.html">the API document</a>.</p>
 
 <h3 id="skipdbm_example">Example Code</h3>
 
@@ -1691,6 +1691,8 @@ int main(int argc, char** argv) {
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
+<p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1TinyDBM.html">the API document</a>.</p>
+
 <h3 id="tinydbm_example">Example Code</h3>
 
 <p>This is a code example where basic operations are done without checking errors.</p>
@@ -1803,6 +1805,8 @@ int main(int argc, char** argv) {
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
+<p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1BabyDBM.html">the API document</a>.</p>
+
 <h3 id="babydbm_example">Example Code</h3>
 
 <p>This is a code example where basic operations are done without checking errors.</p>
@@ -1911,6 +1915,8 @@ int main(int argc, char** argv) {
 
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
+<p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1CacheDBM.html">the API document</a>.</p>
+
 <h3 id="cachedbm_example">Example Code</h3>
 
 <p>This is a code example where basic operations are done without checking errors.</p>
@@ -1955,6 +1961,8 @@ int main(int argc, char** argv) {
 <p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map and std::map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
 <p>In contrast with the hash database, the tree database StdTreeDBM assures that all keys are ordered in alphabetical order.  The iterator supports the Jump method, which enables range searches including forward-matching search.</p>
+
+<p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/tkrzw__dbm__std_8h.html">the API document</a>.</p>
 
 <h3 id="hashdbm_example">Example Code</h3>
 
@@ -2113,6 +2121,8 @@ dbm.OpenAdvanced("casket", true, File::OPEN_DEFAULT, params);
 
 <p>If the file path is "casket" and the number of shards is 4, "casket-00000-of-00004", "casket-00001-of-00004", "casket-00002-of-00004", and "casket-00003-of-00004" are created.  To open an existing database, specify the path without the suffix.  You can omit the "num_shards" parameter to open existing files.</p>
 
+<p>For details of the API, see the API document of <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyDBM.html">PolyDBM</a> and <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1ShardDBM.html">ShardDBM</a>.</p>
+
 <h3 id="polydbm_example">Example Code</h3>
 
 <p>This is a code example of basic usase of PolyDBM.</p>
@@ -2216,6 +2226,8 @@ int main(int argc, char** argv) {
 <p>For the division ID index, the first element can be int64_t for the division ID and the second element can be int64_t for the employee ID.  Therefore, using StdIndex&lt;int64_t, int64_t&gt; is a good idea.  By having the primary key of the main database as the second element, each record becomes unique and you don't have to worry about duplication.  You can also set an arbitrary comparator to adjust the order of records.</p>
 
 <p>Secondary indices are not important data to be perpetuated on the storage because they can be reproduced as long as the main entity data exist.  Therefore, using some of memory indices is a practical solution to realize extreme throughput.  To use on-memory indices, you have to load all index entries from the main database every time when the process starts.</p>
+
+<p>For details of the API, see the API document of <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1FileIndex.html">FileIndex</a> and <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1MemIndex.html">MemIndex</a>.</p>
 
 <h3 id="index_example">Example Code</h3>
 
@@ -2552,6 +2564,61 @@ int main(int argc, char** argv) {
   return 0;
 }
 ]]></code></pre>
+
+<h2 id="langc_overview">C Language Interface</h2>
+
+<p>The C++ API cannot be use directly in C code.  So, the C interface is provided as a wrapper of PolyDBM and ShardDBM.  Those adapter classes absorb differences among concrete database classes so you can use HashDBM, TreeDBM, SkipDBM and other databases in C code.</p>
+
+<p>You can create the database object and open a database by calling the tkrzw_dbm_open function.  It returns the pointer to a TkrzwDBM object.  Most methods of PolyDBM and ShardDBM have their counterparts in the C interface.  For methods of the database object, there are functions whose name begins with "tkrzw_dbm_" and they receive the pointer to a TkrzwDBM object as the first parameter.  An iterator object is created by calling the tkrzw_dbm_make_iterator function.  For methods of the iterator object, there are functions whose name begins with "tkrzw_dbm_iter_" and they receive the pointer to a TkrzwDBMIter object as the first parameter.  See <a href="https://dbmx.net/tkrzw/api/tkrzw__langc_8h.html">the API document</a> for details.</p>
+
+<h3 id="langc_example">Example Code</h3>
+
+<p>You can use a hash database by the following code.</p>
+
+<pre><code class="language-cpp"><![CDATA[#include <stdio.h>
+#include "tkrzw_langc.h"
+
+// Main routine.
+int main(int argc, char** argv) {
+  // Opens the database file.
+  TkrzwDBM* dbm = tkrzw_dbm_open(
+      "casket.tkh", true, "truncate=true,num_buckets=100");
+  
+  // Stores records.
+  tkrzw_dbm_set(dbm, "foo", -1, "hop", -1, true);
+  tkrzw_dbm_set(dbm, "bar", -1, "step", -1, true);
+  tkrzw_dbm_set(dbm, "baz", -1, "jump", -1, true);
+
+  // Retrieves a record.
+  char* value_ptr = tkrzw_dbm_get(dbm, "foo", -1, NULL);
+  if (value_ptr) {
+    puts(value_ptr);
+    free(value_ptr);
+  }
+
+  // Traverses records.
+  TkrzwDBMIter* iter = tkrzw_dbm_make_iterator(dbm);
+  tkrzw_dbm_iter_first(iter);
+  while (true) {
+    char* key_ptr = nullptr;
+    if (!tkrzw_dbm_iter_get(iter, &key_ptr, NULL, &value_ptr, NULL)) {
+      break;
+    }
+    printf("%s:%s\n", key_ptr, value_ptr);
+    free(key_ptr);
+    free(value_ptr);
+    tkrzw_dbm_iter_next(iter);
+  }
+  tkrzw_dbm_iter_free(iter);
+  
+  // Closes the database file.
+  tkrzw_dbm_close(dbm);
+
+  return 0;
+}
+]]></code></pre>
+
+<p>Note that every created TkrzwDBM object should be closed by the tkrzw_dbm_close function.  Every regions allocated by tkrzw_dbm_get, tkrzw_dbm_iter_get and other functions should be released by the free function.  Every created TkrzwDBMIter object should be released by the tkrzw_dbm_iter_free function.</p>
 
 <h2 id="commands">Command Line Utilities</h2>
 
