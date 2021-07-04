@@ -355,7 +355,7 @@ int64_t tkrzw_dbm_get_file_size(TkrzwDBM* dbm) {
 }
 
 char* tkrzw_dbm_get_file_path(TkrzwDBM* dbm) {
-  assert(dbm != nullptr && key_ptr != nullptr);
+  assert(dbm != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   std::string path;
   last_status = xdbm->GetFilePath(&path);
@@ -578,7 +578,7 @@ bool tkrzw_dbm_iter_process(
 bool tkrzw_dbm_iter_get(
     TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
     char** value_ptr, int32_t* value_size) {
-  assert(iter != nullptr && proc != nullptr);
+  assert(iter != nullptr);
   DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
   bool rv = false;
   if (key_ptr == nullptr && value_ptr == nullptr) {
@@ -659,7 +659,7 @@ char* tkrzw_dbm_iter_get_value(TkrzwDBMIter* iter, int32_t* value_size) {
 }
 
 bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value_size) {
-  assert(dbm != nullptr && value_ptr != nullptr);
+  assert(iter != nullptr && value_ptr != nullptr);
   if (value_size < 0) {
     value_size = std::strlen(value_ptr);
   }
@@ -669,7 +669,7 @@ bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value
 }
 
 bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter) {
-  assert(dbm != nullptr);
+  assert(iter != nullptr);
   DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
   last_status = xiter->Remove();
   return last_status == Status::SUCCESS;
