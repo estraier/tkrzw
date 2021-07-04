@@ -3,6 +3,7 @@
 	- Release: 0.9.37
 	- Library version: 1.26.0
 
+	- Add the C language interface.
 	- Efficiency of auto restore is improved.
 
 2021-07-01  Mikio Hirabayashi  <hirarin@gmail.com>

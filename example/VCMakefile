@@ -19,12 +19,14 @@ COMMANDFILES = helloworld.exe accesscounter.exe transfer.exe \
   stdtreedbm_ex1.exe stdtreedbm_ex2.exe \
   polydbm_ex1.exe sharddbm_ex1.exe \
   fileindex_ex1.exe stdindex_ex1.exe \
-  invindex_ex1.exe
+  invindex_ex1.exe \
+  langc_ex1.exe
 
 CL = cl
 LINK = link
+CFLAGS = /std:c99
+CXXFLAGS = /std:c++17 /Zc:__cplusplus
 CLFLAGS = /nologo \
-  /std:c++17 /Zc:__cplusplus \
   /I "$(VCINCPATH)" /I .. \
   /O2 /EHsc /W3 /MT
 LINKFLAGS = /nologo \
@@ -34,8 +36,11 @@ LINKFLAGS = /nologo \
 .SUFFIXES :
 .SUFFIXES : .cc .c .obj .exe
 
+.c.obj :
+	$(CL) /c $(CFLAGS) $(CLFLAGS) $<
+
 .cc.obj :
-	$(CL) /c $(CLFLAGS) $<
+	$(CL) /c $(CXXFLAGS) $(CLFLAGS) $<
 
 all : $(COMMANDFILES)
 
@@ -119,3 +124,6 @@ stdindex_ex1.exe : stdindex_ex1.obj
 
 invindex_ex1.exe : invindex_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ invindex_ex1.obj tkrzw.lib
+
+langc_ex1.exe : langc_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ langc_ex1.obj tkrzw.lib

@@ -21,7 +21,7 @@ MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkr
 MYPCFILES="tkrzw.pc"
 
 # Building flags
-MYCFLAGS="-pthread -fPIC -fsigned-char"
+MYCFLAGS="-std=c99 -pthread -fPIC -fsigned-char"
 MYCXXFLAGS="-std=c++17 -pthread -fPIC -fsigned-char"
 MYCPPFLAGS="-I. -I\$(INCLUDEDIR)"
 MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_ISOC99_SOURCE=1 -D_POSIX_C_SOURCE=999999L"

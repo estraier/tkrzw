@@ -2003,7 +2003,7 @@ Status HashDBMImpl::ValidateRecordsImpl(
 
 Status HashDBMImpl::CheckZeroRegion(int64_t offset, int64_t end_offset) {
   const int64_t max_check_size = PAGE_SIZE * 32;
-  char buf[PAGE_SIZE];
+  char buf[8192];
   end_offset = std::min<int64_t>(offset + max_check_size, end_offset);
   while (offset < end_offset) {
     const int32_t read_size = std::min<int32_t>(end_offset - offset, sizeof(buf));
