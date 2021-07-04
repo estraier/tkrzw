@@ -130,6 +130,23 @@ Status SearchDBMEditDistance(
     bool utf = false);
 
 /**
+ * Searches a database and get keys which match a pattern, according to a mode expression.
+ * @param dbm The DBM object of the database.
+ * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
+ * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
+ * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
+ * extracts keys whose edit distance to the pattern is the least.
+ * @param pattern The pattern for matching.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @param utf If true, text is treated as UTF-8, which affects "regex" and "edit".
+ * @return The result status.
+ */
+Status SearchDBMModal(
+    DBM* dbm, std::string_view mode, std::string_view pattern,
+    std::vector<std::string>* matched, size_t capacity = 0, bool utf = false);
+
+/**
  * Exports all records of a database to a flat record file.
  * @param dbm The DBM object of the database.
  * @param file The file object to write records in.

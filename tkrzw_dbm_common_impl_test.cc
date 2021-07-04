@@ -18,6 +18,7 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_common_impl.h"
+#include "tkrzw_dbm_std.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
@@ -109,6 +110,69 @@ TEST(DBMCommonImplTest, GetHashBucketSize) {
   EXPECT_EQ(65537, tkrzw::GetHashBucketSize(65536));
   EXPECT_EQ(16777259ULL, tkrzw::GetHashBucketSize(16777216ULL));
   EXPECT_EQ(68719476767ULL, tkrzw::GetHashBucketSize(68719476736ULL));
+}
+
+TEST(DBMCommonImplTest, SearchDBMModal) {
+  tkrzw::StdTreeDBM dbm;
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::ToString(i);
+    dbm.Set(key, key);
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "contain", "1", &keys));
+    EXPECT_EQ(20, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "contain", "1", &keys, 3));
+    EXPECT_EQ(3, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "begin", "1", &keys));
+    EXPECT_EQ(12, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "begin", "1", &keys, 5));
+    EXPECT_EQ(5, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "end", "1", &keys));
+    EXPECT_EQ(10, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "end", "1", &keys, 2));
+    EXPECT_EQ(2, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "regex", "1$", &keys));
+    EXPECT_EQ(10, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "regex", "1$", &keys, 4, true));
+    EXPECT_EQ(4, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "edit", "10", &keys, 2));
+    EXPECT_THAT(keys, ElementsAre("10", "1"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "edit", "10", &keys, 3, true));
+    EXPECT_THAT(keys, ElementsAre("10", "1", "100"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::INVALID_ARGUMENT_ERROR,
+              tkrzw::SearchDBMModal(&dbm, "foo", "1", &keys));
+  }
 }
 
 // END OF FILE

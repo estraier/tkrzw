@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
 class PolyDBMTest : public CommonDBMTest {};
 
-TEST_F(PolyDBMTest, FileTest) {
+TEST_F(PolyDBMTest, File) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -46,7 +46,7 @@ TEST_F(PolyDBMTest, FileTest) {
   FileTest(&dbm, file_path);
 }
 
-TEST_F(PolyDBMTest, BasicTest) {
+TEST_F(PolyDBMTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -62,7 +62,7 @@ TEST_F(PolyDBMTest, BasicTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, SequenceTest) {
+TEST_F(PolyDBMTest, Sequence) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -78,7 +78,7 @@ TEST_F(PolyDBMTest, SequenceTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, AppendTest) {
+TEST_F(PolyDBMTest, Append) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -94,7 +94,7 @@ TEST_F(PolyDBMTest, AppendTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, ProcessTest) {
+TEST_F(PolyDBMTest, Process) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -110,7 +110,7 @@ TEST_F(PolyDBMTest, ProcessTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, ProcessEachTest) {
+TEST_F(PolyDBMTest, ProcessEach) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -126,7 +126,7 @@ TEST_F(PolyDBMTest, ProcessEachTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, ProcessMultiTest) {
+TEST_F(PolyDBMTest, ProcessMulti) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::PolyDBM dbm;
@@ -142,7 +142,7 @@ TEST_F(PolyDBMTest, ProcessMultiTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(PolyDBMTest, PolyBasicTest) {
+TEST_F(PolyDBMTest, PolyBasic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string class_name;

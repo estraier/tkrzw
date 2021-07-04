@@ -215,6 +215,26 @@ Status SearchDBMEditDistance(
   return Status(Status::SUCCESS);
 }
 
+Status SearchDBMModal(
+    DBM* dbm, std::string_view mode, std::string_view pattern,
+    std::vector<std::string>* matched, size_t capacity, bool utf) {
+  Status status(tkrzw::Status::SUCCESS);
+  if (mode == "contain") {
+    status = SearchDBM(dbm, pattern, matched, capacity, StrContains);
+  } else if (mode == "begin") {
+    status = SearchDBMForwardMatch(dbm, pattern, matched, capacity);
+  } else if (mode == "end") {
+    status = SearchDBM(dbm, pattern, matched, capacity, StrEndsWith);
+  } else if (mode == "regex") {
+    status = SearchDBMRegex(dbm, pattern, matched, capacity, utf);
+  } else if (mode == "edit") {
+    status = SearchDBMEditDistance(dbm, pattern, matched, capacity, utf);
+  } else {
+    status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
+  }
+  return status;
+}
+
 Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file) {
   assert(dbm != nullptr && file != nullptr);
   Status status = file->Truncate(0);

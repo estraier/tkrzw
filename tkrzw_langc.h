@@ -69,7 +69,7 @@ enum {
  */
 typedef struct {
   /** A dummy member which is never used. */
-  uint32_t _dummy_;
+  void* _dummy_;
 } TkrzwDBM;
 
 /**
@@ -77,7 +77,7 @@ typedef struct {
  */
 typedef struct {
   /** A dummy member which is never used. */
-  uint16_t _dummy_;
+  void* _dummy_;
 } TkrzwDBMIter;
 
 /**
@@ -126,6 +126,16 @@ typedef struct {
 } TkrzwKeyValuePair;
 
 /**
+ * String pointer and its size.
+ */
+typedef struct {
+  /** The pointer to the region. */
+  char* ptr;
+  /** The size of the region. */
+  int32_t size;
+} TkrzwStr;
+
+/**
  * Type of the file processor function.
  * @details The first parameter is an opaque argument set by the caller.  The second parameter is
  * the path of file.
@@ -156,6 +166,13 @@ const char* tkrzw_last_status_message();
  * @return The number of seconds since the UNIX epoch with microsecond precision.
  */
 double tkrzw_get_wall_time();
+
+/**
+ * Releases an allocated array and its elements of allocated strings.
+ * @param array The pointer to the array to release.
+ * @param size The number of the elements of the array.
+ */
+void tkrzw_free_str_array(TkrzwStr* array, int32_t size);
 
 /**
  * Opens a database file and makes a database object.
@@ -436,6 +453,27 @@ bool tkrzw_dbm_is_healthy(TkrzwDBM* dbm);
 bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
 
 /**
+ * Searches a database and get keys which match a pattern, according to a mode expression.
+ * @param dbm The DBM object of the database.
+ * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
+ * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
+ * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
+ * extracts keys whose edit distance to the pattern is the least.
+ * @param pattern_ptr The key pointer.
+ * @param pattern_size The key size.  If it is negative, strlen(pattern_ptr) is used.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @param utf If true, text is treated as UTF-8, which affects "regex" and "edit".
+ * @param num_matched The pointer to the variable to store the number of the element of the
+ * return value.
+ * @return The pointer to an array of matched keys or NULL on failure.  If not NULL, the array
+ * and its elements are allocated dynamically so they should be released by the
+ * tkrzw_free_str_array function.
+ */
+TkrzwStr* tkrzw_dbm_search(
+    TkrzwDBM* dbm, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity, bool utf, int32_t* num_matched);
+
+/**
  * Makes an iterator for each record.
  * @param dbm The database object.
  * @return The new iterator object, which should be released by the tkrzw_dbm_iter_free function.
@@ -583,6 +621,21 @@ bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value
  * @details If possible, the iterator moves to the next record.
  */
 bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter);
+
+/**
+ * Restores a broken database as a new healthy database.
+ * @param old_file_path The path of the broken database.
+ * @param new_file_path The path of the new database to be created.
+ * @param class_name The name of the database class.  If it is NULL or empty, the class is
+ * guessed from the file extension.
+ * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
+ * 0 means the size when the database is synched or closed properly.  Using a positive value
+ * is not meaningful if the number of shards is more than one.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_dbm_restore_database(
+    const char* old_file_path, const char* new_file_path,
+    const char* class_name, int64_t end_offset);
 
 #if defined(__cplusplus)
 }

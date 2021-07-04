@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
 class ShardDBMTest : public CommonDBMTest {};
 
-TEST_F(ShardDBMTest, BasicTest) {
+TEST_F(ShardDBMTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -54,7 +54,7 @@ TEST_F(ShardDBMTest, BasicTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, SequenceTest) {
+TEST_F(ShardDBMTest, Sequence) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -70,7 +70,7 @@ TEST_F(ShardDBMTest, SequenceTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, AppendTest) {
+TEST_F(ShardDBMTest, Append) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -86,7 +86,7 @@ TEST_F(ShardDBMTest, AppendTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, ProcessTest) {
+TEST_F(ShardDBMTest, Process) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -102,7 +102,7 @@ TEST_F(ShardDBMTest, ProcessTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, ProcessEachTest) {
+TEST_F(ShardDBMTest, ProcessEach) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -118,7 +118,7 @@ TEST_F(ShardDBMTest, ProcessEachTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, ProcessMultiTest) {
+TEST_F(ShardDBMTest, ProcessMulti) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   tkrzw::ShardDBM dbm;
@@ -134,7 +134,7 @@ TEST_F(ShardDBMTest, ProcessMultiTest) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
-TEST_F(ShardDBMTest, ShardBasicTest) {
+TEST_F(ShardDBMTest, ShardBasic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   struct Config final {
     std::string class_name;

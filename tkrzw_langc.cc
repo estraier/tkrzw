@@ -96,11 +96,18 @@ double tkrzw_get_wall_time() {
   return GetWallTime();
 }
 
+void tkrzw_free_str_array(TkrzwStr* array, int32_t size) {
+  assert(array != nullptr);
+  for (int32_t i = 0; i < size; i++) {
+    xfree(array[i].ptr);
+  }
+  xfree(array);
+}
+
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
   const int32_t num_shards = tkrzw::StrToInt(tkrzw::SearchMap(xparams, "num_shards", "-1"));
-  xparams.erase("num_shards");
   int32_t open_options = 0;
   if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "truncate", "false"))) {
     open_options |= tkrzw::File::OPEN_TRUNCATE;
@@ -460,6 +467,33 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm) {
   return xdbm->IsOrdered();
 }
 
+TkrzwStr* tkrzw_dbm_search(
+    TkrzwDBM* dbm, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity, bool utf, int32_t* num_matched) {
+  assert(dbm != nullptr && mode != nullptr && pattern_ptr != nullptr && num_matched != nullptr);
+  if (pattern_size < 0) {
+    pattern_size = std::strlen(pattern_ptr);
+  }
+  capacity = std::max(0, capacity);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::vector<std::string> keys;
+  last_status = SearchDBMModal(xdbm, mode, std::string_view(pattern_ptr, pattern_size),
+                               &keys, capacity, utf);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(sizeof(TkrzwStr) * keys.size() + 1));
+  for (size_t i = 0; i < keys.size(); i++) {
+    const auto& key = keys[i];
+    auto& elem = array[i];
+    elem.ptr = static_cast<char*>(xmalloc(key.size() + 1));
+    std::memcpy(elem.ptr, key.c_str(), key.size() + 1);
+    elem.size = key.size();
+  }
+  *num_matched = keys.size();
+  return array;
+}
+
 TkrzwDBMIter* tkrzw_dbm_make_iterator(TkrzwDBM* dbm) {
   assert(dbm != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
@@ -638,6 +672,24 @@ bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter) {
   assert(dbm != nullptr);
   DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
   last_status = xiter->Remove();
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_restore_database(
+    const char* old_file_path, const char* new_file_path,
+    const char* class_name, int64_t end_offset) {
+  assert(old_file_path != nullptr && new_file_path != nullptr);
+  if (class_name == nullptr) {
+    class_name = "";
+  }
+  int32_t num_shards = 0;
+  if (ShardDBM::GetNumberOfShards(old_file_path, &num_shards) == Status::SUCCESS) {
+    last_status = ShardDBM::RestoreDatabase(
+        old_file_path, new_file_path, class_name, end_offset);
+  } else {
+    last_status = PolyDBM::RestoreDatabase(
+        old_file_path, new_file_path, class_name, end_offset);
+  }
   return last_status == Status::SUCCESS;
 }
 

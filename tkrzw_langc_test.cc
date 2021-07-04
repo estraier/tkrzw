@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(LangCTest, ConstantTest) {
+TEST(LangCTest, Constant) {
   EXPECT_GT(std::strlen(TKRZW_PACKAGE_VERSION), 0);
   EXPECT_GT(std::strlen(TKRZW_LIBRARY_VERSION), 0);
   EXPECT_EQ(tkrzw::INT64MIN, TKRZW_INT64MIN);
@@ -63,7 +63,7 @@ void file_proc_check(void* arg, const char* path) {
   *path_str = path;
 }
 
-TEST(LangCTest, BasicTest) {
+TEST(LangCTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
   const std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
@@ -227,7 +227,7 @@ const char* proc_remove(void* arg, const char* key_ptr, int32_t key_size,
   return TKRZW_REC_PROC_REMOVE;
 }
 
-TEST(LangCTest, ProcessTest) {
+TEST(LangCTest, Process) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
@@ -275,7 +275,7 @@ TEST(LangCTest, ProcessTest) {
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 
-TEST(LangCTest, IteratorTest) {
+TEST(LangCTest, Iterator) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
@@ -391,6 +391,86 @@ TEST(LangCTest, IteratorTest) {
   EXPECT_EQ(11, count);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
   tkrzw_dbm_iter_free(iter);
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+}
+
+TEST(LangCTest, Search) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
+  ASSERT_NE(nullptr, dbm);
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::ToString(i);
+    EXPECT_TRUE(tkrzw_dbm_set(dbm, key.c_str(), key.size(), key.c_str(), key.size(), false));
+  }
+  {
+    int32_t num_keys = 0;
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", 1, -1, false, &num_keys);
+    ASSERT_NE(nullptr, keys);
+    EXPECT_EQ(20, num_keys);
+    tkrzw_free_str_array(keys, num_keys);
+  }
+  {
+    int32_t num_keys = 0;
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", -1, 10, false, &num_keys);
+    ASSERT_NE(nullptr, keys);
+    EXPECT_EQ(10, num_keys);
+    tkrzw_free_str_array(keys, num_keys);
+  }
+  {
+    int32_t num_keys = 0;
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "edit", "10", -1, 3, false, &num_keys);
+    ASSERT_NE(nullptr, keys);
+    ASSERT_EQ(3, num_keys);
+    EXPECT_STREQ(keys[0].ptr, "10");
+    EXPECT_STREQ(keys[1].ptr, "1");
+    EXPECT_STREQ(keys[2].ptr, "100");
+    tkrzw_free_str_array(keys, num_keys);
+  }
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+}
+
+TEST(LangCTest, RestoreDatabase) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  const std::string restored_file_path = tmp_dir.MakeUniquePath("casket-restored-", ".tkt");
+  constexpr int32_t num_records = 100;
+  TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "");
+  ASSERT_NE(nullptr, dbm);
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string key = tkrzw::ToString(i);
+    EXPECT_TRUE(tkrzw_dbm_set(dbm, key.c_str(), key.size(), key.c_str(), key.size(), false));
+  }
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+  EXPECT_TRUE(tkrzw_dbm_restore_database(
+      file_path.c_str(), restored_file_path.c_str(), NULL, -1));
+  dbm = tkrzw_dbm_open(restored_file_path.c_str(), false, "");
+  ASSERT_NE(nullptr, dbm);
+  EXPECT_TRUE(tkrzw_dbm_is_healthy(dbm));
+  EXPECT_EQ(num_records, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(restored_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(file_path));
+  dbm = tkrzw_dbm_open(file_path.c_str(), true, "num_shards=3");
+  ASSERT_NE(nullptr, dbm);
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string key = tkrzw::ToString(i);
+    EXPECT_TRUE(tkrzw_dbm_set(dbm, key.c_str(), key.size(), key.c_str(), key.size(), false));
+  }
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+  EXPECT_TRUE(tkrzw_dbm_restore_database(
+      file_path.c_str(), restored_file_path.c_str(), NULL, -1));
+  dbm = tkrzw_dbm_open(restored_file_path.c_str(), false, "num_shards=0");
+  ASSERT_NE(nullptr, dbm);
+  EXPECT_TRUE(tkrzw_dbm_is_healthy(dbm));
+  EXPECT_EQ(num_records, tkrzw_dbm_count(dbm));
+  for (int32_t i = 1; i <= num_records; i++) {
+    const std::string key = tkrzw::ToString(i);
+    int32_t value_size = 0;
+    char* value_ptr = tkrzw_dbm_get(dbm, key.c_str(), key.size(), &value_size);
+    ASSERT_NE(nullptr, value_ptr);
+    free(value_ptr);
+  }
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 

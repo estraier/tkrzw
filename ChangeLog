@@ -3,7 +3,7 @@
 	- Release: 0.9.38
 	- Library version: 1.27.0
 
-	- Add features to the C interface.
+	- Add search and restore features to the C interface.
 	- Add a command to check the C interface functionality.
 
 2021-07-02  Mikio Hirabayashi  <hirarin@gmail.com>

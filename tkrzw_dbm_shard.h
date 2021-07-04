@@ -507,7 +507,8 @@ class ShardDBM final : public ParamDBM {
    * @param class_name The name of the database class.  If it is empty, the class is guessed from
    * the file extension.
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
-   * 0 means the size when the database is synched or closed properly.
+   * 0 means the size when the database is synched or closed properly.  Using a positive value
+   * is not meaningful if the number of shards is more than one.
    * @return The result status.
    */
   static Status RestoreDatabase(
