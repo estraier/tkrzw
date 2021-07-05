@@ -14,6 +14,7 @@
 #include "tkrzw_sys_config.h"
 
 #include "tkrzw_lib_common.h"
+#include "tkrzw_str_util.h"
 
 namespace tkrzw {
 
@@ -76,6 +77,120 @@ void xfreealigned(void* ptr) {
   std::memcpy(&orig, (char*)ptr - sizeof(void*), sizeof(void*));
   std::free(orig);
 #endif
+}
+
+std::map<std::string, std::string> GetSystemInfo() {
+  std::map<std::string, std::string> info;
+#if defined(_SYS_LINUX_)
+  struct ::rusage rbuf;
+  std::memset(&rbuf, 0, sizeof(rbuf));
+  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
+    info["ru_utime"] = SPrintF("%0.6f",
+                               rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
+    info["ru_stime"] = SPrintF("%0.6f",
+                               rbuf.ru_stime.tv_sec + rbuf.ru_stime.tv_usec / 1000000.0);
+    if (rbuf.ru_maxrss > 0) {
+      int64_t size = rbuf.ru_maxrss * 1024LL;
+      info["mem_peak"] = SPrintF("%lld", (long long)size);
+      info["mem_size"] = SPrintF("%lld", (long long)size);
+      info["mem_rss"] = SPrintF("%lld", (long long)size);
+    }
+  }
+  std::ifstream ifs;
+  ifs.open("/proc/self/status", std::ios_base::in | std::ios_base::binary);
+  if (ifs) {
+    std::string line;
+    while (getline(ifs, line)) {
+      size_t index = line.find(':');
+      if (index != std::string::npos) {
+        const std::string& name = line.substr(0, index);
+        index++;
+        while (index < line.size() && line[index] >= '\0' && line[index] <= ' ') {
+          index++;
+        }
+        const std::string& value = line.substr(index);
+        if (name == "VmPeak") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_peak"] = SPrintF("%lld", (long long)size);
+        } else if (name == "VmSize") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_size"] = SPrintF("%lld", (long long)size);
+        } else if (name == "VmRSS") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_rss"] = SPrintF("%lld", (long long)size);
+        }
+      }
+    }
+    ifs.close();
+  }
+  ifs.open("/proc/meminfo", std::ios_base::in | std::ios_base::binary);
+  if (ifs) {
+    std::string line;
+    while (getline(ifs, line)) {
+      size_t index = line.find(':');
+      if (index != std::string::npos) {
+        const std::string& name = line.substr(0, index);
+        index++;
+        while (index < line.size() && line[index] >= '\0' && line[index] <= ' ') {
+          index++;
+        }
+        const std::string& value = line.substr(index);
+        if (name == "MemTotal") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_total"] = SPrintF("%lld", (long long)size);
+        } else if (name == "MemFree") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_free"] = SPrintF("%lld", (long long)size);
+        } else if (name == "Cached") {
+          int64_t size = StrToIntMetric(value.c_str());
+          if (size > 0) info["mem_cached"] = SPrintF("%lld", (long long)size);
+        }
+      }
+    }
+    ifs.close();
+  }
+#elif defined(_SYS_MACOSX_)
+  struct ::rusage rbuf;
+  std::memset(&rbuf, 0, sizeof(rbuf));
+  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
+    info["ru_utime"] = SPrintF("%0.6f",
+                               rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
+    info["ru_stime"] = SPrintF("%0.6f",
+                               rbuf.ru_stime.tv_sec + rbuf.ru_stime.tv_usec / 1000000.0);
+    if (rbuf.ru_maxrss > 0) {
+      int64_t size = rbuf.ru_maxrss;
+      info["mem_peak"] = SPrintF("%lld", (long long)size);
+      info["mem_size"] = SPrintF("%lld", (long long)size);
+      info["mem_rss"] = SPrintF("%lld", (long long)size);
+    }
+  }
+#elif defined(_SYS_FREEBSD_) || defined(_SYS_SUNOS_)
+  struct ::rusage rbuf;
+  std::memset(&rbuf, 0, sizeof(rbuf));
+  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
+    info["ru_utime"] = SPrintF("%0.6f",
+                               rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
+    info["ru_stime"] = SPrintF("%0.6f",
+                               rbuf.ru_stime.tv_sec + rbuf.ru_stime.tv_usec / 1000000.0);
+    if (rbuf.ru_maxrss > 0) {
+      int64_t size = rbuf.ru_maxrss * 1024LL;
+      info["mem_peak"] = SPrintF("%lld", (long long)size);
+      info["mem_size"] = SPrintF("%lld", (long long)size);
+      info["mem_rss"] = SPrintF("%lld", (long long)size);
+    }
+  }
+#endif
+  return info;
+}
+
+int64_t GetMemoryCapacity() {
+  const std::map<std::string, std::string> records = tkrzw::GetSystemInfo();
+  return StrToInt(tkrzw::SearchMap(records, "mem_size", "-1"));
+}
+
+int64_t GetMemoryUsage() {
+  const std::map<std::string, std::string> records = tkrzw::GetSystemInfo();
+  return StrToInt(tkrzw::SearchMap(records, "mem_rss", "-1"));
 }
 
 const Status& Status::OrDie() const {

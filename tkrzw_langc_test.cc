@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(LangCTest, Constant) {
+TEST(LangCTest, Constants) {
   EXPECT_GT(std::strlen(TKRZW_PACKAGE_VERSION), 0);
   EXPECT_GT(std::strlen(TKRZW_LIBRARY_VERSION), 0);
   EXPECT_EQ(tkrzw::INT64MIN, TKRZW_INT64MIN);
@@ -53,10 +53,19 @@ TEST(LangCTest, Constant) {
   EXPECT_STREQ("SUCCESS", tkrzw_status_code_name(TKRZW_STATUS_SUCCESS));
   EXPECT_STREQ("UNKNOWN_ERROR", tkrzw_status_code_name(TKRZW_STATUS_UNKNOWN_ERROR));
   EXPECT_STREQ("APPLICATION_ERROR", tkrzw_status_code_name(TKRZW_STATUS_APPLICATION_ERROR));
+};
+
+TEST(LangCTest, Utils) {
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_last_status_code());
   EXPECT_STREQ("", tkrzw_last_status_message());
   EXPECT_GT(tkrzw_get_wall_time(), 0);
-};
+  EXPECT_GT(tkrzw_get_memory_capacity(), 0);
+  EXPECT_GT(tkrzw_get_memory_usage(), 0);
+  EXPECT_EQ(39025, tkrzw_primary_hash("foobar", -1, 65536));
+  EXPECT_EQ(39025, tkrzw_primary_hash("foobar", 6, 65536));
+  EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", -1, 65536));
+  EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", 6, 65536));
+}
 
 void file_proc_check(void* arg, const char* path) {
   std::string* path_str = (std::string*)arg;

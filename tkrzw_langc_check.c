@@ -34,6 +34,7 @@ void put_char(int32_t c) {
 }
 
 int32_t process(const char* path, const char* params, int32_t num_iters) {
+  const int64_t start_mem_rss = tkrzw_get_memory_usage();
   TkrzwDBM* dbm = tkrzw_dbm_open(path, true, params);
   if (dbm == NULL) {
     print_error("open");
@@ -82,7 +83,8 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
     const double end_time = tkrzw_get_wall_time();
     const double elapsed_time = end_time - start_time;
-    printf("Setting done: elapsed_time=%.6f\n", elapsed_time);
+    const int64_t mem_usage = tkrzw_get_memory_usage() - start_mem_rss;
+    printf("Setting done: elapsed_time=%.6f, mem=%lld\n", elapsed_time, (long long)mem_usage);
     puts("");
   }
   {
@@ -115,7 +117,8 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     }
     const double end_time = tkrzw_get_wall_time();
     const double elapsed_time = end_time - start_time;
-    printf("Getting done: elapsed_time=%.6f\n", elapsed_time);
+    const int64_t mem_usage = tkrzw_get_memory_usage() - start_mem_rss;
+    printf("Getting done: elapsed_time=%.6f, mem=%lld\n", elapsed_time, (long long)mem_usage);
     puts("");
   }
   {
@@ -161,7 +164,8 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     tkrzw_dbm_iter_free(iter);
     const double end_time = tkrzw_get_wall_time();
     const double elapsed_time = end_time - start_time;
-    printf("Iterating done: elapsed_time=%.6f\n", elapsed_time);
+    const int64_t mem_usage = tkrzw_get_memory_usage() - start_mem_rss;
+    printf("Iterating done: elapsed_time=%.6f, mem=%lld\n", elapsed_time, (long long)mem_usage);
     puts("");
   }
   {
@@ -198,7 +202,8 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
     const double end_time = tkrzw_get_wall_time();
     const double elapsed_time = end_time - start_time;
-    printf("Removing done: elapsed_time=%.6f\n", elapsed_time);
+    const int64_t mem_usage = tkrzw_get_memory_usage() - start_mem_rss;
+    printf("Removing done: elapsed_time=%.6f, mem=%lld\n", elapsed_time, (long long)mem_usage);
     puts("");
   }
   if (!tkrzw_dbm_close(dbm)) {

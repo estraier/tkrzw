@@ -168,6 +168,36 @@ const char* tkrzw_last_status_message();
 double tkrzw_get_wall_time();
 
 /**
+ * Gets the memory capacity of the platform.
+ * @return The memory capacity of the platform in bytes, or -1 on failure.
+ */
+int64_t tkrzw_get_memory_capacity();
+
+/**
+ * Gets the current memory usage of the process.
+ * @return The current memory usage of the process in bytes, or -1 on failure.
+ */
+int64_t tkrzw_get_memory_usage();
+
+/**
+ * Primary hash function for the hash database.
+ * @param data_ptr The pointer to the data to calculate the hash value for.
+ * @param data_size The size of the data.  If it is negative, strlen(data_ptr) is used.
+ * @param num_buckets The number of buckets of the hash table.
+ * @return The hash value.
+ */
+uint64_t tkrzw_primary_hash(const char* data_ptr, int32_t data_size, uint64_t num_buckets);
+
+/**
+ * Secondary hash function for sharding.
+ * @param data_ptr The pointer to the data to calculate the hash value for.
+ * @param data_size The size of the data.  If it is negative, strlen(data_ptr) is used.
+ * @param num_shards The number of shards.
+ * @return The hash value.
+ */
+uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t num_shards);
+
+/**
  * Releases an allocated array and its elements of allocated strings.
  * @param array The pointer to the array to release.
  * @param size The number of the elements of the array.

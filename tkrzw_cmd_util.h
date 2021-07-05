@@ -212,12 +212,6 @@ double GetDoubleArgument(
     const std::string& name, int32_t index, double default_value);
 
 /**
- * Gets system information of the environment.
- * @return A map of labels and their values.
- */
-std::map<std::string, std::string> GetSystemInfo();
-
-/**
  * Throws an exception of StatusException to terminates the process with a message.
  * @param message The message to print.
  */

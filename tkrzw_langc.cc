@@ -96,6 +96,30 @@ double tkrzw_get_wall_time() {
   return GetWallTime();
 }
 
+int64_t tkrzw_get_memory_capacity() {
+  return GetMemoryCapacity();
+}
+
+int64_t tkrzw_get_memory_usage() {
+  return GetMemoryUsage();
+}
+
+uint64_t tkrzw_primary_hash(const char* data_ptr, int32_t data_size, uint64_t num_buckets) {
+  assert(data_ptr != nullptr);
+  if (data_size < 0) {
+    data_size = std::strlen(data_ptr);
+  }
+  return PrimaryHash(std::string_view(data_ptr, data_size), num_buckets);
+}
+
+uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t num_shards) {
+  assert(data_ptr != nullptr);
+  if (data_size < 0) {
+    data_size = std::strlen(data_ptr);
+  }
+  return SecondaryHash(std::string_view(data_ptr, data_size), num_shards);
+}
+
 void tkrzw_free_str_array(TkrzwStr* array, int32_t size) {
   assert(array != nullptr);
   for (int32_t i = 0; i < size; i++) {

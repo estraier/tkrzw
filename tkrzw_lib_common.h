@@ -251,6 +251,24 @@ inline typename MAP::value_type::first_type SearchMap(
 }
 
 /**
+ * Gets system information of the environment.
+ * @return A map of labels and their values.
+ */
+std::map<std::string, std::string> GetSystemInfo();
+
+/**
+ * Gets the memory capacity of the platform.
+ * @return The memory capacity of the platform in bytes, or -1 on failure.
+ */
+int64_t GetMemoryCapacity();
+
+/**
+ * Gets the current memory usage of the process.
+ * @return The current memory usage of the process in bytes, or -1 on failure.
+ */
+int64_t GetMemoryUsage();
+
+/**
  * Status of operations.
  */
 class Status final {
@@ -542,20 +560,20 @@ class Status final {
 };
 
 /**
- * Checks whether a stauts code is equal to another status object.
+ * Checks whether a status code is equal to another status object.
  * @param lhs The status code to compare.
  * @param rhs The status object to compare.
- * @return True if The stauts code is equal to the status object.
+ * @return True if The status code is equal to the status object.
  */
 inline bool operator ==(const Status::Code& lhs, const Status& rhs) {
   return lhs == rhs.GetCode();
 }
 
 /**
- * Checks whether a stauts code is not equal to another status object.
+ * Checks whether a status code is not equal to another status object.
  * @param lhs The status code to compare.
  * @param rhs The status object to compare.
- * @return True if The stauts code is equal to the status object.
+ * @return True if The status code is equal to the status object.
  */
 inline bool operator !=(const Status::Code& lhs, const Status& rhs) {
   return lhs != rhs.GetCode();

@@ -140,6 +140,13 @@ TEST(LibCommonTest, SearchMap) {
   EXPECT_EQ("*", tkrzw::SearchMap(str_map, "d", "*"));
 }
 
+TEST(LibCommonTest, GetSystemInfo) {
+  const auto& info = tkrzw::GetSystemInfo();
+  EXPECT_TRUE(tkrzw::CheckMap(info, "mem_size"));
+  EXPECT_GT(tkrzw::GetMemoryCapacity(), 0);
+  EXPECT_GT(tkrzw::GetMemoryUsage(), 0);
+}
+
 TEST(LibCommonTest, Status) {
   tkrzw::Status s1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, s1.GetCode());

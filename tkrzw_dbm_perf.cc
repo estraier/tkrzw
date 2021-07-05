@@ -647,7 +647,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (num_threads < 1) {
     Die("Invalid number of threads");
   }
-  const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
+  const int64_t start_mem_rss = GetMemoryUsage();
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
@@ -727,7 +727,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = dbm->CountSimple();
-    const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
     PrintF("Setting done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
            elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
            mem_usage);
@@ -788,7 +788,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = dbm->CountSimple();
-    const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
     PrintF("Getting done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
            elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
            mem_usage);
@@ -864,7 +864,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = dbm->CountSimple();
-    const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
     PrintF("Removing done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
            elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
            mem_usage);
@@ -955,7 +955,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   if (num_threads < 1) {
     Die("Invalid number of threads");
   }
-  const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
+  const int64_t start_mem_rss = GetMemoryUsage();
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
@@ -1075,7 +1075,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm->CountSimple();
-  const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+  const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
   PrintF("Done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
          elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
          mem_usage);
@@ -1163,7 +1163,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   if (num_threads < 1) {
     Die("Invalid number of threads");
   }
-  const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
+  const int64_t start_mem_rss = GetMemoryUsage();
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
@@ -1381,7 +1381,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm->CountSimple();
-  const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+  const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
   PrintF("Done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
          elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
          mem_usage);
@@ -1567,7 +1567,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   } else {
     Die("Unknown index type");
   }
-  const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
+  const int64_t start_mem_rss = GetMemoryUsage();
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto task = [&](std::function<void(int64_t, int64_t)> op, int32_t id) {
@@ -1616,7 +1616,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     const double end_time = GetWallTime();
     const double elapsed_time = end_time - start_time;
     const int64_t num_records = counter();
-    const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
     PrintF("%s done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
            menu.label.c_str(), elapsed_time, num_records,
            num_iterations * num_threads / elapsed_time, mem_usage);

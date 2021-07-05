@@ -170,11 +170,6 @@ TEST(CmdUtilTest, GetArgument) {
   EXPECT_DOUBLE_EQ(-1.0, tkrzw::GetDoubleArgument(args, "-x", 0, -1.0));
 }
 
-TEST(CmdUtilTest, GetSystemInfo) {
-  const auto& info = tkrzw::GetSystemInfo();
-  EXPECT_TRUE(tkrzw::CheckMap(info, "mem_size"));
-}
-
 TEST(CmdUtilTest, Die) {
   EXPECT_THROW({
       tkrzw::Die("foo");

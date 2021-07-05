@@ -78,7 +78,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   if (num_increments < 1) {
     Die("Invalid number of increments");
   }
-  const int64_t start_mem_rss = StrToInt(GetSystemInfo()["mem_rss"]);
+  const int64_t start_mem_rss = GetMemoryUsage();
   std::atomic_bool has_error(false);
   tkrzw::PolyDBM dbm;
   const std::map<std::string, std::string> tuning_params =
@@ -171,7 +171,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   const double end_time = GetWallTime();
   const double elapsed_time = end_time - start_time;
   const int64_t num_records = dbm.CountSimple();
-  const int64_t mem_usage = StrToInt(GetSystemInfo()["mem_rss"]) - start_mem_rss;
+  const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
   PrintF("Building done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
          elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
          mem_usage);

@@ -4,6 +4,7 @@
 	- Library version: 1.27.0
 
 	- Add search and restore features to the C interface.
+	- Add utility functions to know memory usage.
 	- Add a command to check the C interface functionality.
 
 2021-07-02  Mikio Hirabayashi  <hirarin@gmail.com>
