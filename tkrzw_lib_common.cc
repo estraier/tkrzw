@@ -181,10 +181,13 @@ std::map<std::string, std::string> GetSystemInfo() {
     CloseHandle(proc_handle);
   }
   MEMORYSTATUSEX stat;
+  std::memset(&stat, 0, sizeof(stat));
+  stat.dwLength = sizeof(stat);
   if (GlobalMemoryStatusEx(&stat)) {
-    info["mem_total"] = ToString(stat.ullTotalVirtual);
+    info["mem_total"] = ToString(stat.ullTotalPhys);
     info["mem_free"] = ToString(stat.ullAvailPageFile);
-    info["mem_cached"] = ToString(stat.ullTotalVirtual - stat.ullAvailPageFile);
+    const int64_t cached = stat.ullTotalPhys * (stat.dwMemoryLoad / 100.0);
+    info["mem_cached"] = ToString(cached);
   }
 #endif
   return info;
