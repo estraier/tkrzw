@@ -13,10 +13,6 @@
 
 #include "tkrzw_sys_config.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -35,6 +31,7 @@ int main(int argc, char** argv) {
 TEST(LangCTest, Constants) {
   EXPECT_GT(std::strlen(TKRZW_PACKAGE_VERSION), 0);
   EXPECT_GT(std::strlen(TKRZW_LIBRARY_VERSION), 0);
+  EXPECT_GT(std::strlen(TKRZW_OS_NAME), 0);
   EXPECT_EQ(tkrzw::INT64MIN, TKRZW_INT64MIN);
   EXPECT_EQ(tkrzw::INT64MAX, TKRZW_INT64MAX);
   EXPECT_EQ(tkrzw::Status::SUCCESS, TKRZW_STATUS_SUCCESS);
@@ -59,8 +56,10 @@ TEST(LangCTest, Utils) {
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_last_status_code());
   EXPECT_STREQ("", tkrzw_last_status_message());
   EXPECT_GT(tkrzw_get_wall_time(), 0);
-  EXPECT_GT(tkrzw_get_memory_capacity(), 0);
-  EXPECT_GT(tkrzw_get_memory_usage(), 0);
+  if (std::strcmp(TKRZW_OS_NAME, "Linux") == 0) {
+    EXPECT_GT(tkrzw_get_memory_capacity(), 0);
+    EXPECT_GT(tkrzw_get_memory_usage(), 0);
+  }
   EXPECT_EQ(39025, tkrzw_primary_hash("foobar", -1, 65536));
   EXPECT_EQ(39025, tkrzw_primary_hash("foobar", 6, 65536));
   EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", -1, 65536));

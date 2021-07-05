@@ -28,6 +28,9 @@ extern const char* const TKRZW_PACKAGE_VERSION;
 /** The string expression of the library version. */
 extern const char* const TKRZW_LIBRARY_VERSION;
 
+/** The recognized OS name. */
+extern const char* const TKRZW_OS_NAME;
+
 /** The minimum value of int64_t. */
 extern const int64_t TKRZW_INT64MIN;
 

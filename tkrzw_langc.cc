@@ -39,6 +39,8 @@ const char* const TKRZW_PACKAGE_VERSION = PACKAGE_VERSION;
 
 const char* const TKRZW_LIBRARY_VERSION = LIBRARY_VERSION;
 
+const char* const TKRZW_OS_NAME = OS_NAME;
+
 const int64_t TKRZW_INT64MIN = INT64MIN;
 
 const int64_t TKRZW_INT64MAX = INT64MAX;
