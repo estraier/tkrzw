@@ -226,6 +226,12 @@ class ShardDBM final : public ParamDBM {
   virtual ~ShardDBM();
 
   /**
+   * Copy and assignment are disabled.
+   */
+  explicit ShardDBM(const ShardDBM& rhs) = delete;
+  ShardDBM& operator =(const ShardDBM& rhs) = delete;
+
+  /**
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.

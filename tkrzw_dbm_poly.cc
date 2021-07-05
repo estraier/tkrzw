@@ -24,6 +24,7 @@
 #include "tkrzw_dbm_tree.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
+#include "tkrzw_file_poly.h"
 #include "tkrzw_file_pos.h"
 #include "tkrzw_file_std.h"
 #include "tkrzw_file_util.h"
@@ -150,52 +151,6 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
   return nullptr;
 }
 
-std::unique_ptr<File> MakeFileInstance(std::map<std::string, std::string>* params) {
-  const std::string file_class = StrLowerCase(SearchMap(*params, "file", ""));
-  std::unique_ptr<File> file;
-  if (file_class == "stdfile" || file_class == "std") {
-    file = std::make_unique<StdFile>();
-  } else if (file_class == "" ||
-             file_class == "memorymapparallelfile" || file_class == "mmap-para") {
-    file = std::make_unique<MemoryMapParallelFile>();
-  } else if (file_class == "memorymapatomicfile" || file_class == "mmap-atom") {
-    file = std::make_unique<MemoryMapAtomicFile>();
-  } else if (file_class == "positionalparallelfile" || file_class == "pos-para") {
-    file = std::make_unique<PositionalParallelFile>();
-  } else if (file_class == "positionalatomicfile" || file_class == "pos-atom") {
-    file = std::make_unique<PositionalAtomicFile>();
-  }
-  params->erase("file");
-  if (file == nullptr) {
-    return nullptr;
-  }
-  auto* pos_file = dynamic_cast<PositionalFile*>(file.get());
-  if (pos_file) {
-    const int64_t block_size =
-        std::max<int64_t>(StrToInt(SearchMap(*params, "block_size", "-1")), 1);
-    int32_t options = PositionalFile::ACCESS_DEFAULT;
-    for (const auto& expr : StrSplit(SearchMap(*params, "access_options", ""), ':')) {
-      const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
-      if (norm_expr == "direct") {
-        options |= PositionalFile::ACCESS_DIRECT;
-      }
-      if (norm_expr == "sync") {
-        options |= PositionalFile::ACCESS_SYNC;
-      }
-      if (norm_expr == "padding") {
-        options |= PositionalFile::ACCESS_PADDING;
-      }
-      if (norm_expr == "pagecache") {
-        options |= PositionalFile::ACCESS_PAGECACHE;
-      }
-    }
-    pos_file->SetAccessStrategy(block_size, options);
-    params->erase("block_size");
-    params->erase("access_options");
-  }
-  return file;
-}
-
 void SetHashTuningParams(std::map<std::string, std::string>* params,
                          HashDBM::TuningParameters* tuning_params) {
   const std::string update_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
@@ -309,6 +264,12 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
 
 PolyDBM::PolyDBM() : dbm_(nullptr), open_(false) {}
 
+PolyDBM::~PolyDBM() {
+  if (open_) {
+    Close();
+  }
+}
+
 Status PolyDBM::OpenAdvanced(
     const std::string& path, bool writable, int32_t options,
     const std::map<std::string, std::string>& params) {
@@ -325,7 +286,7 @@ Status PolyDBM::OpenAdvanced(
   }
   mod_params.erase("dbm");
   if (class_name == "hash" || class_name == "hashdbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -343,7 +304,7 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(hash_dbm);
   } else if (class_name == "tree" || class_name == "treedbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -365,7 +326,7 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(tree_dbm);
   } else if (class_name == "skip" || class_name == "skipdbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -383,7 +344,7 @@ Status PolyDBM::OpenAdvanced(
     open_ = true;
     dbm_ = std::move(skip_dbm);
   } else if (class_name == "tiny" || class_name == "tinydbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -403,7 +364,7 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(tiny_dbm);
   } else if (class_name == "baby" || class_name == "babydbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -431,7 +392,7 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(baby_dbm);
   } else if (class_name == "cache" || class_name == "cachedbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -453,7 +414,7 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(cache_dbm);
   } else if (class_name == "stdhash" || class_name == "stdhashdbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
@@ -473,7 +434,7 @@ Status PolyDBM::OpenAdvanced(
     }
     dbm_ = std::move(stdhash_dbm);
   } else if (class_name == "stdtree" || class_name == "stdtreedbm") {
-    auto file = MakeFileInstance(&mod_params);
+    auto file = PolyFile::MakeFileInstance(&mod_params);
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }

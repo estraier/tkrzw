@@ -234,6 +234,17 @@ class PolyDBM final : public ParamDBM {
   PolyDBM();
 
   /**
+   * Destructor.
+   */
+  virtual ~PolyDBM();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit PolyDBM(const PolyDBM& rhs) = delete;
+  PolyDBM& operator =(const PolyDBM& rhs) = delete;
+
+  /**
    * Opens a database file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
@@ -261,11 +272,6 @@ class PolyDBM final : public ParamDBM {
    *   - .tkmc : On-memory LRU cache database (CacheDBM)
    *   - .tksh : On-memory STL hash database (StdHashDBM)
    *   - .tkst : On-memory STL tree database (StdTreeDBM)
-   * @details The optional parameters can include options for the file opening operation.
-   *   - truncate (bool): True to truncate the file.
-   *   - no_create (bool): True to omit file creation.
-   *   - no_wait (bool): True to fail if the file is locked by another process.
-   *   - no_lock (bool): True to omit file locking.
    * @details The optional parameter "dbm" supercedes the decision of the database type by the
    * extension.  The value is the type name: "HashDBM", "TreeDBM", "SkipDBM", "TinyDBM",
    * "BabyDBM", "CacheDBM", "StdHashDBM", "StdTreeDBM".
