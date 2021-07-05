@@ -175,4 +175,75 @@ TEST(DBMCommonImplTest, SearchDBMModal) {
   }
 }
 
+TEST(DBMCommonImplTest, SearchTextModal) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::StdFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string line = tkrzw::ToString(i) + "\n";
+    EXPECT_EQ(tkrzw::Status::SUCCESS, file.Append(line.data(), line.size()));
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "contain", "1", &lines));
+    EXPECT_EQ(20, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "contain", "1", &lines, 3));
+    EXPECT_EQ(3, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "begin", "1", &lines));
+    EXPECT_EQ(12, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "begin", "1", &lines, 5));
+    EXPECT_EQ(5, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "end", "1", &lines));
+    EXPECT_EQ(10, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "end", "1", &lines, 2));
+    EXPECT_EQ(2, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchTextFileModal(&file, "regex", "1$", &lines));
+    EXPECT_EQ(10, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "regex", "1$", &lines, 4, true));
+    EXPECT_EQ(4, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "edit", "10", &lines, 2));
+    EXPECT_THAT(lines, ElementsAre("10", "1"));
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "edit", "10", &lines, 3, true));
+    EXPECT_THAT(lines, ElementsAre("10", "1", "100"));
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::INVALID_ARGUMENT_ERROR,
+              tkrzw::SearchTextFileModal(&file, "foo", "1", &lines));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+}
+
 // END OF FILE

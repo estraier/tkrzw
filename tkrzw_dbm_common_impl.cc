@@ -528,6 +528,26 @@ Status SearchTextFileEditDistance(
   return Status(Status::SUCCESS);
 }
 
+Status SearchTextFileModal(
+    File* file, std::string_view mode, std::string_view pattern,
+    std::vector<std::string>* matched, size_t capacity, bool utf) {
+  Status status(tkrzw::Status::SUCCESS);
+  if (mode == "contain") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrContains);
+  } else if (mode == "begin") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrBeginsWith);
+  } else if (mode == "end") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrEndsWith);
+  } else if (mode == "regex") {
+    status = SearchTextFileRegex(file, pattern, matched, capacity, utf);
+  } else if (mode == "edit") {
+    status = SearchTextFileEditDistance(file, pattern, matched, capacity, utf);
+  } else {
+    status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
+  }
+  return status;
+}
+
 }  // namespace tkrzw
 
 // END OF FILE
