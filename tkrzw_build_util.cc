@@ -89,9 +89,9 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
       PrintF("PROCESS_ID: %s\n", info["proc_id"].c_str());
     }
     if (!info["mem_total"].empty()) {
-      PrintF("MEMORY: total=%s free=%s cached=%s\n",
+      PrintF("MEMORY: total=%s free=%s cached=%s rss=%s\n",
              info["mem_total"].c_str(), info["mem_free"].c_str(),
-             info["mem_cached"].c_str());
+             info["mem_cached"].c_str(), info["mem_rss"].c_str());
     }
     if (*_TKRZW_PREFIX != '\0') {
       PrintF("prefix: %s\n", _TKRZW_PREFIX);
