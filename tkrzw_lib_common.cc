@@ -82,9 +82,10 @@ void xfreealigned(void* ptr) {
 std::map<std::string, std::string> GetSystemInfo() {
   std::map<std::string, std::string> info;
 #if defined(_SYS_LINUX_)
-  struct ::rusage rbuf;
+  info["proc_id"] = SPrintF("%lld", (long long)getpid());
+  struct rusage rbuf;
   std::memset(&rbuf, 0, sizeof(rbuf));
-  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
+  if (getrusage(RUSAGE_SELF, &rbuf) == 0) {
     info["ru_utime"] = SPrintF("%0.6f",
                                rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
     info["ru_stime"] = SPrintF("%0.6f",
@@ -149,25 +150,11 @@ std::map<std::string, std::string> GetSystemInfo() {
     }
     ifs.close();
   }
-#elif defined(_SYS_MACOSX_)
-  struct ::rusage rbuf;
+#elif defined(_SYS_POSIX_)
+  info["proc_id"] = SPrintF("%lld", (long long)getpid());
+  struct rusage rbuf;
   std::memset(&rbuf, 0, sizeof(rbuf));
-  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
-    info["ru_utime"] = SPrintF("%0.6f",
-                               rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
-    info["ru_stime"] = SPrintF("%0.6f",
-                               rbuf.ru_stime.tv_sec + rbuf.ru_stime.tv_usec / 1000000.0);
-    if (rbuf.ru_maxrss > 0) {
-      int64_t size = rbuf.ru_maxrss;
-      info["mem_peak"] = SPrintF("%lld", (long long)size);
-      info["mem_size"] = SPrintF("%lld", (long long)size);
-      info["mem_rss"] = SPrintF("%lld", (long long)size);
-    }
-  }
-#elif defined(_SYS_FREEBSD_) || defined(_SYS_SUNOS_)
-  struct ::rusage rbuf;
-  std::memset(&rbuf, 0, sizeof(rbuf));
-  if (::getrusage(RUSAGE_SELF, &rbuf) == 0) {
+  if (getrusage(RUSAGE_SELF, &rbuf) == 0) {
     info["ru_utime"] = SPrintF("%0.6f",
                                rbuf.ru_utime.tv_sec + rbuf.ru_utime.tv_usec / 1000000.0);
     info["ru_stime"] = SPrintF("%0.6f",
@@ -179,13 +166,33 @@ std::map<std::string, std::string> GetSystemInfo() {
       info["mem_rss"] = SPrintF("%lld", (long long)size);
     }
   }
+#elif defined(_SYS_WINDOWS_)
+  const DWORD proc_id = GetCurrentProcessId();
+  info["proc_id"] = SPrintF("%lld", (long long)proc_id);
+  HANDLE proc_handle =
+      OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, proc_id);
+  if (proc_handle != nullptr) {
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(proc_handle, &pmc, sizeof(pmc))) {
+      info["mem_peak"] = SPrintF("%lld", (long long)pmc.PeakWorkingSetSize);
+      info["mem_size"] = SPrintF("%lld", (long long)pmc.QuotaPagedPoolUsage);
+      info["mem_rss"] = SPrintF("%lld", (long long)pmc.WorkingSetSize);
+    }
+    CloseHandle(proc_handle);
+  }
+  MEMORYSTATUSEX stat;
+  if (GlobalMemoryStatusEx(&stat)) {
+    info["mem_total"] = ToString(stat.ullTotalVirtual);
+    info["mem_free"] = ToString(stat.ullAvailPageFile);
+    info["mem_cached"] = ToString(stat.ullTotalVirtual - stat.ullAvailPageFile);
+  }
 #endif
   return info;
 }
 
 int64_t GetMemoryCapacity() {
   const std::map<std::string, std::string> records = tkrzw::GetSystemInfo();
-  return StrToInt(tkrzw::SearchMap(records, "mem_size", "-1"));
+  return StrToInt(tkrzw::SearchMap(records, "mem_total", "-1"));
 }
 
 int64_t GetMemoryUsage() {

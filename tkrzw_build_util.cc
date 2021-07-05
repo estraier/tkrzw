@@ -85,6 +85,9 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
       PrintF("COMPRESSORS: %s\n", StrJoin(compressors, ", ").c_str());
     }
     std::map<std::string, std::string> info = GetSystemInfo();
+    if (!info["proc_id"].empty()) {
+      PrintF("PROCESS_ID: %s\n", info["proc_id"].c_str());
+    }
     if (!info["mem_total"].empty()) {
       PrintF("MEMORY: total=%s free=%s cached=%s\n",
              info["mem_total"].c_str(), info["mem_free"].c_str(),

@@ -191,6 +191,9 @@ extern "C" {
 #include <direct.h>
 #include <io.h>
 #include <process.h>
+#include <processthreadsapi.h>
+#include <psapi.h>
+#include <sysinfoapi.h>
 
 #endif
 
