@@ -96,12 +96,8 @@ TEST_F(PolyFileTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Read(0, buf, 10));
   EXPECT_EQ("ABCDE12345", std::string(buf, 10));
   EXPECT_EQ(10, file.GetSizeSimple());
-
   auto* in_file = dynamic_cast<tkrzw::StdFile*>(file.GetInternalFile());
   EXPECT_EQ(10, in_file->GetSizeSimple());
-
-
-  
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
   auto made_file = file.MakeFile();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(
