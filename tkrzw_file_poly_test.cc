@@ -18,6 +18,7 @@
 
 #include "tkrzw_file.h"
 #include "tkrzw_file_poly.h"
+#include "tkrzw_file_std.h"
 #include "tkrzw_file_test_common.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
@@ -62,7 +63,7 @@ TEST_F(PolyFileTest, Attributes) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
 }
 
-TEST_F(PolyFileTest, BasicFile) {
+TEST_F(PolyFileTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   const std::string rename_file_path = tmp_dir.MakeUniquePath();
@@ -94,6 +95,17 @@ TEST_F(PolyFileTest, BasicFile) {
       rename_file_path, false, tkrzw::File::OPEN_NO_CREATE, {{"file", "std"}}));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Read(0, buf, 10));
   EXPECT_EQ("ABCDE12345", std::string(buf, 10));
+  EXPECT_EQ(10, file.GetSizeSimple());
+
+  auto* in_file = dynamic_cast<tkrzw::StdFile*>(file.GetInternalFile());
+  EXPECT_EQ(10, in_file->GetSizeSimple());
+
+
+  
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  auto made_file = file.MakeFile();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(
+      rename_file_path, false, tkrzw::File::OPEN_NO_CREATE));
   EXPECT_EQ(10, file.GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
 }

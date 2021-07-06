@@ -216,9 +216,13 @@ class PolyFile final : public File {
    * Makes a new file object of the same concrete class.
    * @return The new file object.
    */
-  std::unique_ptr<File> MakeFile() const override {
-    return std::make_unique<PolyFile>();
-  }
+  std::unique_ptr<File> MakeFile() const override;
+
+  /**
+   * Gets the pointer to the internal file object.
+   * @return The pointer to the internal file object, or nullptr on failure.
+   */
+  File* GetInternalFile() const;
 
   /**
    * Make a File instance according to the given parameters.

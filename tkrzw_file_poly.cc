@@ -159,6 +159,14 @@ bool PolyFile::IsAtomic() const {
   return file_->IsAtomic();
 }
 
+std::unique_ptr<File> PolyFile::MakeFile() const {
+  return std::make_unique<PolyFile>();
+}
+
+File* PolyFile::GetInternalFile() const {
+  return file_.get();
+}
+
 std::unique_ptr<File> PolyFile::MakeFileInstance(std::map<std::string, std::string>* params) {
   const std::string file_class = StrLowerCase(SearchMap(*params, "file", ""));
   std::unique_ptr<File> file;
