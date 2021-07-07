@@ -1,3 +1,10 @@
+2021-07-07  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.39
+	- Library version: 1.28.0
+
+	- The C language interface supports the generic file implementation.
+
 2021-07-04  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.38
