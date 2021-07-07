@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   TkrzwDBMIter* iter = tkrzw_dbm_make_iterator(dbm);
   tkrzw_dbm_iter_first(iter);
   while (true) {
-    char* key_ptr = nullptr;
+    char* key_ptr = NULL;
     if (!tkrzw_dbm_iter_get(iter, &key_ptr, NULL, &value_ptr, NULL)) {
       break;
     }
