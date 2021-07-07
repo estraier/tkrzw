@@ -4,6 +4,7 @@
 	- Library version: 1.28.0
 
 	- The C language interface supports the generic file implementation.
+	- Improve efficiency of the restore operation.
 
 2021-07-04  Mikio Hirabayashi  <hirarin@gmail.com>
 
