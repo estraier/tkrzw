@@ -22,6 +22,8 @@ IMPLHEADERFILES = tkrzw_sys_config.h tkrzw_sys_util_windows.h tkrzw_sys_file_mma
 LIBRARYFILES = tkrzw.lib
 LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_hash_util.obj tkrzw_cmd_util.obj tkrzw_thread_util.obj tkrzw_compress.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_file_poly.obj tkrzw_dbm.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj tkrzw_langc.obj
 COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe tkrzw_dbm_tran.exe tkrzw_langc_check.exe
+CMDLIBRARIES = tkrzw.lib
+EXTRALIBRARIES =
 
 CL = cl
 LIB = lib
@@ -691,24 +693,24 @@ tkrzw.lib : $(LIBOBJFILES)
 	$(LIB) $(LIBFLAGS) /OUT:$@ $(LIBOBJFILES)
 
 tkrzw_build_util.exe : tkrzw_build_util.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_build_util.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_build_util.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_str_perf.exe : tkrzw_str_perf.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_str_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_str_perf.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_file_perf.exe : tkrzw_file_perf.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_file_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_file_perf.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_dbm_util.exe : tkrzw_dbm_util.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_util.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_util.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_dbm_perf.exe : tkrzw_dbm_perf.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_perf.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_perf.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_dbm_tran.exe : tkrzw_dbm_tran.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_tran.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_tran.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_langc_check.exe : tkrzw_langc_check.obj tkrzw.lib
-	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_langc_check.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_langc_check.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
-$(COMMANDFILES) : $(HEADERFILES) tkrzw.lib
+$(COMMANDFILES) : $(HEADERFILES) $(CMDLIBRARIES)

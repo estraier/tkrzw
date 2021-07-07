@@ -243,9 +243,7 @@ $ pkg-config --libs tkrzw
 $ make testrun
 ]]></code></pre>
 
-<p>The "--enable-opt-native" flag of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  
-
-The "--enable-most-features" flag is to enable as many features as possible on the platform.  Data compression features using external libraries are integrated.  You can enable each of them separately by setting "--enable-zlib", "--enable-zstd", "--enable-lz4", and "--enable-lzma".  If you don't need dynamic linking library, set "--disable-shared".  If you want the utility commands with static linking, set "--enable-static".  If you develop Tkrzw itself, set "--enable-devel" or "--enable-debug".</p>
+<p>The "--enable-opt-native" flag of the configure script is to optimize the operation code specifically to the native platform.  If it is omitted, normal optimization is done.  The "--enable-most-features" flag is to enable as many features as possible on the platform.  Data compression features using external libraries are integrated.  You can enable each of them separately by setting "--enable-zlib", "--enable-zstd", "--enable-lz4", and "--enable-lzma".  If you don't need dynamic linking library, set "--disable-shared".  If you want the utility commands with static linking, set "--enable-static".  If you develop Tkrzw itself, set "--enable-devel" or "--enable-debug".</p>
 
 <h3 id="installation_windows">For Windows</h3>
 
@@ -303,6 +301,8 @@ int main(int argc, char** argv) {
 ]]></code></pre>
 
 <p>By default, the compiler flag "/MT" is specified to link to the multithread, static version of the run-time library.  You can change it to "/MD" link to the dynamic run-time library.  You can also make a DLL for TKRZW by the linker option "/LD".</p>
+
+<p>The data compression libraries are not integrated on Windows by default.  If you want to enable some of them, define macros by adding some of "/D_TKRZW_COMP_ZLIB", "/D_TKRZW_COMP_ZSTD" , "/D_TKRZW_COMP_LZ4", and "/D_TKRZW_COMP_LZMA" to CLFLAGS in VCMakefile.  Then, add the library (lib/dll) files to EXTRALIBRARIES in VCMakefile.  You'll also add the library files to the command line to build your own programs.</p>
 
 <h2 id="performance">Performance</h2>
 
