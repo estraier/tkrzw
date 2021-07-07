@@ -1913,8 +1913,16 @@ Status SkipDBM::ReadMetadata(
     int32_t* closure_flags, int64_t* num_records,
     int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
     int32_t* db_type, std::string* opaque) {
+  int64_t act_file_size = 0;
+  Status status = file->GetSize(&act_file_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (act_file_size < METADATA_SIZE) {
+    return Status(Status::BROKEN_DATA_ERROR, "too small metadata");
+  }
   char meta[METADATA_SIZE];
-  const Status status = file->Read(0, meta, METADATA_SIZE);
+  status = file->Read(0, meta, METADATA_SIZE);
   if (status != Status::SUCCESS) {
     return status;
   }

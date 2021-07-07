@@ -2401,8 +2401,16 @@ Status HashDBM::ReadMetadata(
          closure_flags != nullptr && num_buckets != nullptr && num_records != nullptr &&
          eff_data_size != nullptr && file_size != nullptr && mod_time != nullptr &&
          db_type != nullptr && opaque != nullptr);
+  int64_t act_file_size = 0;
+  Status status = file->GetSize(&act_file_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (act_file_size < METADATA_SIZE) {
+    return Status(Status::BROKEN_DATA_ERROR, "too small metadata");
+  }
   char meta[METADATA_SIZE];
-  const Status status = file->Read(0, meta, METADATA_SIZE);
+  status = file->Read(0, meta, METADATA_SIZE);
   if (status != Status::SUCCESS) {
     return status;
   }
