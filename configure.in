@@ -21,7 +21,7 @@ MYTESTFILES="tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkr
 MYPCFILES="tkrzw.pc"
 
 # Building flags
-MYCFLAGS="-std=c99 -pthread -fPIC -fsigned-char"
+MYCFLAGS="-std=c11 -pthread -fPIC -fsigned-char"
 MYCXXFLAGS="-std=c++17 -pthread -fPIC -fsigned-char"
 MYCPPFLAGS="-I. -I\$(INCLUDEDIR)"
 MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_ISOC99_SOURCE=1 -D_POSIX_C_SOURCE=999999L"
@@ -66,7 +66,7 @@ AC_ARG_ENABLE(devel,
   AC_HELP_STRING([--enable-devel], [build for development]))
 if test "$enable_devel" = "yes"
 then
-  MYCFLAGS="-std=c99 -pthread -Wall -pedantic -fPIC -fsigned-char -g0 -O2"
+  MYCFLAGS="-std=c11 -pthread -Wall -pedantic -fPIC -fsigned-char -g0 -O2"
   MYCXXFLAGS="-std=c++17 -pthread -Wall -fPIC -fsigned-char -g0 -O2"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
@@ -81,7 +81,7 @@ AC_ARG_ENABLE(debug,
   AC_HELP_STRING([--enable-debug], [build for debugging]))
 if test "$enable_debug" = "yes"
 then
-  MYCFLAGS="-std=c99 -Wall -pedantic -fPIC -fsigned-char -g -O0"
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O0"
   MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -fPIC -fsigned-char -g -O0"
   MYCPPFLAGS="$MYCPPFLAGS -UNDEBUG -D_TKRZW_DEBUG"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
@@ -97,7 +97,7 @@ AC_ARG_ENABLE(profile,
   AC_HELP_STRING([--enable-profile], [build for profiling]))
 if test "$enable_profile" = "yes"
 then
-  MYCFLAGS="-std=c99 -Wall -pedantic -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
   MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"

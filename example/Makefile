@@ -25,7 +25,7 @@ MYBINS = helloworld accesscounter transfer \
 CC = gcc
 CXX = g++
 CPPFLAGS = -I. -I.. -I/usr/local/include -D_GNU_SOURCE=1
-CFLAGS = -std=c99 -Wall -pedantic -fsigned-char -O2
+CFLAGS = -std=c11 -Wall -pedantic -fsigned-char -O2
 CXXFLAGS = -std=c++17 -Wall -fsigned-char -O2
 LDFLAGS =
 LIBS = -L. -L.. -L/usr/local/lib -ltkrzw -lstdc++ -lpthread
