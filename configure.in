@@ -120,8 +120,14 @@ AC_ARG_ENABLE(opt-native,
   AC_HELP_STRING([--enable-opt-native], [build with optimization for the native architecture]))
 if test "$enable_opt_native" = "yes"
 then
-  MYCFLAGS="$MYCFLAGS -O3 -march=native"
-  MYCXXFLAGS="$MYCXXFLAGS -O3 -march=native"
+  if uname | grep Darwin >config.tmp && uname -m | grep arm64 >config.tmp
+  then
+    MYCFLAGS="$MYCFLAGS -O3 -mcpu=native"
+    MYCXXFLAGS="$MYCXXFLAGS -O3 -mcpu=native"
+  else
+    MYCFLAGS="$MYCFLAGS -O3 -march=native"
+    MYCXXFLAGS="$MYCXXFLAGS -O3 -march=native"
+  fi
   enables="$enables (opt-native)"
 fi
 
