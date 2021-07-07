@@ -155,7 +155,7 @@ class PositionalParallelFile final : public PositionalFile {
    * Expands the file size without writing data.
    * @param inc_size The size to increment the file size by.
    * @param old_size The pointer to an integer object to contain the old size of the file.
-   * put.  If it is nullptr, it is ignored.
+   * If it is nullptr, it is ignored.
    * @return The result status.
    */
   Status Expand(size_t inc_size, int64_t* old_size = nullptr) override;
@@ -367,7 +367,7 @@ class PositionalAtomicFile final : public PositionalFile {
    * Expands the file size without writing data.
    * @param inc_size The size to increment the file size by.
    * @param old_size The pointer to an integer object to contain the old size of the file.
-   * put.  If it is nullptr, it is ignored.
+   * If it is nullptr, it is ignored.
    * @return The result status.
    */
   Status Expand(size_t inc_size, int64_t* old_size = nullptr) override;

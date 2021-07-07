@@ -26,6 +26,8 @@
 #include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_shard.h"
+#include "tkrzw_file.h"
+#include "tkrzw_file_poly.h"
 #include "tkrzw_langc.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
@@ -717,6 +719,83 @@ bool tkrzw_dbm_restore_database(
         old_file_path, new_file_path, class_name, end_offset);
   }
   return last_status == Status::SUCCESS;
+}
+
+TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params) {
+  assert(path != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  int32_t open_options = 0;
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "truncate", "false"))) {
+    open_options |= tkrzw::File::OPEN_TRUNCATE;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_create", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_CREATE;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_wait", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_WAIT;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_lock", "false"))) {
+    open_options |= tkrzw::File::OPEN_NO_LOCK;
+  }
+  PolyFile* file = new tkrzw::PolyFile();
+  last_status = file->OpenAdvanced(path, writable, open_options, xparams);
+  if (last_status != Status::SUCCESS) {
+    delete file;
+    return nullptr;
+  }
+  return reinterpret_cast<TkrzwFile*>(file);
+}
+
+bool tkrzw_file_close(TkrzwFile* file) {
+  assert(file != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Close();
+  bool rv = last_status == Status::SUCCESS;
+  delete xfile;
+  return rv;
+}
+
+bool tkrzw_file_read(TkrzwFile* file, int64_t off, void* buf, size_t size) {
+  assert(file != nullptr && off >= 0 && buf != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Read(off, buf, size);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_file_write(TkrzwFile* file, int64_t off, const void* buf, size_t size) {
+  assert(file != nullptr && off >= 0 && buf != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Write(off, buf, size);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_file_append(TkrzwFile* file, const void* buf, size_t size, int64_t* off) {
+  assert(file != nullptr && buf != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Append(buf, size, off);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_file_truncate(TkrzwFile* file, int64_t size) {
+  assert(file != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Truncate(size);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_file_synchronize(TkrzwFile* file, bool hard, int64_t off, int64_t size) {
+  assert(file != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  last_status = xfile->Synchronize(hard, off, size);
+  return last_status == Status::SUCCESS;
+}
+
+int64_t tkrzw_file_get_size(TkrzwFile* file) {
+  assert(file != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  int64_t size = 0;
+  last_status = xfile->GetSize(&size);
+  return last_status == Status::SUCCESS ? size : -1;
 }
 
 }  // extern "C"

@@ -482,4 +482,38 @@ TEST(LangCTest, RestoreDatabase) {
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 
+TEST(LangCTest, File) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".txt");
+  TkrzwFile* file = tkrzw_file_open(
+      file_path.c_str(), true,
+      "truncate=true,file=pos-atom,block_size=512,access_options=padding:pagecache");
+  ASSERT_NE(file, nullptr);
+  EXPECT_TRUE(tkrzw_file_write(file, 5, "12345", 5));
+  EXPECT_TRUE(tkrzw_file_write(file, 0, "ABCDE", 5));
+  int64_t new_off = 0;
+  EXPECT_TRUE(tkrzw_file_append(file, "FGH", 3, &new_off));
+  EXPECT_EQ(10, new_off);
+  EXPECT_TRUE(tkrzw_file_append(file, "IJ", 2, &new_off));
+  EXPECT_EQ(13, new_off);
+  EXPECT_EQ(15, tkrzw_file_get_size(file));
+  EXPECT_TRUE(tkrzw_file_truncate(file, 12));
+  EXPECT_EQ(12, tkrzw_file_get_size(file));
+  EXPECT_TRUE(tkrzw_file_synchronize(file, false, 0, 0));
+  EXPECT_EQ(12, tkrzw_file_get_size(file));
+  char buf[16];
+  EXPECT_TRUE(tkrzw_file_read(file, 0, buf, 12));
+  EXPECT_EQ(0, std::memcmp("ABCDE12345FG", buf, 12));
+  EXPECT_TRUE(tkrzw_file_read(file, 3, buf, 5));
+  EXPECT_EQ(0, std::memcmp("DE123", buf, 5));
+  EXPECT_FALSE(tkrzw_file_read(file, 1024, buf, 10));
+  EXPECT_EQ(TKRZW_STATUS_INFEASIBLE_ERROR, tkrzw_last_status_code());
+  EXPECT_TRUE(tkrzw_file_close(file));
+  file = tkrzw_file_open(file_path.c_str(), file, "");
+  EXPECT_EQ(512, tkrzw_file_get_size(file));
+  EXPECT_TRUE(tkrzw_file_read(file, 4, buf, 7));
+  EXPECT_EQ(0, std::memcmp("E12345F", buf, 7));
+  EXPECT_TRUE(tkrzw_file_close(file));
+}
+
 // END OF FILE

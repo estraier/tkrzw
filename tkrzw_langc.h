@@ -84,6 +84,14 @@ typedef struct {
 } TkrzwDBMIter;
 
 /**
+ * File interface, just for type check.
+ */
+typedef struct {
+  /** A dummy member which is never used. */
+  void* _dummy_;
+} TkrzwFile;
+
+/**
  * Type of the record processor function.
  * @details The first parameter is an opaque argument set by the caller.  The second parameter is
  * the key pointer.  The third parameter is the key size.  The fourth parameter is the value
@@ -669,6 +677,100 @@ bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter);
 bool tkrzw_dbm_restore_database(
     const char* old_file_path, const char* new_file_path,
     const char* class_name, int64_t end_offset);
+
+/**
+ * Opens a file.
+ * @param path A path of the file.
+ * @param writable If true, the file is writable.  If false, it is read-only.
+ * @param params Optional parameters in \"key=value,key=value\" format.
+ * @return The new file object, which should be released by the tkrzw_dbm_close function.
+ * NULL is returned on failure.
+ * @details The optional parameters can include options for the file opening operation.
+ *   - truncate (bool): True to truncate the file.
+ *   - no_create (bool): True to omit file creation.
+ *   - no_wait (bool): True to fail if the file is locked by another process.
+ *   - no_lock (bool): True to omit file locking.
+ * @details The optional parameter "file" specifies the internal file implementation class.
+ * The default file class is "MemoryMapAtomicFile".  The other supported classes are
+ * "StdFile", "MemoryMapAtomicFile", "PositionalParallelFile", and "PositionalAtomicFile".
+ * @details For the file "PositionalParallelFile" and "PositionalAtomicFile", these optional
+ * parameters are supported.
+ *   - block_size (int): The block size to which all blocks should be aligned.
+ *   - access_options (str): Values separated by colon.  "direct" for direct I/O.  "sync" for
+ *     synchrnizing I/O, "padding" for file size alignment by padding, "pagecache" for the mini
+ *     page cache in the process.
+ */
+TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params);
+
+/**
+ * Closes the file.
+ * @param file The file object.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_file_close(TkrzwFile* file);
+
+/**
+ * Reads data.
+ * @param file The file object.
+ * @param off The offset of a source region.
+ * @param buf The pointer to the destination buffer.
+ * @param size The size of the data to be read.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_file_read(TkrzwFile* file, int64_t off, void* buf, size_t size);
+
+/**
+ * Writes data.
+ * @param file The file object.
+ * @param off The offset of the destination region.
+ * @param buf The pointer to the source buffer.
+ * @param size The size of the data to be written.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_file_write(TkrzwFile* file, int64_t off, const void* buf, size_t size);
+
+/**
+ * Appends data at the end of the file.
+ * @param file The file object.
+ * @param buf The pointer to the source buffer.
+ * @param size The size of the data to be written.
+ * @param off The pointer to an integer object to contain the offset at which the data has been
+ * put.  If it is nullptr, it is ignored.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_file_append(TkrzwFile* file, const void* buf, size_t size, int64_t* off);
+
+/**
+ * Truncates the file.
+ * @param file The file object.
+ * @param size The new size of the file.
+ * @return True on success or false on failure.
+ * @details If the file is shrunk, data after the new file end is discarded.  If the file is
+ * expanded, null codes are filled after the old file end.
+ */
+bool tkrzw_file_truncate(TkrzwFile* file, int64_t size);
+
+/**
+ * Synchronizes the content of the file to the file system.
+ * @param file The file object.
+ * @param hard True to do physical synchronization with the hardware or false to do only
+ * logical synchronization with the file system.
+ * @param off The offset of the region to be synchronized.
+ * @param size The size of the region to be synchronized.  If it is zero, the length to the
+ * end of file is specified.
+ * @return True on success or false on failure.
+ * @details The pysical file size can be larger than the logical size in order to improve
+ * performance by reducing frequency of allocation.  Thus, you should call this function before
+ * accessing the file with external tools.
+ */
+bool tkrzw_file_synchronize(TkrzwFile* file, bool hard, int64_t off, int64_t size);
+
+/**
+ * Gets the size of the file.
+ * @param file The file object.
+ * @return The size of the on success, or -1 on failure.
+ */
+int64_t tkrzw_file_get_size(TkrzwFile* file);
 
 #if defined(__cplusplus)
 }

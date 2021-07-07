@@ -2569,7 +2569,9 @@ int main(int argc, char** argv) {
 
 <p>The C++ API cannot be use directly in C code.  So, the C interface is provided as a wrapper of PolyDBM and ShardDBM.  Those adapter classes absorb differences among concrete database classes so you can use HashDBM, TreeDBM, SkipDBM and other databases in C code.  The C interface is useful to embed the functionality to other languages which provide bridging interface for C but not for C++.  As the name mangling feature of C++ sometimes hinders simple integration.</p>
 
-<p>You can create the database object and open a database by calling the tkrzw_dbm_open function.  It returns the pointer to a TkrzwDBM object.  Most methods of PolyDBM and ShardDBM have their counterparts in the C interface.  For methods of the database object, there are conterpart functions whose name begins with "tkrzw_dbm_" and they receive the pointer to a TkrzwDBM object as the first parameter.  An iterator object is created by calling the tkrzw_dbm_make_iterator function.  For methods of the iterator object, there are counterpart functions whose name begins with "tkrzw_dbm_iter_" and they receive the pointer to a TkrzwDBMIter object as the first parameter.</p>
+<p>You can create the database object and open a database by calling the tkrzw_dbm_open function.  It returns the pointer to a TkrzwDBM object.  Most methods of PolyDBM and ShardDBM in C++ have their counterparts in the C interface.  For methods of the database object, there are conterpart functions whose names begin with "tkrzw_dbm_" and they receive the pointer to a TkrzwDBM object as the first parameter.  An iterator object is created by calling the tkrzw_dbm_make_iterator function.  For methods of the iterator object, there are counterpart functions whose name begins with "tkrzw_dbm_iter_" and they receive the pointer to a TkrzwDBMIter object as the first parameter.</p>
+
+<p>The generic file functions are also useful to handle flat files.  They are wrapper of PolyFile class in C++.  You can use files in the memory mapping I/O mode, the normal I/O mode, and the direct I/O mode with the same interface.  Their names begin with "tkrzw_file_" and they receive the pointer to a TkrzwFile object as the first parameter.</p>
 
 <p>The library header is based on the C99 and C11 standards.  On UNIX-like systems, typically, your program is built like this:</p>
 
@@ -4000,7 +4002,7 @@ $ tkrzw_dbm_util get --file pos-para casket.tkh Japan
 dbm.Open("casket.tkh", true);
 ]]></code></pre>
 
-<p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.</p>
+<p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.  Like the polymorphic database class (PolyDBM), the polymorphic file class (PolyFile) is provided.  It is useful to handle files of different implementation with the same inferface.  See <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyFile.html">the API document</a> for details.</p>
 
 <h3 id="tips_direct_io">Direct I/O</h3>
 
