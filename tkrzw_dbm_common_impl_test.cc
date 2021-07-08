@@ -155,18 +155,13 @@ TEST(DBMCommonImplTest, SearchDBMModal) {
   }
   {
     std::vector<std::string> keys;
-    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "regex", "1$", &keys, 4, true));
-    EXPECT_EQ(4, keys.size());
-  }
-  {
-    std::vector<std::string> keys;
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "edit", "10", &keys, 2));
     EXPECT_THAT(keys, ElementsAre("10", "1"));
   }
   {
     std::vector<std::string> keys;
-    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "edit", "10", &keys, 3, true));
-    EXPECT_THAT(keys, ElementsAre("10", "1", "100"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "editbin", "10", &keys, 2));
+    EXPECT_THAT(keys, ElementsAre("10", "1"));
   }
   {
     std::vector<std::string> keys;
@@ -223,7 +218,7 @@ TEST(DBMCommonImplTest, SearchTextModal) {
   {
     std::vector<std::string> lines;
     EXPECT_EQ(tkrzw::Status::SUCCESS,
-              tkrzw::SearchTextFileModal(&file, "regex", "1$", &lines, 4, true));
+              tkrzw::SearchTextFileModal(&file, "regex", "1$", &lines, 4));
     EXPECT_EQ(4, lines.size());
   }
   {
@@ -235,7 +230,7 @@ TEST(DBMCommonImplTest, SearchTextModal) {
   {
     std::vector<std::string> lines;
     EXPECT_EQ(tkrzw::Status::SUCCESS,
-              tkrzw::SearchTextFileModal(&file, "edit", "10", &lines, 3, true));
+              tkrzw::SearchTextFileModal(&file, "editbin", "10", &lines, 3));
     EXPECT_THAT(lines, ElementsAre("10", "1", "100"));
   }
   {

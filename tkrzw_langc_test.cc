@@ -64,8 +64,6 @@ TEST(LangCTest, Utils) {
   EXPECT_EQ(39025, tkrzw_primary_hash("foobar", 6, 65536));
   EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", -1, 65536));
   EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", 6, 65536));
-
-
   EXPECT_EQ(-1, tkrzw_str_search_regex("", "B"));
   EXPECT_EQ(-2, tkrzw_str_search_regex("", "*"));
   EXPECT_EQ(2, tkrzw_str_search_regex("ABCDEF", "CD"));
@@ -75,8 +73,6 @@ TEST(LangCTest, Utils) {
   result = tkrzw_str_replace_regex("ABCDEF", "123", "XYZ");
   EXPECT_STREQ("ABCDEF", result);
   free(result);
-
-
   EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", true));
   EXPECT_EQ(1, tkrzw_str_edit_distance_lev("あいう", "あう", true));
   EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", false));
@@ -430,21 +426,21 @@ TEST(LangCTest, Search) {
   }
   {
     int32_t num_keys = 0;
-    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", 1, -1, false, &num_keys);
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", 1, -1, &num_keys);
     ASSERT_NE(nullptr, keys);
     EXPECT_EQ(20, num_keys);
     tkrzw_free_str_array(keys, num_keys);
   }
   {
     int32_t num_keys = 0;
-    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", -1, 10, false, &num_keys);
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "contain", "1", -1, 10, &num_keys);
     ASSERT_NE(nullptr, keys);
     EXPECT_EQ(10, num_keys);
     tkrzw_free_str_array(keys, num_keys);
   }
   {
     int32_t num_keys = 0;
-    TkrzwStr* keys = tkrzw_dbm_search(dbm, "edit", "10", -1, 3, false, &num_keys);
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "edit", "10", -1, 3, &num_keys);
     ASSERT_NE(nullptr, keys);
     ASSERT_EQ(3, num_keys);
     EXPECT_STREQ(keys[0].ptr, "10");

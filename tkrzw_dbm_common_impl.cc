@@ -117,18 +117,11 @@ Status SearchDBMForwardMatch(
 }
 
 Status SearchDBMRegex(
-    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
-    bool utf) {
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
   assert(dbm != nullptr && matched != nullptr);
   std::unique_ptr<std::regex> regex;
-  std::unique_ptr<std::wregex> regex_wide;
   try {
-    if (utf) {
-      const std::wstring pattern_wide = ConvertUTF8ToWide(pattern);
-      regex_wide = std::make_unique<std::wregex>(pattern_wide);
-    } else {
-      regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
-    }
+    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
   } catch (const std::regex_error& err) {
     return Status(Status::INVALID_ARGUMENT_ERROR, StrCat("invalid regex: ", err.what()));
   }
@@ -139,22 +132,14 @@ Status SearchDBMRegex(
   class Exporter final : public DBM::RecordProcessor {
    public:
     Exporter(std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
-             std::regex* regex, std::wregex* regex_wide)
-        : pattern_(pattern), matched_(matched),
-          capacity_(capacity), regex_(regex), regex_wide_(regex_wide) {}
+             std::regex* regex)
+        : pattern_(pattern), matched_(matched), capacity_(capacity), regex_(regex) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (matched_->size() >= capacity_) {
         return NOOP;
       }
-      if (regex_wide_ == nullptr) {
-        if (std::regex_search(key.begin(), key.end(), *regex_)) {
-          matched_->emplace_back(std::string(key));
-        }
-      } else {
-        const std::wstring key_wide = ConvertUTF8ToWide(key);
-        if (std::regex_search(key_wide, *regex_wide_)) {
-          matched_->emplace_back(std::string(key));
-        }
+      if (std::regex_search(key.begin(), key.end(), *regex_)) {
+        matched_->emplace_back(std::string(key));
       }
       return NOOP;
     }
@@ -163,22 +148,17 @@ Status SearchDBMRegex(
     std::vector<std::string>* matched_;
     size_t capacity_;
     std::regex* regex_;
-    std::wregex* regex_wide_;
-  } exporter(pattern, matched, capacity, regex.get(), regex_wide.get());
+  } exporter(pattern, matched, capacity, regex.get());
   return dbm->ProcessEach(&exporter, false);
 }
 
 Status SearchDBMEditDistance(
-    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
-    bool utf) {
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
   assert(dbm != nullptr && matched != nullptr);
   if (capacity == 0) {
     capacity = SIZE_MAX;
   }
-  std::vector<uint32_t> pattern_ucs;
-  if (utf) {
-    pattern_ucs = ConvertUTF8ToUCS4(pattern);
-  }
+  const std::vector<uint32_t> pattern_ucs = ConvertUTF8ToUCS4(pattern);
   std::vector<std::pair<int32_t, std::string>> heap;
   class Exporter final : public DBM::RecordProcessor {
    public:
@@ -187,13 +167,8 @@ Status SearchDBMEditDistance(
         : pattern_(pattern), heap_(heap), capacity_(capacity),
           pattern_ucs_(pattern_ucs) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      int32_t dist = 0;
-      if (pattern_ucs_ == nullptr) {
-        dist = EditDistanceLev(pattern_, key);
-      } else {
-        const std::vector<uint32_t> key_ucs = ConvertUTF8ToUCS4(key);
-        dist = EditDistanceLev(*pattern_ucs_, key_ucs);
-      }
+      const std::vector<uint32_t> key_ucs = ConvertUTF8ToUCS4(key);
+      const int32_t dist = EditDistanceLev(*pattern_ucs_, key_ucs);
       HeapByCostAdd(dist, std::string(key), capacity_, heap_);
       return NOOP;
     }
@@ -202,7 +177,42 @@ Status SearchDBMEditDistance(
     std::vector<std::pair<int32_t, std::string>>* heap_;
     size_t capacity_;
     const std::vector<uint32_t>* pattern_ucs_;
-  } exporter(pattern, &heap, capacity, utf ? &pattern_ucs : nullptr);
+  } exporter(pattern, &heap, capacity, &pattern_ucs);
+  const Status status = dbm->ProcessEach(&exporter, false);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  HeapByCostFinish(&heap);
+  matched->clear();
+  for (const auto& rec : heap) {
+    matched->emplace_back(rec.second);
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status SearchDBMEditDistanceBinary(
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
+  assert(dbm != nullptr && matched != nullptr);
+  if (capacity == 0) {
+    capacity = SIZE_MAX;
+  }
+  std::vector<std::pair<int32_t, std::string>> heap;
+  class Exporter final : public DBM::RecordProcessor {
+   public:
+    Exporter(std::string_view pattern, std::vector<std::pair<int32_t, std::string>>* heap,
+             size_t capacity)
+        : pattern_(pattern), heap_(heap), capacity_(capacity) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      const int32_t dist = EditDistanceLev(pattern_, key);
+      HeapByCostAdd(dist, std::string(key), capacity_, heap_);
+      return NOOP;
+    }
+   private:
+    std::string_view pattern_;
+    std::vector<std::pair<int32_t, std::string>>* heap_;
+    size_t capacity_;
+    const std::vector<uint32_t>* pattern_ucs_;
+  } exporter(pattern, &heap, capacity);
   const Status status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
@@ -217,7 +227,7 @@ Status SearchDBMEditDistance(
 
 Status SearchDBMModal(
     DBM* dbm, std::string_view mode, std::string_view pattern,
-    std::vector<std::string>* matched, size_t capacity, bool utf) {
+    std::vector<std::string>* matched, size_t capacity) {
   Status status(tkrzw::Status::SUCCESS);
   if (mode == "contain") {
     status = SearchDBM(dbm, pattern, matched, capacity, StrContains);
@@ -226,9 +236,11 @@ Status SearchDBMModal(
   } else if (mode == "end") {
     status = SearchDBM(dbm, pattern, matched, capacity, StrEndsWith);
   } else if (mode == "regex") {
-    status = SearchDBMRegex(dbm, pattern, matched, capacity, utf);
+    status = SearchDBMRegex(dbm, pattern, matched, capacity);
   } else if (mode == "edit") {
-    status = SearchDBMEditDistance(dbm, pattern, matched, capacity, utf);
+    status = SearchDBMEditDistance(dbm, pattern, matched, capacity);
+  } else if (mode == "editbin") {
+    status = SearchDBMEditDistanceBinary(dbm, pattern, matched, capacity);
   } else {
     status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
   }
@@ -441,23 +453,15 @@ Status SearchTextFile(
   return Status(Status::SUCCESS);
 }
 
-
 Status SearchTextFileRegex(
-    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
-    bool utf) {
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
   assert(file != nullptr && matched != nullptr);
   if (capacity == 0) {
     capacity = SIZE_MAX;
   }
   std::unique_ptr<std::regex> regex;
-  std::unique_ptr<std::wregex> regex_wide;
   try {
-    if (utf) {
-      const std::wstring pattern_wide = ConvertUTF8ToWide(pattern);
-      regex_wide = std::make_unique<std::wregex>(pattern_wide);
-    } else {
-      regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
-    }
+    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
   } catch (const std::regex_error& err) {
     return Status(Status::INVALID_ARGUMENT_ERROR, StrCat("invalid regex: ", err.what()));
   }
@@ -474,29 +478,48 @@ Status SearchTextFileRegex(
     }
     const std::string_view content(
         line.data(), line.empty() || line.back() != '\n' ? line.size() : line.size() - 1);
-    if (regex_wide == nullptr) {
-      if (std::regex_search(content.begin(), content.end(), *regex)) {
-        matched->emplace_back(std::string(content));
-      }
-    } else {
-      const std::wstring content_wide = ConvertUTF8ToWide(content);
-      if (std::regex_search(content_wide, *regex_wide)) {
-        matched->emplace_back(std::string(content));
-      }
+    if (std::regex_search(content.begin(), content.end(), *regex)) {
+      matched->emplace_back(std::string(content));
     }
   }
   return Status(Status::SUCCESS);
 }
 
 Status SearchTextFileEditDistance(
-    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity,
-    bool utf) {
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
   if (capacity == 0) {
     capacity = SIZE_MAX;
   }
-  std::vector<uint32_t> pattern_ucs;
-  if (utf) {
-    pattern_ucs = ConvertUTF8ToUCS4(pattern);
+  const std::vector<uint32_t> pattern_ucs = ConvertUTF8ToUCS4(pattern);
+  FileReader reader(file);
+  std::vector<std::pair<int32_t, std::string>> heap;
+  while (true) {
+    std::string line;
+    Status status = reader.ReadLine(&line);
+    if (status != Status::SUCCESS) {
+      if (status != Status::NOT_FOUND_ERROR) {
+        return status;
+      }
+      break;
+    }
+    const std::string_view content(
+        line.data(), line.empty() || line.back() != '\n' ? line.size() : line.size() - 1);
+    const std::vector<uint32_t> content_ucs = ConvertUTF8ToUCS4(content);
+    const int32_t dist = EditDistanceLev(pattern_ucs, content_ucs);
+    HeapByCostAdd(dist, std::string(content), capacity, &heap);
+  }
+  HeapByCostFinish(&heap);
+  matched->clear();
+  for (const auto& rec : heap) {
+    matched->emplace_back(rec.second);
+  }
+  return Status(Status::SUCCESS);
+}
+
+Status SearchTextFileEditDistanceBinary(
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
+  if (capacity == 0) {
+    capacity = SIZE_MAX;
   }
   FileReader reader(file);
   std::vector<std::pair<int32_t, std::string>> heap;
@@ -511,13 +534,7 @@ Status SearchTextFileEditDistance(
     }
     const std::string_view content(
         line.data(), line.empty() || line.back() != '\n' ? line.size() : line.size() - 1);
-    int32_t dist = 0;
-    if (utf) {
-      const std::vector<uint32_t> content_ucs = ConvertUTF8ToUCS4(content);
-      dist = EditDistanceLev(pattern_ucs, content_ucs);
-    } else {
-      dist = EditDistanceLev(pattern, content);
-    }
+    const int32_t dist = EditDistanceLev(pattern, content);
     HeapByCostAdd(dist, std::string(content), capacity, &heap);
   }
   HeapByCostFinish(&heap);
@@ -530,7 +547,7 @@ Status SearchTextFileEditDistance(
 
 Status SearchTextFileModal(
     File* file, std::string_view mode, std::string_view pattern,
-    std::vector<std::string>* matched, size_t capacity, bool utf) {
+    std::vector<std::string>* matched, size_t capacity) {
   Status status(tkrzw::Status::SUCCESS);
   if (mode == "contain") {
     status = SearchTextFile(file, pattern, matched, capacity, StrContains);
@@ -539,9 +556,11 @@ Status SearchTextFileModal(
   } else if (mode == "end") {
     status = SearchTextFile(file, pattern, matched, capacity, StrEndsWith);
   } else if (mode == "regex") {
-    status = SearchTextFileRegex(file, pattern, matched, capacity, utf);
+    status = SearchTextFileRegex(file, pattern, matched, capacity);
   } else if (mode == "edit") {
-    status = SearchTextFileEditDistance(file, pattern, matched, capacity, utf);
+    status = SearchTextFileEditDistance(file, pattern, matched, capacity);
+  } else if (mode == "editbin") {
+    status = SearchTextFileEditDistanceBinary(file, pattern, matched, capacity);
   } else {
     status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
   }

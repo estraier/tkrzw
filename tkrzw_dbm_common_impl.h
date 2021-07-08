@@ -106,28 +106,33 @@ Status SearchDBMForwardMatch(
  * @param pattern The regular expression pattern for partial matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is treated as UTF-8 and matching is done with UCS sequences.
  * @return The result status.
  * @details This scans the whole database so it can take long time.
  */
 Status SearchDBMRegex(
-    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0,
-    bool utf = false);
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
 
 /**
- * Searches a database and get keys whose edit distance with a pattern is the least.
+ * Searches a database and get keys whose edit distance with a UTF-8 pattern is the least.
  * @param dbm The DBM object of the database.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is treated as UTF-8 and the distance is calculated between UCS
- * sequences.
- * @return The result status.
  * @details This scans the whole database so it can take long time.
  */
 Status SearchDBMEditDistance(
-    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0,
-    bool utf = false);
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
+
+/**
+ * Searches a database and get keys whose edit distance with a binary pattern is the least.
+ * @param dbm The DBM object of the database.
+ * @param pattern The pattern for matching.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @details This scans the whole database so it can take long time.
+ */
+Status SearchDBMEditDistanceBinary(
+    DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
 
 /**
  * Searches a database and get keys which match a pattern, according to a mode expression.
@@ -135,16 +140,16 @@ Status SearchDBMEditDistance(
  * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
- * extracts keys whose edit distance to the pattern is the least.
+ * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
+ * keys whose edit distance to the binary pattern is the least.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is treated as UTF-8, which affects "regex" and "edit".
  * @return The result status.
  */
 Status SearchDBMModal(
     DBM* dbm, std::string_view mode, std::string_view pattern,
-    std::vector<std::string>* matched, size_t capacity = 0, bool utf = false);
+    std::vector<std::string>* matched, size_t capacity = 0);
 
 /**
  * Exports all records of a database to a flat record file.
@@ -215,27 +220,32 @@ Status SearchTextFile(
  * @param pattern The regular expression pattern for partial matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is decoded as UTF-8 and edit distance is calculated by the unicode
- * characters.
  * @return The result status.
  */
 Status SearchTextFileRegex(
-    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0,
-    bool utf = false);
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
 
 /**
- * Searches a text file and get lines whose edit distance with a pattern is the least.
+ * Searches a text file and get lines whose edit distance with a UTF-8 pattern is the least.
  * @param file The file to search.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is decoded as UTF-8 and edit distance is calculated by the unicode
- * characters.
  * @return The result status.
  */
 Status SearchTextFileEditDistance(
-    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0,
-    bool utf = false);
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
+
+/**
+ * Searches a text file and get lines whose edit distance with a binary pattern is the least.
+ * @param file The file to search.
+ * @param pattern The pattern for matching.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @return The result status.
+ */
+Status SearchTextFileEditDistanceBinary(
+    File* file, std::string_view pattern, std::vector<std::string>* matched, size_t capacity = 0);
 
 /**
  * Searches a text file and get lines which match a pattern, according to a mode expression.
@@ -243,17 +253,16 @@ Status SearchTextFileEditDistance(
  * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
- * extracts keys whose edit distance to the pattern is the least.
+ * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
+ * keys whose edit distance to the binary pattern is the least.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is decoded as UTF-8 and edit distance is calculated by the unicode
- * characters.
  * @return The result status.
  */
 Status SearchTextFileModal(
     File* file, std::string_view mode, std::string_view pattern,
-    std::vector<std::string>* matched, size_t capacity = 0, bool utf = false);
+    std::vector<std::string>* matched, size_t capacity = 0);
 
 }  // namespace tkrzw
 

@@ -520,7 +520,7 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm) {
 
 TkrzwStr* tkrzw_dbm_search(
     TkrzwDBM* dbm, const char* mode, const char* pattern_ptr, int32_t pattern_size,
-    int32_t capacity, bool utf, int32_t* num_matched) {
+    int32_t capacity, int32_t* num_matched) {
   assert(dbm != nullptr && mode != nullptr && pattern_ptr != nullptr && num_matched != nullptr);
   if (pattern_size < 0) {
     pattern_size = std::strlen(pattern_ptr);
@@ -529,7 +529,7 @@ TkrzwStr* tkrzw_dbm_search(
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   std::vector<std::string> keys;
   last_status = SearchDBMModal(xdbm, mode, std::string_view(pattern_ptr, pattern_size),
-                               &keys, capacity, utf);
+                               &keys, capacity);
   if (last_status != Status::SUCCESS) {
     return nullptr;
   }

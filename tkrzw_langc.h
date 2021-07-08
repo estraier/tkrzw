@@ -531,7 +531,6 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
  * @param pattern_ptr The key pointer.
  * @param pattern_size The key size.  If it is negative, strlen(pattern_ptr) is used.
  * @param capacity The maximum records to obtain.  0 means unlimited.
- * @param utf If true, text is treated as UTF-8, which affects "regex" and "edit".
  * @param num_matched The pointer to the variable to store the number of the element of the
  * return value.
  * @return The pointer to an array of matched keys or NULL on failure.  If not NULL, the array
@@ -540,7 +539,7 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
  */
 TkrzwStr* tkrzw_dbm_search(
     TkrzwDBM* dbm, const char* mode, const char* pattern_ptr, int32_t pattern_size,
-    int32_t capacity, bool utf, int32_t* num_matched);
+    int32_t capacity, int32_t* num_matched);
 
 /**
  * Makes an iterator for each record.

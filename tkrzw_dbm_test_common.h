@@ -1103,14 +1103,12 @@ inline void CommonDBMTest::RecordMigrationTest(tkrzw::DBM* dbm, tkrzw::File* fil
   EXPECT_EQ(tkrzw::Status::INVALID_ARGUMENT_ERROR, tkrzw::SearchDBMRegex(dbm, "[", &regex_keys));
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMRegex(dbm, "\\d+0\\s+\\d+", &regex_keys));
   EXPECT_EQ(10, regex_keys.size());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMRegex(dbm, "\\d+0\\s+\\d+", &regex_keys, 0, true));
-  EXPECT_EQ(10, regex_keys.size());
   std::vector<std::string> similar_keys;
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMEditDistance(
       dbm, "00000100 00000100", &similar_keys, 1));
   EXPECT_THAT(similar_keys, UnorderedElementsAre("00000100\t00000100"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMEditDistance(
-      dbm, "00000100 00000100", &similar_keys, 1, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMEditDistanceBinary(
+      dbm, "00000100 00000100", &similar_keys, 1));
   EXPECT_THAT(similar_keys, UnorderedElementsAre("00000100\t00000100"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMRecordsToFlatRecords(dbm, file));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
@@ -1171,14 +1169,14 @@ inline void CommonDBMTest::RecordMigrationTest(tkrzw::DBM* dbm, tkrzw::File* fil
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchTextFileRegex(file, "\\d+0 +0\\d+", &text_regex_keys));
   EXPECT_EQ(10, text_regex_keys.size());
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchTextFileRegex(
-      file, "\\d+0 +0\\d+", &text_regex_keys, 0, true));
+      file, "\\d+0 +0\\d+", &text_regex_keys, 0));
   EXPECT_EQ(10, text_regex_keys.size());
   std::vector<std::string> text_similar_keys;
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchTextFileEditDistance(
       file, "00000100 00000100", &text_similar_keys, 1));
   EXPECT_THAT(text_similar_keys, UnorderedElementsAre("00000100 00000100"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, SearchTextFileEditDistance(
-      file, "00000100 00000100", &text_similar_keys, 1, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, SearchTextFileEditDistanceBinary(
+      file, "00000100 00000100", &text_similar_keys, 1));
   EXPECT_THAT(text_similar_keys, UnorderedElementsAre("00000100 00000100"));
 }
 
