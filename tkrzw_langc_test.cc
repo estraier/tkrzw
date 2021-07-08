@@ -64,6 +64,23 @@ TEST(LangCTest, Utils) {
   EXPECT_EQ(39025, tkrzw_primary_hash("foobar", 6, 65536));
   EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", -1, 65536));
   EXPECT_EQ(8012, tkrzw_secondary_hash("foobar", 6, 65536));
+
+
+  EXPECT_EQ(-1, tkrzw_str_search_regex("", "B"));
+  EXPECT_EQ(-2, tkrzw_str_search_regex("", "*"));
+  EXPECT_EQ(2, tkrzw_str_search_regex("ABCDEF", "CD"));
+  char* result = tkrzw_str_replace_regex("ABCDEF", "CD", "XYZ");
+  EXPECT_STREQ("ABXYZEF", result);
+  free(result);
+  result = tkrzw_str_replace_regex("ABCDEF", "123", "XYZ");
+  EXPECT_STREQ("ABCDEF", result);
+  free(result);
+
+
+  EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", true));
+  EXPECT_EQ(1, tkrzw_str_edit_distance_lev("あいう", "あう", true));
+  EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", false));
+  EXPECT_EQ(3, tkrzw_str_edit_distance_lev("あいう", "あう", false));
 }
 
 void file_proc_check(void* arg, const char* path) {
@@ -492,7 +509,7 @@ TEST(LangCTest, Sharding) {
   params += ",num_shards=" + tkrzw::ToString(num_shards);
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, params.c_str());
   EXPECT_TRUE(tkrzw_dbm_is_healthy(dbm));
-  EXPECT_TRUE(tkrzw_dbm_is_writable(dbm));  
+  EXPECT_TRUE(tkrzw_dbm_is_writable(dbm));
   for (int32_t i = 0; i < num_shards; i++) {
     const std::string shard_path = tkrzw::SPrintF(
         "%s-%05d-of-%05d", file_path.c_str(),i, num_shards);

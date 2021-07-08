@@ -379,71 +379,6 @@ TEST(StrUtilTest, StrCaseCompare) {
   EXPECT_GT(tkrzw::StrCaseCompare("あ", "aaa"), 0);
 }
 
-TEST(StrUtilTest, ConvertUTF8AndUCS4) {
-  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
-    const std::vector<uint32_t>& ucs = tkrzw::ConvertUTF8ToUCS4(utf);
-    const std::string& utf_restored = tkrzw::ConvertUCS4ToUTF8(ucs);
-    EXPECT_EQ(utf, utf_restored);
-  }
-  std::vector<uint32_t> ucs;
-  for (uint32_t c = 1; c < 1U << 31; c *= 2) {
-    ucs.emplace_back(c - 1);
-    ucs.emplace_back(c);
-    ucs.emplace_back(c + 1);
-  }
-  const std::string& utf = tkrzw::ConvertUCS4ToUTF8(ucs);
-  const std::vector<uint32_t>& ucs_restored = tkrzw::ConvertUTF8ToUCS4(utf);
-  EXPECT_THAT(ucs_restored, ElementsAreArray(ucs));
-}
-
-TEST(StrUtilTest, ConvertUTF8AndWide) {
-  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
-    const std::wstring wstr = tkrzw::ConvertUTF8ToWide(utf);
-    const std::string& utf_restored = tkrzw::ConvertWideToUTF8(wstr);
-    EXPECT_EQ(utf, utf_restored);
-  }
-  std::wstring wstr;
-  for (uint32_t c = 1; c < 1U << 31; c *= 2) {
-    wstr.push_back(c - 1);
-    wstr.push_back(c);
-    wstr.push_back(c + 1);
-  }
-  const std::string& utf = tkrzw::ConvertWideToUTF8(wstr);
-  const std::wstring& wstr_restored = tkrzw::ConvertUTF8ToWide(utf);
-  EXPECT_EQ(wstr, wstr_restored);
-}
-
-TEST(StrUtilTest, EditDistanceLev) {
-  struct TestCase final {
-    std::string a;
-    std::string b;
-    int32_t expected_dist;
-  };
-  const std::vector<TestCase> test_cases = {
-    {"", "", 0},
-    {"abc", "abc", 0},
-    {"abc", "abxc", 1},
-    {"abc", "ac", 1},
-    {"abc", "axc", 1},
-    {"abcde", "axcxe", 2},
-    {"abcdef", "abcf", 2},
-    {"あいう", "あいう", 0},
-    {std::string(100, 'x'), std::string(100, 'x'), 0},
-    {"", std::string(100, 'x'), 100},
-    {std::string(100, 'x'), std::string(100, 'y'), 100},
-    {std::string(100, 'x'), std::string(50, 'x'), 50},
-    {std::string(100, 'x'), std::string(50, 'y'), 100},
-  };
-  for (const auto& test_case : test_cases) {
-    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(test_case.a, test_case.b));
-    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(test_case.b, test_case.a));
-    const std::vector<uint32_t>& a_ucs = tkrzw::ConvertUTF8ToUCS4(test_case.a);
-    const std::vector<uint32_t>& b_ucs = tkrzw::ConvertUTF8ToUCS4(test_case.b);
-    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(a_ucs, b_ucs));
-    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(b_ucs, a_ucs));
-  }
-}
-
 class StrSearchStaticTest :
     public TestWithParam<int32_t (*)(std::string_view, std::string_view)> {
 };
@@ -793,6 +728,99 @@ TEST(StrUtilTest, StrDecodeURL) {
       str.push_back(c++);
     }
     EXPECT_EQ(str, tkrzw::StrDecodeURL(tkrzw::StrEncodeURL(str)));
+  }
+}
+
+TEST(StrUtilTest, StrSearchRegex) {
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("", ""));
+  EXPECT_EQ(-1, tkrzw::StrSearchRegex("", "a"));
+  EXPECT_EQ(-2, tkrzw::StrSearchRegex("", "*"));
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("abc", ""));
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("abc", "a"));
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("abc", "ab"));
+  EXPECT_EQ(1, tkrzw::StrSearchRegex("abc", "b"));
+  EXPECT_EQ(1, tkrzw::StrSearchRegex("abc", "bc"));
+  EXPECT_EQ(2, tkrzw::StrSearchRegex("abc", "c"));
+  EXPECT_EQ(-1, tkrzw::StrSearchRegex("abc", "d"));
+  EXPECT_EQ(2, tkrzw::StrSearchRegex("abcdabcd", "c"));
+  EXPECT_EQ(3, tkrzw::StrSearchRegex("あいうえお", "いうえ"));
+}
+
+TEST(StrUtilTest, StrReplaceRegex) {
+  EXPECT_EQ("", tkrzw::StrReplaceRegex("", "", ""));
+  EXPECT_EQ("", tkrzw::StrReplaceRegex("", "a", ""));
+  EXPECT_EQ("", tkrzw::StrReplaceRegex("", "*", ""));
+  EXPECT_EQ("bcd", tkrzw::StrReplaceRegex("abcd", "a", ""));
+  EXPECT_EQ("a[BC]d", tkrzw::StrReplaceRegex("abcd", "bc", "[BC]"));
+  EXPECT_EQ("a[bc]d", tkrzw::StrReplaceRegex("abcd", "bc", "[$&]"));
+  EXPECT_EQ("a[]d", tkrzw::StrReplaceRegex("abcd", "bc", "[$3]"));
+  EXPECT_EQ("a[bc]D[ef]g", tkrzw::StrReplaceRegex("abcdefg", "(bc)d(ef)", "[$1]D[$2]"));
+  EXPECT_EQ("あ[いう]エ[おか]き", tkrzw::StrReplaceRegex(
+      "あいうえおかき", "(いう)え(おか)", "[$1]エ[$2]"));
+}
+
+TEST(StrUtilTest, ConvertUTF8AndUCS4) {
+  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
+    const std::vector<uint32_t>& ucs = tkrzw::ConvertUTF8ToUCS4(utf);
+    const std::string& utf_restored = tkrzw::ConvertUCS4ToUTF8(ucs);
+    EXPECT_EQ(utf, utf_restored);
+  }
+  std::vector<uint32_t> ucs;
+  for (uint32_t c = 1; c < 1U << 31; c *= 2) {
+    ucs.emplace_back(c - 1);
+    ucs.emplace_back(c);
+    ucs.emplace_back(c + 1);
+  }
+  const std::string& utf = tkrzw::ConvertUCS4ToUTF8(ucs);
+  const std::vector<uint32_t>& ucs_restored = tkrzw::ConvertUTF8ToUCS4(utf);
+  EXPECT_THAT(ucs_restored, ElementsAreArray(ucs));
+}
+
+TEST(StrUtilTest, ConvertUTF8AndWide) {
+  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
+    const std::wstring wstr = tkrzw::ConvertUTF8ToWide(utf);
+    const std::string& utf_restored = tkrzw::ConvertWideToUTF8(wstr);
+    EXPECT_EQ(utf, utf_restored);
+  }
+  std::wstring wstr;
+  for (uint32_t c = 1; c < 1U << 31; c *= 2) {
+    wstr.push_back(c - 1);
+    wstr.push_back(c);
+    wstr.push_back(c + 1);
+  }
+  const std::string& utf = tkrzw::ConvertWideToUTF8(wstr);
+  const std::wstring& wstr_restored = tkrzw::ConvertUTF8ToWide(utf);
+  EXPECT_EQ(wstr, wstr_restored);
+}
+
+TEST(StrUtilTest, EditDistanceLev) {
+  struct TestCase final {
+    std::string a;
+    std::string b;
+    int32_t expected_dist;
+  };
+  const std::vector<TestCase> test_cases = {
+    {"", "", 0},
+    {"abc", "abc", 0},
+    {"abc", "abxc", 1},
+    {"abc", "ac", 1},
+    {"abc", "axc", 1},
+    {"abcde", "axcxe", 2},
+    {"abcdef", "abcf", 2},
+    {"あいう", "あいう", 0},
+    {std::string(100, 'x'), std::string(100, 'x'), 0},
+    {"", std::string(100, 'x'), 100},
+    {std::string(100, 'x'), std::string(100, 'y'), 100},
+    {std::string(100, 'x'), std::string(50, 'x'), 50},
+    {std::string(100, 'x'), std::string(50, 'y'), 100},
+  };
+  for (const auto& test_case : test_cases) {
+    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(test_case.a, test_case.b));
+    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(test_case.b, test_case.a));
+    const std::vector<uint32_t>& a_ucs = tkrzw::ConvertUTF8ToUCS4(test_case.a);
+    const std::vector<uint32_t>& b_ucs = tkrzw::ConvertUTF8ToUCS4(test_case.b);
+    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(a_ucs, b_ucs));
+    EXPECT_EQ(test_case.expected_dist, tkrzw::EditDistanceLev(b_ucs, a_ucs));
   }
 }
 

@@ -1434,6 +1434,32 @@ std::string StrDecodeURL(std::string_view str) {
   return decoded;
 }
 
+std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
+                            std::string_view replace) {
+  std::string result;
+  try {
+    std::regex regex(pattern.begin(), pattern.end());
+    std::regex_replace(std::back_inserter(result), text.begin(), text.end(), regex,
+                       std::string(replace));
+  } catch (const std::regex_error& err) {
+    result = "";
+  }
+  return result;
+}
+
+std::string SerializeStrPair(std::string_view first, std::string_view second) {
+  const size_t size = SizeVarNum(first.size()) + first.size() +
+      SizeVarNum(second.size()) + second.size();
+  std::string serialized(size, 0);
+  char* wp = const_cast<char*>(serialized.data());
+  wp += WriteVarNum(wp, first.size());
+  std::memcpy(wp, first.data(), first.size());
+  wp += first.size();
+  wp += WriteVarNum(wp, second.size());
+  std::memcpy(wp, second.data(), second.size());
+  return serialized;
+}
+
 std::vector<uint32_t> ConvertUTF8ToUCS4(std::string_view utf) {
   std::vector<uint32_t> ucs;
   ucs.reserve(utf.size());
@@ -1610,17 +1636,18 @@ std::string ConvertWideToUTF8(const std::wstring& wstr) {
   return utf;
 }
 
-std::string SerializeStrPair(std::string_view first, std::string_view second) {
-  const size_t size = SizeVarNum(first.size()) + first.size() +
-      SizeVarNum(second.size()) + second.size();
-  std::string serialized(size, 0);
-  char* wp = const_cast<char*>(serialized.data());
-  wp += WriteVarNum(wp, first.size());
-  std::memcpy(wp, first.data(), first.size());
-  wp += first.size();
-  wp += WriteVarNum(wp, second.size());
-  std::memcpy(wp, second.data(), second.size());
-  return serialized;
+int32_t StrSearchRegex(std::string_view text, std::string_view pattern) {
+  int32_t pos = -1;
+  try {
+    std::regex regex(pattern.begin(), pattern.end());
+    std::cmatch matched;
+    if (std::regex_search(text.begin(), text.end(), matched, regex)) {
+      return matched.position(0);
+    }
+  } catch (const std::regex_error& err) {
+    return -2;
+  }
+  return pos;
 }
 
 void DeserializeStrPair(

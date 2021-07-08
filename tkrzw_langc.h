@@ -216,6 +216,34 @@ uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t 
 void tkrzw_free_str_array(TkrzwStr* array, int32_t size);
 
 /**
+ * Searches a string for a pattern matching a regular expression.
+ * @param text The text to search.
+ * @param pattern The regular expression pattern to search for.
+ * @return The position of the first matching pattern.  If there's no matching pattern. -1 is
+ * returned.  If the regular expression is invalid, -2 is returned.
+ */
+int32_t tkrzw_str_search_regex(const char* text, const char* pattern);
+
+/**
+ * Replaces substrings matching a pattern of regular expression.
+ * @param text The text to process.
+ * @param pattern The regular expression pattern to search for.
+ * @param replace The replacing expression. "$&" means the entire matched pattern.  "$1", "$2",
+ * and etc represent n-th bracketed patterns.
+ * @return The pointer to the result string, which should be released by the free function.
+ */
+char* tkrzw_str_replace_regex(const char* text, const char* pattern, const char* replace);
+
+/**
+ * Gets the Levenshtein edit distance of two strings.
+ * @param a A string.
+ * @param b The other string.
+ * @param utf If true, text is treated as UTF-8.  If false, it is treated as raw bytes.
+ * @return The Levenshtein edit distance of the two strings.
+ */
+int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf);
+
+/**
  * Opens a database file and makes a database object.
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.

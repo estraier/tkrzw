@@ -557,6 +557,26 @@ std::string StrEncodeURL(std::string_view str);
 std::string StrDecodeURL(std::string_view str);
 
 /**
+ * Searches a string for a pattern matching a regular expression.
+ * @param text The text to search.
+ * @param pattern The regular expression pattern to search for.
+ * @return The position of the first matching pattern.  If there's no matching pattern. -1 is
+ * returned.  If the regular expression is invalid, -2 is returned.
+ */
+int32_t StrSearchRegex(std::string_view text, std::string_view pattern);
+
+/**
+ * Replaces substrings matching a pattern of regular expression.
+ * @param text The text to process.
+ * @param pattern The regular expression pattern to search for.
+ * @param replace The replacing expression. "$&" means the entire matched pattern.  "$1", "$2",
+ * and etc represent n-th bracketed patterns.
+ * @return The result string.  If the regular expression is invalid, an empty string is returned.
+ */
+std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
+                            std::string_view replace);
+
+/**
  * Converts a UTF-8 string into a UCS-4 vector.
  * @param utf The UTF-8 string.
  * @return The UCS-4 vector.

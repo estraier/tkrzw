@@ -132,6 +132,29 @@ void tkrzw_free_str_array(TkrzwStr* array, int32_t size) {
   xfree(array);
 }
 
+int32_t tkrzw_str_search_regex(const char* text, const char* pattern) {
+  assert(text != nullptr && pattern != nullptr);
+  return StrSearchRegex(text, pattern);
+}
+
+char* tkrzw_str_replace_regex(const char* text, const char* pattern, const char* replace) {
+  assert(text != nullptr && pattern != nullptr && replace != nullptr);
+  const std::string& processed = StrReplaceRegex(text, pattern, replace);
+  char* result = static_cast<char*>(xmalloc(processed.size() + 1));
+  std::memcpy(result, processed.c_str(), processed.size() + 1);
+  return result;
+}
+
+int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf) {
+  assert(a != nullptr && b != nullptr);
+  if (utf) {
+    const std::vector<uint32_t> a_ucs = ConvertUTF8ToUCS4(a);
+    const std::vector<uint32_t> b_ucs = ConvertUTF8ToUCS4(b);
+    return EditDistanceLev(a_ucs, b_ucs);
+  }
+  return EditDistanceLev(std::string_view(a), std::string_view(b));
+}
+
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
