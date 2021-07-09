@@ -105,17 +105,30 @@ then
   enables="$enables (profile)"
 fi
 
-# Sanitizing mode
-AC_ARG_ENABLE(sanitize,
-  AC_HELP_STRING([--enable-sanitize], [build with address sanitizing]))
-if test "$enable_sanitize" = "yes"
+# Address sanitizing mode
+AC_ARG_ENABLE(sanitize-address,
+  AC_HELP_STRING([--enable-sanitize-address], [build with address sanitizing]))
+if test "$enable_sanitize_address" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
   MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
   MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
-  enables="$enables (sanitize)"
+  enables="$enables (sanitize-address)"
+fi
+
+# Thread sanitizing mode
+AC_ARG_ENABLE(sanitize-thread,
+  AC_HELP_STRING([--enable-sanitize-thread], [build with thread sanitizing]))
+if test "$enable_sanitize_thread" = "yes"
+then
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=thread"
+  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=thread"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
+  enables="$enables (sanitize-thread)"
 fi
 
 # Disable optimization

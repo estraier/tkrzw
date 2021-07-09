@@ -775,14 +775,7 @@ Status TreeDBMImpl::ShouldBeRebuilt(bool* tobe) {
 }
 
 Status TreeDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  if (!reorg_ids_.IsEmpty()) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
-    const Status status = ReorganizeTree();
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-  }
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -793,6 +786,9 @@ Status TreeDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
   Status status(Status::SUCCESS);
+  if (!reorg_ids_.IsEmpty()) {
+    status |= ReorganizeTree();
+  }
   status |= FlushLeafCache(false);
   status |= FlushInnerCache(false);
   status |= SaveMetadata();

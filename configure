@@ -704,7 +704,8 @@ enable_option_checking
 enable_devel
 enable_debug
 enable_profile
-enable_sanitize
+enable_sanitize_address
+enable_sanitize_thread
 enable_opt
 enable_opt_native
 enable_static
@@ -1351,7 +1352,10 @@ Optional Features:
   --enable-devel          build for development
   --enable-debug          build for debugging
   --enable-profile        build for profiling
-  --enable-sanitize       build with address sanitizing
+  --enable-sanitize-address
+                          build with address sanitizing
+  --enable-sanitize-thread
+                          build with thread sanitizing
   --disable-opt           build without optimization
   --enable-opt-native     build with optimization for the native architecture
   --enable-static         build by static linking
@@ -2233,20 +2237,36 @@ then
   enables="$enables (profile)"
 fi
 
-# Sanitizing mode
-# Check whether --enable-sanitize was given.
-if test "${enable_sanitize+set}" = set; then :
-  enableval=$enable_sanitize;
+# Address sanitizing mode
+# Check whether --enable-sanitize-address was given.
+if test "${enable_sanitize_address+set}" = set; then :
+  enableval=$enable_sanitize_address;
 fi
 
-if test "$enable_sanitize" = "yes"
+if test "$enable_sanitize_address" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
   MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
   MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
-  enables="$enables (sanitize)"
+  enables="$enables (sanitize-address)"
+fi
+
+# Thread sanitizing mode
+# Check whether --enable-sanitize-thread was given.
+if test "${enable_sanitize_thread+set}" = set; then :
+  enableval=$enable_sanitize_thread;
+fi
+
+if test "$enable_sanitize_thread" = "yes"
+then
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=thread"
+  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=thread"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
+  enables="$enables (sanitize-thread)"
 fi
 
 # Disable optimization
