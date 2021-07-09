@@ -114,7 +114,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
         tkrzw::DBM::RecordProcessorIncrement proc(1, nullptr, 0);
         std::vector<std::pair<std::string_view, tkrzw::DBM::RecordProcessor*>> key_proc_pairs;
         for (int32_t j = 0; j < num_increments; j++) {
-          key_proc_pairs.emplace_back(std::make_pair(key, &proc));
+          key_proc_pairs.emplace_back(std::make_pair(std::string_view(key), &proc));
         }
         const Status status = dbm.ProcessMulti(key_proc_pairs, true);
         if (status != Status::SUCCESS) {
