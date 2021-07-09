@@ -314,14 +314,18 @@ class Status final {
   /**
    * Constructor representing a specific status.
    * @param code The status code.
+   */
+  Status(Code code) : code_(code), message_(nullptr) {}
+
+  /**
+   * Constructor representing a specific status with a message.
+   * @param code The status code.
    * @param message An arbitrary status message.
    */
-  Status(Code code, std::string_view message = "") : code_(code), message_(nullptr) {
-    if (!message.empty()) {
-      message_ = static_cast<char*>(xmalloc(message.size() + 1));
-      std::memcpy(message_, message.data(), message.size());
-      message_[message.size()] = '\0';
-    }
+  Status(Code code, std::string_view message) : code_(code), message_(nullptr) {
+    message_ = static_cast<char*>(xmalloc(message.size() + 1));
+    std::memcpy(message_, message.data(), message.size());
+    message_[message.size()] = '\0';
   }
 
   /**
@@ -437,20 +441,25 @@ class Status final {
   }
 
   /**
+   * Sets the code and an empty message.
+   * @param code The status code.
+   */
+  void Set(Code code) {
+    code_ = code;
+    xfree(message_);
+    message_ = nullptr;
+  }
+
+  /**
    * Sets the code and the message.
    * @param code The status code.
    * @param message An arbitrary status message.
    */
-  void Set(Code code, std::string_view message = "") {
+  void Set(Code code, std::string_view message) {
     code_ = code;
-    if (message.empty()) {
-      xfree(message_);
-      message_ = nullptr;
-    } else {
-      message_ = static_cast<char*>(xrealloc(message_, message.size() + 1));
-      std::memcpy(message_, message.data(), message.size());
-      message_[message.size()] = '\0';
-    }
+    message_ = static_cast<char*>(xrealloc(message_, message.size() + 1));
+    std::memcpy(message_, message.data(), message.size());
+    message_[message.size()] = '\0';
   }
 
   /**

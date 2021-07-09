@@ -61,9 +61,6 @@ inline int32_t tkrzw_fsync_range(int32_t fd, int64_t off, int64_t size) {
 #endif
 }
 
-
-
-
 class PositionalParallelFileImpl final {
  public:
   PositionalParallelFileImpl();
@@ -446,8 +443,9 @@ Status PositionalParallelFileImpl::SetHeadBuffer(int64_t size) {
     head_buffer_ = nullptr;
     return status;
   }
-  head_buffer_size_ = AlignNumber(size, block_size_);
-  head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
+  head_buffer_size_ = std::max<int64_t>(sizeof(void*), AlignNumber(size, block_size_));
+  head_buffer_ = static_cast<char*>(xmallocaligned(
+      std::max<int64_t>(sizeof(void*), block_size_), head_buffer_size_));
   std::memset(head_buffer_, 0, head_buffer_size_);
   const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_.load());
   status |= PReadSequence(fd_, 0, head_buffer_, read_size);
@@ -458,7 +456,8 @@ Status PositionalParallelFileImpl::SetAccessStrategy(int64_t block_size, int32_t
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  block_size_ = block_size;
+  block_size_ = block_size > 1 ?
+      AlignNumberPowTwo(std::max<int64_t>(sizeof(void*), block_size)) : 1;
   access_options_ = options;
   return Status(Status::SUCCESS);
 }
@@ -1119,7 +1118,7 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
     head_buffer_ = nullptr;
     return status;
   }
-  head_buffer_size_ = AlignNumber(size, block_size_);
+  head_buffer_size_ = std::max<int64_t>(sizeof(void*), AlignNumber(size, block_size_));
   head_buffer_ = static_cast<char*>(xmallocaligned(block_size_, head_buffer_size_));
   std::memset(head_buffer_, 0, head_buffer_size_);
   const int64_t read_size = std::min<int64_t>(head_buffer_size_, file_size_);
