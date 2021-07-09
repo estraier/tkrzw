@@ -3,6 +3,9 @@
 	- Release: 0.9.41
 	- Library version: 1.30.0
 
+	- Fix a bug of memory corruption of tkrzw_dbm_tran.
+	- Fix a metadata inconsistency of TreeDBM.
+
 2021-07-08  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.40
