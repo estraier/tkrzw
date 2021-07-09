@@ -140,8 +140,8 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file, bool with_pagecac
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
   EXPECT_EQ(10, tkrzw::GetFileSize(file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file->SetAccessStrategy(100, tkrzw::PositionalFile::ACCESS_PADDING));
-  EXPECT_EQ(100, file->GetBlockSize());
+            file->SetAccessStrategy(128, tkrzw::PositionalFile::ACCESS_PADDING));
+  EXPECT_EQ(128, file->GetBlockSize());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(5, buf, 5));
   EXPECT_EQ("ABCDE", std::string_view(buf, 5));
@@ -150,7 +150,7 @@ void PositionalFileTest<FILEIMPL>::BlockIOTest(FILEIMPL* file, bool with_pagecac
   EXPECT_EQ("ABCDEXYZ", std::string_view(buf, 8));
   EXPECT_EQ(13, file->GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
-  EXPECT_EQ(100, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(128, tkrzw::GetFileSize(file_path));
 }
 
 template <class FILEIMPL>
@@ -317,7 +317,7 @@ TEST_F(PositionalParallelFileTest, OrderedThread) {
 TEST_F(PositionalParallelFileTest, OrderedThreadBlock) {
   tkrzw::PositionalParallelFile file;
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file.SetAccessStrategy(100, tkrzw::PositionalFile::ACCESS_DEFAULT));
+            file.SetAccessStrategy(128, tkrzw::PositionalFile::ACCESS_DEFAULT));
   OrderedThreadTest(&file);
 }
 
@@ -445,7 +445,7 @@ TEST_F(PositionalAtomicFileTest, OrderedThread) {
 TEST_F(PositionalAtomicFileTest, OrderedThreadBlock) {
   tkrzw::PositionalAtomicFile file;
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            file.SetAccessStrategy(100, tkrzw::PositionalFile::ACCESS_DEFAULT));
+            file.SetAccessStrategy(128, tkrzw::PositionalFile::ACCESS_DEFAULT));
   OrderedThreadTest(&file);
 }
 

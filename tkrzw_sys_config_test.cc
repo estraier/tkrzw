@@ -46,6 +46,17 @@ TEST(SysConfigTest, AlignNumber) {
   EXPECT_EQ(512, tkrzw::AlignNumber(512, 512));
 }
 
+TEST(SysConfigTest, AlignNumberPowTwo) {
+  EXPECT_EQ(1, tkrzw::AlignNumberPowTwo(1));
+  EXPECT_EQ(2, tkrzw::AlignNumberPowTwo(2));
+  EXPECT_EQ(4, tkrzw::AlignNumberPowTwo(3));
+  EXPECT_EQ(4, tkrzw::AlignNumberPowTwo(4));
+  EXPECT_EQ(8, tkrzw::AlignNumberPowTwo(5));
+  EXPECT_EQ(8, tkrzw::AlignNumberPowTwo(7));
+  EXPECT_EQ(8, tkrzw::AlignNumberPowTwo(8));
+  EXPECT_EQ(16, tkrzw::AlignNumberPowTwo(9));
+}
+
 TEST(SysConfigTest, ByteOrders) {
   if (tkrzw::IS_BIG_ENDIAN) {
     EXPECT_EQ(0x1122, tkrzw::HostToNet16(0x1122));

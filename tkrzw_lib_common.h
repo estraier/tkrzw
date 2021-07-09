@@ -201,8 +201,9 @@ inline void xfree(void* ptr) {
 
 /**
  * Allocates an aligned region on memory.
- * @param alignment The alignment of the address.
- * @param size The size of the region.
+ * @param alignment The alignment of the address.  It must be a power of two and more than
+ * sizeof(void*).
+ * @param size The size of the region.  It is ceiled implicitly to a multiple of the alignment.
  * @return The pointer to the allocated region.
  */
 void* xmallocaligned(size_t alignment, size_t size);

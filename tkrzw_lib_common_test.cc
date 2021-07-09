@@ -98,8 +98,8 @@ TEST(LibCommonTest, XMalloc) {
     EXPECT_NE(nullptr, ptr);
   }
   tkrzw::xfree(ptr);
-  for (size_t size = 1; size <= 8192; size *= 2) {
-    ptr = tkrzw::xmallocaligned(512, size);
+  for (size_t size = sizeof(void*); size <= 8192; size *= 2) {
+    ptr = tkrzw::xmallocaligned(512, std::max<int32_t>(size, 512));
     EXPECT_NE(nullptr, ptr);
     EXPECT_EQ(0, reinterpret_cast<intptr_t>(ptr) % 512);
     std::memset(ptr, 0, size);

@@ -41,21 +41,24 @@ const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
 
 void* xmallocaligned(size_t alignment, size_t size) {
 #if defined(_SYS_LINUX_)
-  assert(alignment > 0);
+  assert(alignment >= sizeof(void*));
+  size = AlignNumber(size, alignment);
   void* ptr = std::aligned_alloc(alignment, size);
   if (ptr == nullptr) {
     throw std::bad_alloc();
   }
   return ptr;
 #elif defined(_SYS_WINDOWS_)
-  assert(alignment > 0);
+  assert(alignment >= sizeof(void*));
+  size = AlignNumber(size, alignment);
   void* ptr = _aligned_malloc(size, alignment);
   if (ptr == nullptr) {
     throw std::bad_alloc();
   }
   return ptr;
 #else
-  assert(alignment > 0);
+  assert(alignment >= sizeof(void*));
+  size = AlignNumber(size, alignment);
   void* ptr = xmalloc(size + sizeof(void*) + alignment);
   char* aligned = (char*)ptr + sizeof(void*);
   aligned += alignment - (intptr_t)aligned % alignment;

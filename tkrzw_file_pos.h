@@ -61,7 +61,7 @@ class PositionalFile : public File {
   /**
    * Sets access strategy.
    * @param block_size The block size to which all blocks should be aligned.  It must be a
-   * multiple of the block size of the underlying file system or device.
+   * power of two and a multiple of the block size of the underlying file system or device.
    * @param options Bit-sum options of PositionalFile::AccessOption enums;
    * @return The result status.
    */

@@ -97,12 +97,25 @@ AC_ARG_ENABLE(profile,
   AC_HELP_STRING([--enable-profile], [build for profiling]))
 if test "$enable_profile" = "yes"
 then
-  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
-  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline -pipe"
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -pg -O2 -fno-inline"
+  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -pg -O2 -fno-inline"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
   MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
   enables="$enables (profile)"
+fi
+
+# Sanitizing mode
+AC_ARG_ENABLE(sanitize,
+  AC_HELP_STRING([--enable-sanitize], [build with address sanitizing]))
+if test "$enable_sanitize" = "yes"
+then
+  MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
+  MYCXXFLAGS="-std=c++17 -Wall -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
+  MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
+  MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L/usr/local/lib"
+  enables="$enables (sanitize)"
 fi
 
 # Disable optimization

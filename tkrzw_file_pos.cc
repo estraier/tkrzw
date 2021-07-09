@@ -1132,7 +1132,8 @@ Status PositionalAtomicFileImpl::SetAccessStrategy(int64_t block_size, int32_t o
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
-  block_size_ = block_size;
+  block_size_ = block_size > 1 ?
+      AlignNumberPowTwo(std::max<int64_t>(sizeof(void*), block_size)) : 1;
   access_options_ = options;
   return Status(Status::SUCCESS);
 }

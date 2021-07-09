@@ -225,6 +225,13 @@ std::string HexDumpStr(const std::string_view& str, int32_t folding = 0);
 int64_t AlignNumber(int64_t num, int64_t alignment);
 
 /**
+ * Aligns a number to a power of two.
+ * @param num The number to align.
+ * @return The aligned number.
+ */
+int64_t AlignNumberPowTwo(int64_t num);
+
+/**
  * Normalizes a 16-bit number in the native order into the network byte order.
  * @param num The 16-bit number in the native order.
  * @return The number in the network byte order.
@@ -367,6 +374,16 @@ inline int64_t AlignNumber(int64_t num, int64_t alignment) {
   const int64_t diff = num % alignment;
   if (diff > 0) {
     num += alignment - diff;
+  }
+  return num;
+}
+
+inline int64_t AlignNumberPowTwo(int64_t num) {
+  int64_t remainder = num - 1;
+  num = 1;
+  while (remainder != 0) {
+    num *= 2;
+    remainder /= 2;
   }
   return num;
 }

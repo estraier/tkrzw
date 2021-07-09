@@ -244,7 +244,7 @@ void CommonFileTest::OpenOptionsTest(tkrzw::File* file) {
 void CommonFileTest::OrderedThreadTest(tkrzw::File* file) {
   constexpr int32_t num_threads = 10;
   constexpr int32_t num_iterations = 10000;
-  constexpr int32_t record_size = 100;
+  constexpr int32_t record_size = 128;
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 1.2));
@@ -261,7 +261,7 @@ void CommonFileTest::OrderedThreadTest(tkrzw::File* file) {
         std::this_thread::yield();
       }
       EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(off, read_buf, record_size));
-      EXPECT_EQ(0, memcmp(read_buf, write_buf, record_size));
+      EXPECT_EQ(0, std::memcmp(read_buf, write_buf, record_size));
     }
     delete[] read_buf;
     delete[] write_buf;
@@ -284,7 +284,7 @@ void CommonFileTest::OrderedThreadTest(tkrzw::File* file) {
     for (int32_t i = 0; i < num_iterations; i++) {
       const int32_t off = (i * num_threads + id) * record_size;
       EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(off, read_buf, record_size));
-      EXPECT_EQ(0, memcmp(read_buf, expected_buf, record_size));
+      EXPECT_EQ(0, std::memcmp(read_buf, expected_buf, record_size));
     }
     delete[] read_buf;
     delete[] expected_buf;
