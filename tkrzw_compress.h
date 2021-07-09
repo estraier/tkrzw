@@ -131,7 +131,7 @@ class DummyCompressor : public Compressor {
    * Makes a new Compressor object of the same concrete class.
    * @return The new Compressor object.
    */
-  std::unique_ptr<Compressor> MakeCompressor() const;
+  std::unique_ptr<Compressor> MakeCompressor() const override;
 
  private:
   /** Whether to add a checksum. */
@@ -202,7 +202,7 @@ class ZLibCompressor final : public Compressor {
    * Makes a new Compressor object of the same concrete class.
    * @return The new Compressor object.
    */
-  std::unique_ptr<Compressor> MakeCompressor() const;
+  std::unique_ptr<Compressor> MakeCompressor() const override;
 
  private:
   /** The compression level. */
@@ -263,7 +263,7 @@ class ZStdCompressor final : public Compressor {
    * Makes a new Compressor object of the same concrete class.
    * @return The new Compressor object.
    */
-  std::unique_ptr<Compressor> MakeCompressor() const;
+  std::unique_ptr<Compressor> MakeCompressor() const override;
 
  private:
   /** The compression level. */
@@ -321,7 +321,7 @@ class LZ4Compressor final : public Compressor {
    * Makes a new Compressor object of the same concrete class.
    * @return The new Compressor object.
    */
-  std::unique_ptr<Compressor> MakeCompressor() const;
+  std::unique_ptr<Compressor> MakeCompressor() const override;
 
  private:
   /** The acceleration level. */
@@ -392,7 +392,7 @@ class LZMACompressor final : public Compressor {
    * Makes a new Compressor object of the same concrete class.
    * @return The new Compressor object.
    */
-  std::unique_ptr<Compressor> MakeCompressor() const;
+  std::unique_ptr<Compressor> MakeCompressor() const override;
 
  private:
   /** The compression level. */

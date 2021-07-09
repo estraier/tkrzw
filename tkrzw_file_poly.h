@@ -58,7 +58,7 @@ class PolyFile final : public File {
    * @details By default, exclusive locking against other processes is done for a writer and
    * shared locking against other processes is done for a reader.
    */
-  Status Open(const std::string& path, bool writable, int32_t options = OPEN_DEFAULT) {
+  Status Open(const std::string& path, bool writable, int32_t options = OPEN_DEFAULT) override {
     return OpenAdvanced(path, writable, options);
   }
 
