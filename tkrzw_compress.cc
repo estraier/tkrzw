@@ -437,7 +437,7 @@ char* LZMACompressor::Decompress(const void* buf, size_t size, size_t* sp) {
 }
 
 std::unique_ptr<Compressor> LZMACompressor::MakeCompressor() const {
-  return std::make_unique<LZMACompressor>(level_);
+  return std::make_unique<LZMACompressor>(level_, metadata_mode_);
 }
 
 }  // namespace tkrzw
