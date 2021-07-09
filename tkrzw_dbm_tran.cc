@@ -251,6 +251,7 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
     const int64_t restored_num_records = restored_dbm.CountSimple();
     if (restored_num_records != num_records) {
       PrintL("Inconsistent count: ", num_records, " vs ", restored_num_records);
+      has_error = true;
     }
   }
   const int64_t log_freq = std::max<int64_t>(num_records / 25, 10);
