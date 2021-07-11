@@ -1,3 +1,10 @@
+2021-07-11  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.41
+	- Library version: 1.30.0
+
+	- Fix a compilation error on Windows.
+
 2021-07-09  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.41

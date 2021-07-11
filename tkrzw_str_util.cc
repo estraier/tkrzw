@@ -1441,7 +1441,7 @@ std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
     std::regex regex(pattern.begin(), pattern.end());
     std::regex_replace(std::back_inserter(result), text.begin(), text.end(), regex,
                        std::string(replace));
-  } catch (const std::regex_error& err) {
+  } catch (const std::regex_error&) {
     result = "";
   }
   return result;
@@ -1640,11 +1640,11 @@ int32_t StrSearchRegex(std::string_view text, std::string_view pattern) {
   int32_t pos = -1;
   try {
     std::regex regex(pattern.begin(), pattern.end());
-    std::cmatch matched;
+    std::match_results<std::string_view::const_iterator> matched;
     if (std::regex_search(text.begin(), text.end(), matched, regex)) {
       return matched.position(0);
     }
-  } catch (const std::regex_error& err) {
+  } catch (const std::regex_error&) {
     return -2;
   }
   return pos;
