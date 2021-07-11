@@ -504,6 +504,7 @@ TEST(LangCTest, Sharding) {
   std::string params = "truncate=true";
   params += ",num_shards=" + tkrzw::ToString(num_shards);
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, params.c_str());
+  ASSERT_NE(nullptr, dbm);
   EXPECT_TRUE(tkrzw_dbm_is_healthy(dbm));
   EXPECT_TRUE(tkrzw_dbm_is_writable(dbm));
   for (int32_t i = 0; i < num_shards; i++) {
@@ -525,6 +526,7 @@ TEST(LangCTest, Sharding) {
     EXPECT_TRUE(tkrzw::PathIsFile(shard_path));
   }
   dbm = tkrzw_dbm_open(restored_file_path.c_str(), false, params.c_str());
+  ASSERT_NE(nullptr, dbm);
   for (int32_t i = 0; i < num_records; i++) {
     const std::string key = tkrzw::ToString(i);
     int32_t value_size = 0;
@@ -534,6 +536,33 @@ TEST(LangCTest, Sharding) {
     tkrzw::xfree(value_ptr);
   }
   EXPECT_EQ(num_records, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+}
+
+TEST(LangCTest, Export) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  const std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
+  TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true");
+  ASSERT_NE(nullptr, dbm);
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "ichi", -1, "first", -1, false));
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "ni", -1, "second", -1, false));
+  TkrzwFile* file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
+  ASSERT_NE(nullptr, file);
+  EXPECT_TRUE(tkrzw_dbm_export_to_flat_records(dbm, file));
+  EXPECT_EQ(25, tkrzw_file_get_size(file));
+  EXPECT_TRUE(tkrzw_dbm_clear(dbm));
+  EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_dbm_import_from_flat_records(dbm, file));
+  EXPECT_EQ(2, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_file_close(file));
+  file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
+  ASSERT_NE(nullptr, file);
+  EXPECT_TRUE(tkrzw_dbm_export_keys_as_lines(dbm, file));
+  EXPECT_TRUE(tkrzw_file_close(file));
+  std::string content;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(copy_path, &content));
+  EXPECT_EQ("ichi\nni\n", content);
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 

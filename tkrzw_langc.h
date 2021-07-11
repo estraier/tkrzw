@@ -493,6 +493,30 @@ bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path);
 bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm);
 
 /**
+ * Exports all records of a database to a flat record file.
+ * @param dbm The database object.
+ * @param file The file object to write records in.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* file);
+
+/**
+ * Imports records to a database from a flat record file.
+ * @param dbm The database object.
+ * @param file The file object to read records from.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* file);
+
+/**
+ * Exports the keys of all records of a database as lines to a text file.
+ * @param dbm The database object of the database.
+ * @param file The file object to write keys in.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* file);
+
+/**
  * Inspects the database.
  * @param dbm The database object.
  * @return A string contains TSV key-value pairs separated by linefeeds.  The region should be
@@ -523,7 +547,7 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
 
 /**
  * Searches a database and get keys which match a pattern, according to a mode expression.
- * @param dbm The DBM object of the database.
+ * @param dbm The database object.
  * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"

@@ -3,6 +3,7 @@
 	- Release: 0.9.41
 	- Library version: 1.30.0
 
+	- Exporting functions are added to the C language interface.
 	- Fix a compilation error on Windows.
 
 2021-07-09  Mikio Hirabayashi  <hirarin@gmail.com>
