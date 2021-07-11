@@ -156,6 +156,8 @@ Status SearchDBMModal(
  * @param dbm The DBM object of the database.
  * @param file The file object to write records in.
  * @return The result status.
+ * @details A flat record file contains a sequence of binary records without any high level
+ * structure so it is useful as a intermediate file for data migration.
  */
 Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file);
 
