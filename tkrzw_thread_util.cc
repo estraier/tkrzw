@@ -380,6 +380,77 @@ const std::vector<int64_t> ScopedHashLockMulti::GetBucketIndices() const {
   return bucket_indices_;
 }
 
+TaskQueue::TaskQueue() :
+    queue_(), num_tasks_(0), threads_(), running_(false), mutex_(), cond_() {}
+
+TaskQueue::~TaskQueue() {
+  if (running_.load()) {
+    Stop(1.0);
+  }
+}
+
+void TaskQueue::Start(int32_t num_worker_threads) {
+  threads_.reserve(num_worker_threads);
+  running_ = true;
+  for (int32_t i = 0; i < num_worker_threads; i++) {
+    const auto timeout = std::chrono::milliseconds(100 * num_worker_threads);
+    auto worker = [&]() {
+                    while (running_.load()) {
+                      TaskLambdaType task = nullptr;
+                      {
+                        std::unique_lock<std::mutex> lock(mutex_);
+                        if (queue_.empty()) {
+                          cond_.wait_for(lock, timeout);
+                        } else {
+                          task = queue_.front();
+                          queue_.pop();
+                          num_tasks_.store(queue_.size());
+                        }
+                      }
+                      if (task != nullptr) {
+                        task();
+                      }
+                    }
+                  };
+    threads_.emplace_back(std::thread(worker));
+  }
+}
+
+void TaskQueue::Stop(double timeout) {
+  cond_.notify_all();
+  Sleep(0.01);
+  const double end_time = GetWallTime() + timeout;
+  while (GetWallTime() < end_time) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (queue_.empty()) {
+        break;
+      }
+    }
+    cond_.notify_all();
+    Sleep(0.01);
+  }
+  running_.store(false);
+  cond_.notify_all();
+  for (auto& thread : threads_) {
+    thread.join();
+  }
+  threads_.clear();
+}
+
+void TaskQueue::Add(TaskLambdaType task) {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    queue_.push(task);
+    num_tasks_.store(queue_.size());
+  }
+  cond_.notify_one();
+}
+
+int32_t TaskQueue::GetSize() {
+  return num_tasks_.load();
+}
+
 }  // namespace tkrzw
 
 // END OF FILE

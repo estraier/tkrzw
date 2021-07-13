@@ -15,9 +15,13 @@
 #define _TKRZW_THREAD_UTIL_H
 
 #include <atomic>
+#include <condition_variable>
+#include <functional>
+#include <queue>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include <cinttypes>
@@ -431,6 +435,65 @@ class ScopedHashLockMulti final {
   std::vector<int64_t> bucket_indices_;
   /** Whether it is an exclusive lock. */
   bool writable_;
+};
+
+/**
+ * Task queue with a thread pool
+ */
+class TaskQueue final {
+ public:
+  /**
+   * Lambda function type to do a task.
+   */
+  typedef std::function<void()> TaskLambdaType;
+
+  /**
+   * Default constructor.
+   */
+  TaskQueue();
+
+  /**
+   * Destructor.
+   */
+  ~TaskQueue();
+
+  /**
+   * Starts worker threads.
+   * @param num_worker_threads The number of worker threads.
+   */
+  void Start(int32_t num_worker_threads);
+
+  /**
+   * Stops worker threads.
+   * @param timeout The timeout in seconds to wait for all tasks in the queue to be done.
+   */
+  void Stop(double timeout);
+
+  /**
+   * Adds a task to the queue.
+   * @param task The lambda function to the task.
+   */
+  void Add(TaskLambdaType task);
+
+  /**
+   * Get the number of tasks in the queue.
+   * @return The number of tasks in the queue.
+   */
+  int32_t GetSize();
+
+ private:
+  /** The task queue. */
+  std::queue<TaskLambdaType> queue_;
+  /** The number of tasks. */
+  std::atomic_int32_t num_tasks_;
+  /** The worker threads. */
+  std::vector<std::thread> threads_;
+  /** Whether the worker is running or not. */
+  std::atomic_bool running_;
+  /** The mutex to guard the task queue. */
+  std::mutex mutex_;
+  /** The conditional variable to notify the change. */
+  std::condition_variable cond_;
 };
 
 }  // namespace tkrzw

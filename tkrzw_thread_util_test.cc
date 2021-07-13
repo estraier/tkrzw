@@ -410,4 +410,20 @@ TEST(ThreadUtilTest, HashMutex) {
   }
 }
 
+TEST(ThreadUtilTest, TaskQueue) {
+  constexpr int32_t num_tasks = 10000;
+  std::atomic_int32_t count = 0;
+  tkrzw::TaskQueue queue;
+  queue.Start(10);
+  for (int32_t i = 0; i < num_tasks; i++) {
+    auto task = [&]() {
+                  count.fetch_add(1);
+                };
+    queue.Add(task);
+  }
+  queue.Stop(0.05);
+  EXPECT_EQ(0, queue.GetSize());
+  EXPECT_EQ(num_tasks, count.load());
+}
+
 // END OF FILE
