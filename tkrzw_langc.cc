@@ -606,23 +606,25 @@ bool tkrzw_dbm_iter_jump(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_si
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size) {
+bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size,
+                               bool inclusive) {
   assert(iter != nullptr && key_ptr != nullptr);
   DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
   if (key_size < 0) {
     key_size = std::strlen(key_ptr);
   }
-  last_status = xiter->JumpLower(std::string_view(key_ptr, key_size));
+  last_status = xiter->JumpLower(std::string_view(key_ptr, key_size), inclusive);
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size) {
+bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size,
+                               bool inclusive) {
   assert(iter != nullptr && key_ptr != nullptr);
   DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
   if (key_size < 0) {
     key_size = std::strlen(key_ptr);
   }
-  last_status = xiter->JumpUpper(std::string_view(key_ptr, key_size));
+  last_status = xiter->JumpUpper(std::string_view(key_ptr, key_size), inclusive);
   return last_status == Status::SUCCESS;
 }
 

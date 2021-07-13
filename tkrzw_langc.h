@@ -612,22 +612,26 @@ bool tkrzw_dbm_iter_jump(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_si
  * @param iter The iterator object.
  * @param key_ptr The key pointer.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param inclusive If true, the condition is inclusive: equal to or lower than the key.
  * @return True on success or false on failure.
  * @details Even if there's no matching record, the operation doesn't fail.  This method is
  * suppoerted only by ordered databases.
  */
-bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size);
+bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size,
+                               bool inclusive);
 
 /**
  * Initializes the iterator to indicate the first record whose key is upper than a given key.
  * @param iter The iterator object.
  * @param key_ptr The key pointer.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param inclusive If true, the condition is inclusive: equal to or upper than the key.
  * @return True on success or false on failure.
  * @details Even if there's no matching record, the operation doesn't fail.  This method is
  * suppoerted only by ordered databases.
  */
-bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size);
+bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_size,
+                               bool inclusive);
 
 /**
  * Moves the iterator to the next record.

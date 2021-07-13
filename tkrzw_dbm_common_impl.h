@@ -87,6 +87,22 @@ Status SearchDBM(
     bool (*matcher)(std::string_view, std::string_view) = StrContains);
 
 /**
+ * Searches an ordered database and get keys which match a boundary condition.
+ * @param dbm The DBM object of the database.
+ * @param pattern The boundary pattern of the origin.
+ * @param upper If true, keys whose positions are upper than the boundary pattern are picked up.
+ * If false, keys whose positions are lower than the boundary pattern are picked up.
+ * @param inclusive If true, keys whose position are the same as the boundary pattern are included.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @return The result status.
+ * @details Even if there's no matching record, the operation doesn't fail.  This method is
+ * suppoerted only for ordered databases.
+ */
+Status SearchDBMOrder(DBM* dbm, std::string_view pattern, bool upper, bool inclusive,
+                      std::vector<std::string>* matched, size_t capacity = 0);
+
+/**
  * Searches a database and get keys which begin with a pattern.
  * @param dbm The DBM object of the database.
  * @param pattern The pattern for forward matching.

@@ -364,7 +364,7 @@ TEST(LangCTest, Iterator) {
     EXPECT_EQ(value, std::string_view(value_ptr, value_size));
     tkrzw::xfree(value_ptr);
     tkrzw::xfree(key_ptr);
-    EXPECT_TRUE(tkrzw_dbm_iter_jump_lower(jump_iter, key.data(), key.size()));
+    EXPECT_TRUE(tkrzw_dbm_iter_jump_lower(jump_iter, key.data(), key.size(), false));
     if (count > 1) {
       key_ptr = tkrzw_dbm_iter_get_key(jump_iter, &key_size);
       ASSERT_NE(nullptr, key_ptr);
@@ -373,7 +373,7 @@ TEST(LangCTest, Iterator) {
     } else {
       EXPECT_EQ(nullptr, tkrzw_dbm_iter_get_key(jump_iter, &key_size));
     }
-    EXPECT_TRUE(tkrzw_dbm_iter_jump_upper(jump_iter, key.data(), key.size()));
+    EXPECT_TRUE(tkrzw_dbm_iter_jump_upper(jump_iter, key.data(), key.size(), false));
     if (count < tkrzw_dbm_count(dbm)) {
       key_ptr = tkrzw_dbm_iter_get_key(jump_iter, &key_size);
       ASSERT_NE(nullptr, key_ptr);

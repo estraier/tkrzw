@@ -619,7 +619,7 @@ class DBM {
     /**
      * Initializes the iterator to indicate the last record whose key is lower than a given key.
      * @param key The key to compare with.
-     * @param inclusive If true, the considtion is inclusive: equal to or lower than the key.
+     * @param inclusive If true, the condition is inclusive: equal to or lower than the key.
      * @return The result status.
      * @details Even if there's no matching record, the operation doesn't fail.  This method is
      * suppoerted only by ordered databases.
@@ -629,7 +629,7 @@ class DBM {
     /**
      * Initializes the iterator to indicate the first record whose key is upper than a given key.
      * @param key The key to compare with.
-     * @param inclusive If true, the considtion is inclusive: equal to or upper than the key.
+     * @param inclusive If true, the condition is inclusive: equal to or upper than the key.
      * @return The result status.
      * @details Even if there's no matching record, the operation doesn't fail.  This method is
      * suppoerted only by ordered databases.
