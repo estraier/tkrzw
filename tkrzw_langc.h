@@ -551,7 +551,9 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
  * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
- * extracts keys whose edit distance to the pattern is the least.
+ * extracts keys whose edit distance to the pattern is the least.  Ordered databases support
+ * "upper" and "lower" which extract keys whose positions are equal to or upper/lower than the
+ * pattern.  "upperex" and "lowerex" are their exclusive versions.
  * @param pattern_ptr The key pointer.
  * @param pattern_size The key size.  If it is negative, strlen(pattern_ptr) is used.
  * @param capacity The maximum records to obtain.  0 means unlimited.

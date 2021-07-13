@@ -1,3 +1,10 @@
+2021-07-13  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.43
+	- Library version: 1.32.0
+
+	- Add SearchDBMOrder method.
+
 2021-07-11  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.42

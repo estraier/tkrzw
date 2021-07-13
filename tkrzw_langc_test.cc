@@ -448,6 +448,16 @@ TEST(LangCTest, Search) {
     EXPECT_STREQ(keys[2].ptr, "100");
     tkrzw_free_str_array(keys, num_keys);
   }
+  {
+    int32_t num_keys = 0;
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "upper", "5", -1, 3, &num_keys);
+    ASSERT_NE(nullptr, keys);
+    ASSERT_EQ(3, num_keys);
+    EXPECT_STREQ(keys[0].ptr, "5");
+    EXPECT_STREQ(keys[1].ptr, "50");
+    EXPECT_STREQ(keys[2].ptr, "51");
+    tkrzw_free_str_array(keys, num_keys);
+  }
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 

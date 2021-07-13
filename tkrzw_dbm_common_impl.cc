@@ -83,6 +83,33 @@ Status SearchDBM(
   return dbm->ProcessEach(&exporter, false);
 }
 
+Status SearchDBMOrder(DBM* dbm, std::string_view pattern, bool upper, bool inclusive,
+                      std::vector<std::string>* matched, size_t capacity) {
+  assert(dbm != nullptr && matched != nullptr);
+  auto iter = dbm->MakeIterator();
+  Status status =
+      upper ? iter->JumpUpper(pattern, inclusive) : iter->JumpLower(pattern, inclusive);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  while (matched->size() < capacity) {
+    std::string key;
+    status = iter->Get(&key);
+    if (status != Status::SUCCESS) {
+      if (status != Status::NOT_FOUND_ERROR) {
+        return status;
+      }
+      break;
+    }
+    matched->emplace_back(std::move(key));
+    status = upper ? iter->Next() : iter->Previous();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
 Status SearchDBMForwardMatch(
     DBM* dbm, std::string_view pattern, std::vector<std::string>* matched, size_t capacity) {
   assert(dbm != nullptr && matched != nullptr);
@@ -241,6 +268,14 @@ Status SearchDBMModal(
     status = SearchDBMEditDistance(dbm, pattern, matched, capacity);
   } else if (mode == "editbin") {
     status = SearchDBMEditDistanceBinary(dbm, pattern, matched, capacity);
+  } else if (mode == "upper") {
+    status = SearchDBMOrder(dbm, pattern, true, true, matched, capacity);
+  } else if (mode == "upperex") {
+    status = SearchDBMOrder(dbm, pattern, true, false, matched, capacity);
+  } else if (mode == "lower") {
+    status = SearchDBMOrder(dbm, pattern, false, true, matched, capacity);
+  } else if (mode == "lowerex") {
+    status = SearchDBMOrder(dbm, pattern, false, false, matched, capacity);
   } else {
     status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
   }

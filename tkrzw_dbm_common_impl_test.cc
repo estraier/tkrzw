@@ -112,11 +112,55 @@ TEST(DBMCommonImplTest, GetHashBucketSize) {
   EXPECT_EQ(68719476767ULL, tkrzw::GetHashBucketSize(68719476736ULL));
 }
 
+TEST(DBMCommonImplTest, SearchDBMOrder) {
+  tkrzw::StdTreeDBM dbm;
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::SPrintF("%08d", i);
+    dbm.Set(key, "");
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000050", true, true, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000050", "00000051", "00000052"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000050", true, false, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000051", "00000052", "00000053"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000098", true, false, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000099", "00000100"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000050", false, true, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000050", "00000049", "00000048"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000050", false, false, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000049", "00000048", "00000047"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMOrder(&dbm, "00000003", false, false, &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("00000002", "00000001"));
+  }
+}
+
 TEST(DBMCommonImplTest, SearchDBMModal) {
   tkrzw::StdTreeDBM dbm;
   for (int32_t i = 1; i <= 100; i++) {
     const std::string key = tkrzw::ToString(i);
-    dbm.Set(key, key);
+    dbm.Set(key, "");
   }
   {
     std::vector<std::string> keys;
