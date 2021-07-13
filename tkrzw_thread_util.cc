@@ -385,7 +385,7 @@ TaskQueue::TaskQueue() :
 
 TaskQueue::~TaskQueue() {
   if (running_.load()) {
-    Stop(1.0);
+    Stop(0.1);
   }
 }
 
@@ -393,32 +393,30 @@ void TaskQueue::Start(int32_t num_worker_threads) {
   threads_.reserve(num_worker_threads);
   running_ = true;
   for (int32_t i = 0; i < num_worker_threads; i++) {
-    const auto timeout = std::chrono::milliseconds(100 * num_worker_threads);
-    auto worker = [&]() {
-                    while (running_.load()) {
-                      TaskLambdaType task = nullptr;
-                      {
-                        std::unique_lock<std::mutex> lock(mutex_);
-                        if (queue_.empty()) {
-                          cond_.wait_for(lock, timeout);
-                        } else {
-                          task = queue_.front();
-                          queue_.pop();
-                          num_tasks_.store(queue_.size());
-                        }
-                      }
-                      if (task != nullptr) {
-                        task();
-                      }
-                    }
-                  };
+    auto worker =
+        [&]() {
+          while (running_.load()) {
+            TaskLambdaType task = nullptr;
+            {
+              std::unique_lock<std::mutex> lock(mutex_);
+              if (queue_.empty()) {
+                cond_.wait(lock, [&]() { return !running_.load() || !queue_.empty(); });
+              } else {
+                task = queue_.front();
+                queue_.pop();
+                num_tasks_.store(queue_.size());
+              }
+            }
+            if (task != nullptr) {
+              task();
+            }
+          }
+        };
     threads_.emplace_back(std::thread(worker));
   }
 }
 
 void TaskQueue::Stop(double timeout) {
-  cond_.notify_all();
-  Sleep(0.01);
   const double end_time = GetWallTime() + timeout;
   while (GetWallTime() < end_time) {
     {
@@ -436,6 +434,7 @@ void TaskQueue::Stop(double timeout) {
     thread.join();
   }
   threads_.clear();
+  num_tasks_.store(0);
 }
 
 void TaskQueue::Add(TaskLambdaType task) {
