@@ -416,10 +416,16 @@ TEST(ThreadUtilTest, TaskQueue) {
   tkrzw::TaskQueue queue;
   queue.Start(10);
   for (int32_t i = 0; i < num_tasks; i++) {
-    auto task = [&]() {
+    auto task = [&](int32_t id) {
                   count.fetch_add(1);
+                  if (id % 10 == 0) {
+                    std::this_thread::yield();
+                  }
                 };
-    queue.Add(task);
+    queue.Add(std::bind(task, i));
+    if (i % 10 == 0) {
+      std::this_thread::yield();
+    }
   }
   queue.Stop(tkrzw::INT32MAX);
   EXPECT_EQ(0, queue.GetSize());
