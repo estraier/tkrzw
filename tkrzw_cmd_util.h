@@ -32,6 +32,7 @@
 #include "tkrzw_containers.h"
 #include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
+#include "tkrzw_dbm_async.h"
 #include "tkrzw_dbm_baby.h"
 #include "tkrzw_dbm_cache.h"
 #include "tkrzw_dbm_common_impl.h"
