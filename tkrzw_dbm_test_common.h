@@ -301,6 +301,12 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("one"));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("two"));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("three"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->AppendMulti(
+      {{"one", "1"}, {"two", "2"}}, ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->AppendMulti(
+      {{"one", "ichi"}, {"two", "ni"}}, ":"));
+  EXPECT_EQ("1:ichi", dbm->GetSimple("one"));
+  EXPECT_EQ("2:ni", dbm->GetSimple("two"));
 }
 
 inline void CommonDBMTest::SequenceTest(tkrzw::DBM* dbm) {

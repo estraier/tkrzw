@@ -993,6 +993,43 @@ class DBM {
   }
 
   /**
+   * Appends data to multiple records, with a map of strings.
+   * @param records The records to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  virtual Status AppendMulti(
+      const std::map<std::string_view, std::string_view>& records, std::string_view delim = "") {
+    Status status(Status::SUCCESS);
+    for (const auto& record : records) {
+      status |= Append(record.first, record.second, delim);
+      if (status != Status::SUCCESS) {
+        break;
+      }
+    }
+    return status;
+  }
+
+  /**
+   * Appends data to multiple records, with an initializer list.
+   * @param records The records to store.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  virtual Status AppendMulti(
+      const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
+      std::string_view delim = "") {
+    std::map<std::string_view, std::string_view> map_records;
+    for (const auto& record : records) {
+      map_records.emplace(std::pair(
+          std::string_view(record.first), std::string_view(record.second)));
+    }
+    return AppendMulti(map_records, delim);
+  }
+
+  /**
    * Compares the value of a record and exchanges if the condition meets.
    * @param key The key of the record.
    * @param expected The expected value.  If the data is nullptr, no existing record is expected.

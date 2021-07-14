@@ -93,17 +93,6 @@ class AsyncDBM final {
       const std::map<std::string_view, std::string_view>& records, bool overwrite = true);
 
   /**
-   * Appends data at the end of a record of a key.
-   * @param key The key of the record.
-   * @param value The value to append.
-   * @param delim The delimiter to put after the existing record.
-   * @return The result status.
-   * @details If there's no existing record, the value is set without the delimiter.
-   */
-  std::future<Status> Append(
-      std::string_view key, std::string_view value, std::string_view delim = "");
-
-  /**
    * Removes a record of a key.
    * @param key The key of the record.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
@@ -116,6 +105,27 @@ class AsyncDBM final {
    * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
   std::future<Status> RemoveMulti(const std::vector<std::string_view>& keys);
+
+  /**
+   * Appends data at the end of a record of a key.
+   * @param key The key of the record.
+   * @param value The value to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  std::future<Status> Append(
+      std::string_view key, std::string_view value, std::string_view delim = "");
+
+  /**
+   * Appends data to multiple records, with a map of strings.
+   * @param records The records to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  std::future<Status> AppendMulti(
+      const std::map<std::string_view, std::string_view>& records, std::string_view delim = "");
 
   /**
    * Compares the value of a record and exchanges if the condition meets.

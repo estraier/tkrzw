@@ -94,11 +94,12 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(105, async_dbm.Increment("b", 3, 100).get().second);
     const std::map<std::string_view, std::string_view> records = {{"a", "A"}, {"b", "BB"}};
     EXPECT_EQ(tkrzw::Status::SUCCESS, async_dbm.SetMulti(records, true).get());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async_dbm.AppendMulti(records, ":").get());
     const std::vector<std::string_view> get_keys = {"a", "b", "c", "d"};
     auto get_results = async_dbm.GetMulti(get_keys).get();
     EXPECT_EQ(2, get_results.size());
-    EXPECT_EQ("A", get_results["a"]);
-    EXPECT_EQ("BB", get_results["b"]);
+    EXPECT_EQ("A:A", get_results["a"]);
+    EXPECT_EQ("BB:BB", get_results["b"]);
     const std::vector<std::string_view> remove_keys = {"a", "b"};
     EXPECT_EQ(tkrzw::Status::SUCCESS, async_dbm.RemoveMulti(remove_keys).get());
     async_dbm.Set("1", "10");

@@ -188,6 +188,34 @@ std::future<Status> AsyncDBM::RemoveMulti(const std::vector<std::string_view>& k
   return future;
 }
 
+std::future<Status> AsyncDBM::AppendMulti(
+    const std::map<std::string_view, std::string_view>& records, std::string_view delim) {
+  struct AppendMultiTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::map<std::string, std::string> records;
+    std::map<std::string_view, std::string_view> record_views;
+    std::string delim;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->AppendMulti(record_views, delim);
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<AppendMultiTask>();
+  task->dbm = dbm_;
+  for (const auto& record : records) {
+    task->records.emplace(std::make_pair(record.first, record.second));
+  }
+  for (const auto& record : task->records) {
+    task->record_views.emplace(std::make_pair(
+        std::string_view(record.first), std::string_view(record.second)));
+  }
+  task->delim = delim;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
 std::future<Status> AsyncDBM::CompareExchange(std::string_view key, std::string_view expected,
                                               std::string_view desired) {
   struct CompareExchangeTask : public TaskQueue::Task {
