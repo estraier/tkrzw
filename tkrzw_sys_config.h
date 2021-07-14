@@ -130,6 +130,7 @@
 #include <chrono>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <initializer_list>
 #include <limits>
 #include <list>

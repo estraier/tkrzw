@@ -396,7 +396,7 @@ void TaskQueue::Start(int32_t num_worker_threads) {
     auto worker =
         [&]() {
           while (running_.load()) {
-            TaskLambdaType task = nullptr;
+            std::shared_ptr<Task> task(nullptr);
             {
               std::unique_lock<std::mutex> lock(mutex_);
               if (queue_.empty()) {
@@ -408,7 +408,7 @@ void TaskQueue::Start(int32_t num_worker_threads) {
               }
             }
             if (task != nullptr) {
-              task();
+              task->Do();
             }
           }
         };
@@ -437,13 +437,18 @@ void TaskQueue::Stop(double timeout) {
   num_tasks_.store(0);
 }
 
-void TaskQueue::Add(TaskLambdaType task) {
+
+void TaskQueue::Add(std::unique_ptr<Task> task) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    queue_.push(task);
+    queue_.push(std::move(task));
     num_tasks_.store(queue_.size());
   }
   cond_.notify_one();
+}
+
+void TaskQueue::Add(TaskLambdaType task) {
+  Add(std::make_unique<TaskWithLambda>(task));
 }
 
 int32_t TaskQueue::GetSize() {

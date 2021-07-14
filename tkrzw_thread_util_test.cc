@@ -426,4 +426,24 @@ TEST(ThreadUtilTest, TaskQueue) {
   EXPECT_EQ(num_tasks, count.load());
 }
 
+TEST(ThreadUtilTest, TaskQueueFuture) {
+  constexpr int32_t num_tasks = 4000;
+  std::atomic_int32_t count = 0;
+  tkrzw::TaskQueue queue;
+  queue.Start(10);
+  for (int32_t i = 0; i < num_tasks; i++) {
+    std::promise<void> p;
+    std::future<void> f = p.get_future();
+    auto task = [&]() {
+                  count.fetch_add(1);
+                  p.set_value();
+                };
+    queue.Add(task);
+    f.wait();
+  }
+  EXPECT_EQ(0, queue.GetSize());
+  queue.Stop(0.0);
+  EXPECT_EQ(num_tasks, count.load());
+}
+
 // END OF FILE

@@ -443,9 +443,48 @@ class ScopedHashLockMulti final {
 class TaskQueue final {
  public:
   /**
+   * Interface of a task.
+   */
+  class Task {
+   public:
+    /**
+     * Destructor.
+     */
+    virtual ~Task() = default;
+
+    /**
+     * Do the task.
+     */
+    virtual void Do() = 0;
+  };
+
+  /**
    * Lambda function type to do a task.
    */
   typedef std::function<void()> TaskLambdaType;
+
+  /**
+   * Task implementation with a lambda function.
+   */
+  class TaskWithLambda final : public Task {
+   public:
+    /**
+     * Constructor.
+     * @param lambda A lambda function to process a task.
+     */
+    explicit TaskWithLambda(TaskLambdaType lambda) : lambda_(lambda) {}
+
+    /**
+     * Do the task.
+     */
+    void Do() override {
+      return lambda_();
+    }
+
+   private:
+    // Lambda function to process a task.
+    TaskLambdaType lambda_;
+  };
 
   /**
    * Default constructor.
@@ -471,7 +510,13 @@ class TaskQueue final {
 
   /**
    * Adds a task to the queue.
-   * @param task The lambda function to the task.
+   * @param task The task object.
+   */
+  void Add(std::unique_ptr<Task> task);
+
+  /**
+   * Adds a task to the queue.
+   * @param task The lambda function to do the task.
    */
   void Add(TaskLambdaType task);
 
@@ -483,7 +528,7 @@ class TaskQueue final {
 
  private:
   /** The task queue. */
-  std::queue<TaskLambdaType> queue_;
+  std::queue<std::shared_ptr<Task>> queue_;
   /** The number of tasks. */
   std::atomic_int32_t num_tasks_;
   /** The worker threads. */
