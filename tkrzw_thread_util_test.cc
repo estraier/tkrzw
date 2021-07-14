@@ -421,7 +421,7 @@ TEST(ThreadUtilTest, TaskQueue) {
                 };
     queue.Add(task);
   }
-  queue.Stop(0.05);
+  queue.Stop(tkrzw::INT32MAX);
   EXPECT_EQ(0, queue.GetSize());
   EXPECT_EQ(num_tasks, count.load());
 }
