@@ -27,12 +27,12 @@ int main(int argc, char** argv) {
     {"num_shards", "10"},
     {"dbm", "TreeDBM"}, {"key_comparator", "DecimalKeyComparator"},
   };
-  dbm.OpenAdvanced("casket", true, tkrzw::File::OPEN_TRUNCATE, open_params).OrDie();
+  dbm.OpenAdvanced("casket", true, File::OPEN_TRUNCATE, open_params).OrDie();
   
   // Stores records.
   for (int32_t i = 1; i <= 100; i++) {
-    const std::string key = tkrzw::ToString(i);
-    const std::string value = tkrzw::ToString(i * i);
+    const std::string key = ToString(i);
+    const std::string value = ToString(i * i);
     dbm.Set(key, value).OrDie();
   }
 

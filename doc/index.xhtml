@@ -117,6 +117,7 @@ window.onload = function(){
 <li><strong><a href="#cachedbm_overview">CacheDBM</a></strong> : On-memory database manager implementation with LRU deletion.</li>
 <li><strong><a href="#stddbm_overview">Std(Hash|Tree)DBM</a></strong> : On-memory DBM implementations using std::unordered_map and std::map.</li>
 <li><strong><a href="#polydbm_overview">(Poly|Shard)DBM</a></strong> : Polymorphic and sharding database manager adapters.</li>
+<li><strong><a href="#asyncdbm_overview">AsyncDBM</a></strong> : Asynchronous database manager adapter.</li>
 <li><strong><a href="#index_overview">(File|Mem)Index</a></strong> : Secondary index implementations.</li>
 </ul>
 
@@ -1236,7 +1237,7 @@ int main(int argc, char** argv) {
   TreeDBM dbm;
 
   // Opens a new database with tuning for a small database.
-  tkrzw::TreeDBM::TuningParameters tuning_params;
+  TreeDBM::TuningParameters tuning_params;
   tuning_params.align_pow = 6;
   tuning_params.num_buckets = 10000;
   tuning_params.max_page_size = 4000;
@@ -2143,7 +2144,7 @@ int main(int argc, char** argv) {
     {"max_page_size", "1000"}, {"max_branches", "128"},
     {"key_comparator", "DecimalKeyComparator"},
   };
-  dbm.OpenAdvanced("casket.tkt", true, tkrzw::File::OPEN_TRUNCATE, open_params).OrDie();
+  dbm.OpenAdvanced("casket.tkt", true, File::OPEN_TRUNCATE, open_params).OrDie();
   
   // Stores records.
   dbm.Set("1", "one").OrDie();
@@ -2188,12 +2189,12 @@ int main(int argc, char** argv) {
     {"num_shards", "10"},
     {"dbm", "TreeDBM"}, {"key_comparator", "DecimalKeyComparator"},
   };
-  dbm.OpenAdvanced("casket", true, tkrzw::File::OPEN_TRUNCATE, open_params).OrDie();
+  dbm.OpenAdvanced("casket", true, File::OPEN_TRUNCATE, open_params).OrDie();
   
   // Stores records.
   for (int32_t i = 1; i <= 100; i++) {
-    const std::string key = tkrzw::ToString(i);
-    const std::string value = tkrzw::ToString(i * i);
+    const std::string key = ToString(i);
+    const std::string value = ToString(i * i);
     dbm.Set(key, value).OrDie();
   }
 
@@ -2204,6 +2205,65 @@ int main(int argc, char** argv) {
   while (iter->Get(&key, &value).IsOK()) {
     std::cout << key << ":" << value << std::endl;
     iter->Next();
+  }
+  
+  // Closes the database.
+  dbm.Close().OrDie();
+
+  return 0;
+}
+]]></code></pre>
+
+<h2 id="asyncdbm_overview">AsyncDBM: Asynchronous Database Manager Adapter</h2>
+
+<p>Database operations can take time because of file I/O operations done inside.  So, a thread calling DBM methods can block for a while.  If you want to avoid blocking of the current thread, using the asynchronous API is useful.  The class AsyncDBM is a wrapper of the normal synchronous API of the DBM interface.  Thus, any concrete class of DBM can be used asynchronously.  AsyncDBM has a task queue handled by a thread pool.  When you call an asynchronous method, the operation is registered as a task in the task queue.  The thread pool monitoring the task queue detects tasks and the operations are done in the background by some threads simultaneously.  The main thread never blocks just for registering database operations.</p>
+
+<p>Each asynchronous methods returns a std::future object.  If you want to wait for a database operation to finish, you can call the "wait" or "wait_for" methods of the future object.  You can get the result of the database operation by calling the "get" method of the future object.  If you are not intersted in the result of the database operation, you can ignore the future object without waiting or evaluating the result.  The destructor of the AsyncDBM object assures that all pending tasks are done and all threads in the thread pool are joined.</p>
+
+<p>Generally speaking, asynchronous API is not for improving the throughput because serializing tasks in the task queue and notifying its update to worker threads has a certain overhead.  To improve throughput, you should create and use multi threads yourself to handle divided subtasks concurrently.  Meanwhile, asynchronous API is useful for interactive features, where blocking of the current thread should be avoided.  You use the TaskQueue class to execute arbitrary tasks in the background.  The task queue instance used inside the AsyncDBM instance can be obtained by the GetTaskQueue method.</p>
+
+<p>You can use std::async to execute an arbitrary function in the background.  It also returns std::fugure to wait for the operation to finish and evaluate the result.  So, the semantics are almost the same between AsyncDBM and std::async.  However, std::async creates a new thread for each operation, which deteriorates performance and throughput.  Therefore, AsyncDBM manages a thread pool where the same threads are reused again and again.  Whereas the maximum througput of std::async is less than 100,000 QPS, the maximum throughput of the TaskQueue class is more than 2,000,000 QPS.  However, serializing parameters for various operations to put them in the task queue is a cumbersome to implement.  AsyncDBM encapsulates such complex details, you can easily implement asynchronous database operations without deep knowledge of multi threadking.</p>
+
+<h3 id="asyncdbm_example">Example Code</h3>
+
+<p>This is a code example of basic usase of AsyncDBM.</p>
+
+<pre><code class="language-cpp"><![CDATA[#include "tkrzw_dbm_async.h"
+#include "tkrzw_dbm_poly.h"
+
+// Main routine.
+int main(int argc, char** argv) {
+  // All symbols of Tkrzw are under the namespace "tkrzw".
+  using namespace tkrzw;
+
+  // Opens a new database.
+  PolyDBM dbm;
+  dbm.OpenAdvanced("casket.tkt", true, File::OPEN_TRUNCATE).OrDie();
+  
+  {
+    // Makes an asynchronouns adapter with 10 worker threads.
+    // We limit its scope to destroye it bofore the database instance.
+    AsyncDBM async(&dbm, 10);
+
+    // Sets records without checking the results of operations.
+    async.Set("one", "hop");
+    async.Set("two", "step");
+    async.Set("three", "jump");
+
+    // Retrieves a record value and evaluates the result.
+    auto get_result = async.Get("three").get();
+    std::cout << get_result.first << std::endl;
+    if (get_result.first == Status::SUCCESS) {
+      std::cout << get_result.second << std::endl;
+    }
+
+    // Prints progression while rebuilding the database.
+    auto rebuild_future = async.Rebuild();
+    do {
+      std::cout << "Rebuilding the database" << std::endl;
+    } while (rebuild_future.wait_for(
+        std::chrono::seconds(1)) != std::future_status::ready);
+    std::cout << rebuild_future.get() << std::endl;
   }
   
   // Closes the database.

@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   TreeDBM dbm;
 
   // Opens a new database with tuning for a small database.
-  tkrzw::TreeDBM::TuningParameters tuning_params;
+  TreeDBM::TuningParameters tuning_params;
   tuning_params.align_pow = 6;
   tuning_params.num_buckets = 10000;
   tuning_params.max_page_size = 4000;

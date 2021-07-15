@@ -15,6 +15,7 @@
 #define _TKRZW_THREAD_UTIL_H
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <queue>

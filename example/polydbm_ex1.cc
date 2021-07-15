@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     {"max_page_size", "1000"}, {"max_branches", "128"},
     {"key_comparator", "DecimalKeyComparator"},
   };
-  dbm.OpenAdvanced("casket.tkt", true, tkrzw::File::OPEN_TRUNCATE, open_params).OrDie();
+  dbm.OpenAdvanced("casket.tkt", true, File::OPEN_TRUNCATE, open_params).OrDie();
   
   // Stores records.
   dbm.Set("1", "one").OrDie();
