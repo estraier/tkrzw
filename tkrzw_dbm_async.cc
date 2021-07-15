@@ -49,25 +49,24 @@ std::future<std::pair<Status, std::string>> AsyncDBM::Get(std::string_view key) 
   return future;
 }
 
-std::future<std::map<std::string, std::string>> AsyncDBM::GetMulti(
+std::future<std::pair<Status, std::map<std::string, std::string>>> AsyncDBM::GetMulti(
     const std::vector<std::string_view>& keys) {
   struct GetMultiTask : public TaskQueue::Task {
     DBM* dbm;
     std::vector<std::string> keys;
     std::vector<std::string_view> key_views;
-    std::promise<std::map<std::string, std::string>> promise;
+    std::promise<std::pair<Status, std::map<std::string, std::string>>> promise;
     void Do() override {
-      auto records = dbm->GetMulti(key_views);
-      promise.set_value(std::move(records));
+      std::map<std::string, std::string> records;
+      Status status = dbm->GetMulti(keys, &records);
+      promise.set_value(std::make_pair(std::move(status), std::move(records)));
     }
   };
   auto task = std::make_unique<GetMultiTask>();
   task->dbm = dbm_;
   task->keys.reserve(keys.size());
-  task->key_views.reserve(keys.size());
   for (const auto& key : keys) {
     task->keys.emplace_back(key);
-    task->key_views.emplace_back(task->keys.back());
   }
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));

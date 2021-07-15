@@ -279,7 +279,9 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("third", dbm->GetSimple("three"));
   EXPECT_EQ("fourth", dbm->GetSimple("four"));
   EXPECT_EQ("fifth", dbm->GetSimple("five"));
-  auto res_multi_records = dbm->GetMulti({"one", "two", "three", "four", "five"});
+  std::map<std::string, std::string> res_multi_records;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            dbm->GetMulti({"one", "two", "three", "four", "five"}, &res_multi_records));
   EXPECT_EQ(5, res_multi_records.size());
   EXPECT_EQ("first", res_multi_records["one"]);
   EXPECT_EQ("second", res_multi_records["two"]);
@@ -287,7 +289,7 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("fourth", res_multi_records["four"]);
   EXPECT_EQ("fifth", res_multi_records["five"]);
   const std::vector<std::string_view> multi_keys = {"one", "two", "three", "four", "five"};
-  res_multi_records = dbm->GetMulti(multi_keys);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->GetMulti(multi_keys, &res_multi_records));
   EXPECT_EQ(5, res_multi_records.size());
   EXPECT_EQ("first", res_multi_records["one"]);
   EXPECT_EQ("second", res_multi_records["two"]);

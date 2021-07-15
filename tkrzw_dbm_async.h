@@ -65,17 +65,23 @@ class AsyncDBM final {
   /**
    * Gets the values of multiple records of keys, with a string view vector.
    * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   * @return The result status and a map of retrieved records.  Keys which don't match existing
+   * records are ignored.  If all records of the given keys are found, SUCCESS is returned.
+   * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
+   * code, the result map can have elements.
    */
-  std::future<std::map<std::string, std::string>> GetMulti(
+  std::future<std::pair<Status, std::map<std::string, std::string>>> GetMulti(
       const std::vector<std::string_view>& keys);
-
+  
   /**
    * Gets the values of multiple records of keys, with a string vector.
    * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   * @return The result status and a map of retrieved records.  Keys which don't match existing
+   * records are ignored.  If all records of the given keys are found, SUCCESS is returned.
+   * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
+   * code, the result map can have elements.
    */
-  std::future<std::map<std::string, std::string>> GetMulti(
+  std::future<std::pair<Status, std::map<std::string, std::string>>> GetMulti(
       const std::vector<std::string>& keys) {
     return GetMulti(MakeStrViewVectorFromValues(keys));
   }

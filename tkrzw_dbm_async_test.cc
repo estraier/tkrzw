@@ -97,9 +97,9 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.AppendMulti(records, ":").get());
     const std::vector<std::string_view> get_keys = {"a", "b", "c", "d"};
     auto get_results = async.GetMulti(get_keys).get();
-    EXPECT_EQ(2, get_results.size());
-    EXPECT_EQ("A:A", get_results["a"]);
-    EXPECT_EQ("BB:BB", get_results["b"]);
+    EXPECT_EQ(2, get_results.second.size());
+    EXPECT_EQ("A:A", get_results.second["a"]);
+    EXPECT_EQ("BB:BB", get_results.second["b"]);
     const std::vector<std::string_view> remove_keys = {"a", "b"};
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.RemoveMulti(remove_keys).get());
     async.Set("1", "10");
@@ -158,12 +158,12 @@ TEST(AsyncDBMTest, SearchModal) {
     std::map<std::string, std::string> all_records;
     std::string last_key = "";
     while (true) {
-      auto [status, keys] = async.SearchModal("upper", last_key, 10).get();
-      if (status != tkrzw::Status::SUCCESS || keys.empty()) {
+      auto [search_status, keys] = async.SearchModal("upper", last_key, 10).get();
+      if (search_status != tkrzw::Status::SUCCESS || keys.empty()) {
         break;
       }
-      const auto get_results = async.GetMulti(keys).get();
-      for (const auto& record : get_results) {
+      const auto [get_status, records] = async.GetMulti(keys).get();
+      for (const auto& record : records) {
         all_records.emplace(record);
       }
       last_key = keys.back();

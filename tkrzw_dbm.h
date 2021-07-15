@@ -848,38 +848,54 @@ class DBM {
   /**
    * Gets the values of multiple records of keys, with a string view vector.
    * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
+   * records are ignored.
+   * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
+   * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
+   * code, the result map can have elements.
    */
-  virtual std::map<std::string, std::string> GetMulti(
-      const std::vector<std::string_view>& keys) {
-    std::map<std::string, std::string> records;
+  virtual Status GetMulti(
+      const std::vector<std::string_view>& keys, std::map<std::string, std::string>* records) {
+    Status status(Status::SUCCESS);
     for (const auto& key : keys) {
       std::string value;
-      if (Get(key, &value) == Status::SUCCESS) {
-        records.emplace(key, value);
+      const Status tmp_status = Get(key, &value);
+      if (tmp_status == Status::SUCCESS) {
+        records->emplace(key, std::move(value));
+      } else {
+        status |= tmp_status;
       }
     }
-    return records;
+    return status;
   }
 
   /**
    * Gets the values of multiple records of keys, with an initializer list.
    * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
+   * records are ignored.
+   * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
+   * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
+   * code, the result map can have elements.
    */
-  virtual std::map<std::string, std::string> GetMulti(
-      const std::initializer_list<std::string_view>& keys) {
+  virtual Status GetMulti(const std::initializer_list<std::string_view>& keys,
+                          std::map<std::string, std::string>* records) {
     std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
-    return GetMulti(vector_keys);
+    return GetMulti(vector_keys, records);
   }
 
   /**
    * Gets the values of multiple records of keys, with a string vector.
    * @param keys The keys of records to retrieve.
-   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
+   * records are ignored.
+   * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
+   * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
+   * code, the result map can have elements.
    */
-  virtual std::map<std::string, std::string> GetMulti(const std::vector<std::string>& keys) {
-    return GetMulti(MakeStrViewVectorFromValues(keys));
+  virtual Status GetMulti(
+      const std::vector<std::string>& keys, std::map<std::string, std::string>* records) {
+    return GetMulti(MakeStrViewVectorFromValues(keys), records);
   }
 
   /**

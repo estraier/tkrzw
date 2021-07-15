@@ -450,7 +450,7 @@ TEST(LangCTest, Search) {
   }
   {
     int32_t num_keys = 0;
-    TkrzwStr* keys = tkrzw_dbm_search(dbm, "upper", "5", -1, 3, &num_keys);
+    TkrzwStr* keys = tkrzw_dbm_search(dbm, "upperinc", "5", -1, 3, &num_keys);
     ASSERT_NE(nullptr, keys);
     ASSERT_EQ(3, num_keys);
     EXPECT_STREQ(keys[0].ptr, "5");

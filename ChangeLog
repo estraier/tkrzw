@@ -4,6 +4,14 @@
 	- Library version: 1.32.0
 
 	- Add SearchDBMOrder method.
+	- Add AsyncDBM class.
+	- Add AppendMulti method.
+	- Modify signature of GetMulti method.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.14
+	- tkrzw-python: 0.1.14
+	- tkrzw-ruby: 0.1.14
 
 2021-07-11  Mikio Hirabayashi  <hirarin@gmail.com>
 
