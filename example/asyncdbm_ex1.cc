@@ -34,6 +34,7 @@ int main(int argc, char** argv) {
     async.Set("three", "jump");
 
     // Retrieves a record value and evaluates the result.
+    // The record may or may not be found due to scheduling.
     auto get_result = async.Get("three").get();
     std::cout << get_result.first << std::endl;
     if (get_result.first == Status::SUCCESS) {
@@ -47,6 +48,25 @@ int main(int argc, char** argv) {
     } while (rebuild_future.wait_for(
         std::chrono::seconds(1)) != std::future_status::ready);
     std::cout << rebuild_future.get() << std::endl;
+
+    // Scans all records.
+    std::string last_key = "";
+    while (true) {
+      // Retrieve 100 keys which are upper than the last key.
+      auto [search_status, keys] =
+          async.SearchModal("upper", last_key, 100).get();
+      if (!search_status.IsOK() || keys.empty()) {
+        break;
+      }
+      last_key = keys.back();
+      // Retrieves and prints the values of the keys.
+      auto [get_status, records] = async.GetMulti(keys).get();
+      if (get_status.IsOK())  {
+        for (const auto& record : records) {
+          std::cout << record.first << ":" << record.second << std::endl;
+        }
+      }
+    }
   }
   
   // Closes the database.
