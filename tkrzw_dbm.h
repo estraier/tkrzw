@@ -973,7 +973,7 @@ class DBM {
       const std::map<std::string, std::string>& records, bool overwrite = true) {
     return SetMulti(MakeStrViewMapFromRecords(records), overwrite);
   }
-  
+
   /**
    * Removes a record of a key.
    * @param key The key of the record.

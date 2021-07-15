@@ -72,7 +72,7 @@ class AsyncDBM final {
    */
   std::future<std::pair<Status, std::map<std::string, std::string>>> GetMulti(
       const std::vector<std::string_view>& keys);
-  
+
   /**
    * Gets the values of multiple records of keys, with a string vector.
    * @param keys The keys of records to retrieve.
