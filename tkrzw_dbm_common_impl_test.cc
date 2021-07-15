@@ -209,6 +209,16 @@ TEST(DBMCommonImplTest, SearchDBMModal) {
   }
   {
     std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "upper", "10", &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("100", "11", "12"));
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "lowerinc", "20", &keys, 3));
+    EXPECT_THAT(keys, ElementsAre("20", "2", "19"));
+  }
+  {
+    std::vector<std::string> keys;
     EXPECT_EQ(tkrzw::Status::INVALID_ARGUMENT_ERROR,
               tkrzw::SearchDBMModal(&dbm, "foo", "1", &keys));
   }

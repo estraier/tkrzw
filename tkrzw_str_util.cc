@@ -1708,6 +1708,25 @@ std::vector<std::string> DeserializeStrVector(std::string_view serialized) {
   return values;
 }
 
+std::vector<std::string> MakeStrVectorFromViews(const std::vector<std::string_view>& views) {
+  std::vector<std::string> values;
+  values.reserve(views.size());
+  for (const auto& view : views) {
+    values.emplace_back(view);
+  }
+  return values;
+}
+
+std::vector<std::string_view> MakeStrViewVectorFromValues(
+    const std::vector<std::string>& values) {
+  std::vector<std::string_view> views;
+  views.reserve(values.size());
+  for (const auto& value : values) {
+    views.emplace_back(std::string_view(value));
+  }
+  return views;
+}
+
 std::string SerializeStrMap(const std::map<std::string, std::string>& records) {
   size_t size = 0;
   for (const auto& record : records) {
@@ -1755,6 +1774,25 @@ std::map<std::string, std::string> DeserializeStrMap(std::string_view serialized
     records.emplace(std::string(key_ptr, key_size), std::string(value_ptr, value_size));
   }
   return records;
+}
+
+std::map<std::string, std::string> MakeStrMapFromViews(
+    const std::map<std::string_view, std::string_view>& views) {
+  std::map<std::string, std::string> records;
+  for (const auto& view : views) {
+    records.emplace(std::make_pair(view.first, view.second));
+  }
+  return records;
+}
+
+std::map<std::string_view, std::string_view> MakeStrViewMapFromRecords(
+    const std::map<std::string, std::string>& records) {
+  std::map<std::string_view, std::string_view> views;
+  for (const auto& record : records) {
+    views.emplace(std::make_pair(
+        std::string_view(record.first), std::string_view(record.second)));
+  }
+  return views;
 }
 
 }  // namespace tkrzw

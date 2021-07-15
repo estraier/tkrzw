@@ -846,7 +846,7 @@ class DBM {
   }
 
   /**
-   * Gets the values of multiple records of keys, with a vector.
+   * Gets the values of multiple records of keys, with a string view vector.
    * @param keys The keys of records to retrieve.
    * @return A map of retrieved records.  Keys which don't match existing records are ignored.
    */
@@ -874,6 +874,15 @@ class DBM {
   }
 
   /**
+   * Gets the values of multiple records of keys, with a string vector.
+   * @param keys The keys of records to retrieve.
+   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   */
+  virtual std::map<std::string, std::string> GetMulti(const std::vector<std::string>& keys) {
+    return GetMulti(MakeStrViewVectorFromValues(keys));
+  }
+
+  /**
    * Sets a record of a key and a value.
    * @param key The key of the record.
    * @param value The value of the record.
@@ -896,7 +905,7 @@ class DBM {
   }
 
   /**
-   * Sets multiple records, with a map of strings.
+   * Sets multiple records, with a map of string views.
    * @param records The records to store.
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
@@ -936,6 +945,20 @@ class DBM {
   }
 
   /**
+   * Sets multiple records, with a map of strings.
+   * @param records The records to store.
+   * @param overwrite Whether to overwrite the existing value if there's a record with the same
+   * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+   * is given up and an error status is returned.
+   * @return The result status.  If there are records avoiding overwriting, DUPLICATION_ERROR
+   * is returned.
+   */
+  virtual Status SetMulti(
+      const std::map<std::string, std::string>& records, bool overwrite = true) {
+    return SetMulti(MakeStrViewMapFromRecords(records), overwrite);
+  }
+  
+  /**
    * Removes a record of a key.
    * @param key The key of the record.
    * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
@@ -953,7 +976,7 @@ class DBM {
   }
 
   /**
-   * Removes records of keys.
+   * Removes records of keys, with a string view vector.
    * @param keys The keys of records to remove.
    * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
@@ -976,6 +999,15 @@ class DBM {
   virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
     std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
     return RemoveMulti(vector_keys);
+  }
+
+  /**
+   * Removes records of keys, with a string vector.
+   * @param keys The keys of records to remove.
+   * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
+   */
+  virtual Status RemoveMulti(const std::vector<std::string>& keys) {
+    return RemoveMulti(MakeStrViewVectorFromValues(keys));
   }
 
   /**

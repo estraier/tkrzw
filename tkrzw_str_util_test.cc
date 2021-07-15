@@ -871,6 +871,14 @@ TEST(StrUtilTest, SerializeStrVector) {
   }
 }
 
+TEST(StrUtilTest, MakeStrVectorFromViews) {
+  const std::vector<std::string_view> views = {"one", "two", "three"};
+  const std::vector<std::string>& values = tkrzw::MakeStrVectorFromViews(views);
+  EXPECT_THAT(values, ElementsAreArray(views));
+  const std::vector<std::string_view>& restored = tkrzw::MakeStrViewVectorFromValues(values);
+  EXPECT_THAT(restored, ElementsAreArray(values));
+}
+
 TEST(StrUtilTest, SerializeStrMap) {
   struct TestCase final {
     std::map<std::string, std::string> records;
@@ -889,6 +897,22 @@ TEST(StrUtilTest, SerializeStrMap) {
     const std::map<std::string, std::string> records = tkrzw::DeserializeStrMap(serialized);
     EXPECT_THAT(records, ElementsAreArray(test_case.records));
   }
+}
+
+TEST(StrUtilTest, MakeStrMapFromViews) {
+  const std::map<std::string_view, std::string_view> views = {
+    {"one", "hop"}, {"two", "step"}, {"three", "jump"}};
+  std::map<std::string, std::string> records = tkrzw::MakeStrMapFromViews(views);
+  EXPECT_EQ(3, records.size());
+  EXPECT_EQ("hop", records["one"]);
+  EXPECT_EQ("step", records["two"]);
+  EXPECT_EQ("jump", records["three"]);
+  std::map<std::string_view, std::string_view> restored =
+      tkrzw::MakeStrViewMapFromRecords(records);
+  EXPECT_EQ(3, restored.size());
+  EXPECT_EQ("hop", restored["one"]);
+  EXPECT_EQ("step", restored["two"]);
+  EXPECT_EQ("jump", restored["three"]);
 }
 
 TEST(StrUtilTest, ScopedStringView) {

@@ -63,12 +63,22 @@ class AsyncDBM final {
   std::future<std::pair<Status, std::string>> Get(std::string_view key);
 
   /**
-   * Gets the values of multiple records of keys, with a vector.
+   * Gets the values of multiple records of keys, with a string view vector.
    * @param keys The keys of records to retrieve.
    * @return A map of retrieved records.  Keys which don't match existing records are ignored.
    */
   std::future<std::map<std::string, std::string>> GetMulti(
       const std::vector<std::string_view>& keys);
+
+  /**
+   * Gets the values of multiple records of keys, with a string vector.
+   * @param keys The keys of records to retrieve.
+   * @return A map of retrieved records.  Keys which don't match existing records are ignored.
+   */
+  std::future<std::map<std::string, std::string>> GetMulti(
+      const std::vector<std::string>& keys) {
+    return GetMulti(MakeStrViewVectorFromValues(keys));
+  }
 
   /**
    * Sets a record of a key and a value.
@@ -82,7 +92,7 @@ class AsyncDBM final {
   std::future<Status> Set(std::string_view key, std::string_view value, bool overwrite = true);
 
   /**
-   * Sets multiple records, with a map of strings.
+   * Sets multiple records, with a map of string views.
    * @param records The records to store.
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
@@ -93,6 +103,19 @@ class AsyncDBM final {
       const std::map<std::string_view, std::string_view>& records, bool overwrite = true);
 
   /**
+   * Sets multiple records, with a map of strings.
+   * @param records The records to store.
+   * @param overwrite Whether to overwrite the existing value if there's a record with the same
+   * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+   * is given up and an error status is returned.
+   * @return The result status.
+   */
+  std::future<Status> SetMulti(
+      const std::map<std::string, std::string>& records, bool overwrite = true) {
+    return SetMulti(MakeStrViewMapFromRecords(records));
+  }
+
+  /**
    * Removes a record of a key.
    * @param key The key of the record.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
@@ -100,11 +123,20 @@ class AsyncDBM final {
   std::future<Status> Remove(std::string_view key);
 
   /**
-   * Removes records of keys.
+   * Removes records of keys, with a string view vector.
    * @param keys The keys of records to remove.
    * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
   std::future<Status> RemoveMulti(const std::vector<std::string_view>& keys);
+
+  /**
+   * Removes records of keys, with a string vector.
+   * @param keys The keys of records to remove.
+   * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
+   */
+  std::future<Status> RemoveMulti(const std::vector<std::string>& keys) {
+    return RemoveMulti(MakeStrViewVectorFromValues(keys));
+  }
 
   /**
    * Appends data at the end of a record of a key.
@@ -181,6 +213,22 @@ class AsyncDBM final {
    * @return The result status.
    */
   std::future<Status> Synchronize(bool hard);
+
+  /**
+   * Searches the database and get keys which match a pattern, according to a mode expression.
+   * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
+   * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
+   * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
+   * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
+   * keys whose edit distance to the binary pattern is the least.  Ordered databases support
+   * "upper" and "lower" which extract keys whose positions are upper/lower than the pattern.
+   * "upperinc" and "lowerinc" are their inclusive versions.
+   * @param pattern The pattern for matching.
+   * @param capacity The maximum records to obtain.  0 means unlimited.
+   * @return The result status and the result keys.
+   */
+  std::future<std::pair<Status, std::vector<std::string>>> SearchModal(
+      std::string_view mode, std::string_view pattern, size_t capacity = 0);
 
   /**
    * Gets the internal task queue.

@@ -684,6 +684,21 @@ std::string SerializeStrVector(const std::vector<std::string>& values);
 std::vector<std::string> DeserializeStrVector(std::string_view serialized);
 
 /**
+ * Makes a string vector from a string view vector.
+ * @param views The string view vector.
+ * @return The result string vector.
+ */
+std::vector<std::string> MakeStrVectorFromViews(const std::vector<std::string_view>& views);
+
+/**
+ * Makes a string view vector from a string vector.
+ * @param values The string vector.
+ * @return The result string view vector.  Elements refer to the elements of the input vector.
+ */
+std::vector<std::string_view> MakeStrViewVectorFromValues(
+    const std::vector<std::string>& values);
+
+/**
  * Serializes a map of strings into a string.
  * @param records The string map.
  * @return The serialized string.
@@ -699,6 +714,22 @@ std::string SerializeStrMap(const std::map<std::string, std::string>& records);
  * @return The result string map.
  */
 std::map<std::string, std::string> DeserializeStrMap(std::string_view serialized);
+
+/**
+ * Makes a string map from a string view map.
+ * @param views The string view map.
+ * @return The result string map.
+ */
+std::map<std::string, std::string> MakeStrMapFromViews(
+    const std::map<std::string_view, std::string_view>& views);
+
+/**
+ * Makes a string view map from a string map.
+ * @param records The string map.
+ * @return The result string view map.  Elements refer to the elements of the input map.
+ */
+std::map<std::string_view, std::string_view> MakeStrViewMapFromRecords(
+    const std::map<std::string, std::string>& records);
 
 /**
  * Wrapper of string_view of allocated memory.

@@ -15,6 +15,7 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_async.h"
+#include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"
 
@@ -365,8 +366,29 @@ std::future<Status> AsyncDBM::Synchronize(bool hard) {
   return future;
 }
 
-
-
+std::future<std::pair<Status, std::vector<std::string>>> AsyncDBM::SearchModal(
+    std::string_view mode, std::string_view pattern, size_t capacity) {
+  struct SearchModalTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::string mode;
+    std::string pattern;
+    size_t capacity;
+    std::promise<std::pair<Status, std::vector<std::string>>> promise;
+    void Do() override {
+      std::vector<std::string> keys;
+      Status status = SearchDBMModal(dbm, mode, pattern, &keys, capacity);
+      promise.set_value(std::move(std::make_pair(std::move(status), std::move(keys))));
+    }
+  };
+  auto task = std::make_unique<SearchModalTask>();
+  task->dbm = dbm_;
+  task->mode = mode;
+  task->pattern = pattern;
+  task->capacity = capacity;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
 
 }  // namespace tkrzw
 

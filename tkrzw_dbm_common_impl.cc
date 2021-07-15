@@ -269,13 +269,13 @@ Status SearchDBMModal(
   } else if (mode == "editbin") {
     status = SearchDBMEditDistanceBinary(dbm, pattern, matched, capacity);
   } else if (mode == "upper") {
-    status = SearchDBMOrder(dbm, pattern, true, true, matched, capacity);
-  } else if (mode == "upperex") {
     status = SearchDBMOrder(dbm, pattern, true, false, matched, capacity);
+  } else if (mode == "upperinc") {
+    status = SearchDBMOrder(dbm, pattern, true, true, matched, capacity);
   } else if (mode == "lower") {
-    status = SearchDBMOrder(dbm, pattern, false, true, matched, capacity);
-  } else if (mode == "lowerex") {
     status = SearchDBMOrder(dbm, pattern, false, false, matched, capacity);
+  } else if (mode == "lowerinc") {
+    status = SearchDBMOrder(dbm, pattern, false, true, matched, capacity);
   } else {
     status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
   }
