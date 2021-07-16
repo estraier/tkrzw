@@ -26,23 +26,40 @@ static void PrintUsageAndDie() {
   P("    : Builds the database.\n");
   P("  %s check [options]\n", progname);
   P("    : Checks consistency of the database.\n");
+  P("  %s async [options]\n", progname);
+  P("    : Checks asynchronous operations of the database.\n");
+  P("\n");
   P("\n");
   P("Common options:\n");
   P("  --params str : Sets the parameters in \"key=value,key=value\" format.\n");
-  P("  --incr num : The number of increments. (default: 3)\n");
   P("\n");
   P("Options for the build subcommand:\n");
+  P("  --incr num : The number of increments. (default: 3)\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --threads num : The number of threads. (default: 1)\n");
   P("  --sync_freq num : Frequency of synchronization (default: 100).\n");
   P("  --sync_hard  : Synchronizes physically.\n");
   P("  --remove : Removes some records.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
-  P("  --async num : Uses the asynchronous API and sets the number of worker threads.\n");
+  P("  --async num : Uses the asynchronous API and sets the number of worker threads."
+    " (default: 0)\n");
   P("  --abort : Aborts the process at the end.\n");
   P("\n");
   P("Options for the build subcommand:\n");
+  P("  --incr num : The number of increments. (default: 3)\n");
   P("  --restore : Restores the database and validate it.\n");
+  P("\n");
+  P("Options for the async subcommand:\n");
+  P("  --iter num : The number of iterations. (default: 10000)\n");
+  P("  --threads num : The number of threads. (default: 1)\n");
+  P("  --wait_freq num : Frequency of waiting (default: 0).\n");
+  P("  --rebuild : Rebuilds the database occasionally.\n");
+  P("  --async num : Uses the asynchronous API and sets the number of worker threads."
+    " (default: 0)\n");
+  P("  --random_key : Uses random keys rather than sequential ones.\n");
+  P("  --set_only : Does only setting.\n");
+  P("  --get_only : Does only getting.\n");
+  P("  --remove_only : Does only removing.\n");
   P("\n");
   std::exit(1);
 }
@@ -51,8 +68,9 @@ static void PrintUsageAndDie() {
 static int32_t ProcessBuild(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--params", 1}, {"--iter", 1}, {"--threads", 1}, {"--incr", 1},
-    {"--sync_freq", 1}, {"--sync_hard", 0}, {"--async", 1},
-    {"--remove", 0}, {"--rebuild", 0}, {"--abort", 0},
+    {"--sync_freq", 1}, {"--sync_hard", 0},
+    {"--remove", 0}, {"--rebuild", 0},
+    {"--async", 1}, {"--abort", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -91,7 +109,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
     has_error = true;
   }
   std::unique_ptr<tkrzw::AsyncDBM> async(nullptr);
-  if (num_async_threads) {
+  if (num_async_threads > 0) {
     async = std::make_unique<tkrzw::AsyncDBM>(&dbm, num_async_threads);
   }
   std::map<std::string, std::string> sync_params;
@@ -376,6 +394,370 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
   return has_error ? 1 : 0;
 }
 
+// Processes the async subcommand.
+static int32_t ProcessAsync(int32_t argc, const char** args) {
+  const std::map<std::string, int32_t>& cmd_configs = {
+    {"", 1}, {"--params", 1}, {"--iter", 1}, {"--threads", 1},
+    {"--wait_freq", 1}, {"--rebuild", 0}, {"--async", 1},
+    {"--random_key", 0}, {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
+  };
+  std::map<std::string, std::vector<std::string>> cmd_args;
+  std::string cmd_error;
+  if (!ParseCommandArguments(argc, args, cmd_configs, &cmd_args, &cmd_error)) {
+    EPrint("Invalid command: ", cmd_error, "\n\n");
+    PrintUsageAndDie();
+  }
+  const std::string path = GetStringArgument(cmd_args, "", 0, "");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
+  const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
+  const int32_t wait_freq = GetIntegerArgument(cmd_args, "--wait_freq", 0, 0);
+  const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
+  const int32_t num_async_threads = GetIntegerArgument(cmd_args, "--async", 0, 0);
+  const bool is_random_key = CheckMap(cmd_args, "--random_key");
+  const bool is_get_only = CheckMap(cmd_args, "--get_only");
+  const bool is_set_only = CheckMap(cmd_args, "--set_only");
+  const bool is_remove_only = CheckMap(cmd_args, "--remove_only");
+  if (num_iterations < 1) {
+    Die("Invalid number of iterations");
+  }
+  if (num_threads < 1) {
+    Die("Invalid number of threads");
+  }
+  const int64_t start_mem_rss = GetMemoryUsage();
+  std::atomic_bool has_error(false);
+  tkrzw::PolyDBM dbm;
+  const std::map<std::string, std::string> tuning_params =
+      tkrzw::StrSplitIntoMap(poly_params, ",", "=");
+  const int32_t open_options =
+      !is_get_only && !is_remove_only ? File::OPEN_TRUNCATE : File::OPEN_DEFAULT;
+  Status status = dbm.OpenAdvanced(path, true, open_options, tuning_params);
+  if (status != Status::SUCCESS) {
+    PrintL("Open failed: ", status);
+    has_error = true;
+  }
+  const int32_t dot_mod = std::max(num_iterations / 1000, 1);
+  const int32_t fold_mod = std::max(num_iterations / 20, 1);
+  auto setting_task = [&](int32_t id, tkrzw::AsyncDBM* async) {
+    std::mt19937 key_mt(id);
+    std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
+    bool midline = false;
+    std::vector<std::future<Status>> futures;
+    if (wait_freq > 0) {
+      futures.reserve(wait_freq);
+    }
+    const int32_t rebuild_pos = id == 0 && with_rebuild ? num_iterations / 4 : -1;
+    std::future<Status> rebuild_future;
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
+      const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
+      const std::string& key = SPrintF("%08d", key_num);
+      const std::string& value = SPrintF(
+          "%08llX", static_cast<unsigned long long>(key_num) *  key_num);
+      if (async == nullptr) {
+        const Status status = dbm.Set(key, value);
+        if (status != Status::SUCCESS) {
+          EPrintL("Set failed: ", status);
+          has_error = true;
+          break;
+        }
+      } else {
+        futures.emplace_back(async->Set(key, value));
+        if (wait_freq > 0 && futures.size() >= wait_freq) {
+          for (auto& future : futures) {
+            const Status status = future.get();
+            if (status != Status::SUCCESS) {
+              EPrintL("Set failed: ", status);
+              has_error = true;
+              break;
+            }
+          }
+          futures.clear();
+          futures.reserve(wait_freq);
+        }
+      }
+      if (i == rebuild_pos) {
+        if (async == nullptr) {
+          const Status status = dbm.Rebuild();
+          if (status != Status::SUCCESS) {
+            EPrintL("Rebuild failed: ", status);
+            has_error = true;
+            break;
+          }
+        } else{
+          rebuild_future = async->Rebuild();
+        }
+      }
+      if (id == 0 && (i + 1) % dot_mod == 0) {
+        PutChar('.');
+        midline = true;
+        if ((i + 1) % fold_mod == 0) {
+          PrintF(" (%08d)\n", i + 1);
+          midline = false;
+        }
+      }
+    }
+    if (midline) {
+      PrintF(" (%08d)\n", num_iterations);
+    }
+    if (rebuild_future.valid()) {
+      const Status status = rebuild_future.get();
+      if (status != Status::SUCCESS) {
+        EPrintL("Rebuild failed: ", status);
+        has_error = true;
+      }
+    }
+  };
+  if (!is_get_only && !is_remove_only) {
+    PrintF("Setting: num_iterations=%d num_threads=%d\n", num_iterations, num_threads);
+    const double start_time = GetWallTime();
+    std::unique_ptr<tkrzw::AsyncDBM> async(nullptr);
+    if (num_async_threads > 0) {
+      async = std::make_unique<tkrzw::AsyncDBM>(&dbm, num_async_threads);
+    }
+    std::vector<std::thread> threads;
+    for (int32_t i = 0; i < num_threads; i++) {
+      threads.emplace_back(std::thread(setting_task, i, async.get()));
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    if (async != nullptr) {
+      PrintF("Destroying AsyncDBM (tasks=%d): ... ", async->GetTaskQueue()->GetSize());
+      const double async_del_start_time = GetWallTime();
+      async.reset(nullptr);
+      const double async_del_end_time = GetWallTime();
+      PrintF("done (elapsed=%.6f)\n", async_del_end_time - async_del_start_time);
+    }
+    Print("Synchronizing: ... ");
+    const double sync_start_time = GetWallTime();
+    status = dbm.Synchronize(false);
+    if (status != Status::SUCCESS) {
+      EPrintL("Synchhronize failed: ", status);
+      has_error = true;
+    }
+    const double sync_end_time = GetWallTime();
+    PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+    const double end_time = GetWallTime();
+    const double elapsed_time = end_time - start_time;
+    const int64_t num_records = dbm.CountSimple();
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
+    PrintF("Setting done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
+           elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
+           mem_usage);
+    PrintL();
+  }
+  auto getting_task = [&](int32_t id, tkrzw::AsyncDBM* async) {
+    std::mt19937 key_mt(id);
+    std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
+    bool midline = false;
+    std::vector<std::future<std::pair<Status, std::string>>> futures;
+    if (wait_freq > 0) {
+      futures.reserve(wait_freq);
+    }
+    const int32_t rebuild_pos = id == 0 && with_rebuild ? num_iterations / 4 : -1;
+    std::future<Status> rebuild_future;
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
+      const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
+      const std::string& key = SPrintF("%08d", key_num);
+      if (async == nullptr) {
+        std::string value;
+        const Status status = dbm.Get(key, &value);
+        if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
+          EPrintL("Get failed: ", status);
+          has_error = true;
+          break;
+        }
+      } else {
+        futures.emplace_back(async->Get(key));
+        if (wait_freq > 0 && futures.size() >= wait_freq) {
+          for (auto& future : futures) {
+            const Status status = future.get().first;
+            if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
+              EPrintL("Get failed: ", status);
+              has_error = true;
+              break;
+            }
+          }
+          futures.clear();
+          futures.reserve(wait_freq);
+        }
+      }
+      if (i == rebuild_pos) {
+        if (async == nullptr) {
+          const Status status = dbm.Rebuild();
+          if (status != Status::SUCCESS) {
+            EPrintL("Rebuild failed: ", status);
+            has_error = true;
+            break;
+          }
+        } else{
+          rebuild_future = async->Rebuild();
+        }
+      }
+      if (id == 0 && (i + 1) % dot_mod == 0) {
+        PutChar('.');
+        midline = true;
+        if ((i + 1) % fold_mod == 0) {
+          PrintF(" (%08d)\n", i + 1);
+          midline = false;
+        }
+      }
+    }
+    if (midline) {
+      PrintF(" (%08d)\n", num_iterations);
+    }
+    if (rebuild_future.valid()) {
+      const Status status = rebuild_future.get();
+      if (status != Status::SUCCESS) {
+        EPrintL("Rebuild failed: ", status);
+        has_error = true;
+      }
+    }
+  };
+  if (!is_set_only && !is_remove_only) {
+    PrintF("Getting: num_iterations=%d num_threads=%d\n", num_iterations, num_threads);
+    const double start_time = GetWallTime();
+    std::unique_ptr<tkrzw::AsyncDBM> async(nullptr);
+    if (num_async_threads > 0) {
+      async = std::make_unique<tkrzw::AsyncDBM>(&dbm, num_async_threads);
+    }
+    std::vector<std::thread> threads;
+    for (int32_t i = 0; i < num_threads; i++) {
+      threads.emplace_back(std::thread(setting_task, i, async.get()));
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    if (async != nullptr) {
+      PrintF("Destroying AsyncDBM (tasks=%d): ... ", async->GetTaskQueue()->GetSize());
+      const double async_del_start_time = GetWallTime();
+      async.reset(nullptr);
+      const double async_del_end_time = GetWallTime();
+      PrintF("done (elapsed=%.6f)\n", async_del_end_time - async_del_start_time);
+    }
+    const double end_time = GetWallTime();
+    const double elapsed_time = end_time - start_time;
+    const int64_t num_records = dbm.CountSimple();
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
+    PrintF("Getting done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
+           elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
+           mem_usage);
+    PrintL();
+  }
+  auto removing_task = [&](int32_t id, tkrzw::AsyncDBM* async) {
+    std::mt19937 key_mt(id);
+    std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
+    bool midline = false;
+    std::vector<std::future<Status>> futures;
+    if (wait_freq > 0) {
+      futures.reserve(wait_freq);
+    }
+    const int32_t rebuild_pos = id == 0 && with_rebuild ? num_iterations / 4 : -1;
+    std::future<Status> rebuild_future;
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
+      const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
+      const std::string& key = SPrintF("%08d", key_num);
+      if (async == nullptr) {
+        const Status status = dbm.Remove(key);
+        if (status != Status::SUCCESS || status != Status::NOT_FOUND_ERROR) {
+          EPrintL("Remove failed: ", status);
+          has_error = true;
+          break;
+        }
+      } else {
+        futures.emplace_back(async->Remove(key));
+        if (wait_freq > 0 && futures.size() >= wait_freq) {
+          for (auto& future : futures) {
+            const Status status = future.get();
+            if (status != Status::SUCCESS || status != Status::NOT_FOUND_ERROR) {
+              EPrintL("Remove failed: ", status);
+              has_error = true;
+              break;
+            }
+          }
+          futures.clear();
+          futures.reserve(wait_freq);
+        }
+      }
+      if (i == rebuild_pos) {
+        if (async == nullptr) {
+          const Status status = dbm.Rebuild();
+          if (status != Status::SUCCESS) {
+            EPrintL("Rebuild failed: ", status);
+            has_error = true;
+            break;
+          }
+        } else{
+          rebuild_future = async->Rebuild();
+        }
+      }
+      if (id == 0 && (i + 1) % dot_mod == 0) {
+        PutChar('.');
+        midline = true;
+        if ((i + 1) % fold_mod == 0) {
+          PrintF(" (%08d)\n", i + 1);
+          midline = false;
+        }
+      }
+    }
+    if (midline) {
+      PrintF(" (%08d)\n", num_iterations);
+    }
+    if (rebuild_future.valid()) {
+      const Status status = rebuild_future.get();
+      if (status != Status::SUCCESS) {
+        EPrintL("Rebuild failed: ", status);
+        has_error = true;
+      }
+    }
+  };
+  if (!is_set_only && !is_get_only) {
+    PrintF("Removing: num_iterations=%d num_threads=%d\n", num_iterations, num_threads);
+    const double start_time = GetWallTime();
+    std::unique_ptr<tkrzw::AsyncDBM> async(nullptr);
+    if (num_async_threads > 0) {
+      async = std::make_unique<tkrzw::AsyncDBM>(&dbm, num_async_threads);
+    }
+    std::vector<std::thread> threads;
+    for (int32_t i = 0; i < num_threads; i++) {
+      threads.emplace_back(std::thread(setting_task, i, async.get()));
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    if (async != nullptr) {
+      PrintF("Destroying AsyncDBM (tasks=%d): ... ", async->GetTaskQueue()->GetSize());
+      const double async_del_start_time = GetWallTime();
+      async.reset(nullptr);
+      const double async_del_end_time = GetWallTime();
+      PrintF("done (elapsed=%.6f)\n", async_del_end_time - async_del_start_time);
+    }
+    Print("Synchronizing: ... ");
+    const double sync_start_time = GetWallTime();
+    status = dbm.Synchronize(false);
+    if (status != Status::SUCCESS) {
+      EPrintL("Synchhronize failed: ", status);
+      has_error = true;
+    }
+    const double sync_end_time = GetWallTime();
+    PrintF("done (elapsed=%.6f)\n", sync_end_time - sync_start_time);
+    const double end_time = GetWallTime();
+    const double elapsed_time = end_time - start_time;
+    const int64_t num_records = dbm.CountSimple();
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
+    PrintF("Removing done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
+           elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
+           mem_usage);
+    PrintL();
+  }
+  status = dbm.Close();
+  if (status != tkrzw::Status::SUCCESS) {
+    EPrintL("Close failed: ", status);
+    has_error = true;
+  }
+  return has_error ? 1 : 0;
+}
+
 }  // namespace tkrzw
 
 // Main routine
@@ -390,6 +772,8 @@ int main(int argc, char** argv) {
       rv = tkrzw::ProcessBuild(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "check") == 0) {
       rv = tkrzw::ProcessCheck(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "async") == 0) {
+      rv = tkrzw::ProcessAsync(argc - 1, args + 1);
     } else {
       tkrzw::PrintUsageAndDie();
     }
