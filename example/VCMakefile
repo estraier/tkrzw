@@ -116,6 +116,9 @@ polydbm_ex1.exe : polydbm_ex1.obj
 sharddbm_ex1.exe : sharddbm_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ sharddbm_ex1.obj tkrzw.lib
 
+asyncdbm_ex1.exe : asyncdbm_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ asyncdbm_ex1.obj tkrzw.lib
+
 fileindex_ex1.exe : fileindex_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ fileindex_ex1.obj tkrzw.lib
 
