@@ -1,3 +1,10 @@
+2021-07-15  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.44
+	- Library version: 1.33.0
+
+	- tkrzw_dbm_tran supports asynchronous operations.
+
 2021-07-13  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.43

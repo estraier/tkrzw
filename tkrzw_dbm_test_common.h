@@ -1030,7 +1030,7 @@ inline void CommonDBMTest::RandomTestThread(tkrzw::DBM* dbm) {
   constexpr int32_t num_threads = 5;
   std::vector<std::thread> threads;
   for (int32_t i = 0; i < num_threads; i++) {
-    threads.emplace_back(std::thread([&]() { this->RandomTest(dbm, i); }));
+    threads.emplace_back(std::thread(&CommonDBMTest::RandomTest, std::ref(*this), dbm, i));
   }
   for (auto& thread : threads) {
     thread.join();

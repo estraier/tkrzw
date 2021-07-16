@@ -129,6 +129,104 @@ TEST(AsyncDBMTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST(AsyncDBMTest, Process) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
+  std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
+  {
+    tkrzw::AsyncDBM async(&dbm, 4);
+    class Setter : public tkrzw::DBM::RecordProcessor {
+     public:
+      Setter(std::string_view new_value) : new_value_(new_value), old_value_() {}
+      std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+        old_value_ = value;
+        return new_value_;
+      }
+      std::string_view ProcessEmpty(std::string_view key) override {
+        return new_value_;
+      }
+      const std::string& GetOldValue() const {
+        return old_value_;
+      }
+     private:
+      std::string new_value_;
+      std::string old_value_;
+    };
+    auto r1 = async.Process("a", std::make_unique<Setter>("one"), true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r1.first);
+    EXPECT_EQ("", r1.second->GetOldValue());
+    auto r2 = async.Process("a", std::make_unique<Setter>("two"), true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r2.first);
+    EXPECT_EQ("one", r2.second->GetOldValue());
+    std::string old_value;
+    auto r3 = async.Process("b", [&](std::string_view key, std::string_view value) {
+                                   if (value.data() != tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                                     old_value = value;
+                                   }
+                                   return "uno";
+                                 }, true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r3);
+    EXPECT_EQ("", old_value);
+    auto r4 = async.Process("b", [&](std::string_view key, std::string_view value) {
+                                   if (value.data() != tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                                     old_value = value;
+                                   }
+                                   return "dos";
+                                 }, true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r4);
+    EXPECT_EQ("uno", old_value);
+    class Bracketter : public tkrzw::DBM::RecordProcessor {
+     public:
+      Bracketter() {}
+      std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+        if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+          return tkrzw::DBM::RecordProcessor::NOOP;
+        }
+        new_value_ = tkrzw::StrCat("[", value, "]");
+        return new_value_;
+      }
+     private:
+      std::string new_value_;
+    };
+    auto r5 = async.ProcessEach(std::make_unique<Bracketter>(), true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r5.first);
+    std::string new_value;
+    auto r6 = async.ProcessEach([&](
+        std::string_view key, std::string_view value) -> std::string_view {
+                                  if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                                    return tkrzw::DBM::RecordProcessor::NOOP;
+                                  }
+                                  new_value = tkrzw::StrCat("(", value, ")");
+                                  return new_value;
+                                }, true).get();
+    EXPECT_EQ("([two])", dbm.GetSimple("a"));
+    EXPECT_EQ("([dos])", dbm.GetSimple("b"));
+    std::vector<std::pair<std::string_view, std::shared_ptr<Setter>>> key_proc_pairs;
+    key_proc_pairs.emplace_back(std::make_pair("a", std::make_unique<Setter>("three")));
+    key_proc_pairs.emplace_back(std::make_pair("b", std::make_unique<Setter>("tres")));
+    auto r7 = async.ProcessMulti(key_proc_pairs, true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r7.first);
+    EXPECT_EQ("three", dbm.GetSimple("a"));
+    EXPECT_EQ("tres", dbm.GetSimple("b"));
+    ASSERT_EQ(2, r7.second.size());
+    EXPECT_EQ("([two])", r7.second[0]->GetOldValue());
+    EXPECT_EQ("([dos])", r7.second[1]->GetOldValue());
+    std::vector<std::pair<std::string_view, tkrzw::DBM::RecordLambdaType>> key_lambda_pairs;
+    key_lambda_pairs.emplace_back(std::make_pair(
+        "a", [&](std::string_view key, std::string_view value) { return "four"; }));
+    key_lambda_pairs.emplace_back(std::make_pair(
+        "b", [&](std::string_view key, std::string_view value) { return "cuatro"; }));
+    auto r8 = async.ProcessMulti(key_lambda_pairs, true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r8);
+    EXPECT_EQ("four", dbm.GetSimple("a"));
+    EXPECT_EQ("cuatro", dbm.GetSimple("b"));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
 TEST(AsyncDBMTest, SearchModal) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");

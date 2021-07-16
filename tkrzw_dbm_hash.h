@@ -389,6 +389,7 @@ class HashDBM final : public DBM {
    * @param value The pointer to a string object to contain the result value.  If it is nullptr,
    * the value data is ignored.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
+   * @details Precondition: The database is opened.
    */
   Status Get(std::string_view key, std::string* value = nullptr) override;
 
@@ -402,6 +403,7 @@ class HashDBM final : public DBM {
    * @param old_value The pointer to a string object to contain the old value.  Assignment is done
    * even on the duplication error.  If it is nullptr, it is ignored.
    * @return The result status.  If overwriting is abandoned, DUPLICATION_ERROR is returned.
+   * @details Precondition: The database is opened as writable.
    */
   Status Set(std::string_view key, std::string_view value, bool overwrite = true,
              std::string* old_value = nullptr) override;
@@ -412,6 +414,7 @@ class HashDBM final : public DBM {
    * @param old_value The pointer to a string object to contain the old value.  If it is nullptr,
    * it is ignored.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
+   * @details Precondition: The database is opened as writable.
    */
   Status Remove(std::string_view key, std::string* old_value = nullptr) override;
 

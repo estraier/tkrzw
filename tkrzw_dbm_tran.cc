@@ -38,6 +38,7 @@ static void PrintUsageAndDie() {
   P("  --sync_hard  : Synchronizes physically.\n");
   P("  --remove : Removes some records.\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
+  P("  --async num : Uses the asynchronous API and sets the number of worker threads.\n");
   P("  --abort : Aborts the process at the end.\n");
   P("\n");
   P("Options for the build subcommand:\n");
@@ -50,7 +51,7 @@ static void PrintUsageAndDie() {
 static int32_t ProcessBuild(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--params", 1}, {"--iter", 1}, {"--threads", 1}, {"--incr", 1},
-    {"--sync_freq", 1}, {"--sync_hard", 0},
+    {"--sync_freq", 1}, {"--sync_hard", 0}, {"--async", 1},
     {"--remove", 0}, {"--rebuild", 0}, {"--abort", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -66,8 +67,9 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   const int32_t num_increments = GetIntegerArgument(cmd_args, "--incr", 0, 3);
   const int32_t sync_freq = GetIntegerArgument(cmd_args, "--sync_freq", 0, 100);
   const bool sync_hard = CheckMap(cmd_args, "--sync_hard");
-  const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
   const bool with_remove = CheckMap(cmd_args, "--remove");
+  const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
+  const int32_t num_async_threads = GetIntegerArgument(cmd_args, "--async", 0, 0);
   const bool with_abort = CheckMap(cmd_args, "--abort");
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
@@ -88,6 +90,10 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
     PrintL("Open failed: ", status);
     has_error = true;
   }
+  std::unique_ptr<tkrzw::AsyncDBM> async(nullptr);
+  if (num_async_threads) {
+    async = std::make_unique<tkrzw::AsyncDBM>(&dbm, num_async_threads);
+  }
   std::map<std::string, std::string> sync_params;
   if (dbm.GetInternalDBM()->GetType() == typeid(tkrzw::SkipDBM)) {
     sync_params["reducer"] = "totalbe";
@@ -105,36 +111,75 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
       const int32_t key_num = key_num_dist(mt);
       const std::string& key = SPrintF("%08d", key_num);
       if (with_remove && op_dist(mt) % 5 == 0) {
-        const Status status = dbm.Remove(key);
-        if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
-          EPrintL("Remove failed: ", status);
-          has_error = true;
+        if (async == nullptr) {
+          const Status status = dbm.Remove(key);
+          if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
+            EPrintL("Remove failed: ", status);
+            has_error = true;
+          }
+        } else {
+          const Status status = async->Remove(key).get();
+          if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
+            EPrintL("Remove failed: ", status);
+            has_error = true;
+          }
         }
       } else {
-        tkrzw::DBM::RecordProcessorIncrement proc(1, nullptr, 0);
-        std::vector<std::pair<std::string_view, tkrzw::DBM::RecordProcessor*>> key_proc_pairs;
-        for (int32_t j = 0; j < num_increments; j++) {
-          key_proc_pairs.emplace_back(std::make_pair(std::string_view(key), &proc));
-        }
-        const Status status = dbm.ProcessMulti(key_proc_pairs, true);
-        if (status != Status::SUCCESS) {
-          EPrintL("ProcessMulti failed: ", status);
-          has_error = true;
+        if (async == nullptr) {
+          tkrzw::DBM::RecordProcessorIncrement proc(1, nullptr, 0);
+          std::vector<std::pair<std::string_view, tkrzw::DBM::RecordProcessor*>> key_proc_pairs;
+          for (int32_t j = 0; j < num_increments; j++) {
+            key_proc_pairs.emplace_back(std::make_pair(std::string_view(key), &proc));
+          }
+          const Status status = dbm.ProcessMulti(key_proc_pairs, true);
+          if (status != Status::SUCCESS) {
+            EPrintL("ProcessMulti failed: ", status);
+            has_error = true;
+          }
+        } else {
+          std::vector<std::pair<std::string_view, std::shared_ptr<tkrzw::DBM::RecordProcessor>>>
+              key_proc_pairs;
+          for (int32_t j = 0; j < num_increments; j++) {
+            key_proc_pairs.emplace_back(std::make_pair(
+                std::string_view(key),
+                std::make_unique<tkrzw::DBM::RecordProcessorIncrement>(1, nullptr, 0)));
+          }
+          const Status status = async->ProcessMulti(key_proc_pairs, true).get().first;
+          if (status != Status::SUCCESS) {
+            EPrintL("ProcessMulti failed: ", status);
+            has_error = true;
+          }
         }
       }
       if (sync_freq > 0 && i % sync_freq == 0) {
-        const Status status = dbm.SynchronizeAdvanced(sync_hard, nullptr, sync_params);
-        if (status != Status::SUCCESS) {
-          EPrintL("Synchronize failed: ", status);
-          has_error = true;
+        if (async == nullptr) {
+          const Status status = dbm.SynchronizeAdvanced(sync_hard, nullptr, sync_params);
+          if (status != Status::SUCCESS) {
+            EPrintL("Synchronize failed: ", status);
+            has_error = true;
+          }
+        } else {
+          const Status status = async->Synchronize(sync_hard).get();
+          if (status != Status::SUCCESS) {
+            EPrintL("Synchronize failed: ", status);
+            has_error = true;
+          }
         }
       }
       if (with_rebuild && op_dist(mt) % (num_iterations / num_threads + 1) == 0 &&
           id == master_id.load()) {
-        const Status status = dbm.Rebuild();
-        if (status != Status::SUCCESS) {
-          EPrintL("Rebuild failed: ", status);
-          has_error = true;
+        if (async == nullptr) {
+          const Status status = dbm.Rebuild();
+          if (status != Status::SUCCESS) {
+            EPrintL("Rebuild failed: ", status);
+            has_error = true;
+          }
+        } else {
+          const Status status = async->Rebuild().get();
+          if (status != Status::SUCCESS) {
+            EPrintL("Rebuild failed: ", status);
+            has_error = true;
+          }
         }
       }
       if (id == 0 && (i + 1) % dot_mod == 0) {
@@ -163,6 +208,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   for (auto& thread : threads) {
     thread.join();
   }
+  async.reset(nullptr);
   status = dbm.SynchronizeAdvanced(sync_hard, nullptr, sync_params);
   if (status != Status::SUCCESS) {
     EPrintL("Synchronize failed: ", status);

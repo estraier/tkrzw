@@ -88,6 +88,7 @@ class TreeDBM final : public DBM {
     /**
      * Initializes the iterator to indicate the last record.
      * @return The result status.
+     * @details Precondition: The database is opened.
      * @details Even if there's no record, the operation doesn't fail.
      */
     Status Last() override;
@@ -136,6 +137,7 @@ class TreeDBM final : public DBM {
     /**
      * Moves the iterator to the previous record.
      * @return The result status.
+     * @details Precondition: The database is opened.
      * @details If the current record is missing, the operation fails.  Even if there's no previous
      * previous record, the operation doesn't fail.
      */

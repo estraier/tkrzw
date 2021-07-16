@@ -848,8 +848,8 @@ class DBM {
   /**
    * Gets the values of multiple records of keys, with a string view vector.
    * @param keys The keys of records to retrieve.
-   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
-   * records are ignored.
+   * @param records The pointer to a map to store retrieved records.  Keys which don't match
+   * existing records are ignored.
    * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
    * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
    * code, the result map can have elements.
@@ -872,8 +872,8 @@ class DBM {
   /**
    * Gets the values of multiple records of keys, with an initializer list.
    * @param keys The keys of records to retrieve.
-   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
-   * records are ignored.
+   * @param records The pointer to a map to store retrieved records.  Keys which don't match
+   * existing records are ignored.
    * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
    * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
    * code, the result map can have elements.
@@ -887,8 +887,8 @@ class DBM {
   /**
    * Gets the values of multiple records of keys, with a string vector.
    * @param keys The keys of records to retrieve.
-   * @param The pointer to a map to store retrieved records.  Keys which don't match existing
-   * records are ignored.
+   * @param records The pointer to a map to store retrieved records.  Keys which don't match
+   * existing records are ignored.
    * @return The result status.  If all records of the given keys are found, SUCCESS is returned.
    * If one or more records are missing, NOT_FOUND_ERROR is returned.  Thus, even with an error
    * code, the result map can have elements.
@@ -1133,8 +1133,6 @@ class DBM {
    * @param key_proc_pairs Pairs of the keys and their processor objects.
    * @param writable True if the processors can edit the records.
    * @return The result status.
-   * @details Precondition: The database is opened.  The writable parameter should be
-   * consistent to the open mode.
    * @details If the specified record exists, the ProcessFull of the processor is called.
    * Otherwise, the ProcessEmpty of the processor is called.
    */
@@ -1143,14 +1141,12 @@ class DBM {
       bool writable) = 0;
 
   /**
-   * Processes multiple records with processors.
+   * Processes multiple records with lambda functions.
    * @param key_lambda_pairs Pairs of the keys and their lambda functions.  The first parameter of
    * the lambda functions is the key of the record, or NOOP if it the record doesn't exist.  The
    * return value is a string reference to NOOP, REMOVE, or the new record value.
    * @param writable True if the processors can edit the records.
    * @return The result status.
-   * @details Precondition: The database is opened.  The writable parameter should be
-   * consistent to the open mode.
    */
   virtual Status ProcessMulti(
       const std::vector<std::pair<std::string_view, RecordLambdaType>>& key_lambda_pairs,

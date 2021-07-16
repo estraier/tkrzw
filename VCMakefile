@@ -1,7 +1,7 @@
 # Makefile for Tkrzw for Windows
 
-PKG_VERSION = 0.9.43
-LIB_VERSION = 1.32.0
+PKG_VERSION = 0.9.44
+LIB_VERSION = 1.33.0
 
 VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
@@ -586,19 +586,19 @@ check-tran :
 	  --sync_freq 100 --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
 	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
-	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=8"
+	  --sync_freq 100 --async 3 --rebuild --remove --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
 	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
 	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
-	  --sync_freq 100 --rebuild --remove --params "record_crc_mode=16"
+	  --sync_freq 100 --async 3 --rebuild --remove --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
 	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
 	  --sync_freq 10000
 	tkrzw_dbm_tran.exe check casket.tks
 	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
-	  --sync_freq 10000 --rebuild --remove
+	  --sync_freq 10000 --async 3 --rebuild --remove
 	tkrzw_dbm_tran.exe check casket.tks
 
 check-langc :

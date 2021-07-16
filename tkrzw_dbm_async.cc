@@ -347,19 +347,21 @@ std::future<Status> AsyncDBM::Rebuild() {
   return future;
 }
 
-std::future<Status> AsyncDBM::Synchronize(bool hard) {
+std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc) {
   struct SynchronizeTask : public TaskQueue::Task {
     DBM* dbm;
     bool hard;
+    std::unique_ptr<DBM::FileProcessor> proc;
     std::promise<Status> promise;
     void Do() override {
-      Status status = dbm->Synchronize(hard);
+      Status status = dbm->Synchronize(hard, proc.get());
       promise.set_value(std::move(status));
     }
   };
   auto task = std::make_unique<SynchronizeTask>();
   task->dbm = dbm_;
   task->hard = hard;
+  task->proc = std::move(proc);
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));
   return future;

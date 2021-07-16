@@ -55,6 +55,32 @@ class AsyncDBM final {
   ~AsyncDBM();
 
   /**
+   * Processes a record with a processor.
+   * @param key The key of the record.
+   * @param proc The processor object derived from DBM::RecordProcessor.  The ownership is taken.
+   * @param writable True if the processor can edit the record.
+   * @return The result status and the same processor object as the parameter.
+   * @details If the specified record exists, the ProcessFull of the processor is called.
+   * Otherwise, the ProcessEmpty of the processor is called.
+   */
+  template <typename PROC>
+  std::future<std::pair<Status, std::unique_ptr<PROC>>> Process(
+      std::string_view key, std::unique_ptr<PROC> proc, bool writable);
+
+  /**
+   * Processes a record with a lambda function.
+   * @param key The key of the record.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
+   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
+   * record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   */
+  std::future<Status> Process(std::string_view key, DBM::RecordLambdaType rec_lambda,
+                              bool writable);
+
+  /**
    * Gets the value of a record of a key.
    * @param key The key of the record.
    * @return The result status and the result value.  If there's no matching record,
@@ -201,6 +227,58 @@ class AsyncDBM final {
       std::string_view key, int64_t increment = 1, int64_t initial = 0);
 
   /**
+   * Processes multiple records with processors.
+   * @param key_proc_pairs Pairs of the keys and their processor objects derived from
+   * DBM::RecordProcessor.  The ownership is taken.
+   * @param writable True if the processors can edit the records.
+   * @return The result status and a vector of the same object as the parameter.
+   * @details If the specified record exists, the ProcessFull of the processor is called.
+   * Otherwise, the ProcessEmpty of the processor is called.
+   */
+  template <typename PROC>
+  std::future<std::pair<Status, std::vector<std::shared_ptr<PROC>>>> ProcessMulti(
+      const std::vector<std::pair<std::string_view, std::shared_ptr<PROC>>>& key_proc_pairs,
+      bool writable);
+
+  /**
+   * Processes multiple records with lambda functions.
+   * @param key_lambda_pairs Pairs of the keys and their lambda functions.  The first parameter of
+   * the lambda functions is the key of the record, or NOOP if it the record doesn't exist.  The
+   * return value is a string reference to NOOP, REMOVE, or the new record value.
+   * @param writable True if the processors can edit the records.
+   * @return The result status.
+   */
+  std::future<Status> ProcessMulti(
+      const std::vector<std::pair<std::string_view, DBM::RecordLambdaType>>& key_lambda_pairs,
+      bool writable);
+
+  /**
+   * Processes each and every record in the database with a processor.
+   * @param proc The processor object derived from DBM::RecordProcessor.  The ownership is taken.
+   * @param writable True if the processor can edit the record.
+   * @return The result status and the same processor object as the parameter.
+   * @details The ProcessFull of the processor is called repeatedly for each record.  The
+   * ProcessEmpty of the processor is called once before the iteration and once after the
+   * iteration.
+   */
+  template <typename PROC>
+  std::future<std::pair<Status, std::unique_ptr<PROC>>> ProcessEach(
+      std::unique_ptr<PROC> proc, bool writable);
+
+  /**
+   * Processes each and every record in the database with a lambda function.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
+   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
+   * record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   * @details The lambda function is called repeatedly for each record.  It is also called once
+   * before the iteration and once after the iteration with both the key and the value being NOOP.
+   */
+  std::future<Status> ProcessEach(DBM::RecordLambdaType rec_lambda, bool writable);
+
+  /**
    * Removes all records.
    * @return The result status.
    */
@@ -216,9 +294,12 @@ class AsyncDBM final {
    * Synchronizes the content of the database to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
+   * @param proc The file processor object, whose Process method is called while the content of
+   * the file is synchronized.  The ownership is taken. If it is nullptr, it is ignored.
+   * If it is nullptr, it is not used.
    * @return The result status.
    */
-  std::future<Status> Synchronize(bool hard);
+  std::future<Status> Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc = nullptr);
 
   /**
    * Searches the database and get keys which match a pattern, according to a mode expression.
@@ -250,6 +331,167 @@ class AsyncDBM final {
   /** The task queue. */
   TaskQueue queue_;
 };
+
+template <typename PROC>
+inline std::future<std::pair<Status, std::unique_ptr<PROC>>> AsyncDBM::Process(
+    std::string_view key, std::unique_ptr<PROC> proc, bool writable) {
+  struct ProcessTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::string key;
+    std::unique_ptr<PROC> proc;
+    bool writable;
+    std::promise<std::pair<Status, std::unique_ptr<PROC>>> promise;
+    void Do() override {
+      Status status = dbm->Process(key, proc.get(), writable);
+      promise.set_value(std::make_pair(std::move(status), std::move(proc)));
+    }
+  };
+  auto task = std::make_unique<ProcessTask>();
+  task->dbm = dbm_;
+  task->key = key;
+  task->proc = std::move(proc);
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+inline std::future<Status> AsyncDBM::Process(
+    std::string_view key, DBM::RecordLambdaType rec_lambda, bool writable) {
+  struct ProcessTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::string key;
+    DBM::RecordLambdaType rec_lambda;
+    bool writable;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->Process(key, rec_lambda, writable);
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ProcessTask>();
+  task->dbm = dbm_;
+  task->key = key;
+  task->rec_lambda = rec_lambda;
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+template <typename PROC>
+inline std::future<std::pair<Status, std::unique_ptr<PROC>>> AsyncDBM::ProcessEach(
+    std::unique_ptr<PROC> proc, bool writable) {
+  struct ProcessEachTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::unique_ptr<PROC> proc;
+    bool writable;
+    std::promise<std::pair<Status, std::unique_ptr<PROC>>> promise;
+    void Do() override {
+      Status status = dbm->ProcessEach(proc.get(), writable);
+      promise.set_value(std::make_pair(std::move(status), std::move(proc)));
+    }
+  };
+  auto task = std::make_unique<ProcessEachTask>();
+  task->dbm = dbm_;
+  task->proc = std::move(proc);
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+inline std::future<Status> AsyncDBM::ProcessEach(
+    DBM::RecordLambdaType rec_lambda, bool writable) {
+  struct ProcessEachTask : public TaskQueue::Task {
+    DBM* dbm;
+    DBM::RecordLambdaType rec_lambda;
+    bool writable;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->ProcessEach(rec_lambda, writable);
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ProcessEachTask>();
+  task->dbm = dbm_;
+  task->rec_lambda = rec_lambda;
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+template <typename PROC>
+inline std::future<std::pair<Status, std::vector<std::shared_ptr<PROC>>>> AsyncDBM::ProcessMulti(
+    const std::vector<std::pair<std::string_view, std::shared_ptr<PROC>>>& key_proc_pairs,
+    bool writable) {
+  struct ProcessMultiTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::vector<std::pair<std::string, std::shared_ptr<PROC>>> key_proc_pairs;
+    bool writable;
+    std::promise<std::pair<Status, std::vector<std::shared_ptr<PROC>>>> promise;
+    void Do() override {
+      std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> tmp_pairs;
+      tmp_pairs.reserve(key_proc_pairs.size());
+      std::vector<std::shared_ptr<PROC>> procs;
+      procs.reserve(key_proc_pairs.size());
+      for (auto& key_proc : key_proc_pairs) {
+        tmp_pairs.emplace_back(std::make_pair(
+            std::string_view(key_proc.first), key_proc.second.get()));
+        procs.emplace_back(key_proc.second);
+      }
+      Status status = dbm->ProcessMulti(tmp_pairs, writable);
+      promise.set_value(std::make_pair(std::move(status), std::move(procs)));
+    }
+  };
+  auto task = std::make_unique<ProcessMultiTask>();
+  task->dbm = dbm_;
+  task->key_proc_pairs.reserve(key_proc_pairs.size());
+  for (auto& key_proc : key_proc_pairs) {
+    task->key_proc_pairs.emplace_back(std::make_pair(
+        std::string(key_proc.first), key_proc.second));
+  }
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+inline std::future<Status> AsyncDBM::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordLambdaType>>& key_lambda_pairs,
+    bool writable) {
+  struct ProcessMultiTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::vector<std::pair<std::string, DBM::RecordLambdaType>> key_lambda_pairs;
+    bool writable;
+    std::promise<Status> promise;
+    void Do() override {
+      std::vector<std::pair<std::string_view, DBM::RecordProcessor*>> key_proc_pairs;
+      key_proc_pairs.reserve(key_lambda_pairs.size());
+      std::vector<DBM::RecordProcessorLambda> procs;
+      procs.reserve(key_lambda_pairs.size());
+      for (auto& key_lambda : key_lambda_pairs) {
+        procs.emplace_back(key_lambda.second);
+        key_proc_pairs.emplace_back(std::make_pair(
+            std::string_view(key_lambda.first), &procs.back()));
+      }
+      Status status = dbm->ProcessMulti(key_proc_pairs, writable);
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ProcessMultiTask>();
+  task->dbm = dbm_;
+  task->key_lambda_pairs.reserve(key_lambda_pairs.size());
+  for (auto& key_lambda : key_lambda_pairs) {
+    task->key_lambda_pairs.emplace_back(std::make_pair(
+        std::string(key_lambda.first), key_lambda.second));
+  }
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
 
 }  // namespace tkrzw
 
