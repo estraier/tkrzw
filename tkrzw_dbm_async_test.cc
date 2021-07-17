@@ -138,7 +138,7 @@ TEST(AsyncDBMTest, Process) {
   std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
   {
     tkrzw::AsyncDBM async(&dbm, 4);
-    class Setter : public tkrzw::DBM::RecordProcessor {
+    class Setter : public tkrzw::AsyncDBM::AsyncRecordProcessor {
      public:
       Setter(std::string_view new_value) : new_value_(new_value), old_value_() {}
       std::string_view ProcessFull(std::string_view key, std::string_view value) override {
@@ -178,7 +178,7 @@ TEST(AsyncDBMTest, Process) {
                                  }, true).get();
     EXPECT_EQ(tkrzw::Status::SUCCESS, r4);
     EXPECT_EQ("uno", old_value);
-    class Bracketter : public tkrzw::DBM::RecordProcessor {
+    class Bracketter : public tkrzw::AsyncDBM::AsyncRecordProcessor {
      public:
       Bracketter() {}
       std::string_view ProcessFull(std::string_view key, std::string_view value) override {

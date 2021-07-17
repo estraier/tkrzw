@@ -43,6 +43,24 @@ namespace tkrzw {
 class AsyncDBM final {
  public:
   /**
+   * Interface of asynchronous processor for a record.
+   */
+  class AsyncRecordProcessor : public DBM::RecordProcessor {
+   public:
+    /**
+     * Destructor.
+     */
+    virtual ~AsyncRecordProcessor() = default;
+
+    /**
+     * Processes the status of the database operation.
+     * @param status The status of the database operation.
+     * @details This is called just after the database operation.
+     */
+    virtual void ProcessStatus(const Status& status) {}
+  };
+
+  /**
    * Constructor.
    * @param dbm A database object which has been opened.  The ownership is not taken.
    * @param num_worker_threads The number of threads in the internal thread pool.
@@ -57,7 +75,7 @@ class AsyncDBM final {
   /**
    * Processes a record with a processor.
    * @param key The key of the record.
-   * @param proc The processor object derived from DBM::RecordProcessor.  The ownership is taken.
+   * @param proc The processor object derived from AsyncRecordProcessor.  The ownership is taken.
    * @param writable True if the processor can edit the record.
    * @return The result status and the same processor object as the parameter.
    * @details If the specified record exists, the ProcessFull of the processor is called.
@@ -229,7 +247,7 @@ class AsyncDBM final {
   /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects derived from
-   * DBM::RecordProcessor.  The ownership is taken.
+   * AsyncRecordProcessor.  The ownership is taken.
    * @param writable True if the processors can edit the records.
    * @return The result status and a vector of the same object as the parameter.
    * @details If the specified record exists, the ProcessFull of the processor is called.
@@ -254,7 +272,7 @@ class AsyncDBM final {
 
   /**
    * Processes each and every record in the database with a processor.
-   * @param proc The processor object derived from DBM::RecordProcessor.  The ownership is taken.
+   * @param proc The processor object derived from AsyncRecordProcessor.  The ownership is taken.
    * @param writable True if the processor can edit the record.
    * @return The result status and the same processor object as the parameter.
    * @details The ProcessFull of the processor is called repeatedly for each record.  The
@@ -343,6 +361,7 @@ inline std::future<std::pair<Status, std::unique_ptr<PROC>>> AsyncDBM::Process(
     std::promise<std::pair<Status, std::unique_ptr<PROC>>> promise;
     void Do() override {
       Status status = dbm->Process(key, proc.get(), writable);
+      proc->ProcessStatus(status);
       promise.set_value(std::make_pair(std::move(status), std::move(proc)));
     }
   };
@@ -389,6 +408,7 @@ inline std::future<std::pair<Status, std::unique_ptr<PROC>>> AsyncDBM::ProcessEa
     std::promise<std::pair<Status, std::unique_ptr<PROC>>> promise;
     void Do() override {
       Status status = dbm->ProcessEach(proc.get(), writable);
+      proc->ProcessStatus(status);
       promise.set_value(std::make_pair(std::move(status), std::move(proc)));
     }
   };
@@ -442,6 +462,9 @@ inline std::future<std::pair<Status, std::vector<std::shared_ptr<PROC>>>> AsyncD
         procs.emplace_back(key_proc.second);
       }
       Status status = dbm->ProcessMulti(tmp_pairs, writable);
+      for (auto& proc : procs) {
+        proc->ProcessStatus(status);
+      }
       promise.set_value(std::make_pair(std::move(status), std::move(procs)));
     }
   };

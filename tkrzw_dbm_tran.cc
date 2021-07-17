@@ -64,6 +64,21 @@ static void PrintUsageAndDie() {
   std::exit(1);
 }
 
+// Wrapper of RecordProcessorIncrement as AsyncRecordProcessor.
+class Incrementor : public tkrzw::AsyncDBM::AsyncRecordProcessor {
+ public:
+  Incrementor(int64_t increment, int64_t* current, int64_t initial)
+      : proc_(increment, current, initial) {}
+  std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+    return proc_.ProcessFull(key, value);
+  }
+  std::string_view ProcessEmpty(std::string_view key) override {
+    return proc_.ProcessEmpty(key);
+  }
+ private:
+  tkrzw::DBM::RecordProcessorIncrement proc_;
+};
+
 // Processes the build subcommand.
 static int32_t ProcessBuild(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
@@ -144,7 +159,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
         }
       } else {
         if (async == nullptr) {
-          tkrzw::DBM::RecordProcessorIncrement proc(1, nullptr, 0);
+          Incrementor proc(1, nullptr, 0);
           std::vector<std::pair<std::string_view, tkrzw::DBM::RecordProcessor*>> key_proc_pairs;
           for (int32_t j = 0; j < num_increments; j++) {
             key_proc_pairs.emplace_back(std::make_pair(std::string_view(key), &proc));
@@ -155,12 +170,13 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
             has_error = true;
           }
         } else {
-          std::vector<std::pair<std::string_view, std::shared_ptr<tkrzw::DBM::RecordProcessor>>>
+          std::vector<std::pair<std::string_view,
+                                std::shared_ptr<tkrzw::AsyncDBM::AsyncRecordProcessor>>>
               key_proc_pairs;
           for (int32_t j = 0; j < num_increments; j++) {
             key_proc_pairs.emplace_back(std::make_pair(
                 std::string_view(key),
-                std::make_unique<tkrzw::DBM::RecordProcessorIncrement>(1, nullptr, 0)));
+                std::make_unique<Incrementor>(1, nullptr, 0)));
           }
           const Status status = async->ProcessMulti(key_proc_pairs, true).get().first;
           if (status != Status::SUCCESS) {
