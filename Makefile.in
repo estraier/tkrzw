@@ -690,13 +690,13 @@ check-tran :
 	  --sync_freq 10000 --async 3 --rebuild --remove
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran check --restore casket.tks
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran async casket.tkh --iter 25000 --threads 4 \
-	  --params "num_buckets=100000" --async 0 --rebuild
+	  --params "num_buckets=100000" --rebuild --random_key --async 0
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran async casket.tkh --iter 25000 --threads 4 \
-	  --params "num_buckets=100000" --async 4 --wait_freq 1000 --rebuild
+	  --params "num_buckets=100000" --rebuild --async 4 --wait_freq 1000
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran async casket.tkt --iter 25000 --threads 4 \
-	  --params "num_buckets=10000,max_page_size=1024" --async 0 --rebuild
+	  --params "num_buckets=10000,max_page_size=1024" --rebuild --random_key --async 0
 	$(RUNENV) $(RUNCMD) ./tkrzw_dbm_tran async casket.tkt --iter 25000 --threads 4 \
-	  --params "num_buckets=10000,max_page_size=1024" --async 4 --wait_freq 1000 --rebuild
+	  --params "num_buckets=10000,max_page_size=1024" --rebuild --async 4 --wait_freq 1000
 
 check-langc :
 	rm -Rf casket*

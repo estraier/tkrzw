@@ -52,10 +52,10 @@ static void PrintUsageAndDie() {
   P("Options for the async subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
   P("  --threads num : The number of threads. (default: 1)\n");
-  P("  --wait_freq num : Frequency of waiting (default: 0).\n");
   P("  --rebuild : Rebuilds the database occasionally.\n");
   P("  --async num : Uses the asynchronous API and sets the number of worker threads."
     " (default: 0)\n");
+  P("  --wait_freq num : Frequency of waiting (default: 0).\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
   P("  --set_only : Does only setting.\n");
   P("  --get_only : Does only getting.\n");
@@ -398,7 +398,7 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
 static int32_t ProcessAsync(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--params", 1}, {"--iter", 1}, {"--threads", 1},
-    {"--wait_freq", 1}, {"--rebuild", 0}, {"--async", 1},
+    {"--rebuild", 0}, {"--async", 1}, {"--wait_freq", 1},
     {"--random_key", 0}, {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -411,9 +411,9 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   const int32_t num_iterations = GetIntegerArgument(cmd_args, "--iter", 0, 10000);
   const int32_t num_threads = GetIntegerArgument(cmd_args, "--threads", 0, 1);
-  const int32_t wait_freq = GetIntegerArgument(cmd_args, "--wait_freq", 0, 0);
   const bool with_rebuild = CheckMap(cmd_args, "--rebuild");
   const int32_t num_async_threads = GetIntegerArgument(cmd_args, "--async", 0, 0);
+  const int32_t wait_freq = GetIntegerArgument(cmd_args, "--wait_freq", 0, 0);
   const bool is_random_key = CheckMap(cmd_args, "--random_key");
   const bool is_get_only = CheckMap(cmd_args, "--get_only");
   const bool is_set_only = CheckMap(cmd_args, "--set_only");
@@ -462,7 +462,7 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
         }
       } else {
         futures.emplace_back(async->Set(key, value));
-        if (wait_freq > 0 && futures.size() >= wait_freq) {
+        if (wait_freq > 0 && static_cast<int32_t>(futures.size()) >= wait_freq) {
           for (auto& future : futures) {
             const Status status = future.get();
             if (status != Status::SUCCESS) {
@@ -569,7 +569,7 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
         }
       } else {
         futures.emplace_back(async->Get(key));
-        if (wait_freq > 0 && futures.size() >= wait_freq) {
+        if (wait_freq > 0 && static_cast<int32_t>(futures.size()) >= wait_freq) {
           for (auto& future : futures) {
             const Status status = future.get().first;
             if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
@@ -623,7 +623,7 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
     }
     std::vector<std::thread> threads;
     for (int32_t i = 0; i < num_threads; i++) {
-      threads.emplace_back(std::thread(setting_task, i, async.get()));
+      threads.emplace_back(std::thread(getting_task, i, async.get()));
     }
     for (auto& thread : threads) {
       thread.join();
@@ -659,17 +659,17 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
       const std::string& key = SPrintF("%08d", key_num);
       if (async == nullptr) {
         const Status status = dbm.Remove(key);
-        if (status != Status::SUCCESS || status != Status::NOT_FOUND_ERROR) {
+        if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
           EPrintL("Remove failed: ", status);
           has_error = true;
           break;
         }
       } else {
         futures.emplace_back(async->Remove(key));
-        if (wait_freq > 0 && futures.size() >= wait_freq) {
+        if (wait_freq > 0 && static_cast<int32_t>(futures.size()) >= wait_freq) {
           for (auto& future : futures) {
             const Status status = future.get();
-            if (status != Status::SUCCESS || status != Status::NOT_FOUND_ERROR) {
+            if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
               EPrintL("Remove failed: ", status);
               has_error = true;
               break;
@@ -720,7 +720,7 @@ static int32_t ProcessAsync(int32_t argc, const char** args) {
     }
     std::vector<std::thread> threads;
     for (int32_t i = 0; i < num_threads; i++) {
-      threads.emplace_back(std::thread(setting_task, i, async.get()));
+      threads.emplace_back(std::thread(removing_task, i, async.get()));
     }
     for (auto& thread : threads) {
       thread.join();
