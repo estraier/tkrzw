@@ -127,7 +127,15 @@ uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t 
 void tkrzw_free_str_array(TkrzwStr* array, int32_t size) {
   assert(array != nullptr);
   for (int32_t i = 0; i < size; i++) {
-    xfree(array[i].ptr);
+    xfree(const_cast<char*>(array[i].ptr));
+  }
+  xfree(array);
+}
+
+void tkrzw_free_str_map(TkrzwKeyValuePair* array, int32_t size) {
+  assert(array != nullptr);
+  for (int32_t i = 0; i < size; i++) {
+    xfree(const_cast<char*>(array[i].key_ptr));
   }
   xfree(array);
 }
@@ -233,6 +241,38 @@ char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_
   return value_ptr;
 }
 
+TkrzwKeyValuePair* tkrzw_dbm_get_multi(
+    TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_keys, int32_t* num_matched) {
+  assert(dbm != nullptr && keys != nullptr && num_matched != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::vector<std::string> xkeys;
+  xkeys.reserve(num_keys);
+  for (int32_t i = 0; i < num_keys; i++) {
+    const auto& key = keys[i];
+    const int32_t key_size = key.size < 0 ? strlen(key.ptr) : key.size;
+    xkeys.emplace_back(std::string(key.ptr, key_size));
+  }
+  std::map<std::string, std::string> records;
+  last_status = xdbm->GetMulti(xkeys, &records);
+  TkrzwKeyValuePair* array = static_cast<TkrzwKeyValuePair*>(xmalloc(
+      sizeof(TkrzwKeyValuePair) * records.size() + 1));
+  int32_t num_recs = 0;
+  for (const auto& record : records) {
+    auto& elem = array[num_recs];
+    char* key_ptr = static_cast<char*>(xmalloc(record.first.size() + record.second.size() + 2));
+    std::memcpy(key_ptr, record.first.c_str(), record.first.size() + 1);
+    char* value_ptr = key_ptr + record.first.size() + 1;
+    std::memcpy(value_ptr, record.second.c_str(), record.second.size() + 1);
+    elem.key_ptr = key_ptr;
+    elem.key_size = record.first.size();
+    elem.value_ptr = value_ptr;
+    elem.value_size = record.second.size();
+    num_recs++;
+  }
+  *num_matched = records.size();
+  return array;
+}
+
 bool tkrzw_dbm_set(
     TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
     const char* value_ptr, int32_t value_size, bool overwrite) {
@@ -249,6 +289,24 @@ bool tkrzw_dbm_set(
   return last_status == Status::SUCCESS;
 }
 
+bool tkrzw_dbm_set_multi(
+    TkrzwDBM* dbm, const TkrzwKeyValuePair* records, int32_t num_records, bool overwrite) {
+  assert(dbm != nullptr && records != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::map<std::string, std::string> xrecords;
+  for (int32_t i = 0; i < num_records; i++) {
+    const auto& record = records[i];
+    const int32_t key_size =
+        record.key_size < 0 ? strlen(record.key_ptr) : record.key_size;
+    const int32_t value_size =
+        record.value_size < 0 ? strlen(record.value_ptr) : record.value_size;
+    xrecords.emplace(std::string(record.key_ptr, key_size),
+                     std::string(record.value_ptr, value_size));
+  }
+  last_status = xdbm->SetMulti(xrecords, overwrite);
+  return last_status == Status::SUCCESS;
+}
+
 bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
   assert(dbm != nullptr && key_ptr != nullptr);
   if (key_size < 0) {
@@ -256,6 +314,20 @@ bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
   }
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   last_status = xdbm->Remove(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_remove_multi(TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_keys) {
+  assert(dbm != nullptr && keys != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::vector<std::string> xkeys;
+  xkeys.reserve(num_keys);
+  for (int32_t i = 0; i < num_keys; i++) {
+    const auto& key = keys[i];
+    const int32_t key_size = key.size < 0 ? strlen(key.ptr) : key.size;
+    xkeys.emplace_back(std::string(key.ptr, key_size));
+  }
+  last_status = xdbm->RemoveMulti(xkeys);
   return last_status == Status::SUCCESS;
 }
 
@@ -277,6 +349,28 @@ bool tkrzw_dbm_append(
   last_status = xdbm->Append(
       std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size),
       std::string_view(delim_ptr, delim_size));
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_append_multi(
+    TkrzwDBM* dbm, const TkrzwKeyValuePair* records, int32_t num_records,
+    const char* delim_ptr, int32_t delim_size) {
+  assert(dbm != nullptr && records != nullptr && delim_ptr != nullptr);
+  if (delim_size < 0) {
+    delim_size = std::strlen(delim_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::map<std::string, std::string> xrecords;
+  for (int32_t i = 0; i < num_records; i++) {
+    const auto& record = records[i];
+    const int32_t key_size =
+        record.key_size < 0 ? strlen(record.key_ptr) : record.key_size;
+    const int32_t value_size =
+        record.value_size < 0 ? strlen(record.value_ptr) : record.value_size;
+    xrecords.emplace(std::string(record.key_ptr, key_size),
+                     std::string(record.value_ptr, value_size));
+  }
+  last_status = xdbm->AppendMulti(xrecords, std::string_view(delim_ptr, delim_size));
   return last_status == Status::SUCCESS;
 }
 
@@ -562,8 +656,9 @@ TkrzwStr* tkrzw_dbm_search(
   for (size_t i = 0; i < keys.size(); i++) {
     const auto& key = keys[i];
     auto& elem = array[i];
-    elem.ptr = static_cast<char*>(xmalloc(key.size() + 1));
-    std::memcpy(elem.ptr, key.c_str(), key.size() + 1);
+    char*ptr = static_cast<char*>(xmalloc(key.size() + 1));
+    std::memcpy(ptr, key.c_str(), key.size() + 1);
+    elem.ptr = ptr;
     elem.size = key.size();
   }
   *num_matched = keys.size();

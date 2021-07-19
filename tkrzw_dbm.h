@@ -1041,7 +1041,7 @@ class DBM {
   }
 
   /**
-   * Appends data to multiple records, with a map of strings.
+   * Appends data to multiple records, with a map of string views.
    * @param records The records to append.
    * @param delim The delimiter to put after the existing record.
    * @return The result status.
@@ -1075,6 +1075,18 @@ class DBM {
           std::string_view(record.first), std::string_view(record.second)));
     }
     return AppendMulti(map_records, delim);
+  }
+
+  /**
+   * Appends data to multiple records, with a map of strings.
+   * @param records The records to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  virtual Status AppendMulti(
+      const std::map<std::string, std::string>& records, std::string_view delim = "") {
+    return AppendMulti(MakeStrViewMapFromRecords(records), delim);
   }
 
   /**

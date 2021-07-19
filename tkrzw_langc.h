@@ -109,18 +109,14 @@ extern const char* TKRZW_REC_PROC_NOOP;
 extern const char* TKRZW_REC_PROC_REMOVE;
 
 /**
- * Pair of a key and its processor.
+ * String pointer and its size.
  */
 typedef struct {
-  /** The key pointer. */
-  const char* key_ptr;
-  /** The key size. */
-  int32_t key_size;
-  /** The function pointer to process the key. */
-  tkrzw_record_processor proc;
-  /** An arbitrary data which is given to the callback function. */
-  void* proc_arg;
-} TkrzwKeyProcPair;
+  /** The pointer to the region. */
+  const char* ptr;
+  /** The size of the region. */
+  int32_t size;
+} TkrzwStr;
 
 /**
  * Pair of a key and its value.
@@ -137,14 +133,18 @@ typedef struct {
 } TkrzwKeyValuePair;
 
 /**
- * String pointer and its size.
+ * Pair of a key and its processor.
  */
 typedef struct {
-  /** The pointer to the region. */
-  char* ptr;
-  /** The size of the region. */
-  int32_t size;
-} TkrzwStr;
+  /** The key pointer. */
+  const char* key_ptr;
+  /** The key size. */
+  int32_t key_size;
+  /** The function pointer to process the key. */
+  tkrzw_record_processor proc;
+  /** An arbitrary data which is given to the callback function. */
+  void* proc_arg;
+} TkrzwKeyProcPair;
 
 /**
  * Type of the file processor function.
@@ -214,6 +214,13 @@ uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t 
  * @param size The number of the elements of the array.
  */
 void tkrzw_free_str_array(TkrzwStr* array, int32_t size);
+
+/**
+ * Releases an allocated array and its elements of allocated key-value pairs.
+ * @param array The pointer to the array to release.
+ * @param size The number of the elements of the array.
+ */
+void tkrzw_free_str_map(TkrzwKeyValuePair* array, int32_t size);
 
 /**
  * Searches a string for a pattern matching a regular expression.
@@ -294,6 +301,21 @@ bool tkrzw_dbm_process(
 char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_t* value_size);
 
 /**
+ * Gets the values of multiple records of keys.
+ * @param dbm The database object.
+ * @param keys An array of the keys of records to retrieve.
+ * @param num_keys The number of elements of the key array.
+ * @param num_matched The pointer to the variable to store the number of the element of the
+ * return value.
+ * @return The pointer to an array of matched key-value pairs.  This function returns an empty
+ * array on failure.  If all records of the given keys are found, the status is set SUCCESS.
+ * If one or more records are missing, NOT_FOUND_ERROR is set.  The array and its elements are
+ * allocated dynamically so they should be released by the tkrzw_free_str_map function.
+ */
+TkrzwKeyValuePair* tkrzw_dbm_get_multi(
+    TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_keys, int32_t* num_matched);
+
+/**
  * Sets a record of a key and a value.
  * @param dbm The database object.
  * @param key_ptr The key pointer.
@@ -311,6 +333,20 @@ bool tkrzw_dbm_set(
     const char* value_ptr, int32_t value_size, bool overwrite);
 
 /**
+ * Sets multiple records.
+ * @param dbm The database object.
+ * @param records An array of the key-value pairs of records to store.
+ * @param num_records The number of elements of the record array.
+ * @param overwrite Whether to overwrite the existing value if there's a record with the same
+ * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+ * is given up and an error status is returned.
+ * @return True on success or false on failure.  If there are records avoiding overwriting, false
+ * is returned and DUPLICATION_ERROR status code is set.
+ */
+bool tkrzw_dbm_set_multi(
+    TkrzwDBM* dbm, const TkrzwKeyValuePair* records, int32_t num_records, bool overwrite);
+
+/**
  * Removes a record of a key.
  * @param dbm The database object.
  * @param key_ptr The key pointer.
@@ -319,6 +355,16 @@ bool tkrzw_dbm_set(
  * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
  */
 bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size);
+
+/**
+ * Removes records of keys.
+ * @param dbm The database object.
+ * @param keys An array of the keys of records to retrieve.
+ * @param num_keys The number of elements of the key array.
+ * @return True on success or false on failure.  If there are missing records, false is returned
+ * and NOT_FOUND_ERROR status code is set.
+ */
+bool tkrzw_dbm_remove_multi(TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_keys);
 
 /**
  * Appends data at the end of a record of a key.
@@ -335,6 +381,20 @@ bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size);
 bool tkrzw_dbm_append(
     TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
     const char* value_ptr, int32_t value_size,
+    const char* delim_ptr, int32_t delim_size);
+
+/**
+ * Appends data to multiple records.
+ * @param dbm The database object.
+ * @param records An array of the key-value pairs of records to append.
+ * @param num_records The number of elements of the record array.
+ * @param delim_ptr The delimiter pointer.
+ * @param delim_size The delimiter size.  If it is negative, strlen(delim_ptr) is used.
+ * @return True on success or false on failure.
+ * @details If there's no existing record, the value is set without the delimiter.
+ */
+bool tkrzw_dbm_append_multi(
+    TkrzwDBM* dbm, const TkrzwKeyValuePair* records, int32_t num_records,
     const char* delim_ptr, int32_t delim_size);
 
 /**
