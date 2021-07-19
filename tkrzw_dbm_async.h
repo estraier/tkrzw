@@ -43,14 +43,39 @@ namespace tkrzw {
 class AsyncDBM final {
  public:
   /**
-   * Interface of asynchronous processor for a record.
+   * Interface of a common post processor for a record.
    */
-  class AsyncRecordProcessor : public DBM::RecordProcessor {
+  class CommonPostprocessor {
    public:
     /**
      * Destructor.
      */
-    virtual ~AsyncRecordProcessor() = default;
+    virtual ~CommonPostprocessor() = default;
+
+    /**
+     * Processes the status of a database operation.
+     * @param name The method name of the database operation.
+     * @param status The status of the database operation.
+     */
+    virtual void Postprocess(const char* name, const Status& status) {}
+  };
+
+  /**
+   * Lambda function type to postprocess a database operation.
+   * @details The first parameter is the method name of the database operation.  The second
+   * parameter is the status of the database operation.
+   */
+  typedef std::function<void(const char*, const Status&)> CommonPostLambdaType;
+
+  /**
+   * Interface of asynchronous processor for a record.
+   */
+  class RecordProcessor : public DBM::RecordProcessor {
+   public:
+    /**
+     * Destructor.
+     */
+    virtual ~RecordProcessor() = default;
 
     /**
      * Processes the status of the database operation.
@@ -73,9 +98,38 @@ class AsyncDBM final {
   ~AsyncDBM();
 
   /**
+   * Set the common post processor.
+   * @param proc the common post processor.  If it is nullptr, no postprocess is done.  The
+   * ownership is taken.
+   * @details By default or if nullptr is set, no postprocess is done.  If a processor is set,
+   * its Postprocess method is called every time in parallel after every method is called.
+   */
+  void SetCommonPostprocessor(std::unique_ptr<CommonPostprocessor> proc);
+
+  /**
+   * Set the common post processor with a lambda function.
+   * @param post_lambda the lambda function of the common post processor.
+   * @details By default, no postprocess is done.  If a processor is set, it is called every time
+   * in parallel after every method is called.
+   */
+  void SetCommonPostprocessor(CommonPostLambdaType post_lambda) {
+    class PostprocessorLambda : public CommonPostprocessor {
+     public:
+      explicit PostprocessorLambda(CommonPostLambdaType post_lambda)
+          : post_lambda_(post_lambda) {}
+      void Postprocess(const char* name, const Status& status) override {
+        post_lambda_(name, status);
+      }
+     private:
+      CommonPostLambdaType post_lambda_;
+    };
+    SetCommonPostprocessor(std::make_unique<PostprocessorLambda>(post_lambda));
+  }
+
+  /**
    * Processes a record with a processor.
    * @param key The key of the record.
-   * @param proc The processor object derived from AsyncRecordProcessor.  The ownership is taken.
+   * @param proc The processor object derived from RecordProcessor.  The ownership is taken.
    * @param writable True if the processor can edit the record.
    * @return The result status and the same processor object as the parameter.
    * @details If the specified record exists, the ProcessFull of the processor is called.
@@ -247,7 +301,7 @@ class AsyncDBM final {
   /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects derived from
-   * AsyncRecordProcessor.  The ownership is taken.
+   * RecordProcessor.  The ownership is taken.
    * @param writable True if the processors can edit the records.
    * @return The result status and a vector of the same object as the parameter.
    * @details If the specified record exists, the ProcessFull of the processor is called.
@@ -272,7 +326,7 @@ class AsyncDBM final {
 
   /**
    * Processes each and every record in the database with a processor.
-   * @param proc The processor object derived from AsyncRecordProcessor.  The ownership is taken.
+   * @param proc The processor object derived from RecordProcessor.  The ownership is taken.
    * @param writable True if the processor can edit the record.
    * @return The result status and the same processor object as the parameter.
    * @details The ProcessFull of the processor is called repeatedly for each record.  The
@@ -348,6 +402,8 @@ class AsyncDBM final {
   DBM* dbm_;
   /** The task queue. */
   TaskQueue queue_;
+  /** The postprocessor. */
+  std::unique_ptr<CommonPostprocessor> postproc_;
 };
 
 template <typename PROC>

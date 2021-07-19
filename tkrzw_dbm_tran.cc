@@ -64,8 +64,8 @@ static void PrintUsageAndDie() {
   std::exit(1);
 }
 
-// Wrapper of RecordProcessorIncrement as AsyncRecordProcessor.
-class Incrementor : public tkrzw::AsyncDBM::AsyncRecordProcessor {
+// Wrapper of RecordProcessorIncrement as RecordProcessor.
+class Incrementor : public tkrzw::AsyncDBM::RecordProcessor {
  public:
   Incrementor(int64_t increment, int64_t* current, int64_t initial)
       : proc_(increment, current, initial) {}
@@ -171,7 +171,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
           }
         } else {
           std::vector<std::pair<std::string_view,
-                                std::shared_ptr<tkrzw::AsyncDBM::AsyncRecordProcessor>>>
+                                std::shared_ptr<tkrzw::AsyncDBM::RecordProcessor>>>
               key_proc_pairs;
           for (int32_t j = 0; j < num_increments; j++) {
             key_proc_pairs.emplace_back(std::make_pair(

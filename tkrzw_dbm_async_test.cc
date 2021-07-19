@@ -38,8 +38,16 @@ TEST(AsyncDBMTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
   std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
+  std::map<std::string, int32_t> status_counter;
+  std::mutex postproc_mutex;
+  auto postproc = [&](const char* name, const tkrzw::Status& status) {
+                    std::lock_guard lock(postproc_mutex);
+                    status_counter[tkrzw::StrCat(
+                        name, ":", tkrzw::Status::CodeName(status.GetCode()))]++;
+                  };
   {
     tkrzw::AsyncDBM async(&dbm, 4);
+    async.SetCommonPostprocessor(postproc);
     for (int32_t i = 1; i <= 100; i++) {
       const std::string key = tkrzw::ToString(i);
       const std::string value = tkrzw::ToString(i * i);
@@ -68,6 +76,16 @@ TEST(AsyncDBMTest, Basic) {
       get_results.emplace_back(async.Get(key));
     }
   }
+  {
+    std::lock_guard lock(postproc_mutex);
+    EXPECT_EQ(150, status_counter["Set:SUCCESS"]);
+    EXPECT_EQ(150, status_counter["Set:DUPLICATION_ERROR"]);
+    EXPECT_EQ(200, status_counter["Get:SUCCESS"]);
+    EXPECT_EQ(50, status_counter["Remove:SUCCESS"]);
+    EXPECT_EQ(50, status_counter["Remove:NOT_FOUND_ERROR"]);
+    EXPECT_EQ(100, status_counter["Append:SUCCESS"]);
+    status_counter.clear();
+  }
   EXPECT_EQ(100, dbm.CountSimple());
   ASSERT_EQ(100, get_results.size());
   for (int32_t i = 1; i <= 100; i++) {
@@ -78,6 +96,7 @@ TEST(AsyncDBMTest, Basic) {
   }
   {
     tkrzw::AsyncDBM async(&dbm, 4);
+    async.SetCommonPostprocessor(postproc);
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Synchronize(false).get());
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Rebuild().get());
     EXPECT_EQ(100, dbm.CountSimple());
@@ -126,6 +145,16 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
         kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})).get());
   }
+  {
+    std::lock_guard lock(postproc_mutex);
+    EXPECT_EQ(1, status_counter["Synchronize:SUCCESS"]);
+    EXPECT_EQ(1, status_counter["Rebuild:SUCCESS"]);
+    EXPECT_EQ(1, status_counter["Clear:SUCCESS"]);
+    EXPECT_EQ(1, status_counter["GetMulti:NOT_FOUND_ERROR"]);
+    EXPECT_EQ(1, status_counter["SetMulti:SUCCESS"]);
+    EXPECT_EQ(1, status_counter["AppendMulti:SUCCESS"]);
+    EXPECT_EQ(1, status_counter["RemoveMulti:SUCCESS"]);
+  }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
@@ -138,7 +167,7 @@ TEST(AsyncDBMTest, Process) {
   std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
   {
     tkrzw::AsyncDBM async(&dbm, 4);
-    class Setter : public tkrzw::AsyncDBM::AsyncRecordProcessor {
+    class Setter : public tkrzw::AsyncDBM::RecordProcessor {
      public:
       Setter(std::string_view new_value) : new_value_(new_value), old_value_() {}
       std::string_view ProcessFull(std::string_view key, std::string_view value) override {
@@ -178,7 +207,7 @@ TEST(AsyncDBMTest, Process) {
                                  }, true).get();
     EXPECT_EQ(tkrzw::Status::SUCCESS, r4);
     EXPECT_EQ("uno", old_value);
-    class Bracketter : public tkrzw::AsyncDBM::AsyncRecordProcessor {
+    class Bracketter : public tkrzw::AsyncDBM::RecordProcessor {
      public:
       Bracketter() {}
       std::string_view ProcessFull(std::string_view key, std::string_view value) override {
