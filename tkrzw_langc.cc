@@ -83,17 +83,25 @@ struct RecordProcessorWrapper : public DBM::RecordProcessor {
   }
 };
 
-int32_t tkrzw_last_status_code() {
-  return last_status.GetCode();
+TkrzwStatus tkrzw_last_status() {
+  TkrzwStatus status;
+  status.code = last_status.GetCode();
+  last_message = last_status.GetMessage();
+  status.message = last_message.c_str();
+  return status;
 }
 
-const char* tkrzw_status_code_name(int32_t code) {
-  return Status::CodeName(static_cast<Status::Code>(code));
+int32_t tkrzw_last_status_code() {
+  return last_status.GetCode();
 }
 
 const char* tkrzw_last_status_message() {
   last_message = last_status.GetMessage();
   return last_message.c_str();
+}
+
+const char* tkrzw_status_code_name(int32_t code) {
+  return Status::CodeName(static_cast<Status::Code>(code));
 }
 
 double tkrzw_get_wall_time() {

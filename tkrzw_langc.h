@@ -68,6 +68,16 @@ enum {
 };
 
 /**
+ * Pair of a status code and a message.
+ */
+typedef struct {
+  /** The status code. */
+  int32_t code;
+  /** The message string. */
+  const char* message;
+} TkrzwStatus;
+
+/**
  * DBM interface, just for type check.
  */
 typedef struct {
@@ -154,10 +164,26 @@ typedef struct {
 typedef void (*tkrzw_file_processor)(void* arg, const char*);
 
 /**
+ * Gets the status code and the message of the last database operation.
+ * @return The status code and the message of the last database operation.
+ * @details The regio of the message string is available until the this function or
+ * tkrzw_last_status_message function is called next time.
+ */
+TkrzwStatus tkrzw_last_status();
+
+/**
  * Gets the status code of the last database operation.
  * @return the status code of the last database operation.
  */
 int32_t tkrzw_last_status_code();
+
+/**
+ * Gets the status message of the last database operation.
+ * @return the status message of the last database operation.
+ * @details The regio of the message string is available until the this function or
+ * tkrzw_last_status function is called next time.
+ */
+const char* tkrzw_last_status_message();
 
 /**
  * Gets the string name of a status code.
@@ -165,12 +191,6 @@ int32_t tkrzw_last_status_code();
  * @return The name of the status code.
  */
 const char* tkrzw_status_code_name(int32_t code);
-
-/**
- * Gets the status message of the last database operation.
- * @return the status message of the last database operation.
- */
-const char* tkrzw_last_status_message();
 
 /**
  * Gets the number of seconds since the UNIX epoch.

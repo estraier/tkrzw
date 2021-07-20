@@ -53,6 +53,9 @@ TEST(LangCTest, Constants) {
 };
 
 TEST(LangCTest, Utils) {
+  TkrzwStatus status = tkrzw_last_status();
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, status.code);
+  EXPECT_STREQ("", status.message);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_last_status_code());
   EXPECT_STREQ("", tkrzw_last_status_message());
   EXPECT_GT(tkrzw_get_wall_time(), 0);
@@ -101,6 +104,8 @@ TEST(LangCTest, Basic) {
   EXPECT_TRUE(tkrzw_dbm_remove(dbm, "one", 3));
   EXPECT_FALSE(tkrzw_dbm_remove(dbm, "one", 3));
   EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_last_status_code());
+  TkrzwStatus status = tkrzw_last_status();
+  EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, status.code);
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "one", 3, "first", 5, true));
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "two", 3, "second", -1, true));
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "three", -1, "third", -1, true));
