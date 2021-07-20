@@ -2653,6 +2653,8 @@ int main(int argc, char** argv) {
 
 <p>The generic file functions are also useful to handle flat files.  They are wrapper of PolyFile class in C++.  You can use files in the memory mapping I/O mode, the normal I/O mode, and the direct I/O mode with the same interface.  Their names begin with "tkrzw_file_" and they receive the pointer to a TkrzwFile object as the first parameter.</p>
 
+<p>The status of last called database operation or file operation is stored as a thread-local variable.  You can get it with "tkrzw_get_last_status" function.</p>
+
 <p>The library header is based on the C99 and C11 standards.  On UNIX-like systems, typically, your program is built like this:</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ gcc -std=c11 -pthread -I/usr/local/include \
