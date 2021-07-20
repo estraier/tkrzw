@@ -50,9 +50,9 @@ const int64_t TKRZW_INT64MAX = INT64MAX;
 thread_local Status last_status(Status::SUCCESS);
 thread_local std::string last_message;
 
-const char* TKRZW_REC_PROC_NOOP = (char*)-1;
+const char* const TKRZW_REC_PROC_NOOP = (char*)-1;
 
-const char* TKRZW_REC_PROC_REMOVE = (char*)-2;
+const char* const TKRZW_REC_PROC_REMOVE = (char*)-2;
 
 struct RecordProcessorWrapper : public DBM::RecordProcessor {
  public:
@@ -83,6 +83,16 @@ struct RecordProcessorWrapper : public DBM::RecordProcessor {
   }
 };
 
+void tkrzw_set_last_status(int32_t code, const char* message) {
+  if (message == nullptr) {
+    last_status.Set(Status::Code(code));
+    last_message.clear();
+  } else {
+    last_status.Set(Status::Code(code), message);
+    last_message = message;
+  }
+}
+
 TkrzwStatus tkrzw_get_last_status() {
   TkrzwStatus status;
   status.code = last_status.GetCode();
@@ -102,6 +112,21 @@ const char* tkrzw_get_last_status_message() {
 
 const char* tkrzw_status_code_name(int32_t code) {
   return Status::CodeName(static_cast<Status::Code>(code));
+}
+
+TkrzwStatus tkrzw_copy_last_status() {
+  TkrzwStatus status;
+  status.code = last_status.GetCode();
+  if (last_status.HasMessage()) {
+    status.message = last_status.MakeMessageC();
+  } else {
+    status.message = nullptr;
+  }
+  return status;
+}
+
+void tkrzw_free_copied_status(TkrzwStatus status) {
+  xfree((char*)status.message);
 }
 
 double tkrzw_get_wall_time() {

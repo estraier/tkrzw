@@ -441,6 +441,30 @@ class Status final {
   }
 
   /**
+   * Checks whether the status has a non-empty message.
+   * @return True if the status has a non-empty message.
+   */
+  bool HasMessage() const {
+    return message_ != nullptr && *message_ != '\0';
+  }
+
+  /**
+   * Makes a C string of the message.
+   * @return The C message string, which should be released by the free function.
+   */
+  char* MakeMessageC() const {
+    if (message_ == nullptr) {
+      char* str = static_cast<char*>(xmalloc(1));
+      *str = '\0';
+      return str;
+    }
+    const size_t size = std::strlen(message_);
+    char* str = static_cast<char*>(xmalloc(size + 1));
+    std::memcpy(str, message_, size + 1);
+    return str;
+  }
+
+  /**
    * Sets the code and an empty message.
    * @param code The status code.
    */

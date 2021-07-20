@@ -151,6 +151,10 @@ TEST(LibCommonTest, Status) {
   tkrzw::Status s1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, s1.GetCode());
   EXPECT_EQ("", s1.GetMessage());
+  EXPECT_FALSE(s1.HasMessage());
+  char* cstr = s1.MakeMessageC();
+  EXPECT_STREQ("", cstr);
+  tkrzw::xfree(cstr);
   EXPECT_EQ(tkrzw::Status::SUCCESS, s1);
   EXPECT_EQ(s1, tkrzw::Status::SUCCESS);
   EXPECT_EQ("SUCCESS", static_cast<std::string>(s1));
@@ -160,6 +164,10 @@ TEST(LibCommonTest, Status) {
   s2.Set(tkrzw::Status::UNKNOWN_ERROR, "hello");
   EXPECT_EQ(tkrzw::Status::UNKNOWN_ERROR, s2.GetCode());
   EXPECT_EQ("hello", s2.GetMessage());
+  EXPECT_TRUE(s2.HasMessage());
+  cstr = s2.MakeMessageC();
+  EXPECT_STREQ("hello", cstr);
+  tkrzw::xfree(cstr);
   EXPECT_NE(s1, s2);
   EXPECT_NE(s2, s1);
   EXPECT_FALSE(s2.IsOK());
