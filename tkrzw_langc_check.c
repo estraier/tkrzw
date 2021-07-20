@@ -24,8 +24,9 @@ void print_usage() {
 }
 
 void print_error(const char* func) {
-  fprintf(stderr, "%s failed: %s: %s\n", func,
-          tkrzw_status_code_name(tkrzw_last_status_code()), tkrzw_last_status_message());
+  TkrzwStatus status = tkrzw_get_last_status();
+  fprintf(stderr, "%s failed: %s: %s\n",
+          func, tkrzw_status_code_name(status.code), status.message);
 }
 
 void put_char(int32_t c) {
@@ -137,7 +138,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
       char* value_ptr = NULL;
       int32_t value_size = 0;
       if (!tkrzw_dbm_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
-        if (tkrzw_last_status_code() != TKRZW_STATUS_NOT_FOUND_ERROR) {
+        if (tkrzw_get_last_status_code() != TKRZW_STATUS_NOT_FOUND_ERROR) {
           print_error("iter_get");
           has_error = true;
         }

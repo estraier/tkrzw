@@ -53,11 +53,11 @@ TEST(LangCTest, Constants) {
 };
 
 TEST(LangCTest, Utils) {
-  TkrzwStatus status = tkrzw_last_status();
+  TkrzwStatus status = tkrzw_get_last_status();
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, status.code);
   EXPECT_STREQ("", status.message);
-  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_last_status_code());
-  EXPECT_STREQ("", tkrzw_last_status_message());
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  EXPECT_STREQ("", tkrzw_get_last_status_message());
   EXPECT_GT(tkrzw_get_wall_time(), 0);
   if (std::strcmp(TKRZW_OS_NAME, "Linux") == 0) {
     EXPECT_GT(tkrzw_get_memory_capacity(), 0);
@@ -93,18 +93,18 @@ TEST(LangCTest, Basic) {
   const std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
   TkrzwDBM* dbm = tkrzw_dbm_open("casket", true, "");
   EXPECT_EQ(nullptr, dbm);
-  EXPECT_EQ(TKRZW_STATUS_INVALID_ARGUMENT_ERROR, tkrzw_last_status_code());
-  EXPECT_STREQ("unknown DBM class", tkrzw_last_status_message());
+  EXPECT_EQ(TKRZW_STATUS_INVALID_ARGUMENT_ERROR, tkrzw_get_last_status_code());
+  EXPECT_STREQ("unknown DBM class", tkrzw_get_last_status_message());
   dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=10");
   ASSERT_NE(nullptr, dbm);
   EXPECT_EQ(nullptr, tkrzw_dbm_get(dbm, "", 0, nullptr));
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "one", 3, "first", 5, false));
   EXPECT_FALSE(tkrzw_dbm_set(dbm, "one", 3, "1", 1, false));
-  EXPECT_EQ(TKRZW_STATUS_DUPLICATION_ERROR, tkrzw_last_status_code());
+  EXPECT_EQ(TKRZW_STATUS_DUPLICATION_ERROR, tkrzw_get_last_status_code());
   EXPECT_TRUE(tkrzw_dbm_remove(dbm, "one", 3));
   EXPECT_FALSE(tkrzw_dbm_remove(dbm, "one", 3));
-  EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_last_status_code());
-  TkrzwStatus status = tkrzw_last_status();
+  EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
+  TkrzwStatus status = tkrzw_get_last_status();
   EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, status.code);
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "one", 3, "first", 5, true));
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "two", 3, "second", -1, true));
@@ -355,7 +355,7 @@ TEST(LangCTest, Iterator) {
     char* value_ptr = nullptr;
     int32_t value_size = 0;
     if (!tkrzw_dbm_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
-      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_last_status_code());
+      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
       break;
     }
     count++;
@@ -392,7 +392,7 @@ TEST(LangCTest, Iterator) {
     char* value_ptr = nullptr;
     int32_t value_size = 0;
     if (!tkrzw_dbm_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
-      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_last_status_code());
+      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
       break;
     }
     const std::string key = tkrzw::SPrintF("%04d", count);
@@ -434,7 +434,7 @@ TEST(LangCTest, Iterator) {
     char* value_ptr = nullptr;
     int32_t value_size = 0;
     if (!tkrzw_dbm_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
-      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_last_status_code());
+      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
       break;
     }
     const std::string key = tkrzw::SPrintF("%04d", count);
@@ -638,7 +638,7 @@ TEST(LangCTest, File) {
   EXPECT_TRUE(tkrzw_file_read(file, 3, buf, 5));
   EXPECT_EQ(0, std::memcmp("DE123", buf, 5));
   EXPECT_FALSE(tkrzw_file_read(file, 1024, buf, 10));
-  EXPECT_EQ(TKRZW_STATUS_INFEASIBLE_ERROR, tkrzw_last_status_code());
+  EXPECT_EQ(TKRZW_STATUS_INFEASIBLE_ERROR, tkrzw_get_last_status_code());
   EXPECT_TRUE(tkrzw_file_close(file));
   file = tkrzw_file_open(file_path.c_str(), file, "");
   EXPECT_EQ(512, tkrzw_file_get_size(file));

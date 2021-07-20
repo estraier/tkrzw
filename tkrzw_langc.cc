@@ -83,7 +83,7 @@ struct RecordProcessorWrapper : public DBM::RecordProcessor {
   }
 };
 
-TkrzwStatus tkrzw_last_status() {
+TkrzwStatus tkrzw_get_last_status() {
   TkrzwStatus status;
   status.code = last_status.GetCode();
   last_message = last_status.GetMessage();
@@ -91,11 +91,11 @@ TkrzwStatus tkrzw_last_status() {
   return status;
 }
 
-int32_t tkrzw_last_status_code() {
+int32_t tkrzw_get_last_status_code() {
   return last_status.GetCode();
 }
 
-const char* tkrzw_last_status_message() {
+const char* tkrzw_get_last_status_message() {
   last_message = last_status.GetMessage();
   return last_message.c_str();
 }

@@ -167,23 +167,23 @@ typedef void (*tkrzw_file_processor)(void* arg, const char*);
  * Gets the status code and the message of the last database operation.
  * @return The status code and the message of the last database operation.
  * @details The regio of the message string is available until the this function or
- * tkrzw_last_status_message function is called next time.
+ * tkrzw_get_last_status_message function is called next time.
  */
-TkrzwStatus tkrzw_last_status();
+TkrzwStatus tkrzw_get_last_status();
 
 /**
  * Gets the status code of the last database operation.
  * @return the status code of the last database operation.
  */
-int32_t tkrzw_last_status_code();
+int32_t tkrzw_get_last_status_code();
 
 /**
  * Gets the status message of the last database operation.
  * @return the status message of the last database operation.
  * @details The regio of the message string is available until the this function or
- * tkrzw_last_status function is called next time.
+ * tkrzw_get_last_status function is called next time.
  */
-const char* tkrzw_last_status_message();
+const char* tkrzw_get_last_status_message();
 
 /**
  * Gets the string name of a status code.
