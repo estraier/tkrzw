@@ -58,10 +58,6 @@ TEST(LangCTest, Utils) {
   EXPECT_STREQ("", status.message);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   EXPECT_STREQ("", tkrzw_get_last_status_message());
-  TkrzwStatus status_copy = tkrzw_copy_last_status();
-  EXPECT_EQ(TKRZW_STATUS_SUCCESS, status_copy.code);
-  EXPECT_EQ(NULL, status_copy.message);
-  tkrzw_free_copied_status(status_copy);
   tkrzw_set_last_status(TKRZW_STATUS_NOT_FOUND_ERROR, NULL);
   status = tkrzw_get_last_status();
   EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, status.code);
@@ -70,10 +66,6 @@ TEST(LangCTest, Utils) {
   status = tkrzw_get_last_status();
   EXPECT_EQ(TKRZW_STATUS_APPLICATION_ERROR, status.code);
   EXPECT_STREQ("error", status.message);
-  status_copy = tkrzw_copy_last_status();
-  EXPECT_EQ(TKRZW_STATUS_APPLICATION_ERROR, status_copy.code);
-  EXPECT_STREQ("error", status_copy.message);
-  tkrzw_free_copied_status(status_copy);
   EXPECT_GT(tkrzw_get_wall_time(), 0);
   if (std::strcmp(TKRZW_OS_NAME, "Linux") == 0) {
     EXPECT_GT(tkrzw_get_memory_capacity(), 0);

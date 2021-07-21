@@ -96,8 +96,12 @@ void tkrzw_set_last_status(int32_t code, const char* message) {
 TkrzwStatus tkrzw_get_last_status() {
   TkrzwStatus status;
   status.code = last_status.GetCode();
-  last_message = last_status.GetMessage();
-  status.message = last_message.c_str();
+  if (last_status.HasMessage()) {
+    last_message = last_status.GetMessage();
+    status.message = last_message.c_str();
+  } else {
+    status.message = "";
+  }
   return status;
 }
 
@@ -106,27 +110,15 @@ int32_t tkrzw_get_last_status_code() {
 }
 
 const char* tkrzw_get_last_status_message() {
-  last_message = last_status.GetMessage();
-  return last_message.c_str();
+  if (last_status.HasMessage()) {
+    last_message = last_status.GetMessage();
+    return last_message.c_str();
+  }
+  return "";
 }
 
 const char* tkrzw_status_code_name(int32_t code) {
   return Status::CodeName(static_cast<Status::Code>(code));
-}
-
-TkrzwStatus tkrzw_copy_last_status() {
-  TkrzwStatus status;
-  status.code = last_status.GetCode();
-  if (last_status.HasMessage()) {
-    status.message = last_status.MakeMessageC();
-  } else {
-    status.message = nullptr;
-  }
-  return status;
-}
-
-void tkrzw_free_copied_status(TkrzwStatus status) {
-  xfree((char*)status.message);
 }
 
 double tkrzw_get_wall_time() {

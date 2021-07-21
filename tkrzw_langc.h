@@ -164,29 +164,29 @@ typedef struct {
 typedef void (*tkrzw_file_processor)(void* arg, const char*);
 
 /**
- * Sets the status code and the message as if it is from the last database operation.
+ * Sets the status code and the message as if it is from the last system operation.
  * @param code The status code.
  * @param message The status message.  If it is NULL, no message is set.
  */
 void tkrzw_set_last_status(int32_t code, const char* message);
 
 /**
- * Gets the status code and the message of the last database operation.
- * @return The status code and the message of the last database operation.
+ * Gets the status code and the message of the last system operation.
+ * @return The status code and the message of the last system operation.
  * @details The region of the message string is available until the this function or
  * tkrzw_get_last_status_message function is called next time.
  */
 TkrzwStatus tkrzw_get_last_status();
 
 /**
- * Gets the status code of the last database operation.
- * @return the status code of the last database operation.
+ * Gets the status code of the last system operation.
+ * @return the status code of the last system operation.
  */
 int32_t tkrzw_get_last_status_code();
 
 /**
- * Gets the status message of the last database operation.
- * @return the status message of the last database operation.
+ * Gets the status message of the last system operation.
+ * @return the status message of the last system operation.
  * @details The region of the message string is available until the this function or
  * tkrzw_get_last_status function is called next time.
  */
@@ -198,22 +198,6 @@ const char* tkrzw_get_last_status_message();
  * @return The name of the status code.
  */
 const char* tkrzw_status_code_name(int32_t code);
-
-/**
- * Copies the content of the last database operation.
- * @return The status object where the members are set with allocated data.  If the last status
- * doesn't have a non-empty message, the message field becomes NULL.
- * @details The members should be released by the tkrzw_free_status function.
- */
-TkrzwStatus tkrzw_copy_last_status();
-
-/**
- * Releases the internal data of a status object set by the tkrzw_copy_last_status function.
- * @param status The status object where the members are released.
- * @details This must not be called for the status object taken by the tkrzw_get_last_status
- * function.
- */
-void tkrzw_free_copied_status(TkrzwStatus status);
 
 /**
  * Gets the number of seconds since the UNIX epoch.
