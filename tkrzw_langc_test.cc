@@ -88,6 +88,22 @@ TEST(LangCTest, Utils) {
   EXPECT_EQ(1, tkrzw_str_edit_distance_lev("あいう", "あう", true));
   EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", false));
   EXPECT_EQ(3, tkrzw_str_edit_distance_lev("あいう", "あう", false));
+  int32_t esc_size = 0;
+  char* esc_ptr = tkrzw_str_escape_c("a\tb\n", 4, false, &esc_size);
+  EXPECT_STREQ("a\\tb\\n", esc_ptr);
+  EXPECT_EQ(6, esc_size);
+  int32_t unesc_size = 0;
+  char* unesc_ptr = tkrzw_str_unescape_c(esc_ptr, esc_size, &unesc_size);
+  EXPECT_STREQ("a\tb\n", unesc_ptr);
+  EXPECT_EQ(4, unesc_size);
+  free(unesc_ptr);
+  free(esc_ptr);  
+  esc_ptr = tkrzw_str_escape_c("aBあ", -1, true, NULL);
+  EXPECT_STREQ("aB\\xe3\\x81\\x82", esc_ptr);
+  unesc_ptr = tkrzw_str_unescape_c(esc_ptr, -1, NULL);
+  EXPECT_STREQ("aBあ", unesc_ptr);
+  free(unesc_ptr);
+  free(esc_ptr);
 }
 
 void file_proc_check(void* arg, const char* path) {

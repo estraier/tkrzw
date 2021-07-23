@@ -203,6 +203,34 @@ int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf) {
   return EditDistanceLev(std::string_view(a), std::string_view(b));
 }
 
+char* tkrzw_str_escape_c(const char* ptr, int32_t size, bool esc_nonasc, int32_t* res_size) {
+  assert(ptr != nullptr);
+  if (size < 0) {
+    size = strlen(ptr);
+  }
+  const std::string& result = StrEscapeC(std::string_view(ptr, size), esc_nonasc);
+  char* res_ptr = static_cast<char*>(xmalloc(result.size() + 1));
+  std::memcpy(res_ptr, result.c_str(), result.size() + 1);
+  if (res_size != nullptr) {
+    *res_size = result.size();
+  }
+  return res_ptr;
+}
+
+char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size) {
+  assert(ptr != nullptr);
+  if (size < 0) {
+    size = strlen(ptr);
+  }
+  const std::string& result = StrUnescapeC(std::string_view(ptr, size));
+  char* res_ptr = static_cast<char*>(xmalloc(result.size() + 1));
+  std::memcpy(res_ptr, result.c_str(), result.size() + 1);
+  if (res_size != nullptr) {
+    *res_size = result.size();
+  }
+  return res_ptr;
+}
+
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");

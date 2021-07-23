@@ -289,6 +289,27 @@ char* tkrzw_str_replace_regex(const char* text, const char* pattern, const char*
 int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf);
 
 /**
+ * Escapes C-style meta characters in a string.
+ * @param ptr The pointer to the string to convert.
+ * @param size The size of the string to convert.  If it is negative, strlen(ptr) is used.
+ * @param esc_nonasc If true, non-ASCII characters are excaped.
+ * @param res_size The pointer to the variable to store the result string size.  If it is NULL,
+ * it is not used.
+ * @return The result string, which should be released by the free function.
+ */
+char* tkrzw_str_escape_c(const char* ptr, int32_t size, bool esc_nonasc, int32_t* res_size);
+
+/**
+ * Unescapes C-style escape sequences in a string.
+ * @param ptr The pointer to the string to convert.
+ * @param size The size of the string to convert.  If it is negative, strlen(ptr) is used.
+ * @param res_size The pointer to the variable to store the result string size.  If it is NULL,
+ * it is not used.
+ * @return The result string, which should be released by the free function.
+ */
+char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size);
+
+/**
  * Opens a database file and makes a database object.
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.
