@@ -77,7 +77,7 @@ all : $(LIBRARYFILES) $(COMMANDFILES)
 clean :
 	rm -f $(LIBRARYFILES) $(LIBOBJFILES) $(COMMANDFILES) $(TESTFILES)
 	rm -f *.o *.d *.gch a.out check.in check.out gmon.out *.log *.vlog \
-	  *.tkh *.tkt *~ hoge moge tako ika uni doc/*~
+	  *.tkh *.tkt *.tks *.flat *~ hoge moge tako ika uni doc/*~
 	rm -Rf casket*
 
 untabify :
