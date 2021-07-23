@@ -250,6 +250,17 @@ void tkrzw_free_str_array(TkrzwStr* array, int32_t size);
 void tkrzw_free_str_map(TkrzwKeyValuePair* array, int32_t size);
 
 /**
+ * Searches an array of key-value pairs for a record with the given key.
+ * @param array The pointer to the array to search.
+ * @param size The number of the elements of the array.
+ * @param key_ptr The key pointer to search for.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @return The pointer to the matched record or NULL on failure.
+ */
+TkrzwKeyValuePair* tkrzw_search_str_map(TkrzwKeyValuePair* array, int32_t size,
+                                        const char* key_ptr, int32_t key_size);
+
+/**
  * Searches a string for a pattern matching a regular expression.
  * @param text The text to search.
  * @param pattern The regular expression pattern to search for.
@@ -332,7 +343,7 @@ char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_
  * @param dbm The database object.
  * @param keys An array of the keys of records to retrieve.
  * @param num_keys The number of elements of the key array.
- * @param num_matched The pointer to the variable to store the number of the element of the
+ * @param num_matched The pointer to the variable to store the number of the elements of the
  * return value.
  * @return The pointer to an array of matched key-value pairs.  This function returns an empty
  * array on failure.  If all records of the given keys are found, the status is set SUCCESS.
@@ -606,10 +617,13 @@ bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* file);
 /**
  * Inspects the database.
  * @param dbm The database object.
- * @return A string contains TSV key-value pairs separated by linefeeds.  The region should be
- * released by the free function.  This never fails.
+ * @param num_records The pointer to the variable to store the number of the elements of the
+ * return value.
+ * @return The pointer to an array of property key-value pairs.  This function returns an empty
+ * array on failure.  The array and its elements are allocated dynamically so they should be
+ * released by the tkrzw_free_str_map function.
  */
-char* tkrzw_dbm_inspect(TkrzwDBM* dbm);
+TkrzwKeyValuePair* tkrzw_dbm_inspect(TkrzwDBM* dbm, int32_t* num_records);
 
 /**
  * Checks whether the database is writable.

@@ -165,6 +165,21 @@ void tkrzw_free_str_map(TkrzwKeyValuePair* array, int32_t size) {
   xfree(array);
 }
 
+TkrzwKeyValuePair* tkrzw_search_str_map(TkrzwKeyValuePair* array, int32_t size,
+                                        const char* key_ptr, int32_t key_size) {
+  assert(array != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  for (int32_t i = 0; i < size; i++) {
+    TkrzwKeyValuePair* elem = array + i;
+    if (elem->key_size == key_size && memcmp(elem->key_ptr, key_ptr, key_size) == 0) {
+      return elem;
+    }
+  }
+  return nullptr;
+}
+
 int32_t tkrzw_str_search_regex(const char* text, const char* pattern) {
   assert(text != nullptr && pattern != nullptr);
   return StrSearchRegex(text, pattern);
@@ -622,26 +637,27 @@ bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* file) {
   return last_status == Status::SUCCESS;
 }
 
-char* tkrzw_dbm_inspect(TkrzwDBM* dbm) {
-  assert(dbm != nullptr);
+TkrzwKeyValuePair* tkrzw_dbm_inspect(TkrzwDBM* dbm, int32_t* num_records) {
+  assert(dbm != nullptr && num_records != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-  const auto& result = xdbm->Inspect();
-  size_t result_size = 0;
-  for (const auto& rec : result) {
-    result_size += rec.first.size() + rec.second.size() + 2;
+  const auto& records = xdbm->Inspect();
+  TkrzwKeyValuePair* array = static_cast<TkrzwKeyValuePair*>(xmalloc(
+      sizeof(TkrzwKeyValuePair) * records.size() + 1));
+  int32_t num_recs = 0;
+  for (const auto& record : records) {
+    auto& elem = array[num_recs];
+    char* key_ptr = static_cast<char*>(xmalloc(record.first.size() + record.second.size() + 2));
+    std::memcpy(key_ptr, record.first.c_str(), record.first.size() + 1);
+    char* value_ptr = key_ptr + record.first.size() + 1;
+    std::memcpy(value_ptr, record.second.c_str(), record.second.size() + 1);
+    elem.key_ptr = key_ptr;
+    elem.key_size = record.first.size();
+    elem.value_ptr = value_ptr;
+    elem.value_size = record.second.size();
+    num_recs++;
   }
-  char* result_ptr = static_cast<char*>(xmalloc(result_size + 1));
-  char* wp = result_ptr;
-  for (const auto& rec : result) {
-    std::memcpy(wp, rec.first.data(), rec.first.size());
-    wp += rec.first.size();
-    *wp++ = '\t';
-    std::memcpy(wp, rec.second.data(), rec.second.size());
-    wp += rec.second.size();
-    *wp++ = '\n';
-  }
-  *wp = '\0';
-  return result_ptr;
+  *num_records = records.size();
+  return array;
 }
 
 bool tkrzw_dbm_is_writable(TkrzwDBM* dbm) {

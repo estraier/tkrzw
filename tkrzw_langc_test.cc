@@ -249,11 +249,19 @@ TEST(LangCTest, Basic) {
   EXPECT_TRUE(tkrzw_dbm_is_writable(dbm));
   EXPECT_FALSE(tkrzw_dbm_is_ordered(dbm));
   EXPECT_EQ(24, tkrzw_dbm_count(dbm));
-  char* inspect_ptr = tkrzw_dbm_inspect(dbm);
-  ASSERT_NE(nullptr, inspect_ptr);
-  EXPECT_NE(nullptr, strstr(inspect_ptr, "num_records"));
-  EXPECT_NE(nullptr, strstr(inspect_ptr, "file_size"));
-  tkrzw::xfree(inspect_ptr);
+  int32_t num_insp_records = 0;
+  TkrzwKeyValuePair* insp_records = tkrzw_dbm_inspect(dbm, &num_insp_records);
+  EXPECT_GE(num_insp_records, 2);
+  TkrzwKeyValuePair* insp_elem =
+      tkrzw_search_str_map(insp_records, num_insp_records, "num_records", -1);
+  ASSERT_NE(nullptr, insp_elem);
+  EXPECT_STREQ("num_records", insp_elem->key_ptr);
+  EXPECT_STREQ("24", insp_elem->value_ptr);
+  insp_elem = tkrzw_search_str_map(insp_records, num_insp_records, "class", 5);
+  ASSERT_NE(nullptr, insp_elem);
+  EXPECT_STREQ("class", insp_elem->key_ptr);
+  EXPECT_STREQ("HashDBM", insp_elem->value_ptr);
+  tkrzw_free_str_map(insp_records, num_insp_records);
   TkrzwDBM* orig_dbm = tkrzw_dbm_open(file_path.c_str(), true, "no_create=true");
   ASSERT_NE(nullptr, orig_dbm);
   EXPECT_TRUE(tkrzw_dbm_is_healthy(orig_dbm));
