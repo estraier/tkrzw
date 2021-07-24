@@ -12,6 +12,7 @@
  *************************************************************************************************/
 
 #include "tkrzw_cmd_util.h"
+#include "tkrzw_langc.h"
 
 namespace tkrzw {
 
@@ -668,12 +669,25 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
       std::string_view value(value_buf, is_random_value ? value_size_dist(misc_mt) : value_size);
+      /*
       const Status status = dbm->Set(key, value);
       if (status != Status::SUCCESS) {
         EPrintL("Set failed: ", status);
         has_error = true;
         break;
       }
+      */
+
+      if (!tkrzw_dbm_set((TkrzwDBM*)dbm.get(), key.data(), key.size(),
+                         value.data(), value.size(), true)) {
+        has_error = true;
+        break;
+      }
+
+
+      
+
+
       if (id == 0 && (i + 1) % dot_mod == 0) {
         PutChar('.');
         midline = true;
@@ -745,6 +759,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
       const std::string& key = SPrintF("%08d", key_num);
+
+      /*
       const Status status = dbm->Get(key);
       if (status != Status::SUCCESS &&
           !(is_random_key && random_seed < 0 && status == Status::NOT_FOUND_ERROR)) {
@@ -752,6 +768,14 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
         has_error = true;
         break;
       }
+      */
+      int32_t value_size = 0;
+      char* value_ptr = tkrzw_dbm_get(
+          (TkrzwDBM*)dbm.get(), key.data(), key.size(), &value_size);
+      free(value_ptr);
+
+
+
       if (id == 0 && (i + 1) % dot_mod == 0) {
         PutChar('.');
         midline = true;

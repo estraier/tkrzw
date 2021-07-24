@@ -97,3 +97,5 @@ void DumpBuffer(BabyDBM* buffer, int32_t file_id) {
   }
   dbm.Close().OrDie();
 }
+
+// END OF FILE
