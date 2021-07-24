@@ -97,7 +97,7 @@ TEST(LangCTest, Utils) {
   EXPECT_STREQ("a\tb\n", unesc_ptr);
   EXPECT_EQ(4, unesc_size);
   free(unesc_ptr);
-  free(esc_ptr);  
+  free(esc_ptr);
   esc_ptr = tkrzw_str_escape_c("aBあ", -1, true, NULL);
   EXPECT_STREQ("aB\\xe3\\x81\\x82", esc_ptr);
   unesc_ptr = tkrzw_str_unescape_c(esc_ptr, -1, NULL);
