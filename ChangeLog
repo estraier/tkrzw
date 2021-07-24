@@ -1,3 +1,10 @@
+2021-07-23  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.46
+	- Library version: 1.35.0
+
+	- Add string utilities to the C interface.
+
 2021-07-17  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.45

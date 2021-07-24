@@ -231,6 +231,20 @@ char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size) {
   return res_ptr;
 }
 
+char* tkrzw_str_append(char* modified, const char* appended) {
+  assert(appended != nullptr);
+  const size_t append_size = strlen(appended);
+  if (modified == nullptr) {
+    char* modified = static_cast<char*>(xreallocappend(nullptr, append_size + 1));
+    std::memcpy(modified, appended, append_size + 1);
+    return modified;
+  }
+  const size_t orig_size = strlen(modified);
+  modified = static_cast<char*>(xreallocappend(modified, orig_size + append_size + 1));
+  std::memcpy(modified + orig_size, appended, append_size + 1);
+  return modified;
+}
+
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");

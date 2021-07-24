@@ -310,6 +310,15 @@ char* tkrzw_str_escape_c(const char* ptr, int32_t size, bool esc_nonasc, int32_t
 char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size);
 
 /**
+ * Appends a string at the end of another allocated string.
+ * @param modified The string to be modified.  It must be allocated by malloc.  The ownership is
+ * taken.  If it is NULL, a new string is allocated.
+ * @param appended The string to be appended at the end.
+ * @return The result string, which should be released by the free function.
+ */
+char* tkrzw_str_append(char* modified, const char* appended);
+
+/**
  * Opens a database file and makes a database object.
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.

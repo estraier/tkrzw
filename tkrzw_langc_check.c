@@ -215,7 +215,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 1 || argc > 4) {
+  if (argc < 2 || argc > 4) {
     print_usage();
     return 1;
   }

@@ -104,6 +104,13 @@ TEST(LangCTest, Utils) {
   EXPECT_STREQ("aBあ", unesc_ptr);
   free(unesc_ptr);
   free(esc_ptr);
+  char* append_str = tkrzw_str_append(NULL, "abc");
+  EXPECT_STREQ("abc", append_str);
+  append_str = tkrzw_str_append(append_str, ":");
+  append_str = tkrzw_str_append(append_str, "defg");
+  append_str = tkrzw_str_append(append_str, ":hijklmn");
+  EXPECT_STREQ("abc:defg:hijklmn", append_str);
+  free(append_str);
 }
 
 void file_proc_check(void* arg, const char* path) {
