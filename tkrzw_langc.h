@@ -527,8 +527,8 @@ bool tkrzw_dbm_process_multi(
  * @details If the condition doesn't meet, INFEASIBLE_ERROR is returned.
  */
 bool tkrzw_dbm_compare_exchange_multi(
-    TkrzwDBM* dbm, TkrzwKeyValuePair* expected, int32_t num_expected,
-    TkrzwKeyValuePair* desired, int32_t num_desired);
+    TkrzwDBM* dbm, const TkrzwKeyValuePair* expected, int32_t num_expected,
+    const TkrzwKeyValuePair* desired, int32_t num_desired);
 
 /**
  * Processes each and every record in the database with a processor.
