@@ -666,7 +666,7 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm);
  * @param dest_file The file object to write records in.
  * @return True on success or false on failure.
  */
-bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file);
+bool tkrzw_dbm_export_records_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file);
 
 /**
  * Imports records to a database from a flat record file.
@@ -674,7 +674,7 @@ bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file);
  * @param src_file The file object to read records from.
  * @return True on success or false on failure.
  */
-bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file);
+bool tkrzw_dbm_import_records_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file);
 
 /**
  * Exports the keys of all records of a database as lines to a text file.
