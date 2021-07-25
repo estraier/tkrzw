@@ -238,7 +238,6 @@ Status SearchDBMEditDistanceBinary(
     std::string_view pattern_;
     std::vector<std::pair<int32_t, std::string>>* heap_;
     size_t capacity_;
-    const std::vector<uint32_t>* pattern_ucs_;
   } exporter(pattern, &heap, capacity);
   const Status status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {

@@ -457,7 +457,7 @@ std::future<std::pair<Status, std::vector<std::string>>> AsyncDBM::SearchModal(
       if (postproc != nullptr) {
         postproc->Postprocess("SearchModal", status);
       }
-      promise.set_value(std::move(std::make_pair(std::move(status), std::move(keys))));
+      promise.set_value(std::make_pair(std::move(status), std::move(keys)));
     }
   };
   auto task = std::make_unique<SearchModalTask>();

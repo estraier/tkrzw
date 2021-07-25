@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   // Prints members for each division.
   for (const int64_t division_id : {301, 401, 501}) {
     std::cout << "-- Division " << division_id << "  --" << std::endl;
-    for (const std::string employee_id :
+    for (const std::string& employee_id :
              division_index.GetValues(ToString(division_id))) {
       Employee employee;
       employee.Deserialize(dbm.GetSimple(employee_id));
