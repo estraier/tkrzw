@@ -690,6 +690,10 @@ TEST(LangCTest, File) {
   EXPECT_EQ(12, tkrzw_file_get_size(file));
   EXPECT_TRUE(tkrzw_file_synchronize(file, false, 0, 0));
   EXPECT_EQ(12, tkrzw_file_get_size(file));
+  char* path = tkrzw_file_get_path(file);
+  ASSERT_NE(path, nullptr);
+  EXPECT_NE(std::string_view::npos, std::string_view(path).find("casket-"));
+  free(path);
   char buf[16];
   EXPECT_TRUE(tkrzw_file_read(file, 0, buf, 12));
   EXPECT_EQ(0, std::memcmp("ABCDE12345FG", buf, 12));

@@ -1129,6 +1129,19 @@ int64_t tkrzw_file_get_size(TkrzwFile* file) {
   return last_status == Status::SUCCESS ? size : -1;
 }
 
+char* tkrzw_file_get_path(TkrzwFile* file) {
+  assert(file != nullptr);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  std::string path;
+  last_status = xfile->GetPath(&path);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  char* path_ptr = reinterpret_cast<char*>(xmalloc(path.size() + 1));
+  std::memcpy(path_ptr, path.c_str(), path.size() + 1);
+  return path_ptr;
+}
+
 }  // extern "C"
 
 // END OF FILE

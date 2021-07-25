@@ -1000,6 +1000,14 @@ bool tkrzw_file_synchronize(TkrzwFile* file, bool hard, int64_t off, int64_t siz
  */
 int64_t tkrzw_file_get_size(TkrzwFile* file);
 
+/**
+ * Gets the path of the file.
+ * @param file The file object.
+ * @return The pointer to the path data, which should be released by the free function.  NULL
+ * is returned on failure.
+ */
+char* tkrzw_file_get_path(TkrzwFile* file);
+
 #if defined(__cplusplus)
 }
 #endif
