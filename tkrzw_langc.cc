@@ -758,27 +758,27 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm) {
 }
 
 
-bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* file) {
-  assert(dbm != nullptr && file != nullptr);
+bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file) {
+  assert(dbm != nullptr && dest_file != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
-  last_status = ExportDBMRecordsToFlatRecords(xdbm, xfile);
+  PolyFile* xdest_file = reinterpret_cast<PolyFile*>(dest_file);
+  last_status = ExportDBMRecordsToFlatRecords(xdbm, xdest_file);
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* file) {
-  assert(dbm != nullptr && file != nullptr);
+bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file) {
+  assert(dbm != nullptr && src_file != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
-  last_status = ImportDBMRecordsFromFlatRecords(xdbm, xfile);
+  PolyFile* xsrc_file = reinterpret_cast<PolyFile*>(src_file);
+  last_status = ImportDBMRecordsFromFlatRecords(xdbm, xsrc_file);
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* file) {
-  assert(dbm != nullptr && file != nullptr);
+bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* dest_file) {
+  assert(dbm != nullptr && dest_file != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
-  last_status = ExportDBMKeysAsLines(xdbm, xfile);
+  PolyFile* xdest_file = reinterpret_cast<PolyFile*>(dest_file);
+  last_status = ExportDBMKeysAsLines(xdbm, xdest_file);
   return last_status == Status::SUCCESS;
 }
 

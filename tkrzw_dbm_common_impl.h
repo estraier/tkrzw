@@ -172,54 +172,54 @@ Status SearchDBMModal(
 /**
  * Exports all records of a database to a flat record file.
  * @param dbm The DBM object of the database.
- * @param file The file object to write records in.
+ * @param dest_file The file object to write records in.
  * @return The result status.
  * @details A flat record file contains a sequence of binary records without any high level
  * structure so it is useful as a intermediate file for data migration.
  */
-Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file);
+Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file);
 
 /**
  * Imports records to a database from a flat record file.
  * @param dbm The DBM object of the database.
- * @param file The file object to read records from.
+ * @param src_file The file object to read records from.
  * @return The result status.
  */
-Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* file);
+Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* src_file);
 
 /**
  * Exports the keys of all records of a database to a flat record file.
  * @param dbm The DBM object of the database.
- * @param file The file object to write keys in.
+ * @param dest_file The file object to write keys in.
  * @return The result status.
  */
-Status ExportDBMKeysToFlatRecords(DBM* dbm, File* file);
+Status ExportDBMKeysToFlatRecords(DBM* dbm, File* dest_file);
 
 /**
  * Exports all records of a database to a TSV file.
  * @param dbm The DBM object of the database.
- * @param file The file object to write records in.
+ * @param dest_file The file object to write records in.
  * @param escape If true, C-style escaping is applied to the output.
  * @return The result status.
  */
-Status ExportDBMRecordsToTSV(DBM* dbm, File* file, bool escape = false);
+Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape = false);
 
 /**
  * Imports records to a database from a TSV file.
  * @param dbm The DBM object of the database.
- * @param file The file object to read records from.
+ * @param dest_file The file object to read records from.
  * @param unescape If true, C-style unescaping is applied to the input.
  * @return The result status.
  */
-Status ImportDBMRecordsFromTSV(DBM* dbm, File* file, bool unescape = false);
+Status ImportDBMRecordsFromTSV(DBM* dbm, File* dest_file, bool unescape = false);
 
 /**
  * Exports the keys of all records of a database as lines to a text file.
  * @param dbm The DBM object of the database.
- * @param file The file object to write keys in.
+ * @param dest_file The file object to write keys in.
  * @return The result status.
  */
-Status ExportDBMKeysAsLines(DBM* dbm, File* file);
+Status ExportDBMKeysAsLines(DBM* dbm, File* dest_file);
 
 /**
  * Searches a text file and get lines which match a pattern.

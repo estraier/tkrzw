@@ -281,26 +281,27 @@ Status SearchDBMModal(
   return status;
 }
 
-Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file) {
-  assert(dbm != nullptr && file != nullptr);
-  Status status = file->Truncate(0);
+Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file) {
+  assert(dbm != nullptr && dest_file != nullptr);
+  Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
     return status;
   }
   Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, File* file) : impl_status_(impl_status), file_(file) {}
+    Exporter(Status* impl_status, File* dest_file)
+        : impl_status_(impl_status), dest_file_(dest_file) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      FlatRecord rec(file_);
+      FlatRecord rec(dest_file_);
       *impl_status_ |= rec.Write(key);
       *impl_status_ |= rec.Write(value);
       return NOOP;
     }
    private:
     Status* impl_status_;
-    File* file_;
-  } exporter(&impl_status, file);
+    File* dest_file_;
+  } exporter(&impl_status, dest_file);
   status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
@@ -308,14 +309,14 @@ Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* file) {
   return impl_status;
 }
 
-Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* file) {
-  assert(dbm != nullptr && file != nullptr);
+Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* src_file) {
+  assert(dbm != nullptr && src_file != nullptr);
   int64_t end_offset = 0;
-  Status status = file->GetSize(&end_offset);
+  Status status = src_file->GetSize(&end_offset);
   if (status != Status::SUCCESS) {
     return status;
   }
-  FlatRecordReader reader(file);
+  FlatRecordReader reader(src_file);
   std::string key_store;
   while (true) {
     std::string_view key;
@@ -343,25 +344,26 @@ Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* file) {
   return Status(Status::SUCCESS);
 }
 
-Status ExportDBMKeysToFlatRecords(DBM* dbm, File* file) {
-  assert(dbm != nullptr && file != nullptr);
-  Status status = file->Truncate(0);
+Status ExportDBMKeysToFlatRecords(DBM* dbm, File* dest_file) {
+  assert(dbm != nullptr && dest_file != nullptr);
+  Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
     return status;
   }
   Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, File* file) : impl_status_(impl_status), file_(file) {}
+    Exporter(Status* impl_status, File* dest_file)
+        : impl_status_(impl_status), dest_file_(dest_file) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      FlatRecord rec(file_);
+      FlatRecord rec(dest_file_);
       *impl_status_ |= rec.Write(key);
       return NOOP;
     }
    private:
     Status* impl_status_;
-    File* file_;
-  } exporter(&impl_status, file);
+    File* dest_file_;
+  } exporter(&impl_status, dest_file);
   status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
@@ -369,29 +371,29 @@ Status ExportDBMKeysToFlatRecords(DBM* dbm, File* file) {
   return impl_status;
 }
 
-Status ExportDBMRecordsToTSV(DBM* dbm, File* file, bool escape) {
-  assert(dbm != nullptr && file != nullptr);
-  Status status = file->Truncate(0);
+Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape) {
+  assert(dbm != nullptr && dest_file != nullptr);
+  Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
     return status;
   }
   Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, File* file, bool escape)
-        : impl_status_(impl_status), file_(file), escape_(escape) {}
+    Exporter(Status* impl_status, File* dest_file, bool escape)
+        : impl_status_(impl_status), dest_file_(dest_file), escape_(escape) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       const std::string& esc_key = escape_ ? StrEscapeC(key) : StrTrimForTSV(key);
       const std::string& esc_value = escape_ ? StrEscapeC(value) : StrTrimForTSV(value, true);
       const std::string& line = StrCat(esc_key, "\t", esc_value, "\n");
-      *impl_status_ |= file_->Append(line.data(), line.size());
+      *impl_status_ |= dest_file_->Append(line.data(), line.size());
       return NOOP;
     }
    private:
     Status* impl_status_;
-    File* file_;
+    File* dest_file_;
     bool escape_;
-  } exporter(&impl_status, file, escape);
+  } exporter(&impl_status, dest_file, escape);
   status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
@@ -399,9 +401,9 @@ Status ExportDBMRecordsToTSV(DBM* dbm, File* file, bool escape) {
   return impl_status;
 }
 
-Status ImportDBMRecordsFromTSV(DBM* dbm, File* file, bool unescape) {
-  assert(dbm != nullptr && file != nullptr);
-  FileReader reader(file);
+Status ImportDBMRecordsFromTSV(DBM* dbm, File* src_file, bool unescape) {
+  assert(dbm != nullptr && src_file != nullptr);
+  FileReader reader(src_file);
   while (true) {
     std::string line;
     Status status = reader.ReadLine(&line);
@@ -433,26 +435,26 @@ Status ImportDBMRecordsFromTSV(DBM* dbm, File* file, bool unescape) {
   return Status(Status::SUCCESS);
 }
 
-Status ExportDBMKeysAsLines(DBM* dbm, File* file) {
-  assert(dbm != nullptr && file != nullptr);
-  Status status = file->Truncate(0);
+Status ExportDBMKeysAsLines(DBM* dbm, File* dest_file) {
+  assert(dbm != nullptr && dest_file != nullptr);
+  Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
     return status;
   }
   Status impl_status(Status::SUCCESS);
   class Exporter final : public DBM::RecordProcessor {
    public:
-    Exporter(Status* impl_status, File* file)
-        : impl_status_(impl_status), file_(file) {}
+    Exporter(Status* impl_status, File* dest_file)
+        : impl_status_(impl_status), dest_file_(dest_file) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       const std::string line = StrCat(key, "\n");
-      *impl_status_ |= file_->Append(line.data(), line.size());
+      *impl_status_ |= dest_file_->Append(line.data(), line.size());
       return NOOP;
     }
    private:
     Status* impl_status_;
-    File* file_;
-  } exporter(&impl_status, file);
+    File* dest_file_;
+  } exporter(&impl_status, dest_file);
   status = dbm->ProcessEach(&exporter, false);
   if (status != Status::SUCCESS) {
     return status;
