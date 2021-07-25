@@ -3,6 +3,7 @@
 	- Release: 0.9.46
 	- Library version: 1.35.0
 
+	- Fix a bug of RestoreDatabase on systems with the page size more than 4096, like M1 Mac.
 	- Add string utilities to the C interface.
 
 2021-07-17  Mikio Hirabayashi  <hirarin@gmail.com>

@@ -599,7 +599,8 @@ Status HashDBMImpl::Rebuild(
   int64_t est_num_records = num_records_.load();
   if (est_num_records < HashDBM::DEFAULT_NUM_BUCKETS) {
     const int64_t record_section_size = file_->GetSizeSimple() - record_base_;
-    est_num_records = std::max(est_num_records, record_section_size / PAGE_SIZE);
+    const int64_t est_avg_record_size = 512;
+    est_num_records = std::max(est_num_records, record_section_size / est_avg_record_size);
     est_num_records = std::min(est_num_records, HashDBM::DEFAULT_NUM_BUCKETS);
   }
   HashDBM::TuningParameters tmp_tuning_params;
@@ -1409,10 +1410,10 @@ Status HashDBMImpl::InitializeBuckets() {
   int64_t offset = METADATA_SIZE;
   int64_t size = record_base_ - offset;
   Status status = file_->Truncate(record_base_);
-  char* buf = new char[PAGE_SIZE];
-  std::memset(buf, 0, PAGE_SIZE);
+  char buf[8192];
+  std::memset(buf, 0, sizeof(buf));
   while (size > 0) {
-    const int64_t write_size = std::min<int64_t>(size, PAGE_SIZE);
+    const int64_t write_size = std::min<int64_t>(size, sizeof(buf));
     const Status write_status = file_->Write(offset, buf, write_size);
     if (write_status != Status::SUCCESS) {
       status |= write_status;
@@ -1421,7 +1422,6 @@ Status HashDBMImpl::InitializeBuckets() {
     offset += write_size;
     size -= write_size;
   }
-  delete[] buf;
   char head[RECORD_BASE_HEADER_SIZE];
   std::memset(head, 0, RECORD_BASE_HEADER_SIZE);
   std::memcpy(head, RECORD_BASE_MAGIC_DATA, sizeof(RECORD_BASE_MAGIC_DATA) - 1);
@@ -2002,7 +2002,7 @@ Status HashDBMImpl::ValidateRecordsImpl(
 }
 
 Status HashDBMImpl::CheckZeroRegion(int64_t offset, int64_t end_offset) {
-  const int64_t max_check_size = PAGE_SIZE * 32;
+  const int64_t max_check_size = 128 * 1024;
   char buf[8192];
   end_offset = std::min<int64_t>(offset + max_check_size, end_offset);
   while (offset < end_offset) {
@@ -2565,12 +2565,12 @@ Status HashDBM::RestoreDatabase(
   if (status != Status::SUCCESS) {
     return status;
   }
-  int64_t actual_old_file_size = 0;
-  status = old_file.GetSize(&actual_old_file_size);
+  int64_t act_old_file_size = 0;
+  status = old_file.GetSize(&act_old_file_size);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (actual_old_file_size < PAGE_SIZE) {
+  if (act_old_file_size < RECORD_BASE_ALIGN) {
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
   UpdateMode update_mode = UPDATE_DEFAULT;
@@ -2680,7 +2680,7 @@ Status HashDBM::RestoreDatabase(
     return status;
   }
   std::unique_ptr<File> new_file;
-  if (actual_old_file_size <= UINT32MAX) {
+  if (act_old_file_size <= UINT32MAX) {
     new_file = std::make_unique<MemoryMapParallelFile>();
   } else {
     new_file = std::make_unique<PositionalParallelFile>();

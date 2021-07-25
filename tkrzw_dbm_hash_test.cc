@@ -1573,7 +1573,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
         file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
-        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Expand(tkrzw::PAGE_SIZE * 100));
+        EXPECT_EQ(tkrzw::Status::SUCCESS, file->Expand(256 * 1024));
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(file_path, true));

@@ -111,6 +111,7 @@ class SkipDBMImpl final {
   Status SaveMetadata(File* file, bool finish);
   Status LoadMetadata();
   Status CheckFileBeforeOpen(File* file, const std::string& path, bool writable);
+  Status CheckZeroRegion(int64_t offset, int64_t end_offset);
   Status PadFileForDirectIO();
   Status PrepareStorage();
   Status FinishStorage(SkipDBM::ReducerType reducer);
@@ -261,27 +262,13 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
   }
   bool healthy = closure_flags_ & CLOSURE_FLAG_CLOSE;
   bool invalid_file_size = false;
-  const int64_t actual_file_size = file_->GetSizeSimple();
-  if (file_size_ != actual_file_size) {
-    if (file_size_ > actual_file_size) {
+  const int64_t act_file_size = file_->GetSizeSimple();
+  if (file_size_ != act_file_size) {
+    if (file_size_ > act_file_size) {
       healthy = false;
       invalid_file_size = true;
-    } else {
-      const int64_t remainder = std::min<int64_t>(actual_file_size - file_size_, PAGE_SIZE);
-      char* buf = new char[remainder];
-      status = file_->Read(file_size_, buf, remainder);
-      if (status != Status::SUCCESS) {
-        delete[] buf;
-        return status;
-      }
-      bool only_zeros = true;
-      for (int32_t i = 0; i < remainder; i++) {
-        if (buf[i] != 0) {
-          only_zeros = false;
-        }
-      }
-      delete[] buf;
-      if (only_zeros) {
+    } else if (file_size_ > 0) {
+      if (CheckZeroRegion(file_size_, act_file_size) == Status::SUCCESS) {
         status = writable ? file_->Truncate(file_size_) : file_->TruncateFakely(file_size_);
         if (status != Status::SUCCESS) {
           healthy = false;
@@ -1089,6 +1076,26 @@ Status SkipDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
     }
   }
   return Status(Status::SUCCESS);;
+}
+
+Status SkipDBMImpl::CheckZeroRegion(int64_t offset, int64_t end_offset) {
+  const int64_t max_check_size = 128 * 1024;
+  char buf[8192];
+  end_offset = std::min<int64_t>(offset + max_check_size, end_offset);
+  while (offset < end_offset) {
+    const int32_t read_size = std::min<int32_t>(end_offset - offset, sizeof(buf));
+    const Status status = file_->Read(offset, buf, read_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    for (int32_t i = 0; i < read_size; i++) {
+      if (buf[i] != 0) {
+        return Status(Status::BROKEN_DATA_ERROR, "non-zero region");
+      }
+    }
+    offset += read_size;
+  }
+  return Status(Status::SUCCESS);
 }
 
 Status SkipDBMImpl::PadFileForDirectIO() {
@@ -1956,12 +1963,12 @@ Status SkipDBM::RestoreDatabase(
   if (status != Status::SUCCESS) {
     return status;
   }
-  int64_t actual_old_file_size = 0;
-  status = old_file.GetSize(&actual_old_file_size);
+  int64_t act_old_file_size = 0;
+  status = old_file.GetSize(&act_old_file_size);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (actual_old_file_size < METADATA_SIZE) {
+  if (act_old_file_size < METADATA_SIZE) {
     return Status(Status::BROKEN_DATA_ERROR, "too small file");
   }
   int32_t offset_width = -1;
@@ -1991,7 +1998,7 @@ Status SkipDBM::RestoreDatabase(
     max_level = old_max_level;
   }
   std::unique_ptr<File> new_file;
-  if (actual_old_file_size <= UINT32MAX) {
+  if (act_old_file_size <= UINT32MAX) {
     new_file = std::make_unique<MemoryMapParallelFile>();
   } else {
     new_file = std::make_unique<PositionalParallelFile>();
