@@ -1008,6 +1008,27 @@ int64_t tkrzw_file_get_size(TkrzwFile* file);
  */
 char* tkrzw_file_get_path(TkrzwFile* file);
 
+/**
+ * Searches the file and get lines which match a pattern, according to a mode expression.
+ * @param file The file object.
+ * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
+ * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
+ * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
+ * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
+ * keys whose edit distance to the binary pattern is the least.
+ * @param pattern_ptr The key pointer.
+ * @param pattern_size The key size.  If it is negative, strlen(pattern_ptr) is used.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @param num_matched The pointer to the variable to store the number of the element of the
+ * return value.
+ * @return The pointer to an array of matched keys or NULL on failure.  If not NULL, the array
+ * and its elements are allocated dynamically so they should be released by the
+ * tkrzw_free_str_array function.
+ */
+TkrzwStr* tkrzw_file_search(
+    TkrzwFile* file, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity, int32_t* num_matched);
+
 #if defined(__cplusplus)
 }
 #endif

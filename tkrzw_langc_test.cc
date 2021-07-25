@@ -706,6 +706,25 @@ TEST(LangCTest, File) {
   EXPECT_EQ(512, tkrzw_file_get_size(file));
   EXPECT_TRUE(tkrzw_file_read(file, 4, buf, 7));
   EXPECT_EQ(0, std::memcmp("E12345F", buf, 7));
+  EXPECT_TRUE(tkrzw_file_truncate(file, 0));
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string line = tkrzw::SPrintF("%08d\n", i);
+    EXPECT_TRUE(tkrzw_file_append(file, line.data(), line.size(), NULL));
+  }
+  {
+    int32_t num_lines = 0;
+    TkrzwStr* lines = tkrzw_file_search(file, "contain", "9", 1, -1, &num_lines);
+    ASSERT_NE(nullptr, lines);
+    EXPECT_EQ(19, num_lines);
+    tkrzw_free_str_array(lines, num_lines);
+  }
+  {
+    int32_t num_lines = 0;
+    TkrzwStr* lines = tkrzw_file_search(file, "contain", "100", -1, 100, &num_lines);
+    ASSERT_NE(nullptr, lines);
+    EXPECT_EQ(1, num_lines);
+    tkrzw_free_str_array(lines, num_lines);
+  }
   EXPECT_TRUE(tkrzw_file_close(file));
 }
 

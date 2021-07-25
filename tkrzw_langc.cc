@@ -1142,6 +1142,34 @@ char* tkrzw_file_get_path(TkrzwFile* file) {
   return path_ptr;
 }
 
+TkrzwStr* tkrzw_file_search(
+    TkrzwFile* file, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity, int32_t* num_matched) {
+  assert(file != nullptr && mode != nullptr && pattern_ptr != nullptr && num_matched != nullptr);
+  if (pattern_size < 0) {
+    pattern_size = std::strlen(pattern_ptr);
+  }
+  capacity = std::max(0, capacity);
+  PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
+  std::vector<std::string> lines;
+  last_status = SearchTextFileModal(xfile, mode, std::string_view(pattern_ptr, pattern_size),
+                                    &lines, capacity);
+  if (last_status != Status::SUCCESS) {
+    return nullptr;
+  }
+  TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(sizeof(TkrzwStr) * lines.size() + 1));
+  for (size_t i = 0; i < lines.size(); i++) {
+    const auto& line = lines[i];
+    auto& elem = array[i];
+    char*ptr = static_cast<char*>(xmalloc(line.size() + 1));
+    std::memcpy(ptr, line.c_str(), line.size() + 1);
+    elem.ptr = ptr;
+    elem.size = line.size();
+  }
+  *num_matched = lines.size();
+  return array;
+}
+
 }  // extern "C"
 
 // END OF FILE
