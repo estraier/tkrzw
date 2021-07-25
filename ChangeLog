@@ -4,6 +4,13 @@
 	- Library version: 1.36.0
 
 	- Fix compilation warnings on Mac.
+	- Add TKRZW_PAGE_SIZE constant to the C interface.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.16
+	- tkrzw-python: 0.1.16
+	- tkrzw-ruby: 0.1.16
+	- tkrzw-go: 0.1.2
 
 2021-07-23  Mikio Hirabayashi  <hirarin@gmail.com>
 

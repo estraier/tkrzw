@@ -43,6 +43,8 @@ const char* const TKRZW_LIBRARY_VERSION = LIBRARY_VERSION;
 
 const char* const TKRZW_OS_NAME = OS_NAME;
 
+const int32_t TKRZW_PAGE_SIZE = PAGE_SIZE;
+
 const int64_t TKRZW_INT64MIN = INT64MIN;
 
 const int64_t TKRZW_INT64MAX = INT64MAX;
@@ -371,6 +373,64 @@ bool tkrzw_dbm_set(
   return last_status == Status::SUCCESS;
 }
 
+char* tkrzw_dbm_set_and_get(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size, bool overwrite, int32_t* old_value_size) {
+  assert(dbm != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  tkrzw::Status impl_status(tkrzw::Status::SUCCESS);
+  std::string old_value;
+  bool hit = false;
+  class Processor final : public tkrzw::DBM::RecordProcessor {
+   public:
+    Processor(tkrzw::Status* status, std::string_view value, bool overwrite,
+              std::string* old_value, bool* hit)
+        : status_(status), value_(value), overwrite_(overwrite),
+          old_value_(old_value), hit_(hit) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      *old_value_ = value;
+      *hit_ = true;
+      if (overwrite_) {
+        return value_;
+      }
+      status_->Set(tkrzw::Status::DUPLICATION_ERROR);
+      return NOOP;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      return value_;
+    }
+   private:
+    tkrzw::Status* status_;
+    std::string_view value_;
+    bool overwrite_;
+    std::string* old_value_;
+    bool* hit_;
+  };
+  Processor proc(&impl_status, std::string_view(value_ptr, value_size), overwrite,
+                 &old_value, &hit);
+  const tkrzw::Status status = xdbm->Process(std::string_view(key_ptr, key_size), &proc, true);
+  char* old_value_ptr = nullptr;
+  if (status == Status::SUCCESS) {
+    if (hit) {
+      old_value_ptr = static_cast<char*>(xmalloc(old_value.size() + 1));
+      std::memcpy(old_value_ptr, old_value.c_str(), old_value.size() + 1);
+      if (old_value_size != nullptr) {
+        *old_value_size = old_value.size();
+      }
+    }
+    last_status = impl_status;
+  } else {
+    last_status = status;
+  }
+  return old_value_ptr;
+}
+
 bool tkrzw_dbm_set_multi(
     TkrzwDBM* dbm, const TkrzwKeyValuePair* records, int32_t num_records, bool overwrite) {
   assert(dbm != nullptr && records != nullptr);
@@ -397,6 +457,49 @@ bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   last_status = xdbm->Remove(std::string_view(key_ptr, key_size));
   return last_status == Status::SUCCESS;
+}
+
+char* tkrzw_dbm_remove_and_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+                               int32_t* value_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  tkrzw::Status impl_status(tkrzw::Status::SUCCESS);
+  std::string old_value;
+  class Processor final : public tkrzw::DBM::RecordProcessor {
+   public:
+    Processor(tkrzw::Status* status, std::string* old_value)
+        : status_(status), old_value_(old_value) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      *old_value_ = value;
+      return REMOVE;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      status_->Set(tkrzw::Status::NOT_FOUND_ERROR);
+      return NOOP;
+    }
+   private:
+    tkrzw::Status* status_;
+    std::string* old_value_;
+  };
+  Processor proc(&impl_status, &old_value);
+  const tkrzw::Status status = xdbm->Process(std::string_view(key_ptr, key_size), &proc, true);
+  char* old_value_ptr = nullptr;
+  if (status == Status::SUCCESS) {
+    if (impl_status == Status::SUCCESS) {
+      old_value_ptr = static_cast<char*>(xmalloc(old_value.size() + 1));
+      std::memcpy(old_value_ptr, old_value.c_str(), old_value.size() + 1);
+      if (value_size != nullptr) {
+        *value_size = old_value.size();
+      }
+    }
+    last_status = impl_status;
+  } else {
+    last_status = status;
+  }
+  return old_value_ptr;
 }
 
 bool tkrzw_dbm_remove_multi(TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_keys) {

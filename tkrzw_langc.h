@@ -31,6 +31,9 @@ extern const char* const TKRZW_LIBRARY_VERSION;
 /** The recognized OS name. */
 extern const char* const TKRZW_OS_NAME;
 
+/** The size of a memory page on the OS. */
+extern const int32_t TKRZW_PAGE_SIZE;
+
 /** The minimum value of int64_t. */
 extern const int64_t TKRZW_INT64MIN;
 
@@ -363,7 +366,8 @@ bool tkrzw_dbm_process(
  * @param value_size The pointer to the variable to store the value size.  If it is NULL, it is
  * not used.
  * @return The pointer to the value data, which should be released by the free function.  NULL
- * is returned on failure.
+ * is returned on failure.  The value data is trailed by a null code so that the region can be
+ * treated as a C-style string.
  * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
  */
 char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_t* value_size);
@@ -392,7 +396,7 @@ TkrzwKeyValuePair* tkrzw_dbm_get_multi(
  * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
  * @param overwrite Whether to overwrite the existing value if there's a record with the same
  * key.  If true, the existing value is overwritten by the new value.  If false, the operation
- * is given up and an error status is returned.
+ * is given up and an error status is set.
  * @return True on success or false on failure.
  * @details If overwriting is abandoned, DUPLICATION_ERROR status code is set.
  */
@@ -401,13 +405,34 @@ bool tkrzw_dbm_set(
     const char* value_ptr, int32_t value_size, bool overwrite);
 
 /**
+ * Sets a record and get the old value.
+ * @param dbm The database object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The new value pointer.
+ * @param value_size The new value size.  If it is negative, strlen(value_ptr) is used.
+ * @param overwrite Whether to overwrite the existing value if there's a record with the same
+ * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+ * is given up and an error status is set.
+ * @param old_value_size The pointer to the variable to store the value size.  If it is NULL, it
+ * is not used.
+ * @return The pointer to the old value data, which should be released by the free function.  NULL
+ * is returned if there's no existing record.  The value data is trailed by a null code so that
+ * the region can be treated as a C-style string.
+ * @details If overwriting is abandoned, DUPLICATION_ERROR status code is set.
+ */
+char* tkrzw_dbm_set_and_get(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size, bool overwrite, int32_t* old_value_size);
+
+/**
  * Sets multiple records.
  * @param dbm The database object.
  * @param records An array of the key-value pairs of records to store.
  * @param num_records The number of elements of the record array.
  * @param overwrite Whether to overwrite the existing value if there's a record with the same
  * key.  If true, the existing value is overwritten by the new value.  If false, the operation
- * is given up and an error status is returned.
+ * is given up and an error status is set.
  * @return True on success or false on failure.  If there are records avoiding overwriting, false
  * is returned and DUPLICATION_ERROR status code is set.
  */
@@ -423,6 +448,21 @@ bool tkrzw_dbm_set_multi(
  * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
  */
 bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size);
+
+/**
+ * Removes a record and get the value.
+ * @param dbm The database object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_size The pointer to the variable to store the value size.  If it is NULL, it is
+ * not used.
+ * @return The pointer to the value data, which should be released by the free function.  NULL
+ * is returned if there's no existing record.  The value data is trailed by a null code so that
+ * the region can be treated as a C-style string.
+ * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
+ */
+char* tkrzw_dbm_remove_and_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+                               int32_t* value_size);
 
 /**
  * Removes records of keys.
