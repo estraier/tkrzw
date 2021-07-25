@@ -854,7 +854,7 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
       }
       return NOOP;
     }
-    std::string_view ProcessEmpty(std::string_view key) {
+    std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
       return NOOP;
     }
@@ -883,7 +883,7 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
       value_ = tkrzw::ToString(tkrzw::StrToInt(value) + 1);
       return value_;
     }
-    std::string_view ProcessEmpty(std::string_view key) {
+    std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
       return NOOP;
     }
@@ -913,7 +913,7 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
       EXPECT_EQ(tkrzw::ToString(tkrzw::StrToInt(key) + 1), value);
       return NOOP;
     }
-    std::string_view ProcessEmpty(std::string_view key) {
+    std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
       return NOOP;
     }

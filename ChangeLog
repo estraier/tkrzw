@@ -1,3 +1,10 @@
+2021-07-25  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.47
+	- Library version: 1.36.0
+
+	- Fix compilation warnings on Mac.
+
 2021-07-23  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.46
