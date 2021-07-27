@@ -36,8 +36,8 @@ namespace tkrzw {
  * Asynchronous database manager adapter.
  * @details This class is a wrapper of DBM for asynchronous operations.  A task queue with a
  * thread pool is used inside.  Every methods except for the constructor and the destructor are
- * run by a thread in the thread pool and the result is set in the feature oject of the return
- * value.  The caller can ignore the feature object if it is not necessary.  The destructor of
+ * run by a thread in the thread pool and the result is set in the future oject of the return
+ * value.  The caller can ignore the future object if it is not necessary.  The destructor of
  * this asynchronous database manager waits for all tasks to be done.  Therefore, the destructor
  * should be called before the database is closed.
  */
@@ -255,7 +255,7 @@ class AsyncDBM final {
       std::string_view key, std::string_view value, std::string_view delim = "");
 
   /**
-   * Appends data to multiple records, with a map of strings.
+   * Appends data to multiple records, with a map of string views.
    * @param records The records to append.
    * @param delim The delimiter to put after the existing record.
    * @return The result status.
@@ -263,6 +263,18 @@ class AsyncDBM final {
    */
   std::future<Status> AppendMulti(
       const std::map<std::string_view, std::string_view>& records, std::string_view delim = "");
+
+  /**
+   * Appends data to multiple records, with a map of strings.
+   * @param records The records to append.
+   * @param delim The delimiter to put after the existing record.
+   * @return The result status.
+   * @details If there's no existing record, the value is set without the delimiter.
+   */
+  std::future<Status> AppendMulti(
+      const std::map<std::string, std::string>& records, std::string_view delim = "") {
+    return AppendMulti(MakeStrViewMapFromRecords(records), delim);
+  }
 
   /**
    * Compares the value of a record and exchanges if the condition meets.
@@ -359,9 +371,10 @@ class AsyncDBM final {
 
   /**
    * Rebuilds the entire database.
+   * @param params Optional parameters.
    * @return The result status.
    */
-  std::future<Status> Rebuild();
+  std::future<Status> Rebuild(const std::map<std::string, std::string>& params = {});
 
   /**
    * Synchronizes the content of the database to the file system.
@@ -370,9 +383,11 @@ class AsyncDBM final {
    * @param proc The file processor object, whose Process method is called while the content of
    * the file is synchronized.  The ownership is taken. If it is nullptr, it is ignored.
    * If it is nullptr, it is not used.
+   * @param params Optional parameters.
    * @return The result status.
    */
-  std::future<Status> Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc = nullptr);
+  std::future<Status> Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc = nullptr,
+                                  const std::map<std::string, std::string>& params = {});
 
   /**
    * Searches the database and get keys which match a pattern, according to a mode expression.
@@ -460,35 +475,35 @@ class StatusFuture final {
    * @return The result status.
    * @details Either one of the Get method family can be called only once.
    */
-  Status GetStatus();
+  Status Get();
 
   /**
    * Waits for the operation to be done and gets the status and the extra string.
    * @return The result status and the extra string.
    * @details Either one of the Get method family can be called only once.
    */
-  std::pair<Status, std::string> GetStatusAndString();
+  std::pair<Status, std::string> GetString();
 
   /**
    * Waits for the operation to be done and gets the status and the extra string vector.
    * @return The result status and the extra string vector.
    * @details Either one of the Get method family can be called only once.
    */
-  std::pair<Status, std::vector<std::string>> GetStatusAndStringVector();
+  std::pair<Status, std::vector<std::string>> GetStringVector();
 
   /**
    * Waits for the operation to be done and gets the status and the extra string map.
    * @return The result status and the extra string map.
    * @details Either one of the Get method family can be called only once.
    */
-  std::pair<Status, std::map<std::string, std::string>> GetStatusAndStringMap();
+  std::pair<Status, std::map<std::string, std::string>> GetStringMap();
 
   /**
    * Waits for the operation to be done and gets the status and the extra integer.
    * @return The result status and the extra integer.
    * @details Either one of the Get method family can be called only once.
    */
-  std::pair<Status, int64_t> GetStatusAndInteger();
+  std::pair<Status, int64_t> GetInteger();
 
  private:
   void* future_;

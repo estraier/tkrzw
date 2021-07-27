@@ -16,6 +16,7 @@
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_async.h"
 #include "tkrzw_dbm_common_impl.h"
+#include "tkrzw_dbm_poly.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"
 
@@ -396,13 +397,20 @@ std::future<Status> AsyncDBM::Clear() {
   return future;
 }
 
-std::future<Status> AsyncDBM::Rebuild() {
+std::future<Status> AsyncDBM::Rebuild(const std::map<std::string, std::string>& params) {
   struct RebuildTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
+    std::map<std::string, std::string> params;
     std::promise<Status> promise;
     void Do() override {
-      Status status = dbm->Rebuild();
+      Status status(Status::SUCCESS);
+      ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
+      if (param_dbm == nullptr) {
+        status = param_dbm->RebuildAdvanced(params);
+      } else {
+        status = dbm->Rebuild();
+      }
       if (postproc != nullptr) {
         postproc->Postprocess("Rebuild", status);
       }
@@ -412,20 +420,29 @@ std::future<Status> AsyncDBM::Rebuild() {
   auto task = std::make_unique<RebuildTask>();
   task->dbm = dbm_;
   task->postproc = postproc_.get();
+  task->params = params;
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));
   return future;
 }
 
-std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc) {
+std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc,
+                                          const std::map<std::string, std::string>& params) {
   struct SynchronizeTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
     bool hard;
     std::unique_ptr<DBM::FileProcessor> proc;
+    std::map<std::string, std::string> params;
     std::promise<Status> promise;
     void Do() override {
-      Status status = dbm->Synchronize(hard, proc.get());
+      Status status(Status::SUCCESS);
+      ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
+      if (param_dbm == nullptr) {
+        status = param_dbm->SynchronizeAdvanced(hard, proc.get(), params);
+      } else {
+        status = dbm->Synchronize(hard, proc.get());
+      }
       if (postproc != nullptr) {
         postproc->Postprocess("Synchronize", status);
       }
@@ -437,6 +454,7 @@ std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FilePr
   task->postproc = postproc_.get();
   task->hard = hard;
   task->proc = std::move(proc);
+  task->params = params;
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));
   return future;
@@ -568,7 +586,7 @@ bool StatusFuture::Wait(double timeout) {
   return done;
 }
 
-Status StatusFuture::GetStatus() {
+Status StatusFuture::Get() {
   if (type_ == typeid(Status)) {
     auto* future = reinterpret_cast<std::future<Status>*>(future_);
     if (future->valid()) {
@@ -578,7 +596,7 @@ Status StatusFuture::GetStatus() {
   return Status(Status::INVALID_ARGUMENT_ERROR);
 }
 
-std::pair<Status, std::string> StatusFuture::GetStatusAndString() {
+std::pair<Status, std::string> StatusFuture::GetString() {
   if (type_ == typeid(std::pair<Status, std::string>)) {
     auto* future = reinterpret_cast<std::future<std::pair<Status, std::string>>*>(future_);
     if (future->valid()) {
@@ -588,7 +606,7 @@ std::pair<Status, std::string> StatusFuture::GetStatusAndString() {
   return std::make_pair(Status(Status::INVALID_ARGUMENT_ERROR), "");
 }
 
-std::pair<Status, std::vector<std::string>> StatusFuture::GetStatusAndStringVector() {
+std::pair<Status, std::vector<std::string>> StatusFuture::GetStringVector() {
   if (type_ == typeid(std::pair<Status, std::vector<std::string>>)) {
     auto* future =
         reinterpret_cast<std::future<std::pair<Status, std::vector<std::string>>>*>(future_);
@@ -599,7 +617,7 @@ std::pair<Status, std::vector<std::string>> StatusFuture::GetStatusAndStringVect
   return std::make_pair(Status(Status::INFEASIBLE_ERROR), std::vector<std::string>());
 }
 
-std::pair<Status, std::map<std::string, std::string>> StatusFuture::GetStatusAndStringMap() {
+std::pair<Status, std::map<std::string, std::string>> StatusFuture::GetStringMap() {
   if (type_ == typeid(std::pair<Status, std::map<std::string, std::string>>)) {
     auto* future =
         reinterpret_cast<std::future<std::pair<Status, std::map<std::string, std::string>>>*>(
@@ -611,7 +629,7 @@ std::pair<Status, std::map<std::string, std::string>> StatusFuture::GetStatusAnd
   return std::make_pair(Status(Status::INFEASIBLE_ERROR), std::map<std::string, std::string>());
 }
 
-std::pair<Status, int64_t> StatusFuture::GetStatusAndInteger() {
+std::pair<Status, int64_t> StatusFuture::GetInteger() {
   if (type_ == typeid(std::pair<Status, int64_t>)) {
     auto* future = reinterpret_cast<std::future<std::pair<Status, int64_t>>*>(future_);
     if (future->valid()) {

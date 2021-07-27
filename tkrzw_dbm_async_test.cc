@@ -164,7 +164,6 @@ TEST(AsyncDBMTest, Process) {
   tkrzw::PolyDBM dbm;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
-  std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
   {
     tkrzw::AsyncDBM async(&dbm, 4);
     class Setter : public tkrzw::AsyncDBM::RecordProcessor {
@@ -262,7 +261,6 @@ TEST(AsyncDBMTest, SearchModal) {
   tkrzw::PolyDBM dbm;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
-  std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
   {
     tkrzw::AsyncDBM async(&dbm, 4);
     std::vector<std::future<tkrzw::Status>> set_results;
@@ -306,7 +304,6 @@ TEST(AsyncDBMTest, StatusFeature) {
   tkrzw::PolyDBM dbm;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
-  std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
   {
     tkrzw::AsyncDBM async(&dbm, 4);
     for (int32_t i = 1; i <= 100; i++) {
@@ -316,13 +313,13 @@ TEST(AsyncDBMTest, StatusFeature) {
       if (i % 3 == 0) {
         EXPECT_TRUE(set_future.Wait());
       }
-      const auto& set_result = set_future.GetStatus();
+      const auto& set_result = set_future.Get();
       EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
       tkrzw::StatusFuture get_future(async.Get(key));
       if (i % 3 == 0) {
         EXPECT_TRUE(get_future.Wait());
       }
-      const auto& get_result = get_future.GetStatusAndString();
+      const auto& get_result = get_future.GetString();
       EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
       EXPECT_EQ(value, get_result.second);
       if (i % 2 == 0) {
@@ -330,13 +327,13 @@ TEST(AsyncDBMTest, StatusFeature) {
         if (i % 3 == 0) {
           EXPECT_TRUE(remove_future.Wait());
         }
-        const auto& remove_result = remove_future.GetStatus();
+        const auto& remove_result = remove_future.Get();
         EXPECT_EQ(tkrzw::Status::SUCCESS, remove_result);
         tkrzw::StatusFuture incr_future(async.Increment(key, 1, 100));
         if (i % 3 == 0) {
           EXPECT_TRUE(incr_future.Wait());
         }
-        const auto& incr_result = incr_future.GetStatusAndInteger();
+        const auto& incr_result = incr_future.GetInteger();
         EXPECT_EQ(tkrzw::Status::SUCCESS, incr_result.first);
         EXPECT_EQ(101, incr_result.second);
       }
@@ -346,7 +343,7 @@ TEST(AsyncDBMTest, StatusFeature) {
       tkrzw::StatusFuture search_future(async.SearchModal("regex", "[123]7", 0));
       search_future.Wait(0);
       EXPECT_TRUE(search_future.Wait());
-      const auto& search_result = search_future.GetStatusAndStringVector();
+      const auto& search_result = search_future.GetStringVector();
       EXPECT_EQ(tkrzw::Status::SUCCESS, search_result.first);
       EXPECT_THAT(search_result.second, UnorderedElementsAre("0017", "0027", "0037"));
     }
@@ -364,13 +361,13 @@ TEST(AsyncDBMTest, StatusFeature) {
       if (i % 3 == 0) {
         EXPECT_TRUE(set_future.Wait());
       }
-      const auto& set_result = set_future.GetStatus();
+      const auto& set_result = set_future.Get();
       EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
       tkrzw::StatusFuture get_future(async.GetMulti(keys));
       if (i % 3 == 0) {
         EXPECT_TRUE(get_future.Wait());
       }
-      const auto& get_result = get_future.GetStatusAndStringMap();
+      const auto& get_result = get_future.GetStringMap();
       EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
       EXPECT_EQ(10, get_result.second.size());
       for (const auto& key : keys) {
@@ -381,7 +378,7 @@ TEST(AsyncDBMTest, StatusFeature) {
         if (i % 3 == 0) {
           EXPECT_TRUE(remove_future.Wait());
         }
-        const auto& remove_result = remove_future.GetStatus();
+        const auto& remove_result = remove_future.Get();
         EXPECT_EQ(tkrzw::Status::SUCCESS, remove_result);
       }
     }

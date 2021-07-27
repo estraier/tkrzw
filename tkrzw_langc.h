@@ -81,6 +81,14 @@ typedef struct {
 } TkrzwStatus;
 
 /**
+ * Future interface, just for type check.
+ */
+typedef struct {
+  /** A dummy member which is never used. */
+  void* _dummy_;
+} TkrzwFuture;
+
+/**
  * DBM interface, just for type check.
  */
 typedef struct {
@@ -95,6 +103,14 @@ typedef struct {
   /** A dummy member which is never used. */
   void* _dummy_;
 } TkrzwDBMIter;
+
+/**
+ * Asynchronous DBM interface, just for type check.
+ */
+typedef struct {
+  /** A dummy member which is never used. */
+  void* _dummy_;
+} TkrzwAsyncDBM;
 
 /**
  * File interface, just for type check.
@@ -320,6 +336,84 @@ char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size);
  * @return The result string, which should be released by the free function.
  */
 char* tkrzw_str_append(char* modified, const char* appended);
+
+/**
+ * Releases the future object.
+ * @param future The future object.
+ */
+void tkrzw_future_free(TkrzwFuture* future);
+
+/**
+ * Waits for the operation of the future object to be done.
+ * @param future The future object.
+ * @param timeout The waiting time in seconds.  If it is negative, no timeout is set.
+ * @return True if the operation has done.  False if timeout occurs.
+ */
+bool tkrzw_future_wait(TkrzwFuture* future, double timeout);
+
+/**
+ * Gets the status of the operation of the future object.
+ * @param future the future object.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the single status without any extra data.  This can be called only once for each future.
+ * object.
+ */
+void tkrzw_future_get(TkrzwFuture* future);
+
+/**
+ * Gets the status and the extra string data of the operation of the future object.
+ * @param future the future object.
+ * @param size The pointer to the variable to store the extra string size.  If it is NULL, it is
+ * not used.
+ * @return The pointer to the extra string data, which should be released by the free function.
+ * An empty string is returned on failure.  The string data is trailed by a null code so that the
+ * region can be treated as a C-style string.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the status with an extra string data.  This can be called only once for each future.
+ * object.
+ */
+char* tkrzw_future_get_str(TkrzwFuture* future, int32_t* size);
+
+/**
+ * Gets the status and the extra string array of the operation of the future object.
+ * @param future the future object.
+ * @param num_elems The pointer to the variable to store the number of elements of the extra
+ * string array.
+ * @return The pointer to an array of the extra string array, which should be released by the
+ * tkrzw_free_str_array function.  An empty array is returned on failure.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the status with an extra string array.  This can be called only once for each future.
+ * object.
+ */
+TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems);
+
+/**
+ * Gets the status and the extra string map of the operation of the future object.
+ * @param future the future object.
+ * @param num_elems The pointer to the variable to store the number of elements of the extra
+ * string map.
+ * @return The pointer to an array of the extra string map, which should be released by the
+ * tkrzw_free_str_map function.  An empty array is returned on failure.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the status with an extra string map.  This can be called only once for each future.
+ * object.
+ */
+TkrzwKeyValuePair* tkrzw_future_get_str_map(TkrzwFuture* future, int32_t* num_elems);
+
+/**
+ * Gets the status and the extra integer data of the operation of the future object.
+ * @param future the future object.
+ * @return The extra integer data.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the status with an extra integer data.  This can be called only once for each future.
+ * object.
+ */
+int64_t tkrzw_future_get_int(TkrzwFuture* future);
 
 /**
  * Opens a database file and makes a database object.
@@ -905,6 +999,231 @@ bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter);
 bool tkrzw_dbm_restore_database(
     const char* old_file_path, const char* new_file_path,
     const char* class_name, int64_t end_offset);
+
+/**
+ * Creates an asynchronous database adapter.
+ * @param dbm A database object which has been opened.  The ownership is not taken.
+ * @param num_worker_threads The number of threads in the internal thread pool.
+ * @return The new database object, which should be released by the tkrzw_async_dbm_destruct
+ * function.
+ * @details This class is a wrapper of DBM for asynchronous operations.  A task queue with a
+ * thread pool is used inside.  Every methods except for the constructor and the destructor are
+ * run by a thread in the thread pool and the result is set in the future oject of the return
+ * value.  While the caller should release the returned future object, it can omit evaluation of
+ * the result status if it is not interesting.  The destructor of this asynchronous database
+ * manager waits for all tasks to be done.  Therefore, the destructor should be called before the
+ * database is closed.
+ */
+TkrzwAsyncDBM* tkrzw_async_dbm_new(TkrzwDBM* dbm, int32_t num_worker_threads);
+
+/**
+ * Releases the asynchronous database adapter.
+ * @param async the asynchronous database adapter.
+ */
+void tkrzw_async_dbm_free(TkrzwAsyncDBM* async);
+
+/**
+ * Gets the value of a record of a key asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_str function.
+ * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_get(TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size);
+
+/**
+ * Gets the values of multiple records of keys asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param keys An array of the keys of records to retrieve.
+ * @param num_keys The number of elements of the key array.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_str_map
+ * function.
+ */
+TkrzwFuture* tkrzw_async_dbm_get_multi(
+    TkrzwAsyncDBM* async, const TkrzwStr* keys, int32_t num_keys);
+
+/**
+ * Sets a record of a key and a value asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @param overwrite Whether to overwrite the existing value if there's a record with the same
+ * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+ * is given up and an error status is set.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If overwriting is abandoned, DUPLICATION_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_set(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size, bool overwrite);
+
+/**
+ * Sets multiple records asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param records An array of the key-value pairs of records to store.
+ * @param num_records The number of elements of the record array.
+ * @param overwrite Whether to overwrite the existing value if there's a record with the same
+ * key.  If true, the existing value is overwritten by the new value.  If false, the operation
+ * is given up and an error status is set.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If overwriting is abandoned, DUPLICATION_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_set_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* records, int32_t num_records,
+    bool overwrite);
+
+/**
+ * Removes a record of a key asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If there's no matching record, NOT_FOUND_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_remove(TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size);
+
+/**
+ * Removes records of keys asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param keys An array of the keys of records to retrieve.
+ * @param num_keys The number of elements of the key array.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If there are missing records, NOT_FOUND_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_remove_multi(
+    TkrzwAsyncDBM* async, const TkrzwStr* keys, int32_t num_keys);
+
+/**
+ * Appends data at the end of a record of a key asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @param delim_ptr The delimiter pointer.
+ * @param delim_size The delimiter size.  If it is negative, strlen(delim_ptr) is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If there's no existing record, the value is set without the delimiter.
+ */
+TkrzwFuture* tkrzw_async_dbm_append(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size,
+    const char* delim_ptr, int32_t delim_size);
+
+/**
+ * Appends data to multiple records asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param records An array of the key-value pairs of records to append.
+ * @param num_records The number of elements of the record array.
+ * @param delim_ptr The delimiter pointer.
+ * @param delim_size The delimiter size.  If it is negative, strlen(delim_ptr) is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If there's no existing record, the value is set without the delimiter.
+ */
+TkrzwFuture* tkrzw_async_dbm_append_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* records, int32_t num_records,
+    const char* delim_ptr, int32_t delim_size);
+
+/**
+ * Compares the value of a record and exchanges if the condition meets asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param expected_ptr The expected value pointer.  If it is NULL, no existing record is
+ * expected.
+ * @param expected_size The expected value size.  If it is negative, strlen(expected_ptr) is used.
+ * @param desired_ptr The desired value pointer.  If it is NULL, the record is to be removed.
+ * expected.
+ * @param desired_size The desired value size.  If it is negative, strlen(desired_ptr) is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If the condition doesn't meet, INFEASIBLE_ERROR status code is set.
+ */
+TkrzwFuture* tkrzw_async_dbm_compare_exchange(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* expected_ptr, int32_t expected_size,
+    const char* desired_ptr, int32_t desired_size);
+
+/**
+ * Increments the numeric value of a record asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param increment The incremental value.  If it is TKRZW_INT64MIN, the current value is not
+ * changed and a new record is not created.
+ * @param initial The initial value.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_int function.
+ * @details The record value is stored as an 8-byte big-endian integer.  Negative is also
+ * supported.
+ */
+TkrzwFuture* tkrzw_async_dbm_increment(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    int64_t increment, int64_t initial);
+
+/**
+ * Compares the values of records and exchanges if the condition meets asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param expected An array of the record keys and their expected values.  If the value is NULL,
+ * no existing record is expected.
+ * @param num_expected The number of the expected array.
+ * @param desired An array of the record keys and their desired values.  If the value is NULL,
+ * the record is to be removed.
+ * @param num_desired The number of the desired array.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If the condition doesn't meet, INFEASIBLE_ERROR is returned.
+ */
+TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* expected, int32_t num_expected,
+    const TkrzwKeyValuePair* desired, int32_t num_desired);
+
+/**
+ * Removes all records asynchronously.
+ * @param async the asynchronous database adapter.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async);
+
+/**
+ * Rebuilds the entire database asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * the same way as with PolyDBM::RebuildAdvanced.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params);
+
+/**
+ * Synchronizes the content of the database to the file system asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param hard True to do physical synchronization with the hardware or false to do only
+ * logical synchronization with the file system.
+ * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * the same way as with PolyDBM::OpenAdvanced.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_synchronize(
+    TkrzwAsyncDBM* async, bool hard, const char* params);
+
+
+
+
+
 
 /**
  * Opens a file.

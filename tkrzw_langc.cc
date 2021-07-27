@@ -23,6 +23,7 @@
 #include <cstdint>
 
 #include "tkrzw_dbm.h"
+#include "tkrzw_dbm_async.h"
 #include "tkrzw_dbm_common_impl.h"
 #include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_shard.h"
@@ -245,6 +246,87 @@ char* tkrzw_str_append(char* modified, const char* appended) {
   modified = static_cast<char*>(xreallocappend(modified, orig_size + append_size + 1));
   std::memcpy(modified + orig_size, appended, append_size + 1);
   return modified;
+}
+
+void tkrzw_future_free(TkrzwFuture* future) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  delete xfuture;
+}
+
+bool tkrzw_future_wait(TkrzwFuture* future, double timeout) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  return xfuture->Wait(timeout);
+}
+
+void tkrzw_future_get(TkrzwFuture* future) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  last_status = xfuture->Get();
+}
+
+char* tkrzw_future_get_str(TkrzwFuture* future, int32_t* size) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  const auto& result = xfuture->GetString();
+  last_status = result.first;
+  char* value_ptr = reinterpret_cast<char*>(xmalloc(result.second.size() + 1));
+  std::memcpy(value_ptr, result.second.c_str(), result.second.size() + 1);
+  if (size != nullptr) {
+    *size = result.second.size();
+  }
+  return value_ptr;
+}
+
+TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  const auto& result = xfuture->GetStringVector();
+  last_status = result.first;
+  TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(sizeof(TkrzwStr) * result.second.size() + 1));
+  for (size_t i = 0; i < result.second.size(); i++) {
+    const auto& xelem = result.second[i];
+    auto& elem = array[i];
+    char* ptr = static_cast<char*>(xmalloc(xelem.size() + 1));
+    std::memcpy(ptr, xelem.c_str(), xelem.size() + 1);
+    elem.ptr = ptr;
+    elem.size = xelem.size();
+  }
+  *num_elems = result.second.size();
+  return array;
+}
+
+TkrzwKeyValuePair* tkrzw_future_get_str_map(TkrzwFuture* future, int32_t* num_elems) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  const auto& result = xfuture->GetStringMap();
+  last_status = result.first;
+  TkrzwKeyValuePair* array = static_cast<TkrzwKeyValuePair*>(
+      xmalloc(sizeof(TkrzwKeyValuePair) * result.second.size() + 1));
+  int32_t num_recs = 0;
+  for (const auto& record : result.second) {
+    auto& elem = array[num_recs];
+    char* key_ptr = static_cast<char*>(xmalloc(record.first.size() + record.second.size() + 2));
+    std::memcpy(key_ptr, record.first.c_str(), record.first.size() + 1);
+    char* value_ptr = key_ptr + record.first.size() + 1;
+    std::memcpy(value_ptr, record.second.c_str(), record.second.size() + 1);
+    elem.key_ptr = key_ptr;
+    elem.key_size = record.first.size();
+    elem.value_ptr = value_ptr;
+    elem.value_size = record.second.size();
+    num_recs++;
+  }
+  *num_elems = num_recs;
+  return array;
+}
+
+int64_t tkrzw_future_get_int(TkrzwFuture* future) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  const auto& result = xfuture->GetInteger();
+  last_status = result.first;
+  return result.second;
 }
 
 TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
@@ -842,7 +924,7 @@ TkrzwStr* tkrzw_dbm_search(
   for (size_t i = 0; i < keys.size(); i++) {
     const auto& key = keys[i];
     auto& elem = array[i];
-    char*ptr = static_cast<char*>(xmalloc(key.size() + 1));
+    char* ptr = static_cast<char*>(xmalloc(key.size() + 1));
     std::memcpy(ptr, key.c_str(), key.size() + 1);
     elem.ptr = ptr;
     elem.size = key.size();
@@ -1052,6 +1134,229 @@ bool tkrzw_dbm_restore_database(
   return last_status == Status::SUCCESS;
 }
 
+TkrzwAsyncDBM* tkrzw_async_dbm_new(TkrzwDBM* dbm, int32_t num_worker_threads) {
+  assert(dbm != nullptr && num_worker_threads > 0);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  AsyncDBM* xasync = new AsyncDBM(xdbm, num_worker_threads);
+  return reinterpret_cast<TkrzwAsyncDBM*>(xasync);
+}
+
+void tkrzw_async_dbm_free(TkrzwAsyncDBM* async) {
+  assert(async != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  delete xasync;
+}
+
+TkrzwFuture* tkrzw_async_dbm_get(TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size) {
+  assert(async != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Get(
+      std::string_view(key_ptr, key_size))));
+}
+
+TkrzwFuture* tkrzw_async_dbm_get_multi(
+    TkrzwAsyncDBM* async, const TkrzwStr* keys, int32_t num_keys) {
+  assert(async != nullptr && keys != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  std::vector<std::string> xkeys;
+  xkeys.reserve(num_keys);
+  for (int32_t i = 0; i < num_keys; i++) {
+    const auto& key = keys[i];
+    const int32_t key_size = key.size < 0 ? strlen(key.ptr) : key.size;
+    xkeys.emplace_back(std::string(key.ptr, key_size));
+  }
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->GetMulti(xkeys)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_set(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size, bool overwrite) {
+  assert(async != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Set(
+      std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size), overwrite)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_set_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* records, int32_t num_records,
+    bool overwrite) {
+  assert(async != nullptr && records != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  std::map<std::string, std::string> xrecords;
+  for (int32_t i = 0; i < num_records; i++) {
+    const auto& record = records[i];
+    const int32_t key_size =
+        record.key_size < 0 ? strlen(record.key_ptr) : record.key_size;
+    const int32_t value_size =
+        record.value_size < 0 ? strlen(record.value_ptr) : record.value_size;
+    xrecords.emplace(std::string(record.key_ptr, key_size),
+                     std::string(record.value_ptr, value_size));
+  }
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->SetMulti(xrecords, overwrite)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_remove(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size) {
+  assert(async != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Remove(
+      std::string_view(key_ptr, key_size))));
+}
+
+TkrzwFuture* tkrzw_async_dbm_remove_multi(
+    TkrzwAsyncDBM* async, const TkrzwStr* keys, int32_t num_keys) {
+  assert(async != nullptr && keys != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  std::vector<std::string> xkeys;
+  xkeys.reserve(num_keys);
+  for (int32_t i = 0; i < num_keys; i++) {
+    const auto& key = keys[i];
+    const int32_t key_size = key.size < 0 ? strlen(key.ptr) : key.size;
+    xkeys.emplace_back(std::string(key.ptr, key_size));
+  }
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->RemoveMulti(xkeys)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_append(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size,
+    const char* delim_ptr, int32_t delim_size) {
+  assert(async != nullptr && key_ptr != nullptr && value_ptr != nullptr && delim_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  if (delim_size < 0) {
+    delim_size = std::strlen(delim_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Append(
+      std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size),
+      std::string_view(delim_ptr, delim_size))));
+}
+
+TkrzwFuture* tkrzw_async_dbm_append_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* records, int32_t num_records,
+    const char* delim_ptr, int32_t delim_size) {
+  if (delim_size < 0) {
+    delim_size = std::strlen(delim_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  std::map<std::string, std::string> xrecords;
+  for (int32_t i = 0; i < num_records; i++) {
+    const auto& record = records[i];
+    const int32_t key_size =
+        record.key_size < 0 ? strlen(record.key_ptr) : record.key_size;
+    const int32_t value_size =
+        record.value_size < 0 ? strlen(record.value_ptr) : record.value_size;
+    xrecords.emplace(std::string(record.key_ptr, key_size),
+                     std::string(record.value_ptr, value_size));
+  }
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->AppendMulti(
+      xrecords, std::string_view(delim_ptr, delim_size))));
+}
+
+TkrzwFuture* tkrzw_async_dbm_compare_exchange(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    const char* expected_ptr, int32_t expected_size,
+    const char* desired_ptr, int32_t desired_size) {
+  assert(async != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (expected_ptr != nullptr && expected_size < 0) {
+    expected_size = std::strlen(expected_ptr);
+  }
+  if (desired_ptr != nullptr && desired_size < 0) {
+    desired_size = std::strlen(desired_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->CompareExchange(
+      std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
+      std::string_view(desired_ptr, desired_size))));
+}
+
+TkrzwFuture* tkrzw_async_dbm_increment(
+    TkrzwAsyncDBM* async, const char* key_ptr, int32_t key_size,
+    int64_t increment, int64_t initial) {
+  assert(async != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Increment(
+      std::string_view(key_ptr, key_size), increment, initial)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
+    TkrzwAsyncDBM* async, const TkrzwKeyValuePair* expected, int32_t num_expected,
+    const TkrzwKeyValuePair* desired, int32_t num_desired) {
+  std::vector<std::pair<std::string_view, std::string_view>> expected_vec(num_expected);
+  for (int32_t i = 0; i < num_expected; i++) {
+    auto& key_value_pair = expected[i];
+    auto& xpair = expected_vec[i];
+    const int32_t key_size =
+        key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
+    xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
+    const int32_t value_size =
+        key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
+        strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
+    xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+  }
+  std::vector<std::pair<std::string_view, std::string_view>> desired_vec(num_desired);
+  for (int32_t i = 0; i < num_desired; i++) {
+    auto& key_value_pair = desired[i];
+    auto& xpair = desired_vec[i];
+    const int32_t key_size =
+        key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
+    xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
+    const int32_t value_size =
+        key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
+        strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
+    xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->CompareExchangeMulti(expected_vec, desired_vec)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async) {
+  assert(async != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Clear()));
+}
+
+TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params) {
+  assert(async != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Rebuild(xparams)));
+}
+
+
+TkrzwFuture* tkrzw_async_dbm_synchronize(
+    TkrzwAsyncDBM* async, bool hard, const char* params) {
+  assert(async != nullptr && params != nullptr);
+  std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->Synchronize(hard, nullptr, xparams)));
+}
+
 TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
@@ -1161,7 +1466,7 @@ TkrzwStr* tkrzw_file_search(
   for (size_t i = 0; i < lines.size(); i++) {
     const auto& line = lines[i];
     auto& elem = array[i];
-    char*ptr = static_cast<char*>(xmalloc(line.size() + 1));
+    char* ptr = static_cast<char*>(xmalloc(line.size() + 1));
     std::memcpy(ptr, line.c_str(), line.size() + 1);
     elem.ptr = ptr;
     elem.size = line.size();

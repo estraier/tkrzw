@@ -4,6 +4,7 @@
 	- Library version: 1.37.0
 
 	- Add StatusFuture class for the asynchronous API.
+	- Add asynchronous API to the C interface.
 
 2021-07-25  Mikio Hirabayashi  <hirarin@gmail.com>
 

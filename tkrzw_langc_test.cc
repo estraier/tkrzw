@@ -671,6 +671,153 @@ TEST(LangCTest, Export) {
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 
+TEST(LangCTest, Async) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
+  ASSERT_NE(nullptr, dbm);
+  TkrzwAsyncDBM* async = tkrzw_async_dbm_new(dbm, 4);
+  for (int32_t i = 1; i <= 100; i++) {
+    const std::string key = tkrzw::SPrintF("%04d", i);
+    const std::string value = tkrzw::ToString(i * i);
+    TkrzwFuture* set_future = tkrzw_async_dbm_set(
+        async, key.data(), key.size(), value.data(), value.size(), true);
+    if (i % 3 == 0) {
+      EXPECT_TRUE(tkrzw_future_wait(set_future, -1));
+    }
+    tkrzw_future_get(set_future);
+    EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+    tkrzw_future_free(set_future);
+    TkrzwFuture* get_future = tkrzw_async_dbm_get(async, key.data(), key.size());
+    if (i % 3 == 0) {
+      EXPECT_TRUE(tkrzw_future_wait(get_future, -1));
+    }
+    int32_t value_size = 0;
+    char* value_ptr = tkrzw_future_get_str(get_future, &value_size);
+    EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+    EXPECT_STREQ(value.c_str(), value_ptr);
+    EXPECT_EQ(value.size(), value_size);
+    free(value_ptr);
+    tkrzw_future_free(get_future);
+    if (i % 2 == 0) {
+      TkrzwFuture* remove_future = tkrzw_async_dbm_remove(async, key.data(), key.size());
+      if (i % 3 == 0) {
+        EXPECT_TRUE(tkrzw_future_wait(remove_future, -1));
+      }
+      tkrzw_future_get(remove_future);
+      EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+      tkrzw_future_free(remove_future);
+      TkrzwFuture* incr_future = tkrzw_async_dbm_increment(async, key.data(), key.size(), 1, 100);
+      if (i % 3 == 0) {
+        EXPECT_TRUE(tkrzw_future_wait(incr_future, -1));
+      }
+      const int64_t num = tkrzw_future_get_int(incr_future);
+      EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+      EXPECT_EQ(101, num);
+      tkrzw_future_free(incr_future);
+    }
+  }
+  EXPECT_EQ(100, tkrzw_dbm_count(dbm));
+  TkrzwKeyValuePair set_records[2];
+  set_records[0].key_ptr = "tako";
+  set_records[0].key_size = 4;
+  set_records[0].value_ptr = "ika";
+  set_records[0].value_size = 3;
+  set_records[1].key_ptr = "uni";
+  set_records[1].key_size = -1;
+  set_records[1].value_ptr = "kani";
+  set_records[1].value_size = -1;
+  TkrzwFuture* set_future = tkrzw_async_dbm_set_multi(async, set_records, 2, true);
+  EXPECT_TRUE(tkrzw_future_wait(set_future, -1));
+  tkrzw_future_get(set_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(set_future);
+  TkrzwFuture* append_future = tkrzw_async_dbm_append_multi(async, set_records, 2, ":", -1);
+  EXPECT_TRUE(tkrzw_future_wait(append_future, -1));
+  tkrzw_future_get(append_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(append_future);
+  TkrzwStr get_keys[2];
+  get_keys[0].ptr = "tako";
+  get_keys[0].size = -1;
+  get_keys[1].ptr = "uni";
+  get_keys[1].size = -3;
+  TkrzwFuture* get_future = tkrzw_async_dbm_get_multi(async, get_keys, 2);
+  EXPECT_TRUE(tkrzw_future_wait(get_future, -1));
+  int32_t num_get_records = 0;
+  TkrzwKeyValuePair* get_records = tkrzw_future_get_str_map(get_future, &num_get_records);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  EXPECT_EQ(2, num_get_records);
+  TkrzwKeyValuePair* rec1 = tkrzw_search_str_map(get_records, num_get_records, "tako", -1);
+  ASSERT_NE(nullptr, rec1);
+  EXPECT_STREQ("ika:ika", rec1->value_ptr);
+  tkrzw_free_str_map(get_records, num_get_records);
+  tkrzw_future_free(get_future);
+  TkrzwFuture* remove_future = tkrzw_async_dbm_remove_multi(async, get_keys, 2);
+  EXPECT_TRUE(tkrzw_future_wait(remove_future, -1));
+  tkrzw_future_get(remove_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(remove_future);
+  EXPECT_EQ(100, tkrzw_dbm_count(dbm));
+  append_future = tkrzw_async_dbm_append(async, "ebi", -1, "ikura", -1, ":", -1);
+  EXPECT_TRUE(tkrzw_future_wait(append_future, -1));
+  tkrzw_future_get(append_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(append_future);
+  append_future = tkrzw_async_dbm_append(async, "ebi", 3, "hoya", 4, ":", 1);
+  EXPECT_TRUE(tkrzw_future_wait(append_future, -1));
+  tkrzw_future_get(append_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(append_future);
+  TkrzwFuture* cas_future = tkrzw_async_dbm_compare_exchange(
+      async, "ebi", -1, "ikura:hoya", -1, "sushi", -1);
+  tkrzw_future_get(cas_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(cas_future);
+  cas_future = tkrzw_async_dbm_compare_exchange(async, "ebi", 3, "poke", 4, "sushi", 4);
+  tkrzw_future_get(cas_future);
+  EXPECT_EQ(TKRZW_STATUS_INFEASIBLE_ERROR, tkrzw_get_last_status_code());
+  tkrzw_future_free(cas_future);
+  TkrzwKeyValuePair expected[2];
+  expected[0].key_ptr = "tako";
+  expected[0].key_size = -1;
+  expected[0].value_ptr = nullptr;
+  expected[0].value_size = -1;
+  expected[1].key_ptr = "uni";
+  expected[1].key_size = -1;
+  expected[1].value_ptr = nullptr;
+  expected[1].value_size = -1;
+  TkrzwKeyValuePair desired[2];
+  desired[0].key_ptr = "tako";
+  desired[0].key_size = 4;
+  desired[0].value_ptr = "ika";
+  desired[0].value_size = 3;
+  desired[1].key_ptr = "uni";
+  desired[1].key_size = 3;
+  desired[1].value_ptr = "kani";
+  desired[1].value_size = 4;
+  cas_future = tkrzw_async_dbm_compare_exchange_multi(
+      async, expected, 2, desired, 2);
+  tkrzw_future_get(cas_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(cas_future);
+  TkrzwFuture* rebuild_future = tkrzw_async_dbm_rebuild(async, "");
+  tkrzw_future_get(rebuild_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(rebuild_future);
+  TkrzwFuture* sync_future = tkrzw_async_dbm_synchronize(async, false, "");
+  tkrzw_future_get(sync_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(sync_future);
+  TkrzwFuture* clear_future = tkrzw_async_dbm_clear(async);
+  tkrzw_future_get(clear_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(clear_future);
+  EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+  tkrzw_async_dbm_free(async);
+  EXPECT_TRUE(tkrzw_dbm_close(dbm));
+}
+
 TEST(LangCTest, File) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".txt");
