@@ -819,8 +819,8 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm);
  * extracts keys whose edit distance to the pattern is the least.  Ordered databases support
  * "upper" and "lower" which extract keys whose positions are equal to or upper/lower than the
  * pattern.  "upperex" and "lowerex" are their exclusive versions.
- * @param pattern_ptr The key pointer.
- * @param pattern_size The key size.  If it is negative, strlen(pattern_ptr) is used.
+ * @param pattern_ptr The pattern pointer.
+ * @param pattern_size The pattern size.  If it is negative, strlen(pattern_ptr) is used.
  * @param capacity The maximum records to obtain.  0 means unlimited.
  * @param num_matched The pointer to the variable to store the number of the element of the
  * return value.
@@ -1220,10 +1220,25 @@ TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params);
 TkrzwFuture* tkrzw_async_dbm_synchronize(
     TkrzwAsyncDBM* async, bool hard, const char* params);
 
-
-
-
-
+/**
+ * Searches a database and get keys asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
+ * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
+ * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
+ * extracts keys whose edit distance to the pattern is the least.  Ordered databases support
+ * "upper" and "lower" which extract keys whose positions are equal to or upper/lower than the
+ * pattern.  "upperex" and "lowerex" are their exclusive versions.
+ * @param pattern_ptr The pattern pointer.
+ * @param pattern_size The pattern size.  If it is negative, strlen(pattern_ptr) is used.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_str_array
+ * function.
+ */
+TkrzwFuture* tkrzw_async_dbm_search(
+    TkrzwAsyncDBM* async, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity);
 
 /**
  * Opens a file.

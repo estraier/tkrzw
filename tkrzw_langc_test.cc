@@ -801,6 +801,13 @@ TEST(LangCTest, Async) {
   tkrzw_future_get(cas_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(cas_future);
+  TkrzwFuture* search_future = tkrzw_async_dbm_search(async, "regex", "^(tako|uni)$", -1, 0);
+  int32_t num_search_keys = 0;
+  TkrzwStr* search_keys = tkrzw_future_get_str_array(search_future, &num_search_keys);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  EXPECT_EQ(2, num_search_keys);
+  tkrzw_free_str_array(search_keys, num_search_keys);
+  tkrzw_future_free(search_future);
   TkrzwFuture* rebuild_future = tkrzw_async_dbm_rebuild(async, "");
   tkrzw_future_get(rebuild_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());

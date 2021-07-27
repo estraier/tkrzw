@@ -1357,6 +1357,19 @@ TkrzwFuture* tkrzw_async_dbm_synchronize(
       xasync->Synchronize(hard, nullptr, xparams)));
 }
 
+TkrzwFuture* tkrzw_async_dbm_search(
+    TkrzwAsyncDBM* async, const char* mode, const char* pattern_ptr, int32_t pattern_size,
+    int32_t capacity) {
+  assert(async != nullptr && mode != nullptr && pattern_ptr != nullptr);
+  if (pattern_size < 0) {
+    pattern_size = std::strlen(pattern_ptr);
+  }
+  capacity = std::max(0, capacity);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->SearchModal(mode, std::string_view(pattern_ptr, pattern_size), capacity)));
+}
+
 TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params) {
   assert(path != nullptr && params != nullptr);
   std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
