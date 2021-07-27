@@ -300,4 +300,93 @@ TEST(AsyncDBMTest, SearchModal) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST(AsyncDBMTest, StatusFeature) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
+  std::vector<std::future<std::pair<tkrzw::Status, std::string>>> get_results;
+  {
+    tkrzw::AsyncDBM async(&dbm, 4);
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string key = tkrzw::SPrintF("%04d", i);
+      const std::string value = tkrzw::ToString(i * i);
+      tkrzw::StatusFuture set_future(async.Set(key, value));
+      if (i % 3 == 0) {
+        EXPECT_TRUE(set_future.Wait());
+      }
+      const auto& set_result = set_future.GetStatus();
+      EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
+      tkrzw::StatusFuture get_future(async.Get(key));
+      if (i % 3 == 0) {
+        EXPECT_TRUE(get_future.Wait());
+      }
+      const auto& get_result = get_future.GetStatusAndString();
+      EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
+      EXPECT_EQ(value, get_result.second);
+      if (i % 2 == 0) {
+        tkrzw::StatusFuture remove_future(async.Remove(key));
+        if (i % 3 == 0) {
+          EXPECT_TRUE(remove_future.Wait());
+        }
+        const auto& remove_result = remove_future.GetStatus();
+        EXPECT_EQ(tkrzw::Status::SUCCESS, remove_result);
+        tkrzw::StatusFuture incr_future(async.Increment(key, 1, 100));
+        if (i % 3 == 0) {
+          EXPECT_TRUE(incr_future.Wait());
+        }
+        const auto& incr_result = incr_future.GetStatusAndInteger();
+        EXPECT_EQ(tkrzw::Status::SUCCESS, incr_result.first);
+        EXPECT_EQ(101, incr_result.second);
+      }
+    }
+    EXPECT_EQ(100, dbm.CountSimple());
+    {
+      tkrzw::StatusFuture search_future(async.SearchModal("regex", "[123]7", 0));
+      search_future.Wait(0);
+      EXPECT_TRUE(search_future.Wait());
+      const auto& search_result = search_future.GetStatusAndStringVector();
+      EXPECT_EQ(tkrzw::Status::SUCCESS, search_result.first);
+      EXPECT_THAT(search_result.second, UnorderedElementsAre("0017", "0027", "0037"));
+    }
+    for (int32_t i = 0; i < 10; i++) {
+      std::map<std::string, std::string> records;
+      std::vector<std::string> keys;
+      for (int32_t j = 1; j <= 10; j++) {
+        const int32_t num = i * 10 + j;
+        const std::string key = tkrzw::SPrintF("%04d", num);
+        const std::string value = tkrzw::ToString(num * num);
+        records.emplace(key, value);
+        keys.emplace_back(key);
+      }
+      tkrzw::StatusFuture set_future(async.SetMulti(records));
+      if (i % 3 == 0) {
+        EXPECT_TRUE(set_future.Wait());
+      }
+      const auto& set_result = set_future.GetStatus();
+      EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
+      tkrzw::StatusFuture get_future(async.GetMulti(keys));
+      if (i % 3 == 0) {
+        EXPECT_TRUE(get_future.Wait());
+      }
+      const auto& get_result = get_future.GetStatusAndStringMap();
+      EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
+      EXPECT_EQ(10, get_result.second.size());
+      for (const auto& key : keys) {
+        EXPECT_NE(get_result.second.end(), get_result.second.find(key));
+      }
+      if (i == 0) {
+        tkrzw::StatusFuture remove_future(async.RemoveMulti(keys));
+        if (i % 3 == 0) {
+          EXPECT_TRUE(remove_future.Wait());
+        }
+        const auto& remove_result = remove_future.GetStatus();
+        EXPECT_EQ(tkrzw::Status::SUCCESS, remove_result);
+      }
+    }
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
 // END OF FILE

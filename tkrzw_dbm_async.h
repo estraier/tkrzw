@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -404,6 +405,94 @@ class AsyncDBM final {
   TaskQueue queue_;
   /** The postprocessor. */
   std::unique_ptr<CommonPostprocessor> postproc_;
+};
+
+/**
+ * Wrapper of std::future containing a status object and extra data.
+ */
+class StatusFuture final {
+ public:
+  /**
+   * Constructor for a status object.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<Status>&& future);
+
+  /**
+   * Constructor for a status object and a string.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<std::pair<Status, std::string>>&& future);
+
+  /**
+   * Constructor for a status object and a string vector.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<std::pair<Status, std::vector<std::string>>>&& future);
+
+  /**
+   * Constructor for a status object and a string map.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<std::pair<
+                        Status, std::map<std::string, std::string>>>&& future);
+
+  /**
+   * Constructor for a status object and an integer.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<std::pair<Status, int64_t>>&& future);
+
+  /**
+   * Destructor.
+   */
+  ~StatusFuture();
+
+  /**
+   * Waits for the operation to be done.
+   * @param timeout The waiting time in seconds.  If it is negative, no timeout is set.
+   * @return True if the operation has done.  False if timeout occurs.
+   */
+  bool Wait(double timeout = -1);
+
+  /**
+   * Waits for the operation to be done and gets the result status.
+   * @return The result status.
+   * @details Either one of the Get method family can be called only once.
+   */
+  Status GetStatus();
+
+  /**
+   * Waits for the operation to be done and gets the status and the extra string.
+   * @return The result status and the extra string.
+   * @details Either one of the Get method family can be called only once.
+   */
+  std::pair<Status, std::string> GetStatusAndString();
+
+  /**
+   * Waits for the operation to be done and gets the status and the extra string vector.
+   * @return The result status and the extra string vector.
+   * @details Either one of the Get method family can be called only once.
+   */
+  std::pair<Status, std::vector<std::string>> GetStatusAndStringVector();
+
+  /**
+   * Waits for the operation to be done and gets the status and the extra string map.
+   * @return The result status and the extra string map.
+   * @details Either one of the Get method family can be called only once.
+   */
+  std::pair<Status, std::map<std::string, std::string>> GetStatusAndStringMap();
+
+  /**
+   * Waits for the operation to be done and gets the status and the extra integer.
+   * @return The result status and the extra integer.
+   * @details Either one of the Get method family can be called only once.
+   */
+  std::pair<Status, int64_t> GetStatusAndInteger();
+
+ private:
+  void* future_;
+  const std::type_info& type_;
 };
 
 template <typename PROC>

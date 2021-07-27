@@ -471,6 +471,156 @@ std::future<std::pair<Status, std::vector<std::string>>> AsyncDBM::SearchModal(
   return future;
 }
 
+StatusFuture::StatusFuture(std::future<Status>&& future)
+    : future_(new std::future<Status>(std::move(future))), type_(typeid(Status)) {}
+
+StatusFuture::StatusFuture(std::future<std::pair<Status, std::string>>&& future)
+    : future_(new std::future<std::pair<Status, std::string>>(std::move(future))),
+      type_(typeid(std::pair<Status, std::string>)) {}
+
+StatusFuture::StatusFuture(std::future<std::pair<Status, std::vector<std::string>>>&& future)
+    : future_(new std::future<std::pair<Status, std::vector<std::string>>>(std::move(future))),
+      type_(typeid(std::pair<Status, std::vector<std::string>>)) {}
+
+StatusFuture::StatusFuture(std::future<std::pair<
+                           Status, std::map<std::string, std::string>>>&& future)
+    : future_(new std::future<std::pair<Status, std::map<std::string, std::string>>>(
+          std::move(future))),
+      type_(typeid(std::pair<Status, std::map<std::string, std::string>>)) {}
+
+StatusFuture::StatusFuture(std::future<std::pair<Status, int64_t>>&& future)
+    : future_(new std::future<std::pair<Status, int64_t>>(std::move(future))),
+      type_(typeid(std::pair<Status, int64_t>)) {}
+
+StatusFuture::~StatusFuture() {
+  if (type_ == typeid(Status)) {
+    auto* future = reinterpret_cast<std::future<Status>*>(future_);
+    delete future;
+  } else if (type_ == typeid(std::pair<Status, std::string>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, std::string>>*>(future_);
+    delete future;
+  } else if (type_ == typeid(std::pair<Status, std::vector<std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::vector<std::string>>>*>(future_);
+    delete future;
+  } else if (type_ == typeid(std::pair<Status, std::map<std::string, std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::map<std::string, std::string>>>*>(
+            future_);
+    delete future;
+  } else if (type_ == typeid(std::pair<Status, int64_t>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, int64_t>>*>(future_);
+    delete future;
+  }
+}
+
+bool StatusFuture::Wait(double timeout) {
+  bool done = false;
+  if (type_ == typeid(Status)) {
+    auto* future = reinterpret_cast<std::future<Status>*>(future_);
+    if (timeout < 0) {
+      future->wait();
+      done = true;
+    } else {
+      done = future->wait_for(std::chrono::microseconds(
+          static_cast<int64_t>(timeout * 1000000))) == std::future_status::ready;
+    }
+  } else if (type_ == typeid(std::pair<Status, std::string>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, std::string>>*>(future_);
+    if (timeout < 0) {
+      future->wait();
+      done = true;
+    } else {
+      done = future->wait_for(std::chrono::microseconds(
+          static_cast<int64_t>(timeout * 1000000))) == std::future_status::ready;
+    }
+  } else if (type_ == typeid(std::pair<Status, std::vector<std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::vector<std::string>>>*>(future_);
+    if (timeout < 0) {
+      future->wait();
+      done = true;
+    } else {
+      done = future->wait_for(std::chrono::microseconds(
+          static_cast<int64_t>(timeout * 1000000))) == std::future_status::ready;
+    }
+  } else if (type_ == typeid(std::pair<Status, std::map<std::string, std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::map<std::string, std::string>>>*>(
+            future_);
+    if (timeout < 0) {
+      future->wait();
+      done = true;
+    } else {
+      done = future->wait_for(std::chrono::microseconds(
+          static_cast<int64_t>(timeout * 1000000))) == std::future_status::ready;
+    }
+  } else if (type_ == typeid(std::pair<Status, int64_t>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, int64_t>>*>(future_);
+    if (timeout < 0) {
+      future->wait();
+      done = true;
+    } else {
+      done = future->wait_for(std::chrono::microseconds(
+          static_cast<int64_t>(timeout * 1000000))) == std::future_status::ready;
+    }
+  }
+  return done;
+}
+
+Status StatusFuture::GetStatus() {
+  if (type_ == typeid(Status)) {
+    auto* future = reinterpret_cast<std::future<Status>*>(future_);
+    if (future->valid()) {
+      return future->get();
+    }
+  }
+  return Status(Status::INVALID_ARGUMENT_ERROR);
+}
+
+std::pair<Status, std::string> StatusFuture::GetStatusAndString() {
+  if (type_ == typeid(std::pair<Status, std::string>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, std::string>>*>(future_);
+    if (future->valid()) {
+      return future->get();
+    }
+  }
+  return std::make_pair(Status(Status::INVALID_ARGUMENT_ERROR), "");
+}
+
+std::pair<Status, std::vector<std::string>> StatusFuture::GetStatusAndStringVector() {
+  if (type_ == typeid(std::pair<Status, std::vector<std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::vector<std::string>>>*>(future_);
+    if (future->valid()) {
+      return future->get();
+    }
+  }
+  return std::make_pair(Status(Status::INFEASIBLE_ERROR), std::vector<std::string>());
+}
+
+std::pair<Status, std::map<std::string, std::string>> StatusFuture::GetStatusAndStringMap() {
+  if (type_ == typeid(std::pair<Status, std::map<std::string, std::string>>)) {
+    auto* future =
+        reinterpret_cast<std::future<std::pair<Status, std::map<std::string, std::string>>>*>(
+            future_);
+    if (future->valid()) {
+      return future->get();
+    }
+  }
+  return std::make_pair(Status(Status::INFEASIBLE_ERROR), std::map<std::string, std::string>());
+}
+
+std::pair<Status, int64_t> StatusFuture::GetStatusAndInteger() {
+  if (type_ == typeid(std::pair<Status, int64_t>)) {
+    auto* future = reinterpret_cast<std::future<std::pair<Status, int64_t>>*>(future_);
+    if (future->valid()) {
+      return future->get();
+    }
+  }
+  return std::make_pair(Status(Status::INFEASIBLE_ERROR), 0);
+}
+
 }  // namespace tkrzw
 
 // END OF FILE
