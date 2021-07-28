@@ -4,6 +4,7 @@
 	- Library version: 1.38.0
 
 	- Add exporting methods to the asynchronous API.
+	- Rename some exporting methods.
 
 2021-07-26  Mikio Hirabayashi  <hirarin@gmail.com>
 
