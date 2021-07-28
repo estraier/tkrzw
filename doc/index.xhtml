@@ -75,21 +75,23 @@ window.onload = function(){
     let text = texts[Math.floor(now.getTime() / 60000) % texts.length];
     elem.firstChild.nodeValue = "Tkrzw: " + text;
   }
+  let slide_url = "https://docs.google.com/presentation/d/e/2PACX-1vSUIwfUHh791MQzPPGbh7uoCSiAhLvCsj550IH3dR7_PylF4e8pucIZ66aOUU8aGtA4kCuLf2mCBWmR/embed?start=false&loop=false&delayms=1000000";
   if (navigator.language == "ja") {
-    let logo = document.getElementById("logo");
-    if (logo) {
-      while (logo.firstChild) {
-        logo.removeChild(logo.firstChild);
-      }
-      let slides = document.createElement("iframe");
-      slides.src = "https://docs.google.com/presentation/d/e/2PACX-1vTbBrc0VUoT6y-9uSynhP1fNUfkF528Dsg2JBjsk0cDRFzvVOBeUpJa8WzWI2Q1MbeD1fA_FRtwnJgI/embed?start=false&loop=false&delayms=100000";
-      slides.width = 600;
-      slides.height = 380;
-      slides.allowFullscreen = true;
-      slides.mozAllowFullscreen = true;
-      slides.webkitAllowFullscreen = true;
-      logo.appendChild(slides);
+    slide_url = "https://docs.google.com/presentation/d/e/2PACX-1vTbBrc0VUoT6y-9uSynhP1fNUfkF528Dsg2JBjsk0cDRFzvVOBeUpJa8WzWI2Q1MbeD1fA_FRtwnJgI/embed?start=false&loop=false&delayms=1000000";
+  }
+  let logo = document.getElementById("logo");
+  if (logo) {
+    while (logo.firstChild) {
+      logo.removeChild(logo.firstChild);
     }
+    let slides = document.createElement("iframe");
+    slides.src = slide_url;
+    slides.width = 600;
+    slides.height = 380;
+    slides.allowFullscreen = true;
+    slides.mozAllowFullscreen = true;
+    slides.webkitAllowFullscreen = true;
+    logo.appendChild(slides);
   }
 }
 /*]]>*/</script>
