@@ -1118,30 +1118,30 @@ inline void CommonDBMTest::RecordMigrationTest(tkrzw::DBM* dbm, tkrzw::File* fil
   EXPECT_EQ(tkrzw::Status::SUCCESS, SearchDBMEditDistanceBinary(
       dbm, "00000100 00000100", &similar_keys, 1));
   EXPECT_THAT(similar_keys, UnorderedElementsAre("00000100\t00000100"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMRecordsToFlatRecords(dbm, file));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMToFlatRecords(dbm, file));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
   EXPECT_EQ(0, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMRecordsFromFlatRecords(dbm, file));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMFromFlatRecords(dbm, file));
   for (int32_t i = 1; i <= num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d\t%08d", i, i);
     const std::string value = tkrzw::StrCat((i * i), "\n", (i * i));
     EXPECT_EQ(value, dbm->GetSimple(key));
   }
   EXPECT_EQ(num_records, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMRecordsToTSV(dbm, file, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMToTSV(dbm, file, true));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
   EXPECT_EQ(0, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMRecordsFromTSV(dbm, file, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMFromTSV(dbm, file, true));
   for (int32_t i = 1; i <= num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d\t%08d", i, i);
     const std::string value = tkrzw::StrCat((i * i), "\n", (i * i));
     EXPECT_EQ(value, dbm->GetSimple(key));
   }
   EXPECT_EQ(num_records, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMRecordsToTSV(dbm, file));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ExportDBMToTSV(dbm, file));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
   EXPECT_EQ(0, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMRecordsFromTSV(dbm, file));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ImportDBMFromTSV(dbm, file));
   std::vector<std::string> keys;
   for (int32_t i = 1; i <= num_records; i++) {
     const std::string key = tkrzw::SPrintF("%08d %08d", i, i);

@@ -513,7 +513,7 @@ std::future<Status> AsyncDBM::ExportRecordsToFlatRecords(File* dest_file) {
     File* dest_file;
     std::promise<Status> promise;
     void Do() override {
-      Status status = ExportDBMRecordsToFlatRecords(dbm, dest_file);
+      Status status = ExportDBMToFlatRecords(dbm, dest_file);
       if (postproc != nullptr) {
         postproc->Postprocess("ExportRecordsToFlatRecords", status);
       }
@@ -536,7 +536,7 @@ std::future<Status> AsyncDBM::ImportRecordsFromFlatRecords(File* src_file) {
     File* src_file;
     std::promise<Status> promise;
     void Do() override {
-      Status status = ImportDBMRecordsFromFlatRecords(dbm, src_file);
+      Status status = ImportDBMFromFlatRecords(dbm, src_file);
       if (postproc != nullptr) {
         postproc->Postprocess("ImportRecordsFromFlatRecords", status);
       }

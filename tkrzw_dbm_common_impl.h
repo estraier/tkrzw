@@ -177,7 +177,7 @@ Status SearchDBMModal(
  * @details A flat record file contains a sequence of binary records without any high level
  * structure so it is useful as a intermediate file for data migration.
  */
-Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file);
+Status ExportDBMToFlatRecords(DBM* dbm, File* dest_file);
 
 /**
  * Imports records to a database from a flat record file.
@@ -185,7 +185,7 @@ Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file);
  * @param src_file The file object to read records from.
  * @return The result status.
  */
-Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* src_file);
+Status ImportDBMFromFlatRecords(DBM* dbm, File* src_file);
 
 /**
  * Exports the keys of all records of a database to a flat record file.
@@ -202,7 +202,7 @@ Status ExportDBMKeysToFlatRecords(DBM* dbm, File* dest_file);
  * @param escape If true, C-style escaping is applied to the output.
  * @return The result status.
  */
-Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape = false);
+Status ExportDBMToTSV(DBM* dbm, File* dest_file, bool escape = false);
 
 /**
  * Imports records to a database from a TSV file.
@@ -211,7 +211,7 @@ Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape = false);
  * @param unescape If true, C-style unescaping is applied to the input.
  * @return The result status.
  */
-Status ImportDBMRecordsFromTSV(DBM* dbm, File* dest_file, bool unescape = false);
+Status ImportDBMFromTSV(DBM* dbm, File* dest_file, bool unescape = false);
 
 /**
  * Exports the keys of all records of a database as lines to a text file.

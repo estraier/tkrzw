@@ -1366,9 +1366,9 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
         ok = false;
       }
     } else {
-      status = tkrzw::ExportDBMRecordsToTSV(dbm.get(), rec_file.get(), with_escape);
+      status = tkrzw::ExportDBMToTSV(dbm.get(), rec_file.get(), with_escape);
       if (status != Status::SUCCESS) {
-        EPrintL("ExportDBMRecordsToTSV failed: ", status);
+        EPrintL("ExportDBMToTSV failed: ", status);
         ok = false;
       }
     }
@@ -1380,9 +1380,9 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
         ok = false;
       }
     } else {
-      status = tkrzw::ExportDBMRecordsToFlatRecords(dbm.get(), rec_file.get());
+      status = tkrzw::ExportDBMToFlatRecords(dbm.get(), rec_file.get());
       if (status != Status::SUCCESS) {
-        EPrintL("ExportDBMRecordsToFlatRecords failed: ", status);
+        EPrintL("ExportDBMToFlatRecords failed: ", status);
         ok = false;
       }
     }
@@ -1460,15 +1460,15 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   }
   bool ok = true;
   if (is_tsv) {
-    status = tkrzw::ImportDBMRecordsFromTSV(dbm.get(), rec_file.get(), with_escape);
+    status = tkrzw::ImportDBMFromTSV(dbm.get(), rec_file.get(), with_escape);
     if (status != Status::SUCCESS) {
-      EPrintL("ImportDBMRecordsFromTSV failed: ", status);
+      EPrintL("ImportDBMFromTSV failed: ", status);
       ok = false;
     }
   } else {
-    status = tkrzw::ImportDBMRecordsFromFlatRecords(dbm.get(), rec_file.get());
+    status = tkrzw::ImportDBMFromFlatRecords(dbm.get(), rec_file.get());
     if (status != Status::SUCCESS) {
-      EPrintL("ExportDBMRecordsToFlatRecords failed: ", status);
+      EPrintL("ExportDBMToFlatRecords failed: ", status);
       ok = false;
     }
   }

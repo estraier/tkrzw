@@ -281,7 +281,7 @@ Status SearchDBMModal(
   return status;
 }
 
-Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file) {
+Status ExportDBMToFlatRecords(DBM* dbm, File* dest_file) {
   assert(dbm != nullptr && dest_file != nullptr);
   Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
@@ -309,7 +309,7 @@ Status ExportDBMRecordsToFlatRecords(DBM* dbm, File* dest_file) {
   return impl_status;
 }
 
-Status ImportDBMRecordsFromFlatRecords(DBM* dbm, File* src_file) {
+Status ImportDBMFromFlatRecords(DBM* dbm, File* src_file) {
   assert(dbm != nullptr && src_file != nullptr);
   int64_t end_offset = 0;
   Status status = src_file->GetSize(&end_offset);
@@ -371,7 +371,7 @@ Status ExportDBMKeysToFlatRecords(DBM* dbm, File* dest_file) {
   return impl_status;
 }
 
-Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape) {
+Status ExportDBMToTSV(DBM* dbm, File* dest_file, bool escape) {
   assert(dbm != nullptr && dest_file != nullptr);
   Status status = dest_file->Truncate(0);
   if (status != Status::SUCCESS) {
@@ -401,7 +401,7 @@ Status ExportDBMRecordsToTSV(DBM* dbm, File* dest_file, bool escape) {
   return impl_status;
 }
 
-Status ImportDBMRecordsFromTSV(DBM* dbm, File* src_file, bool unescape) {
+Status ImportDBMFromTSV(DBM* dbm, File* src_file, bool unescape) {
   assert(dbm != nullptr && src_file != nullptr);
   FileReader reader(src_file);
   while (true) {
