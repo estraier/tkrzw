@@ -5,11 +5,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tkrzw, 0.9.48)
+AC_INIT([tkrzw], [0.9.49])
 
 # Package information
 MYLIBVER=1
-MYLIBREV=37
+MYLIBREV=38
 MYLIBFMT=0
 
 # Targets
@@ -63,7 +63,7 @@ use_lzma=""
 
 # Development mode
 AC_ARG_ENABLE(devel,
-  AC_HELP_STRING([--enable-devel], [build for development]))
+  AS_HELP_STRING([--enable-devel], [build for development]))
 if test "$enable_devel" = "yes"
 then
   MYCFLAGS="-std=c11 -pthread -Wall -pedantic -fPIC -fsigned-char -g0 -O2"
@@ -78,7 +78,7 @@ fi
 
 # Debug mode
 AC_ARG_ENABLE(debug,
-  AC_HELP_STRING([--enable-debug], [build for debugging]))
+  AS_HELP_STRING([--enable-debug], [build for debugging]))
 if test "$enable_debug" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O0"
@@ -94,7 +94,7 @@ fi
 
 # Profiling mode
 AC_ARG_ENABLE(profile,
-  AC_HELP_STRING([--enable-profile], [build for profiling]))
+  AS_HELP_STRING([--enable-profile], [build for profiling]))
 if test "$enable_profile" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -pg -O2 -fno-inline"
@@ -107,7 +107,7 @@ fi
 
 # Address sanitizing mode
 AC_ARG_ENABLE(sanitize-address,
-  AC_HELP_STRING([--enable-sanitize-address], [build with address sanitizing]))
+  AS_HELP_STRING([--enable-sanitize-address], [build with address sanitizing]))
 if test "$enable_sanitize_address" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=address"
@@ -120,7 +120,7 @@ fi
 
 # Thread sanitizing mode
 AC_ARG_ENABLE(sanitize-thread,
-  AC_HELP_STRING([--enable-sanitize-thread], [build with thread sanitizing]))
+  AS_HELP_STRING([--enable-sanitize-thread], [build with thread sanitizing]))
 if test "$enable_sanitize_thread" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O2 -fno-inline -fno-omit-frame-pointer -fsanitize=thread"
@@ -133,7 +133,7 @@ fi
 
 # Disable optimization
 AC_ARG_ENABLE(opt,
-  AC_HELP_STRING([--disable-opt], [build without optimization]))
+  AS_HELP_STRING([--disable-opt], [build without optimization]))
 if test "$enable_opt" = "no"
 then
   MYCFLAGS="$MYCFLAGS -O0"
@@ -143,7 +143,7 @@ fi
 
 # Optimize for the native architecture
 AC_ARG_ENABLE(opt-native,
-  AC_HELP_STRING([--enable-opt-native], [build with optimization for the native architecture]))
+  AS_HELP_STRING([--enable-opt-native], [build with optimization for the native architecture]))
 if test "$enable_opt_native" = "yes"
 then
   if uname | grep Darwin >config.tmp && uname -m | grep arm64 >config.tmp
@@ -159,7 +159,7 @@ fi
 
 # Static mode
 AC_ARG_ENABLE(static,
-  AC_HELP_STRING([--enable-static], [build by static linking]))
+  AS_HELP_STRING([--enable-static], [build by static linking]))
 if test "$enable_static" = "yes"
 then
   is_static="yes"
@@ -168,7 +168,7 @@ fi
 
 # Disable shared object
 AC_ARG_ENABLE(shared,
-  AC_HELP_STRING([--disable-shared], [avoid to build shared libraries]))
+  AS_HELP_STRING([--disable-shared], [avoid to build shared libraries]))
 if test "$enable_shared" = "no"
 then
   enables="$enables (no-shared)"
@@ -176,7 +176,7 @@ fi
 
 # Use the standard library only
 AC_ARG_ENABLE(stdonly,
-  AC_HELP_STRING([--enable-stdonly], [use the standard library only]))
+  AS_HELP_STRING([--enable-stdonly], [use the standard library only]))
 if test "$enable_stdonly" = "yes"
 then
   enables="$enables (stdonly)"
@@ -185,7 +185,7 @@ fi
 
 # Enable the zlib compression feature
 AC_ARG_ENABLE(zlib,
-  AC_HELP_STRING([--enable-zlib], [enable the zlib compressin feature]))
+  AS_HELP_STRING([--enable-zlib], [enable the zlib compressin feature]))
 if test "$enable_zlib" = "yes"
 then
   use_zlib="yes"
@@ -194,7 +194,7 @@ fi
 
 # Enable the zstd compression feature
 AC_ARG_ENABLE(zstd,
-  AC_HELP_STRING([--enable-zstd], [enable the zstd compressin feature]))
+  AS_HELP_STRING([--enable-zstd], [enable the zstd compressin feature]))
 if test "$enable_zstd" = "yes"
 then
   use_zstd="yes"
@@ -203,7 +203,7 @@ fi
 
 # Enable the lz4 compression feature
 AC_ARG_ENABLE(lz4,
-  AC_HELP_STRING([--enable-lz4], [enable the LZ4 compressin feature]))
+  AS_HELP_STRING([--enable-lz4], [enable the LZ4 compressin feature]))
 if test "$enable_lz4" = "yes"
 then
   use_lz4="yes"
@@ -212,7 +212,7 @@ fi
 
 # Enable the LZMA compression feature
 AC_ARG_ENABLE(lzma,
-  AC_HELP_STRING([--enable-lzma], [enable the LZMA compressin feature]))
+  AS_HELP_STRING([--enable-lzma], [enable the LZMA compressin feature]))
 if test "$enable_lzma" = "yes"
 then
   use_lzma="yes"
@@ -221,7 +221,7 @@ fi
 
 # Enable as many features as possible
 AC_ARG_ENABLE(most-features,
-  AC_HELP_STRING([--enable-most-features], [enable as many features as poissble]))
+  AS_HELP_STRING([--enable-most-features], [enable as many features as poissble]))
 if test "$enable_most_features" = "yes"
 then
   enables="$enables (most-features)"
@@ -419,7 +419,8 @@ AC_SUBST(MYDBMTRANRECCOMPPARAMS)
 AC_SUBST(MYPOSTCMD)
 
 # Targets
-AC_OUTPUT(Makefile tkrzw.pc)
+AC_CONFIG_FILES([Makefile tkrzw.pc])
+AC_OUTPUT
 
 # Messages
 printf '#================================================================\n'
