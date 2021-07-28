@@ -674,6 +674,7 @@ TEST(LangCTest, Export) {
 TEST(LangCTest, Async) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  const std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
   ASSERT_NE(nullptr, dbm);
   TkrzwAsyncDBM* async = tkrzw_async_dbm_new(dbm, 4);
@@ -816,11 +817,39 @@ TEST(LangCTest, Async) {
   tkrzw_future_get(sync_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(sync_future);
+  EXPECT_EQ(103, tkrzw_dbm_count(dbm));
+  TkrzwFuture* copy_future = tkrzw_async_dbm_copy_file_data(async, copy_path.c_str());
+  tkrzw_future_get(copy_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(copy_future);
+  TkrzwDBM* copy_dbm = tkrzw_dbm_open(copy_path.c_str(), true, "num_buckets=100");
+  ASSERT_NE(nullptr, copy_dbm);
+  EXPECT_EQ(103, tkrzw_dbm_count(copy_dbm));
+  EXPECT_TRUE(tkrzw_dbm_clear(copy_dbm));
+  EXPECT_EQ(0, tkrzw_dbm_count(copy_dbm));
+  TkrzwFuture* export_future = tkrzw_async_dbm_export(async, copy_dbm);
+  tkrzw_future_get(export_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(export_future);
+  EXPECT_EQ(103, tkrzw_dbm_count(copy_dbm));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(copy_path));
+  EXPECT_TRUE(tkrzw_dbm_close(copy_dbm));
+  TkrzwFile* copy_file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
+  TkrzwFuture* expflat_future = tkrzw_async_dbm_export_records_to_flat_records(async, copy_file);
+  tkrzw_future_get(expflat_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(expflat_future);
   TkrzwFuture* clear_future = tkrzw_async_dbm_clear(async);
   tkrzw_future_get(clear_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(clear_future);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+  TkrzwFuture* impflat_future = tkrzw_async_dbm_import_records_from_flat_records(async, copy_file);
+  tkrzw_future_get(impflat_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  tkrzw_future_free(impflat_future);
+  EXPECT_EQ(103, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_file_close(copy_file));
   tkrzw_async_dbm_free(async);
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }

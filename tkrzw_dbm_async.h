@@ -390,6 +390,41 @@ class AsyncDBM final {
                                   const std::map<std::string, std::string>& params = {});
 
   /**
+   * Copies the content of the database file to another file.
+   * @param dest_path A path to the destination file.
+   * @return The result status.
+   * @details Copying is done while the content is synchronized and stable.  So, this method is
+   * suitable for making a backup file while running a database service.
+   */
+  std::future<Status> CopyFileData(const std::string& dest_path);
+
+  /**
+   * Exports all records to another database.
+   * @param dbm The pointer to the destination database.  The lefetime of the database object
+   * must last until the task finishes.
+   * @return The result status.
+   */
+  std::future<Status> Export(DBM* dbm);
+
+  /**
+   * Exports all records of a database to a flat record file.
+   * @param dest_file The file object to write records in.  The lefetime of the file object
+   * must last until the task finishes.
+   * @return The result status.
+   * @details A flat record file contains a sequence of binary records without any high level
+   * structure so it is useful as a intermediate file for data migration.
+   */
+  std::future<Status> ExportRecordsToFlatRecords(File* dest_file);
+
+  /**
+   * Imports records to a database from a flat record file.
+   * @param src_file The file object to read records from.  The lefetime of the file object
+   * must last until the task finishes.
+   * @return The result status.
+   */
+  std::future<Status> ImportRecordsFromFlatRecords(File* src_file);
+
+  /**
    * Searches the database and get keys which match a pattern, according to a mode expression.
    * @param mode The search mode.  "contain" extracts keys containing the pattern.  "begin"
    * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.

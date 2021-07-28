@@ -1012,7 +1012,8 @@ bool tkrzw_dbm_restore_database(
  * value.  While the caller should release the returned future object, it can omit evaluation of
  * the result status if it is not interesting.  The destructor of this asynchronous database
  * manager waits for all tasks to be done.  Therefore, the destructor should be called before the
- * database is closed.
+ * database is closed.  Asynchronous functions which take pointers to C-strings copies the regions
+ * of them so the caller doesn't have to expand the lifetime of them.
  */
 TkrzwAsyncDBM* tkrzw_async_dbm_new(TkrzwDBM* dbm, int32_t num_worker_threads);
 
@@ -1219,6 +1220,49 @@ TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params);
  */
 TkrzwFuture* tkrzw_async_dbm_synchronize(
     TkrzwAsyncDBM* async, bool hard, const char* params);
+
+/**
+ * Copies the content of the database files to other files.
+ * @param async the asynchronous database adapter.
+ * @param dest_path The path prefix to the destination files.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details Copying is done while the content is synchronized and stable.  So, this method is
+ * suitable for making a backup file while running a database service.
+ */
+TkrzwFuture* tkrzw_async_dbm_copy_file_data(TkrzwAsyncDBM* async, const char* dest_path);
+
+/**
+ * Exports all records to another database.
+ * @param async the asynchronous database adapter.
+ * @param dest_dbm The destination database object.  The lefetime of the database object
+ * must last until the task finishes.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm);
+
+/**
+ * Exports all records of a database to a flat record file.
+ * @param async the asynchronous database adapter.
+ * @param dest_file The file object to write records in.  The lefetime of the file object
+ * must last until the task finishes.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_export_records_to_flat_records(
+    TkrzwAsyncDBM* async, TkrzwFile* dest_file);
+
+/**
+ * Imports records to a database from a flat record file.
+ * @param async the asynchronous database adapter.
+ * @param src_file The file object to read records from.  The lefetime of the file object
+ * must last until the task finishes.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ */
+TkrzwFuture* tkrzw_async_dbm_import_records_from_flat_records(
+    TkrzwAsyncDBM* async, TkrzwFile* src_file);
 
 /**
  * Searches a database and get keys asynchronously.

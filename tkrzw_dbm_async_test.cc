@@ -19,6 +19,7 @@
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_async.h"
 #include "tkrzw_dbm_poly.h"
+#include "tkrzw_file_poly.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
@@ -34,6 +35,7 @@ int main(int argc, char** argv) {
 TEST(AsyncDBMTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
   tkrzw::PolyDBM dbm;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
@@ -100,6 +102,29 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Synchronize(false).get());
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Rebuild().get());
     EXPECT_EQ(100, dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.CopyFileData(copy_path).get());
+    {
+      tkrzw::PolyDBM copy_dbm;
+      EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm.OpenAdvanced(
+          copy_path, true, tkrzw::File::OPEN_DEFAULT, {{"num_buckets", "100"}}));
+      EXPECT_EQ(100, copy_dbm.CountSimple());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm.Clear());
+      EXPECT_EQ(0, copy_dbm.CountSimple());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.Export(&copy_dbm).get());
+      EXPECT_EQ(100, copy_dbm.CountSimple());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm.Close());
+    }
+    {
+      tkrzw::PolyFile copy_file;
+      EXPECT_EQ(tkrzw::Status::SUCCESS, copy_file.Open(
+          copy_path, true, tkrzw::File::OPEN_TRUNCATE));
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ExportRecordsToFlatRecords(&copy_file).get());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Clear());
+      EXPECT_EQ(0, dbm.CountSimple());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ImportRecordsFromFlatRecords(&copy_file).get());
+      EXPECT_EQ(100, dbm.CountSimple());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, copy_file.Close());
+    }
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Clear().get());
     EXPECT_EQ(0, dbm.CountSimple());
     EXPECT_EQ(tkrzw::Status::SUCCESS,

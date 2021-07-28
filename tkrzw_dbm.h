@@ -1348,12 +1348,12 @@ class DBM {
 
   /**
    * Exports all records to another database.
-   * @param dbm The pointer to the destination database.
+   * @param dest_dbm The pointer to the destination database.
    * @return The result status.
    */
-  virtual Status Export(DBM* dbm) {
+  virtual Status Export(DBM* dest_dbm) {
     Status impl_status(Status::SUCCESS);
-    RecordProcessorExport proc(&impl_status, dbm);
+    RecordProcessorExport proc(&impl_status, dest_dbm);
     const Status status = ProcessEach(&proc, false);
     if (status != Status::SUCCESS) {
       return status;

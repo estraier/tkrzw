@@ -1347,7 +1347,6 @@ TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params) {
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Rebuild(xparams)));
 }
 
-
 TkrzwFuture* tkrzw_async_dbm_synchronize(
     TkrzwAsyncDBM* async, bool hard, const char* params) {
   assert(async != nullptr && params != nullptr);
@@ -1355,6 +1354,37 @@ TkrzwFuture* tkrzw_async_dbm_synchronize(
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
       xasync->Synchronize(hard, nullptr, xparams)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_copy_file_data(TkrzwAsyncDBM* async, const char* dest_path) {
+  assert(async != nullptr && dest_path != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->CopyFileData(dest_path)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm) {
+  assert(async != nullptr && dest_dbm != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  PolyDBM* xdest_dbm = reinterpret_cast<PolyDBM*>(dest_dbm);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Export(xdest_dbm)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_export_records_to_flat_records(
+    TkrzwAsyncDBM* async, TkrzwFile* dest_file) {
+  assert(async != nullptr && dest_file != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  PolyFile* xdest_file = reinterpret_cast<PolyFile*>(dest_file);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->ExportRecordsToFlatRecords(xdest_file)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_import_records_from_flat_records(
+    TkrzwAsyncDBM* async, TkrzwFile* src_file) {
+  assert(async != nullptr && src_file != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  PolyFile* xsrc_file = reinterpret_cast<PolyFile*>(src_file);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->ImportRecordsFromFlatRecords(xsrc_file)));
 }
 
 TkrzwFuture* tkrzw_async_dbm_search(

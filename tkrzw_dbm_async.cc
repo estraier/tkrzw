@@ -460,6 +460,98 @@ std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FilePr
   return future;
 }
 
+std::future<Status> AsyncDBM::CopyFileData(const std::string& dest_path) {
+  struct CopyFileTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    std::string dest_path;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->CopyFileData(dest_path);
+      if (postproc != nullptr) {
+        postproc->Postprocess("CopyFileData", status);
+      }
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<CopyFileTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  task->dest_path = dest_path;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+std::future<Status> AsyncDBM::Export(DBM* dest_dbm) {
+  struct ExportTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    DBM* dest_dbm;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->Export(dest_dbm);
+      if (postproc != nullptr) {
+        postproc->Postprocess("Export", status);
+      }
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ExportTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  task->dest_dbm = dest_dbm;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+std::future<Status> AsyncDBM::ExportRecordsToFlatRecords(File* dest_file) {
+  struct ExportTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    File* dest_file;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = ExportDBMRecordsToFlatRecords(dbm, dest_file);
+      if (postproc != nullptr) {
+        postproc->Postprocess("ExportRecordsToFlatRecords", status);
+      }
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ExportTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  task->dest_file = dest_file;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+std::future<Status> AsyncDBM::ImportRecordsFromFlatRecords(File* src_file) {
+  struct ImportTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    File* src_file;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = ImportDBMRecordsFromFlatRecords(dbm, src_file);
+      if (postproc != nullptr) {
+        postproc->Postprocess("ImportRecordsFromFlatRecords", status);
+      }
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ImportTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  task->src_file = src_file;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
 std::future<std::pair<Status, std::vector<std::string>>> AsyncDBM::SearchModal(
     std::string_view mode, std::string_view pattern, size_t capacity) {
   struct SearchModalTask : public TaskQueue::Task {
