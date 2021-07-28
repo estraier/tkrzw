@@ -414,7 +414,7 @@ class AsyncDBM final {
    * @details A flat record file contains a sequence of binary records without any high level
    * structure so it is useful as a intermediate file for data migration.
    */
-  std::future<Status> ExportRecordsToFlatRecords(File* dest_file);
+  std::future<Status> ExportToFlatRecords(File* dest_file);
 
   /**
    * Imports records to a database from a flat record file.
@@ -422,7 +422,7 @@ class AsyncDBM final {
    * must last until the task finishes.
    * @return The result status.
    */
-  std::future<Status> ImportRecordsFromFlatRecords(File* src_file);
+  std::future<Status> ImportFromFlatRecords(File* src_file);
 
   /**
    * Searches the database and get keys which match a pattern, according to a mode expression.

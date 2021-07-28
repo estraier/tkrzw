@@ -118,10 +118,10 @@ TEST(AsyncDBMTest, Basic) {
       tkrzw::PolyFile copy_file;
       EXPECT_EQ(tkrzw::Status::SUCCESS, copy_file.Open(
           copy_path, true, tkrzw::File::OPEN_TRUNCATE));
-      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ExportRecordsToFlatRecords(&copy_file).get());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ExportToFlatRecords(&copy_file).get());
       EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Clear());
       EXPECT_EQ(0, dbm.CountSimple());
-      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ImportRecordsFromFlatRecords(&copy_file).get());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.ImportFromFlatRecords(&copy_file).get());
       EXPECT_EQ(100, dbm.CountSimple());
       EXPECT_EQ(tkrzw::Status::SUCCESS, copy_file.Close());
     }

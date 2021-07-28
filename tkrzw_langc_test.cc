@@ -654,11 +654,11 @@ TEST(LangCTest, Export) {
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "ni", -1, "second", -1, false));
   TkrzwFile* file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
   ASSERT_NE(nullptr, file);
-  EXPECT_TRUE(tkrzw_dbm_export_records_to_flat_records(dbm, file));
+  EXPECT_TRUE(tkrzw_dbm_export_to_flat_records(dbm, file));
   EXPECT_EQ(25, tkrzw_file_get_size(file));
   EXPECT_TRUE(tkrzw_dbm_clear(dbm));
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
-  EXPECT_TRUE(tkrzw_dbm_import_records_from_flat_records(dbm, file));
+  EXPECT_TRUE(tkrzw_dbm_import_from_flat_records(dbm, file));
   EXPECT_EQ(2, tkrzw_dbm_count(dbm));
   EXPECT_TRUE(tkrzw_file_close(file));
   file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
@@ -835,7 +835,7 @@ TEST(LangCTest, Async) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(copy_path));
   EXPECT_TRUE(tkrzw_dbm_close(copy_dbm));
   TkrzwFile* copy_file = tkrzw_file_open(copy_path.c_str(), true, "truncate=true");
-  TkrzwFuture* expflat_future = tkrzw_async_dbm_export_records_to_flat_records(async, copy_file);
+  TkrzwFuture* expflat_future = tkrzw_async_dbm_export_to_flat_records(async, copy_file);
   tkrzw_future_get(expflat_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(expflat_future);
@@ -844,7 +844,7 @@ TEST(LangCTest, Async) {
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(clear_future);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
-  TkrzwFuture* impflat_future = tkrzw_async_dbm_import_records_from_flat_records(async, copy_file);
+  TkrzwFuture* impflat_future = tkrzw_async_dbm_import_from_flat_records(async, copy_file);
   tkrzw_future_get(impflat_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(impflat_future);

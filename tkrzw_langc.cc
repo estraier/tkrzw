@@ -840,7 +840,7 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm) {
 }
 
 
-bool tkrzw_dbm_export_records_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file) {
+bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file) {
   assert(dbm != nullptr && dest_file != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   PolyFile* xdest_file = reinterpret_cast<PolyFile*>(dest_file);
@@ -848,7 +848,7 @@ bool tkrzw_dbm_export_records_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_fil
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_import_records_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file) {
+bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file) {
   assert(dbm != nullptr && src_file != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   PolyFile* xsrc_file = reinterpret_cast<PolyFile*>(src_file);
@@ -1369,22 +1369,22 @@ TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm) {
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Export(xdest_dbm)));
 }
 
-TkrzwFuture* tkrzw_async_dbm_export_records_to_flat_records(
+TkrzwFuture* tkrzw_async_dbm_export_to_flat_records(
     TkrzwAsyncDBM* async, TkrzwFile* dest_file) {
   assert(async != nullptr && dest_file != nullptr);
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
   PolyFile* xdest_file = reinterpret_cast<PolyFile*>(dest_file);
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
-      xasync->ExportRecordsToFlatRecords(xdest_file)));
+      xasync->ExportToFlatRecords(xdest_file)));
 }
 
-TkrzwFuture* tkrzw_async_dbm_import_records_from_flat_records(
+TkrzwFuture* tkrzw_async_dbm_import_from_flat_records(
     TkrzwAsyncDBM* async, TkrzwFile* src_file) {
   assert(async != nullptr && src_file != nullptr);
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
   PolyFile* xsrc_file = reinterpret_cast<PolyFile*>(src_file);
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
-      xasync->ImportRecordsFromFlatRecords(xsrc_file)));
+      xasync->ImportFromFlatRecords(xsrc_file)));
 }
 
 TkrzwFuture* tkrzw_async_dbm_search(

@@ -506,7 +506,7 @@ std::future<Status> AsyncDBM::Export(DBM* dest_dbm) {
   return future;
 }
 
-std::future<Status> AsyncDBM::ExportRecordsToFlatRecords(File* dest_file) {
+std::future<Status> AsyncDBM::ExportToFlatRecords(File* dest_file) {
   struct ExportTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
@@ -529,7 +529,7 @@ std::future<Status> AsyncDBM::ExportRecordsToFlatRecords(File* dest_file) {
   return future;
 }
 
-std::future<Status> AsyncDBM::ImportRecordsFromFlatRecords(File* src_file) {
+std::future<Status> AsyncDBM::ImportFromFlatRecords(File* src_file) {
   struct ImportTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;

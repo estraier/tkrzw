@@ -760,7 +760,7 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm);
  * @param dest_file The file object to write records in.
  * @return True on success or false on failure.
  */
-bool tkrzw_dbm_export_records_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file);
+bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file);
 
 /**
  * Imports records to a database from a flat record file.
@@ -768,7 +768,7 @@ bool tkrzw_dbm_export_records_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_fil
  * @param src_file The file object to read records from.
  * @return True on success or false on failure.
  */
-bool tkrzw_dbm_import_records_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file);
+bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file);
 
 /**
  * Exports the keys of all records of a database as lines to a text file.
@@ -1250,7 +1250,7 @@ TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm);
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
  */
-TkrzwFuture* tkrzw_async_dbm_export_records_to_flat_records(
+TkrzwFuture* tkrzw_async_dbm_export_to_flat_records(
     TkrzwAsyncDBM* async, TkrzwFile* dest_file);
 
 /**
@@ -1261,7 +1261,7 @@ TkrzwFuture* tkrzw_async_dbm_export_records_to_flat_records(
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
  */
-TkrzwFuture* tkrzw_async_dbm_import_records_from_flat_records(
+TkrzwFuture* tkrzw_async_dbm_import_from_flat_records(
     TkrzwAsyncDBM* async, TkrzwFile* src_file);
 
 /**
