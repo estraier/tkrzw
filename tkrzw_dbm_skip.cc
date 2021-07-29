@@ -1101,15 +1101,15 @@ Status SkipDBMImpl::CheckZeroRegion(int64_t offset, int64_t end_offset) {
 Status SkipDBMImpl::PadFileForDirectIO() {
   auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
   if (pos_file == nullptr || !pos_file->IsDirectIO()) {
-    return Status::SUCCESS;
+    return Status(Status::SUCCESS);
   }
   const int64_t file_size = file_->GetSizeSimple();
   const int64_t block_size = pos_file->GetBlockSize();
   const int64_t size_rem = file_size % block_size;
   if (size_rem == 0) {
-    return Status::SUCCESS;
+    return Status(Status::SUCCESS);
   }
-  return Status::SUCCESS;
+  return Status(Status::SUCCESS);
 }
 
 Status SkipDBMImpl::PrepareStorage() {

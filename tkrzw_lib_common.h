@@ -315,7 +315,7 @@ class Status final {
    * Constructor representing a specific status.
    * @param code The status code.
    */
-  Status(Code code) : code_(code), message_(nullptr) {}
+  explicit Status(Code code) : code_(code), message_(nullptr) {}
 
   /**
    * Constructor representing a specific status with a message.

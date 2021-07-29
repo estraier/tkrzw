@@ -341,10 +341,11 @@ TEST(AsyncDBMTest, StatusFeature) {
       const auto& set_result = set_future.Get();
       EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
       tkrzw::StatusFuture get_future(async.Get(key));
+      tkrzw::StatusFuture get_future_move(std::move(get_future));
       if (i % 3 == 0) {
-        EXPECT_TRUE(get_future.Wait());
+        EXPECT_TRUE(get_future_move.Wait());
       }
-      const auto& get_result = get_future.GetString();
+      const auto& get_result = get_future_move.GetString();
       EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
       EXPECT_EQ(value, get_result.second);
       if (i % 2 == 0) {

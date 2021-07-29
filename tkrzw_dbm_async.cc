@@ -602,6 +602,10 @@ StatusFuture::StatusFuture(std::future<std::pair<Status, int64_t>>&& future)
     : future_(new std::future<std::pair<Status, int64_t>>(std::move(future))),
       type_(typeid(std::pair<Status, int64_t>)) {}
 
+StatusFuture::StatusFuture(StatusFuture&& rhs) : future_(rhs.future_), type_(rhs.type_) {
+  rhs.future_ = nullptr;
+}
+
 StatusFuture::~StatusFuture() {
   if (type_ == typeid(Status)) {
     auto* future = reinterpret_cast<std::future<Status>*>(future_);

@@ -99,6 +99,12 @@ class AsyncDBM final {
   ~AsyncDBM();
 
   /**
+   * Copy and assignment are disabled.
+   */
+  explicit AsyncDBM(const AsyncDBM& rhs) = delete;
+  AsyncDBM& operator =(const AsyncDBM& rhs) = delete;
+
+  /**
    * Set the common post processor.
    * @param proc the common post processor.  If it is nullptr, no postprocess is done.  The
    * ownership is taken.
@@ -494,9 +500,21 @@ class StatusFuture final {
   explicit StatusFuture(std::future<std::pair<Status, int64_t>>&& future);
 
   /**
+   * Move constructor.
+   * @param rhs The right-hand-side object.
+   */
+  StatusFuture(StatusFuture&& rhs);
+
+  /**
    * Destructor.
    */
   ~StatusFuture();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit StatusFuture(const StatusFuture& rhs) = delete;
+  StatusFuture& operator =(const StatusFuture& rhs) = delete;
 
   /**
    * Waits for the operation to be done.
