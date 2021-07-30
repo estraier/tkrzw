@@ -926,7 +926,8 @@ class DBM {
    * @param overwrite Whether to overwrite the existing value if there's a record with the same
    * key.  If true, the existing value is overwritten by the new value.  If false, the operation
    * is given up and an error status is returned.
-   * @return The result status.
+   * @return The result status.  If there are records avoiding overwriting, DUPLICATION_ERROR
+   * is returned.
    */
   virtual Status SetMulti(
       const std::map<std::string_view, std::string_view>& records, bool overwrite = true) {
