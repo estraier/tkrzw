@@ -558,6 +558,12 @@ class StatusFuture final {
    */
   std::pair<Status, int64_t> GetInteger();
 
+  /**
+   * Gets the type information of the extra data.
+   * @return The type information of the extra data.
+   */
+  const std::type_info& GetExtraType();
+
  private:
   void* future_;
   const std::type_info& type_;

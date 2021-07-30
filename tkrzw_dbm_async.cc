@@ -735,6 +735,10 @@ std::pair<Status, int64_t> StatusFuture::GetInteger() {
   return std::make_pair(Status(Status::INFEASIBLE_ERROR), 0);
 }
 
+const std::type_info& StatusFuture::GetExtraType() {
+  return type_;
+}
+
 }  // namespace tkrzw
 
 // END OF FILE

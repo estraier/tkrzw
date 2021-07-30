@@ -335,6 +335,7 @@ TEST(AsyncDBMTest, StatusFeature) {
       const std::string key = tkrzw::SPrintF("%04d", i);
       const std::string value = tkrzw::ToString(i * i);
       tkrzw::StatusFuture set_future(async.Set(key, value));
+      EXPECT_EQ(typeid(tkrzw::Status), set_future.GetExtraType());
       if (i % 3 == 0) {
         EXPECT_TRUE(set_future.Wait());
       }
@@ -342,6 +343,7 @@ TEST(AsyncDBMTest, StatusFeature) {
       EXPECT_EQ(tkrzw::Status::SUCCESS, set_result);
       tkrzw::StatusFuture get_future(async.Get(key));
       tkrzw::StatusFuture get_future_move(std::move(get_future));
+      EXPECT_EQ(typeid(std::pair<tkrzw::Status, std::string>), get_future.GetExtraType());
       if (i % 3 == 0) {
         EXPECT_TRUE(get_future_move.Wait());
       }
@@ -350,6 +352,7 @@ TEST(AsyncDBMTest, StatusFeature) {
       EXPECT_EQ(value, get_result.second);
       if (i % 2 == 0) {
         tkrzw::StatusFuture remove_future(async.Remove(key));
+        EXPECT_EQ(typeid(tkrzw::Status), remove_future.GetExtraType());
         if (i % 3 == 0) {
           EXPECT_TRUE(remove_future.Wait());
         }
@@ -367,6 +370,8 @@ TEST(AsyncDBMTest, StatusFeature) {
     EXPECT_EQ(100, dbm.CountSimple());
     {
       tkrzw::StatusFuture search_future(async.SearchModal("regex", "[123]7", 0));
+      EXPECT_EQ(typeid(std::pair<tkrzw::Status, std::vector<std::string>>),
+                search_future.GetExtraType());
       search_future.Wait(0);
       EXPECT_TRUE(search_future.Wait());
       const auto& search_result = search_future.GetStringVector();
@@ -384,6 +389,7 @@ TEST(AsyncDBMTest, StatusFeature) {
         keys.emplace_back(key);
       }
       tkrzw::StatusFuture set_future(async.SetMulti(records));
+      EXPECT_EQ(typeid(tkrzw::Status), set_future.GetExtraType());
       if (i % 3 == 0) {
         EXPECT_TRUE(set_future.Wait());
       }
@@ -394,6 +400,8 @@ TEST(AsyncDBMTest, StatusFeature) {
         EXPECT_TRUE(get_future.Wait());
       }
       const auto& get_result = get_future.GetStringMap();
+      EXPECT_EQ(typeid(std::pair<tkrzw::Status, std::map<std::string, std::string>>),
+                get_future.GetExtraType());
       EXPECT_EQ(tkrzw::Status::SUCCESS, get_result.first);
       EXPECT_EQ(10, get_result.second.size());
       for (const auto& key : keys) {
@@ -401,6 +409,7 @@ TEST(AsyncDBMTest, StatusFeature) {
       }
       if (i == 0) {
         tkrzw::StatusFuture remove_future(async.RemoveMulti(keys));
+        EXPECT_EQ(typeid(tkrzw::Status), remove_future.GetExtraType());
         if (i % 3 == 0) {
           EXPECT_TRUE(remove_future.Wait());
         }
