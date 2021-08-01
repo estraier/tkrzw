@@ -35,7 +35,7 @@ namespace tkrzw {
 /**
  * Asynchronous database manager adapter.
  * @details This class is a wrapper of DBM for asynchronous operations.  A task queue with a
- * thread pool is used inside.  Every methods except for the constructor and the destructor are
+ * thread pool is used inside.  Every method except for the constructor and the destructor is
  * run by a thread in the thread pool and the result is set in the future oject of the return
  * value.  The caller can ignore the future object if it is not necessary.  The destructor of
  * this asynchronous database manager waits for all tasks to be done.  Therefore, the destructor
