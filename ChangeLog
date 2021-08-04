@@ -1,3 +1,10 @@
+2021-08-02  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.50
+	- Library version: 1.39.0
+
+	- Support injection of mutex implementations.
+
 2021-07-28  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.49

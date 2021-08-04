@@ -193,9 +193,9 @@ Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
   bool lock_mem_buckets_;
   bool cache_buckets_;
   std::unique_ptr<File> file_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
   HashMutex record_mutex_;
-  std::mutex file_mutex_;
+  fast_mutex file_mutex_;
 };
 
 class HashDBMIteratorImpl final {
@@ -243,7 +243,7 @@ HashDBMImpl::~HashDBMImpl() {
 
 Status HashDBMImpl::Open(const std::string& path, bool writable,
                          int32_t options, const HashDBM::TuningParameters& tuning_params) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -348,7 +348,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
 }
 
 Status HashDBMImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -362,7 +362,7 @@ Status HashDBMImpl::Close() {
 
 Status HashDBMImpl::Process(
     std::string_view key, DBM::RecordProcessor* proc, bool readable, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -382,7 +382,7 @@ Status HashDBMImpl::Process(
 Status HashDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -414,7 +414,7 @@ Status HashDBMImpl::ProcessMulti(
 }
 
 Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -525,7 +525,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status HashDBMImpl::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -534,7 +534,7 @@ Status HashDBMImpl::Count(int64_t* count) {
 }
 
 Status HashDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -543,7 +543,7 @@ Status HashDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status HashDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -552,7 +552,7 @@ Status HashDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status HashDBMImpl::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -586,14 +586,14 @@ Status HashDBMImpl::Clear() {
 
 Status HashDBMImpl::Rebuild(
     const HashDBM::TuningParameters& tuning_params, bool skip_broken_records) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable database");
   }
-  std::lock_guard<std::mutex> file_lock(file_mutex_);
+  std::lock_guard<fast_mutex> file_lock(file_mutex_);
   const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
   const std::string tmp_path = path_ + ".tmp.rebuild";
   int64_t est_num_records = num_records_.load();
@@ -749,7 +749,7 @@ Status HashDBMImpl::Rebuild(
 }
 
 Status HashDBMImpl::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -775,7 +775,7 @@ Status HashDBMImpl::ShouldBeRebuilt(bool* tobe) {
 }
 
 Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -804,7 +804,7 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
 }
 
 std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -866,27 +866,27 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
 }
 
 bool HashDBMImpl::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 bool HashDBMImpl::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 bool HashDBMImpl::IsHealthy() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && healthy_;
 }
 
 bool HashDBMImpl::IsAutoRestored() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> HashDBMImpl::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<HashDBM>(file_->MakeFile());
 }
 
@@ -895,7 +895,7 @@ const File* HashDBMImpl::GetInternalFile() {
 }
 
 int64_t HashDBMImpl::GetEffectiveDataSize() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -903,7 +903,7 @@ int64_t HashDBMImpl::GetEffectiveDataSize() {
 }
 
 double HashDBMImpl::GetModificationTime() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -911,7 +911,7 @@ double HashDBMImpl::GetModificationTime() {
 }
 
 int32_t HashDBMImpl::GetDatabaseType() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -919,7 +919,7 @@ int32_t HashDBMImpl::GetDatabaseType() {
 }
 
 Status HashDBMImpl::SetDatabaseTypeMetadata(uint32_t db_type) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -931,7 +931,7 @@ Status HashDBMImpl::SetDatabaseTypeMetadata(uint32_t db_type) {
 }
 
 std::string HashDBMImpl::GetOpaqueMetadata() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return "";
   }
@@ -939,7 +939,7 @@ std::string HashDBMImpl::GetOpaqueMetadata() {
 }
 
 Status HashDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -951,7 +951,7 @@ Status HashDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
 }
 
 int64_t HashDBMImpl::CountBuckets() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -959,7 +959,7 @@ int64_t HashDBMImpl::CountBuckets() {
 }
 
 int64_t HashDBMImpl::CountUsedBuckets() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -986,7 +986,7 @@ int64_t HashDBMImpl::CountUsedBuckets() {
 }
 
 HashDBM::UpdateMode HashDBMImpl::GetUpdateMode() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return HashDBM::UPDATE_DEFAULT;
   }
@@ -1000,7 +1000,7 @@ HashDBM::UpdateMode HashDBMImpl::GetUpdateMode() {
 }
 
 Status HashDBMImpl::SetUpdateModeAppending() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1016,7 +1016,7 @@ Status HashDBMImpl::ImportFromFileForward(
     const std::string& path, bool skip_broken_records,
     int64_t record_base, int64_t end_offset) {
   {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -1041,7 +1041,7 @@ Status HashDBMImpl::ImportFromFileForward(
     File* file, bool skip_broken_records,
     int64_t record_base, int64_t end_offset) {
   {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -1060,7 +1060,7 @@ Status HashDBMImpl::ImportFromFileBackward(
     int64_t record_base, int64_t end_offset) {
   std::string offset_path, dead_path;
   {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -1089,7 +1089,7 @@ Status HashDBMImpl::ImportFromFileBackward(
     int64_t record_base, int64_t end_offset) {
   std::string offset_path, dead_path;
   {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -1107,7 +1107,7 @@ Status HashDBMImpl::ImportFromFileBackward(
 }
 
 Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -2051,19 +2051,19 @@ Status HashDBMImpl::CheckHashChain(int64_t offset, const HashRecord& rec, int64_
 
 HashDBMIteratorImpl::HashDBMIteratorImpl(HashDBMImpl* dbm)
     : dbm_(dbm), bucket_index_(-1), keys_() {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 HashDBMIteratorImpl::~HashDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
 }
 
 Status HashDBMIteratorImpl::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -2073,7 +2073,7 @@ Status HashDBMIteratorImpl::First() {
 }
 
 Status HashDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -2098,7 +2098,7 @@ Status HashDBMIteratorImpl::Jump(std::string_view key) {
 }
 
 Status HashDBMIteratorImpl::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;
@@ -2108,7 +2108,7 @@ Status HashDBMIteratorImpl::Next() {
 }
 
 Status HashDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;

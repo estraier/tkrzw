@@ -89,7 +89,7 @@ class TinyDBMImpl final {
   std::atomic_int64_t num_records_;
   int64_t num_buckets_;
   char** buckets_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
   HashMutex record_mutex_;
 };
 
@@ -220,7 +220,7 @@ TinyDBMImpl::~TinyDBMImpl() {
 }
 
 Status TinyDBMImpl::Open(const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -241,7 +241,7 @@ Status TinyDBMImpl::Open(const std::string& path, bool writable, int32_t options
 }
 
 Status TinyDBMImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -262,7 +262,7 @@ Status TinyDBMImpl::Close() {
 }
 
 Status TinyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   ScopedHashLock record_lock(record_mutex_, key, writable);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   ProcessImpl(key, bucket_index, proc, writable);
@@ -270,7 +270,7 @@ Status TinyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
 }
 
 Status TinyDBMImpl::Append(std::string_view key, std::string_view value, std::string_view delim) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   ScopedHashLock record_lock(record_mutex_, key, true);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   AppendImpl(key, bucket_index, value, delim);
@@ -280,7 +280,7 @@ Status TinyDBMImpl::Append(std::string_view key, std::string_view value, std::st
 Status TinyDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   std::vector<std::string_view> keys;
   keys.reserve(key_proc_pairs.size());
   for (const auto& pair : key_proc_pairs) {
@@ -298,7 +298,7 @@ Status TinyDBMImpl::ProcessMulti(
 
 Status TinyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     TinyRecord rec;
     for (int64_t bucket_index = 0; bucket_index < num_buckets_; bucket_index++) {
@@ -312,7 +312,7 @@ Status TinyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     }
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     TinyRecord rec;
     for (int64_t bucket_index = 0; bucket_index < num_buckets_; bucket_index++) {
@@ -331,13 +331,13 @@ Status TinyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status TinyDBMImpl::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *count = num_records_.load();
   return Status(Status::SUCCESS);
 }
 
 Status TinyDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -346,7 +346,7 @@ Status TinyDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status TinyDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -355,7 +355,7 @@ Status TinyDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status TinyDBMImpl::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   ReleaseAllRecords();
   CancelIterators();
   xfree(buckets_);
@@ -365,7 +365,7 @@ Status TinyDBMImpl::Clear() {
 }
 
 Status TinyDBMImpl::Rebuild(int64_t num_buckets) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   const int64_t old_num_buckets_ = num_buckets_;
   char** old_buckets = buckets_;
   num_buckets_ = num_buckets > 0 ? num_buckets : num_records_ * 2 + 1;
@@ -390,13 +390,13 @@ Status TinyDBMImpl::Rebuild(int64_t num_buckets) {
 }
 
 Status TinyDBMImpl::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *tobe = num_records_.load() > num_buckets_;
   return Status(Status::SUCCESS);
 }
 
 Status TinyDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   if (open_ && writable_) {
     status |= ExportRecords();
@@ -409,7 +409,7 @@ Status TinyDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
 }
 
 std::vector<std::pair<std::string, std::string>> TinyDBMImpl::Inspect() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -424,17 +424,17 @@ std::vector<std::pair<std::string, std::string>> TinyDBMImpl::Inspect() {
 }
 
 bool TinyDBMImpl::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 bool TinyDBMImpl::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 std::unique_ptr<DBM> TinyDBMImpl::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<TinyDBM>(file_->MakeFile(), num_buckets_);
 }
 
@@ -635,26 +635,26 @@ Status TinyDBMImpl::ReadNextBucketRecords(TinyDBMIteratorImpl* iter) {
 
 TinyDBMIteratorImpl::TinyDBMIteratorImpl(TinyDBMImpl* dbm)
     : dbm_(dbm), bucket_index_(-1), keys_() {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 TinyDBMIteratorImpl::~TinyDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
 }
 
 Status TinyDBMIteratorImpl::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   bucket_index_.store(0);
   keys_.clear();
   return Status(Status::SUCCESS);
 }
 
 Status TinyDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   bucket_index_.store(-1);
   keys_.clear();
   {
@@ -676,7 +676,7 @@ Status TinyDBMIteratorImpl::Jump(std::string_view key) {
 }
 
 Status TinyDBMIteratorImpl::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;
@@ -686,7 +686,7 @@ Status TinyDBMIteratorImpl::Next() {
 }
 
 Status TinyDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;

@@ -81,7 +81,7 @@ class MemoryMapParallelFileImpl final {
   int32_t open_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 class MemoryMapParallelFileZoneImpl final {
@@ -89,7 +89,7 @@ class MemoryMapParallelFileZoneImpl final {
   MemoryMapParallelFileZoneImpl(
       MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size, Status* status);
   ~MemoryMapParallelFileZoneImpl();
-  void SetLockedMutex(std::shared_timed_mutex* mutex);
+  void SetLockedMutex(fast_shared_mutex* mutex);
   int64_t Offset() const;
   char* Pointer() const;
   size_t Size() const;
@@ -300,7 +300,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   map_size_.store(file_size_.load());
   if (ftruncate(fd_, map_size_.load()) != 0) {
@@ -395,7 +395,7 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
   }
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
   }
@@ -691,7 +691,7 @@ class MemoryMapAtomicFileImpl final {
   int32_t open_options_;
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 class MemoryMapAtomicFileZoneImpl final {
@@ -699,7 +699,7 @@ class MemoryMapAtomicFileZoneImpl final {
   MemoryMapAtomicFileZoneImpl(
       MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status);
   ~MemoryMapAtomicFileZoneImpl();
-  void SetLockedMutex(std::shared_timed_mutex* mutex);
+  void SetLockedMutex(fast_shared_mutex* mutex);
   int64_t Offset() const;
   char* Pointer() const;
   size_t Size() const;
@@ -725,7 +725,7 @@ MemoryMapAtomicFileImpl::~MemoryMapAtomicFileImpl() {
 
 Status MemoryMapAtomicFileImpl::Open(
     const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
@@ -816,7 +816,7 @@ Status MemoryMapAtomicFileImpl::Open(
 }
 
 Status MemoryMapAtomicFileImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -866,7 +866,7 @@ Status MemoryMapAtomicFileImpl::Close() {
 }
 
 Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -898,7 +898,7 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
 }
 
 Status MemoryMapAtomicFileImpl::TruncateFakely(int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -907,7 +907,7 @@ Status MemoryMapAtomicFileImpl::TruncateFakely(int64_t size) {
 }
 
 Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -936,7 +936,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
 }
 
 Status MemoryMapAtomicFileImpl::GetSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -945,7 +945,7 @@ Status MemoryMapAtomicFileImpl::GetSize(int64_t* size) {
 }
 
 Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ >= 0) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
@@ -955,12 +955,12 @@ Status MemoryMapAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double 
 }
 
 Status MemoryMapAtomicFileImpl::CopyProperties(File* file) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
 }
 
 Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -972,7 +972,7 @@ Status MemoryMapAtomicFileImpl::GetPath(std::string* path) {
 }
 
 Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -987,7 +987,7 @@ Status MemoryMapAtomicFileImpl::Rename(const std::string& new_path) {
 }
 
 Status MemoryMapAtomicFileImpl::DisablePathOperations() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -996,7 +996,7 @@ Status MemoryMapAtomicFileImpl::DisablePathOperations() {
 }
 
 Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }

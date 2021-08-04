@@ -73,7 +73,7 @@ class PositionalParallelFileImpl final {
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
   std::unique_ptr<PageCache> page_cache_;
-  std::mutex mutex_;
+  fast_mutex mutex_;
 };
 
 PositionalParallelFileImpl::PositionalParallelFileImpl()
@@ -482,7 +482,7 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= trunc_size_.load()) {
     return Status(Status::SUCCESS);
   }
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   if (min_size <= trunc_size_.load()) {
     return Status(Status::SUCCESS);
   }
@@ -743,7 +743,7 @@ class PositionalAtomicFileImpl final {
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
   std::unique_ptr<PageCache> page_cache_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 PositionalAtomicFileImpl::PositionalAtomicFileImpl()
@@ -761,7 +761,7 @@ PositionalAtomicFileImpl::~PositionalAtomicFileImpl() {
 }
 
 Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "opened file");
   }
@@ -862,7 +862,7 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
 }
 
 Status PositionalAtomicFileImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -925,7 +925,7 @@ Status PositionalAtomicFileImpl::Close() {
 }
 
 Status PositionalAtomicFileImpl::Read(int64_t off, void* buf, size_t size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -933,7 +933,7 @@ Status PositionalAtomicFileImpl::Read(int64_t off, void* buf, size_t size) {
 }
 
 Status PositionalAtomicFileImpl::Write(int64_t off, const void* buf, size_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -950,7 +950,7 @@ Status PositionalAtomicFileImpl::Write(int64_t off, const void* buf, size_t size
 }
 
 Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* off) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -974,7 +974,7 @@ Status PositionalAtomicFileImpl::Append(const void* buf, size_t size, int64_t* o
 }
 
 Status PositionalAtomicFileImpl::Truncate(int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1005,7 +1005,7 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
 }
 
 Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1014,7 +1014,7 @@ Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {
 }
 
 Status PositionalAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1040,7 +1040,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t siz
 }
 
 Status PositionalAtomicFileImpl::GetSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1049,7 +1049,7 @@ Status PositionalAtomicFileImpl::GetSize(int64_t* size) {
 }
 
 Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1078,7 +1078,7 @@ Status PositionalAtomicFileImpl::SetHeadBuffer(int64_t size) {
 }
 
 Status PositionalAtomicFileImpl::SetAccessStrategy(int64_t block_size, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
@@ -1088,7 +1088,7 @@ Status PositionalAtomicFileImpl::SetAccessStrategy(int64_t block_size, int32_t o
 }
 
 Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "alread opened file");
   }
@@ -1098,7 +1098,7 @@ Status PositionalAtomicFileImpl::SetAllocationStrategy(int64_t init_size, double
 }
 
 Status PositionalAtomicFileImpl::CopyProperties(File* file) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   Status status = file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
   auto* pos_file = dynamic_cast<PositionalFile*>(file);
   if (pos_file != nullptr) {
@@ -1108,7 +1108,7 @@ Status PositionalAtomicFileImpl::CopyProperties(File* file) {
 }
 
 Status PositionalAtomicFileImpl::GetPath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1120,7 +1120,7 @@ Status PositionalAtomicFileImpl::GetPath(std::string* path) {
 }
 
 Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1135,7 +1135,7 @@ Status PositionalAtomicFileImpl::Rename(const std::string& new_path) {
 }
 
 Status PositionalAtomicFileImpl::DisablePathOperations() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
@@ -1144,12 +1144,12 @@ Status PositionalAtomicFileImpl::DisablePathOperations() {
 }
 
 int64_t PositionalAtomicFileImpl::GetBlockSize() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return block_size_;
 }
 
 bool PositionalAtomicFileImpl::IsDirectIO() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return access_options_ & PositionalFile::ACCESS_DIRECT;
 }
 

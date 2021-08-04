@@ -152,7 +152,7 @@ class SkipDBMImpl final {
   std::unique_ptr<SkipRecordCache> cache_;
   int64_t old_num_records_;
   int64_t old_eff_data_size_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 class SkipDBMIteratorImpl final {
@@ -205,7 +205,7 @@ SkipDBMImpl::~SkipDBMImpl() {
 
 Status SkipDBMImpl::Open(const std::string& path, bool writable,
                          int32_t options, const SkipDBM::TuningParameters& tuning_params) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -333,7 +333,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
 }
 
 Status SkipDBMImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -381,7 +381,7 @@ Status SkipDBMImpl::Close() {
 
 Status SkipDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -396,7 +396,7 @@ Status SkipDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
       return status;
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -409,7 +409,7 @@ Status SkipDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
 }
 
 Status SkipDBMImpl::Insert(std::string_view key, std::string_view value) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -423,7 +423,7 @@ Status SkipDBMImpl::Insert(std::string_view key, std::string_view value) {
 }
 
 Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* value) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -453,7 +453,7 @@ Status SkipDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -470,7 +470,7 @@ Status SkipDBMImpl::ProcessMulti(
       }
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -486,7 +486,7 @@ Status SkipDBMImpl::ProcessMulti(
 
 Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -525,7 +525,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     }
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     if (!open_) {
       return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
@@ -558,7 +558,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status SkipDBMImpl::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -567,7 +567,7 @@ Status SkipDBMImpl::Count(int64_t* count) {
 }
 
 Status SkipDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -576,7 +576,7 @@ Status SkipDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status SkipDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -585,7 +585,7 @@ Status SkipDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status SkipDBMImpl::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -618,7 +618,7 @@ Status SkipDBMImpl::Clear() {
 }
 
 Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -739,7 +739,7 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
 }
 
 Status SkipDBMImpl::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -756,7 +756,7 @@ Status SkipDBMImpl::ShouldBeRebuilt(bool* tobe) {
 
 Status SkipDBMImpl::Synchronize(
     bool hard, DBM::FileProcessor* proc, SkipDBM::ReducerType reducer) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -779,7 +779,7 @@ Status SkipDBMImpl::Synchronize(
 }
 
 std::vector<std::pair<std::string, std::string>> SkipDBMImpl::Inspect() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -812,27 +812,27 @@ std::vector<std::pair<std::string, std::string>> SkipDBMImpl::Inspect() {
 }
 
 bool SkipDBMImpl::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 bool SkipDBMImpl::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 bool SkipDBMImpl::IsHealthy() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && healthy_;
 }
 
 bool SkipDBMImpl::IsAutoRestored() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> SkipDBMImpl::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<SkipDBM>(file_->MakeFile());
 }
 
@@ -841,7 +841,7 @@ const File* SkipDBMImpl::GetInternalFile() {
 }
 
 int64_t SkipDBMImpl::GetEffectiveDataSize() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -849,7 +849,7 @@ int64_t SkipDBMImpl::GetEffectiveDataSize() {
 }
 
 double SkipDBMImpl::GetModificationTime() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -857,7 +857,7 @@ double SkipDBMImpl::GetModificationTime() {
 }
 
 int32_t SkipDBMImpl::GetDatabaseType() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -865,7 +865,7 @@ int32_t SkipDBMImpl::GetDatabaseType() {
 }
 
 Status SkipDBMImpl::SetDatabaseTypeMetadata(uint32_t db_type) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -877,7 +877,7 @@ Status SkipDBMImpl::SetDatabaseTypeMetadata(uint32_t db_type) {
 }
 
 std::string SkipDBMImpl::GetOpaqueMetadata() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return "";
   }
@@ -885,7 +885,7 @@ std::string SkipDBMImpl::GetOpaqueMetadata() {
 }
 
 Status SkipDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -897,7 +897,7 @@ Status SkipDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
 }
 
 Status SkipDBMImpl::Revert() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -913,12 +913,12 @@ Status SkipDBMImpl::Revert() {
 }
 
 bool SkipDBMImpl::IsUpdated() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && updated_;
 }
 
 Status SkipDBMImpl::MergeSkipDatabase(const std::string& src_path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -959,7 +959,7 @@ Status SkipDBMImpl::MergeSkipDatabase(const std::string& src_path) {
 }
 
 Status SkipDBMImpl::ValidateRecords() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1346,19 +1346,19 @@ Status SkipDBMImpl::ProcessImpl(std::string_view key, DBM::RecordProcessor* proc
 
 SkipDBMIteratorImpl::SkipDBMIteratorImpl(SkipDBMImpl* dbm)
     : dbm_(dbm), record_offset_(-1), record_index_(-1), record_size_(0) {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 SkipDBMIteratorImpl::~SkipDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
 }
 
 Status SkipDBMIteratorImpl::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1369,7 +1369,7 @@ Status SkipDBMIteratorImpl::First() {
 }
 
 Status SkipDBMIteratorImpl::Last() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1391,7 +1391,7 @@ Status SkipDBMIteratorImpl::Last() {
 }
 
 Status SkipDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1411,7 +1411,7 @@ Status SkipDBMIteratorImpl::Jump(std::string_view key) {
 }
 
 Status SkipDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1457,7 +1457,7 @@ Status SkipDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
 }
 
 Status SkipDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1498,7 +1498,7 @@ Status SkipDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
 }
 
 Status SkipDBMIteratorImpl::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (record_offset_ < 0 || record_offset_ >= dbm_->file_->GetSizeSimple()) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -1518,7 +1518,7 @@ Status SkipDBMIteratorImpl::Next() {
 }
 
 Status SkipDBMIteratorImpl::Previous() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (record_offset_ < 0 || record_offset_ >= dbm_->file_->GetSizeSimple()) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -1540,7 +1540,7 @@ Status SkipDBMIteratorImpl::Previous() {
 
 Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     if (record_offset_ < 0 || record_offset_ >= dbm_->file_->GetSizeSimple()) {
       return Status(Status::NOT_FOUND_ERROR);
     }
@@ -1570,7 +1570,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
       record_size_ = 0;
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
     if (record_offset_ < 0 || record_offset_ >= dbm_->file_->GetSizeSimple()) {
       return Status(Status::NOT_FOUND_ERROR);
     }
@@ -1595,7 +1595,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status SkipDBMIteratorImpl::Get(std::string* key, std::string* value) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (record_offset_ < 0 || record_offset_ >= dbm_->file_->GetSizeSimple()) {
     return Status(Status::NOT_FOUND_ERROR);
   }

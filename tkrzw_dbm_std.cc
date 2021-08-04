@@ -66,7 +66,7 @@ class StdDBMImpl {
   bool open_;
   bool writable_;
   std::string path_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 template <class STRMAP>
@@ -113,7 +113,7 @@ StdDBMImpl<STRMAP>::~StdDBMImpl() {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -135,7 +135,7 @@ Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t 
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -157,7 +157,7 @@ Status StdDBMImpl<STRMAP>::Process(
     std::string_view key, DBM::RecordProcessor* proc, bool writable) {
   const std::string key_str(key);
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     auto it = map_.find(key_str);
     if (it == map_.end()) {
       const std::string_view new_value = proc->ProcessEmpty(key);
@@ -180,7 +180,7 @@ Status StdDBMImpl<STRMAP>::Process(
       }
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     const auto& const_map = map_;
     const auto it = const_map.find(key_str);
     if (it == const_map.end()) {
@@ -197,7 +197,7 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     for (const auto& key_proc : key_proc_pairs) {
       const std::string_view key = key_proc.first;
       DBM::RecordProcessor* proc = key_proc.second;
@@ -225,7 +225,7 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
       }
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     const auto& const_map = map_;
     for (const auto& key_proc : key_proc_pairs) {
       const std::string_view key = key_proc.first;
@@ -245,7 +245,7 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     auto it = map_.begin();
     while (it != map_.end()) {
@@ -266,7 +266,7 @@ Status StdDBMImpl<STRMAP>::ProcessEach(DBM::RecordProcessor* proc, bool writable
     }
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+    std::shared_lock<fast_shared_mutex> lock(mutex_);
     proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
     const auto& const_map = map_;
     auto it = const_map.begin();
@@ -281,14 +281,14 @@ Status StdDBMImpl<STRMAP>::ProcessEach(DBM::RecordProcessor* proc, bool writable
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *count = map_.size();
   return Status(Status::SUCCESS);
 }
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -298,7 +298,7 @@ Status StdDBMImpl<STRMAP>::GetFileSize(int64_t* size) {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -308,7 +308,7 @@ Status StdDBMImpl<STRMAP>::GetFilePath(std::string* path) {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   map_.clear();
   CancelIterators();
   return Status(Status::SUCCESS);
@@ -316,14 +316,14 @@ Status StdDBMImpl<STRMAP>::Clear() {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Rebuild() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   CancelIterators();
   return Status(Status::SUCCESS);
 }
 
 template <>
 Status StdDBMImpl<StringHashMap>::Rebuild() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   map_.rehash(map_.size() * 2 + 1);
   CancelIterators();
   return Status(Status::SUCCESS);
@@ -331,21 +331,21 @@ Status StdDBMImpl<StringHashMap>::Rebuild() {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *tobe = false;
   return Status(Status::SUCCESS);
 }
 
 template <>
 Status StdDBMImpl<StringHashMap>::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *tobe = map_.load_factor() > 1.0;
   return Status(Status::SUCCESS);
 }
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   if (open_ && writable_) {
     status |= ExportRecords();
@@ -359,7 +359,7 @@ Status StdDBMImpl<STRMAP>::Synchronize(bool hard, DBM::FileProcessor* proc) {
 
 template <class STRMAP>
 void StdDBMImpl<STRMAP>::Inspect(std::vector<std::pair<std::string, std::string>>* meta) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   auto Add = [&](const std::string& name, const std::string& value) {
     meta->emplace_back(std::make_pair(name, value));
   };
@@ -371,7 +371,7 @@ void StdDBMImpl<STRMAP>::Inspect(std::vector<std::pair<std::string, std::string>
 
 template <>
 void StdDBMImpl<StringHashMap>::Inspect(std::vector<std::pair<std::string, std::string>>* meta) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
  auto Add = [&](const std::string& name, const std::string& value) {
     meta->emplace_back(std::make_pair(name, value));
   };
@@ -384,25 +384,25 @@ void StdDBMImpl<StringHashMap>::Inspect(std::vector<std::pair<std::string, std::
 
 template <class STRMAP>
 bool StdDBMImpl<STRMAP>::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 template <class STRMAP>
 bool StdDBMImpl<STRMAP>::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 template <class STRMAP>
 std::unique_ptr<DBM> StdDBMImpl<STRMAP>::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<StdTreeDBM>();
 }
 
 template <>
 std::unique_ptr<DBM> StdDBMImpl<StringHashMap>::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<StdHashDBM>(map_.bucket_count());
 }
 
@@ -470,7 +470,7 @@ Status StdDBMImpl<STRMAP>::ExportRecords() {
 template <class STRMAP>
 StdDBMIteratorImpl<STRMAP>::StdDBMIteratorImpl(StdDBMImpl<STRMAP>* dbm)
     : dbm_(dbm) {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
   it_ = dbm_->map_.end();
 }
@@ -478,14 +478,14 @@ StdDBMIteratorImpl<STRMAP>::StdDBMIteratorImpl(StdDBMImpl<STRMAP>* dbm)
 template <class STRMAP>
 StdDBMIteratorImpl<STRMAP>::~StdDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
 }
 
 template <class STRMAP>
 Status StdDBMIteratorImpl<STRMAP>::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = const_map.begin();
   return Status(Status::SUCCESS);
@@ -498,7 +498,7 @@ Status StdDBMIteratorImpl<STRMAP>::Last() {
 
 template <>
 Status StdDBMIteratorImpl<StringTreeMap>::Last() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = const_map.end();
   if (it_ != const_map.begin()) {
@@ -509,7 +509,7 @@ Status StdDBMIteratorImpl<StringTreeMap>::Last() {
 
 template <class STRMAP>
 Status StdDBMIteratorImpl<STRMAP>::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = const_map.find(std::string(key));
   if (it_ == dbm_->map_.end()) {
@@ -520,7 +520,7 @@ Status StdDBMIteratorImpl<STRMAP>::Jump(std::string_view key) {
 
 template <>
 Status StdDBMIteratorImpl<StringTreeMap>::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = const_map.lower_bound(std::string(key));
   return Status(Status::SUCCESS);
@@ -533,7 +533,7 @@ Status StdDBMIteratorImpl<STRMAP>::JumpLower(std::string_view key, bool inclusiv
 
 template <>
 Status StdDBMIteratorImpl<StringTreeMap>::JumpLower(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = const_map.lower_bound(std::string(key));
   if (it_ == const_map.end()) {
@@ -559,13 +559,13 @@ Status StdDBMIteratorImpl<StringTreeMap>::JumpLower(std::string_view key, bool i
 
 template <class STRMAP>
 Status StdDBMIteratorImpl<STRMAP>::JumpUpper(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   return Status(Status::NOT_IMPLEMENTED_ERROR);
 }
 
 template <>
 Status StdDBMIteratorImpl<StringTreeMap>::JumpUpper(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   it_ = inclusive ? const_map.lower_bound(std::string(key)) :
       const_map.upper_bound(std::string(key));
@@ -574,7 +574,7 @@ Status StdDBMIteratorImpl<StringTreeMap>::JumpUpper(std::string_view key, bool i
 
 template <class STRMAP>
 Status StdDBMIteratorImpl<STRMAP>::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   if (it_ == const_map.end()) {
     return Status(Status::NOT_FOUND_ERROR);
@@ -592,7 +592,7 @@ Status StdDBMIteratorImpl<STRMAP>::Previous() {
 
 template <>
 Status StdDBMIteratorImpl<StringTreeMap>::Previous() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const auto& const_map = dbm_->map_;
   if (it_ == const_map.end()) {
     return Status(Status::NOT_FOUND_ERROR);
@@ -608,7 +608,7 @@ Status StdDBMIteratorImpl<StringTreeMap>::Previous() {
 template <class STRMAP>
 Status StdDBMIteratorImpl<STRMAP>::Process(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     if (it_ == dbm_->map_.end()) {
       return Status(Status::NOT_FOUND_ERROR);
     }
@@ -625,7 +625,7 @@ Status StdDBMIteratorImpl<STRMAP>::Process(DBM::RecordProcessor* proc, bool writ
       dbm_->map_.find(it_->first)->second = new_value;
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
     if (it_ == dbm_->map_.end()) {
       return Status(Status::NOT_FOUND_ERROR);
     }

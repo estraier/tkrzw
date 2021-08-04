@@ -97,7 +97,7 @@ struct BabyLeafNode final {
   BabyLeafNode* prev;
   BabyLeafNode* next;
   std::vector<BabyRecord*> records;
-  std::shared_timed_mutex mutex;
+  fast_shared_mutex mutex;
   BabyLeafNode(BabyLeafNode* prev, BabyLeafNode* next)
       : prev(prev), next(next), records(), mutex() {}
   ~BabyLeafNode() {
@@ -175,7 +175,7 @@ class BabyDBMImpl final {
   BabyLeafNode* first_node_;
   BabyLeafNode* last_node_;
   AtomicSet<std::pair<BabyLeafNode*, std::string>> reorg_nodes_;
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 class BabyDBMIteratorImpl final {
@@ -358,7 +358,7 @@ BabyDBMImpl::~BabyDBMImpl() {
 }
 
 Status BabyDBMImpl::Open(const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -379,7 +379,7 @@ Status BabyDBMImpl::Open(const std::string& path, bool writable, int32_t options
 }
 
 Status BabyDBMImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -402,16 +402,16 @@ Status BabyDBMImpl::Close() {
 
 Status BabyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bool writable) {
   if (writable && !reorg_nodes_.IsEmpty()) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     ReorganizeTree();
   }
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   BabyLeafNode* leaf_node = SearchTree(key);
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::lock_guard<fast_shared_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key, proc, true);
   } else {
-    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::shared_lock<fast_shared_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key, proc, false);
   }
   return Status(Status::SUCCESS);
@@ -419,12 +419,12 @@ Status BabyDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bo
 
 Status BabyDBMImpl::Append(std::string_view key, std::string_view value, std::string_view delim) {
   if (!reorg_nodes_.IsEmpty()) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     ReorganizeTree();
   }
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   BabyLeafNode* leaf_node = SearchTree(key);
-  std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+  std::lock_guard<fast_shared_mutex> page_lock(leaf_node->mutex);
   AppendImpl(leaf_node, key, value, delim);
   return Status(Status::SUCCESS);
 }
@@ -433,10 +433,10 @@ Status BabyDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   if (!reorg_nodes_.IsEmpty()) {
-    std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+    std::lock_guard<fast_shared_mutex> lock(mutex_);
     ReorganizeTree();
   }
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   std::vector<BabyLeafNode*> leaf_nodes;
   std::set<BabyLeafNode*> uniq_leaf_nodes;
   for (const auto& key_proc : key_proc_pairs) {
@@ -468,12 +468,12 @@ Status BabyDBMImpl::ProcessMulti(
 }
 
 Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
   BabyLeafNode* leaf_node = first_node_;
   while (leaf_node != nullptr) {
     if (writable) {
-      std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+      std::lock_guard<fast_shared_mutex> page_lock(leaf_node->mutex);
       std::vector<std::string> keys;
       keys.reserve(leaf_node->records.size());
       for (const auto* rec : leaf_node->records) {
@@ -483,7 +483,7 @@ Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         ProcessImpl(leaf_node, key, proc, true);
       }
     } else {
-      std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+      std::shared_lock<fast_shared_mutex> page_lock(leaf_node->mutex);
       for (const auto* rec : leaf_node->records) {
         proc->ProcessFull(rec->GetKey(), rec->GetValue());
       }
@@ -495,13 +495,13 @@ Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status BabyDBMImpl::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *count = num_records_.load();
   return Status(Status::SUCCESS);
 }
 
 Status BabyDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -510,7 +510,7 @@ Status BabyDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status BabyDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -519,7 +519,7 @@ Status BabyDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status BabyDBMImpl::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   for (auto* iterator : iterators_) {
     iterator->ClearPosition();
   }
@@ -530,7 +530,7 @@ Status BabyDBMImpl::Clear() {
 }
 
 Status BabyDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   if (open_ && writable_) {
     status |= ExportRecords();
@@ -543,7 +543,7 @@ Status BabyDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
 }
 
 std::vector<std::pair<std::string, std::string>> BabyDBMImpl::Inspect() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -558,17 +558,17 @@ std::vector<std::pair<std::string, std::string>> BabyDBMImpl::Inspect() {
 }
 
 bool BabyDBMImpl::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 bool BabyDBMImpl::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 std::unique_ptr<DBM> BabyDBMImpl::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<BabyDBM>(file_->MakeFile());
 }
 
@@ -936,7 +936,7 @@ Status BabyDBMImpl::ImportRecords() {
     }
     DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     BabyLeafNode* leaf_node = SearchTree(key_store);
-    std::lock_guard<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::lock_guard<fast_shared_mutex> page_lock(leaf_node->mutex);
     ProcessImpl(leaf_node, key_store, &setter, true);
   }
   return Status(Status::SUCCESS);
@@ -950,7 +950,7 @@ Status BabyDBMImpl::ExportRecords() {
   FlatRecord flat_rec(file_.get());
   BabyLeafNode* leaf_node = first_node_;
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::shared_lock<fast_shared_mutex> page_lock(leaf_node->mutex);
     for (const auto* rec : leaf_node->records) {
       status = flat_rec.Write(rec->GetKey());
       if (status != Status::SUCCESS) {
@@ -1023,41 +1023,41 @@ void BabyDBMImpl::AppendImpl(
 
 BabyDBMIteratorImpl::BabyDBMIteratorImpl(BabyDBMImpl* dbm)
     : dbm_(dbm), key_ptr_(nullptr), key_size_(0), leaf_node_(nullptr) {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 BabyDBMIteratorImpl::~BabyDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
   ClearPosition();
 }
 
 Status BabyDBMIteratorImpl::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   ClearPosition();
   SetPositionFirst(dbm_->first_node_);
   return Status(Status::SUCCESS);
 }
 
 Status BabyDBMIteratorImpl::Last() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   ClearPosition();
   SetPositionLast(dbm_->last_node_);
   return Status(Status::SUCCESS);
 }
 
 Status BabyDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   ClearPosition();
   SetPositionWithKey(nullptr, key);
   return Status(Status::SUCCESS);
 }
 
 Status BabyDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   ClearPosition();
   SetPositionWithKey(nullptr, key);
   Status status = SyncPosition(key);
@@ -1087,7 +1087,7 @@ Status BabyDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
 }
 
 Status BabyDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   ClearPosition();
   SetPositionWithKey(nullptr, key);
   Status status = SyncPosition(key);
@@ -1116,7 +1116,7 @@ Status BabyDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
 }
 
 Status BabyDBMIteratorImpl::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -1125,7 +1125,7 @@ Status BabyDBMIteratorImpl::Next() {
 }
 
 Status BabyDBMIteratorImpl::Previous() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -1135,10 +1135,10 @@ Status BabyDBMIteratorImpl::Previous() {
 
 Status BabyDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   if (writable && !dbm_->reorg_nodes_.IsEmpty()) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->ReorganizeTree();
   }
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -1157,7 +1157,7 @@ void BabyDBMIteratorImpl::ClearPosition() {
 
 bool BabyDBMIteratorImpl::SetPositionFirst(BabyLeafNode* leaf_node) {
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::shared_lock<fast_shared_mutex> page_lock(leaf_node->mutex);
     auto& records = leaf_node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_node, records.front()->GetKey());
@@ -1171,7 +1171,7 @@ bool BabyDBMIteratorImpl::SetPositionFirst(BabyLeafNode* leaf_node) {
 
 bool BabyDBMIteratorImpl::SetPositionLast(BabyLeafNode* leaf_node) {
   while (leaf_node != nullptr) {
-    std::shared_lock<std::shared_timed_mutex> page_lock(leaf_node->mutex);
+    std::shared_lock<fast_shared_mutex> page_lock(leaf_node->mutex);
     auto& records = leaf_node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_node, records.back()->GetKey());
@@ -1198,7 +1198,7 @@ Status BabyDBMIteratorImpl::NextImpl(std::string_view key) {
   BabyRecordOnStack search_stack(key);
   const BabyRecord* search_rec = search_stack.record;
   {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+    std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
     auto& records = leaf_node_->records;
     auto it = std::upper_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -1222,7 +1222,7 @@ Status BabyDBMIteratorImpl::PreviousImpl(std::string_view key) {
   BabyRecordOnStack search_stack(key);
   const BabyRecord* search_rec = search_stack.record;
   {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+    std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
     auto& records = leaf_node_->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -1248,7 +1248,7 @@ Status BabyDBMIteratorImpl::SyncPosition(std::string_view key) {
   BabyRecordOnStack search_stack(key);
   const BabyRecord* search_rec = search_stack.record;
   bool hit = false;
-  std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+  std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
   auto& records = leaf_node_->records;
   auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
   if (it != records.end()) {
@@ -1259,7 +1259,7 @@ Status BabyDBMIteratorImpl::SyncPosition(std::string_view key) {
   if (!hit) {
     leaf_node_ = leaf_node_->next;
     while (leaf_node_ != nullptr) {
-      std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+      std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
       auto& records = leaf_node_->records;
       if (!records.empty()) {
         BabyRecord* rec = records.front();
@@ -1287,7 +1287,7 @@ Status BabyDBMIteratorImpl::ProcessImpl(
   const BabyRecord* search_rec = search_stack.record;
   bool hit = false;
   if (writable) {
-    std::lock_guard<std::shared_timed_mutex> lock(leaf_node_->mutex);
+    std::lock_guard<fast_shared_mutex> lock(leaf_node_->mutex);
     auto& records = leaf_node_->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -1297,7 +1297,7 @@ Status BabyDBMIteratorImpl::ProcessImpl(
       hit = true;
     }
   } else {
-    std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+    std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
     auto& records = leaf_node_->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -1311,7 +1311,7 @@ Status BabyDBMIteratorImpl::ProcessImpl(
     leaf_node_ = leaf_node_->next;
     while (leaf_node_ != nullptr) {
       if (writable) {
-        std::lock_guard<std::shared_timed_mutex> lock(leaf_node_->mutex);
+        std::lock_guard<fast_shared_mutex> lock(leaf_node_->mutex);
         auto& records = leaf_node_->records;
         if (!records.empty()) {
           BabyRecord* rec = records.front();
@@ -1323,7 +1323,7 @@ Status BabyDBMIteratorImpl::ProcessImpl(
           leaf_node_ = leaf_node_->next;
         }
       } else {
-        std::shared_lock<std::shared_timed_mutex> lock(leaf_node_->mutex);
+        std::shared_lock<fast_shared_mutex> lock(leaf_node_->mutex);
         auto& records = leaf_node_->records;
         if (!records.empty()) {
           BabyRecord* rec = records.front();

@@ -78,7 +78,7 @@ class CacheSlot final {
   int64_t num_buckets_;
   int64_t num_records_;
   int64_t eff_data_size_;
-  std::mutex mutex_;
+  fast_mutex mutex_;
 };
 
 class CacheDBMImpl final {
@@ -123,7 +123,7 @@ class CacheDBMImpl final {
   int64_t cap_rec_num_;
   int64_t cap_mem_size_;
   CacheSlot slots_[NUM_CACHE_SLOTS];
-  std::shared_timed_mutex mutex_;
+  fast_shared_mutex mutex_;
 };
 
 class CacheDBMIteratorImpl final {
@@ -282,7 +282,7 @@ void CacheSlot::Unlock() {
 
 void CacheSlot::Process(
     std::string_view key, uint64_t hash, DBM::RecordProcessor* proc, bool writable) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   return ProcessImpl(key, hash, proc, writable);
 }
 
@@ -392,7 +392,7 @@ void CacheSlot::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     std::vector<std::string> keys;
     keys.reserve(num_records_);
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<fast_mutex> lock(mutex_);
       char* ptr = first_;
       while (ptr != nullptr) {
         CacheRecord rec;
@@ -406,7 +406,7 @@ void CacheSlot::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       Process(key, hash, proc, true);
     }
   } else {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<fast_mutex> lock(mutex_);
     char* ptr = first_;
     while (ptr != nullptr) {
       CacheRecord rec;
@@ -420,17 +420,17 @@ void CacheSlot::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 int64_t CacheSlot::Count() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   return num_records_;
 }
 
 int64_t CacheSlot::GetEffectiveDataSize() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   return eff_data_size_;
 }
 
 int64_t CacheSlot::GetMemoryUsage() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   return GetMemoryUsageImpl();
 }
 
@@ -443,7 +443,7 @@ int64_t CacheSlot::GetMemoryUsageImpl() {
 }
 
 void CacheSlot::Rebuild(int64_t cap_rec_num, int64_t cap_mem_size) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   cap_rec_num_ = cap_rec_num;
   cap_mem_size_ = cap_mem_size;
   num_buckets_ = GetHashBucketSize(std::min<int64_t>(cap_rec_num_ * MAX_LOAD_FACTOR, INT32MAX));
@@ -479,7 +479,7 @@ void CacheSlot::Rebuild(int64_t cap_rec_num, int64_t cap_mem_size) {
 }
 
 Status CacheSlot::ExportRecords(FlatRecord* flat_rec) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   char* ptr = first_;
   while (ptr != nullptr) {
     CacheRecord rec;
@@ -533,7 +533,7 @@ void CacheSlot::RemoveLRU() {
 }
 
 std::vector<std::string> CacheSlot::GetKeys() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<fast_mutex> lock(mutex_);
   std::vector<std::string> keys;
   keys.reserve(num_records_);
   char* ptr = first_;
@@ -565,7 +565,7 @@ CacheDBMImpl::~CacheDBMImpl() {
 }
 
 Status CacheDBMImpl::Open(const std::string& path, bool writable, int32_t options) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -586,7 +586,7 @@ Status CacheDBMImpl::Open(const std::string& path, bool writable, int32_t option
 }
 
 Status CacheDBMImpl::Close() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -605,7 +605,7 @@ Status CacheDBMImpl::Close() {
 }
 
 Status CacheDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   uint64_t hash = PrimaryHash(key, UINT64MAX);
   const int32_t slot_index = (hash & 0xff) % NUM_CACHE_SLOTS;
   hash >>= 8;
@@ -616,7 +616,7 @@ Status CacheDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, b
 Status CacheDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   std::set<CacheSlot*> uniq_slots;
   for (const auto& key_proc : key_proc_pairs) {
     const uint64_t hash = PrimaryHash(key_proc.first, UINT64MAX);
@@ -640,7 +640,7 @@ Status CacheDBMImpl::ProcessMulti(
 }
 
 Status CacheDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
   for (auto& slot : slots_) {
     slot.ProcessEach(proc, writable);
@@ -650,7 +650,7 @@ Status CacheDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status CacheDBMImpl::Count(int64_t* count) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   *count = 0;
   for (auto& slot : slots_) {
     *count += slot.Count();
@@ -659,7 +659,7 @@ Status CacheDBMImpl::Count(int64_t* count) {
 }
 
 Status CacheDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -668,7 +668,7 @@ Status CacheDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status CacheDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -677,7 +677,7 @@ Status CacheDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status CacheDBMImpl::Clear() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   CleanUpAllSlots();
   CancelIterators();
   InitAllSlots();
@@ -685,7 +685,7 @@ Status CacheDBMImpl::Clear() {
 }
 
 Status CacheDBMImpl::Rebuild(int64_t cap_rec_num, int64_t cap_mem_size) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   if (cap_rec_num > 0) {
     cap_rec_num_ = cap_rec_num;
   }
@@ -702,7 +702,7 @@ Status CacheDBMImpl::Rebuild(int64_t cap_rec_num, int64_t cap_mem_size) {
 }
 
 Status CacheDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   Status status(Status::SUCCESS);
   if (open_ && writable_) {
     status |= ExportRecords();
@@ -715,7 +715,7 @@ Status CacheDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
 }
 
 std::vector<std::pair<std::string, std::string>> CacheDBMImpl::Inspect() {
-  std::lock_guard<std::shared_timed_mutex> lock(mutex_);
+  std::lock_guard<fast_shared_mutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -741,22 +741,22 @@ std::vector<std::pair<std::string, std::string>> CacheDBMImpl::Inspect() {
 }
 
 bool CacheDBMImpl::IsOpen() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_;
 }
 
 bool CacheDBMImpl::IsWritable() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return open_ && writable_;
 }
 
 std::unique_ptr<DBM> CacheDBMImpl::MakeDBM() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   return std::make_unique<CacheDBM>(file_->MakeFile(), cap_rec_num_, cap_mem_size_);
 }
 
 int64_t CacheDBMImpl::GetEffectiveDataSize() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   int64_t eff_data_size = 0;
   for (auto& slot : slots_) {
     eff_data_size += slot.GetEffectiveDataSize();
@@ -765,7 +765,7 @@ int64_t CacheDBMImpl::GetEffectiveDataSize() {
 }
 
 int64_t CacheDBMImpl::GetMemoryUsage() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  std::shared_lock<fast_shared_mutex> lock(mutex_);
   int64_t mem_usage = 0;
   for (auto& slot : slots_) {
     mem_usage += slot.GetMemoryUsage();
@@ -863,26 +863,26 @@ Status CacheDBMImpl::ReadNextBucketRecords(CacheDBMIteratorImpl* iter) {
 
 CacheDBMIteratorImpl::CacheDBMIteratorImpl(CacheDBMImpl* dbm)
     : dbm_(dbm), slot_index_(-1), keys_() {
-  std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 CacheDBMIteratorImpl::~CacheDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<std::shared_timed_mutex> lock(dbm_->mutex_);
+    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
 }
 
 Status CacheDBMIteratorImpl::First() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   slot_index_.store(0);
   keys_.clear();
   return Status(Status::SUCCESS);
 }
 
 Status CacheDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   slot_index_.store(-1);
   keys_.clear();
   const uint64_t hash = PrimaryHash(key, UINT64MAX);
@@ -902,7 +902,7 @@ Status CacheDBMIteratorImpl::Jump(std::string_view key) {
 }
 
 Status CacheDBMIteratorImpl::Next() {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;
@@ -912,7 +912,7 @@ Status CacheDBMIteratorImpl::Next() {
 }
 
 Status CacheDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<std::shared_timed_mutex> lock(dbm_->mutex_);
+  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
   const Status status = ReadKeys();
   if (status != Status::SUCCESS) {
     return status;
