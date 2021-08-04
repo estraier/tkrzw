@@ -71,7 +71,7 @@ TEST(AsyncDBMTest, Basic) {
     }
     for (int32_t i = 1; i <= 100; i++) {
       const std::string key = tkrzw::ToString(i);
-      async.Append(key, "0", ":");
+      async.Append(key, "0", ":").wait();
     }
     for (int32_t i = 1; i <= 100; i++) {
       const std::string key = tkrzw::ToString(i);
