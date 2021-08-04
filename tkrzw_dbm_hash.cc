@@ -162,8 +162,8 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset,
       const std::string& offset_path, const std::string& dead_path);
-Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
-                           int64_t* null_end_offset, int64_t* count, int64_t* eff_data_size);
+  Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
+                             int64_t* null_end_offset, int64_t* count, int64_t* eff_data_size);
 
   bool open_;
   bool writable_;
@@ -194,7 +194,7 @@ Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
   bool cache_buckets_;
   std::unique_ptr<File> file_;
   fast_shared_mutex mutex_;
-  HashMutex record_mutex_;
+  HashMutex<fast_shared_mutex> record_mutex_;
   fast_mutex file_mutex_;
 };
 

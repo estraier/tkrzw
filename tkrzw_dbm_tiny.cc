@@ -90,7 +90,7 @@ class TinyDBMImpl final {
   int64_t num_buckets_;
   char** buckets_;
   fast_shared_mutex mutex_;
-  HashMutex record_mutex_;
+  HashMutex<fast_shared_mutex> record_mutex_;
 };
 
 class TinyDBMIteratorImpl final {

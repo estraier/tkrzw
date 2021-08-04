@@ -83,6 +83,7 @@ class SpinLock final {
 /**
  * Slotted shared mutex.
  */
+template<typename SHAREDMUTEX = std::shared_mutex>
 class SlottedMutex final {
  public:
   /**
@@ -156,12 +157,13 @@ class SlottedMutex final {
   /** The number of the slots. */
   int32_t num_slots_;
   /** The array of the slots. */
-  std::shared_timed_mutex* slots_;
+  SHAREDMUTEX* slots_;
 };
 
 /**
  * Scoped lock with a slotted shared mutex.
  */
+template<typename SHAREDMUTEX = std::shared_mutex>
 class ScopedSlottedLock final {
  public:
   /**
@@ -170,7 +172,7 @@ class ScopedSlottedLock final {
    * @param index The index of a slot.  Negative means all slots.
    * @param writable True for exclusive lock.  False for shared lock.
    */
-  ScopedSlottedLock(SlottedMutex& mutex, int32_t index, bool writable);
+  ScopedSlottedLock(SlottedMutex<SHAREDMUTEX>& mutex, int32_t index, bool writable);
 
   /**
    * Destructor.
@@ -185,7 +187,7 @@ class ScopedSlottedLock final {
 
  private:
   /** The slotted mutex. */
-  SlottedMutex& mutex_;
+  SlottedMutex<SHAREDMUTEX>& mutex_;
   /** The index of the locked slot. */
   int32_t index_;
   /** Whether it is an exclusive lock. */
@@ -195,6 +197,7 @@ class ScopedSlottedLock final {
 /**
  * Mutex for a hash table.
  */
+template<typename SHAREDMUTEX = std::shared_mutex>
 class HashMutex final {
 public:
   /**
@@ -339,12 +342,13 @@ public:
   /** The hash function. */
   uint64_t (*hash_func_)(std::string_view, uint64_t);
   /** The array of the slots. */
-  std::shared_timed_mutex* slots_;
+  SHAREDMUTEX* slots_;
 };
 
 /**
  * Scoped lock with a mutex for a hash table.
  */
+template<typename SHAREDMUTEX = std::shared_mutex>
 class ScopedHashLock final {
  public:
   /**
@@ -353,14 +357,14 @@ class ScopedHashLock final {
    * @param data The data to be set in the hash table.
    * @param writable True for exclusive lock or false for shared lock.
    */
-  ScopedHashLock(HashMutex& mutex, std::string_view data, bool writable);
+  ScopedHashLock(HashMutex<SHAREDMUTEX>& mutex, std::string_view data, bool writable);
 
   /**
    * Constructro to lock all buckets.
    * @param mutex A hash mutex.
    * @param writable True for exclusive lock or false for shared lock.
    */
-  ScopedHashLock(HashMutex& mutex, bool writable);
+  ScopedHashLock(HashMutex<SHAREDMUTEX>& mutex, bool writable);
 
   /**
    * Constructor to lock the bucket specific to an index.
@@ -369,7 +373,7 @@ class ScopedHashLock final {
    * @param writable True for exclusive lock or false for shared lock.
    * @details Only this constructor can fail.  It is because of rehashing.
    */
-  ScopedHashLock(HashMutex& mutex, int64_t bucket_index, bool writable);
+  ScopedHashLock(HashMutex<SHAREDMUTEX>& mutex, int64_t bucket_index, bool writable);
 
   /**
    * Destructor.
@@ -392,7 +396,7 @@ class ScopedHashLock final {
 
  private:
   /** The slotted mutex. */
-  HashMutex& mutex_;
+  HashMutex<SHAREDMUTEX>& mutex_;
   /** The index of the bucket or -1 for all buckets. */
   int64_t bucket_index_;
   /** Whether it is an exclusive lock. */
@@ -402,6 +406,7 @@ class ScopedHashLock final {
 /**
  * Scoped lock with multiple mutexes for a hash table.
  */
+template<typename SHAREDMUTEX = std::shared_mutex>
 class ScopedHashLockMulti final {
  public:
   /**
@@ -410,7 +415,8 @@ class ScopedHashLockMulti final {
    * @param data_list The data list to be set in the hash table.
    * @param writable True for exclusive lock or false for shared lock.
    */
-  ScopedHashLockMulti(HashMutex& mutex, std::vector<std::string_view> data_list, bool writable);
+  ScopedHashLockMulti(
+      HashMutex<SHAREDMUTEX>& mutex, std::vector<std::string_view> data_list, bool writable);
 
   /**
    * Destructor.
@@ -431,7 +437,7 @@ class ScopedHashLockMulti final {
 
  private:
   /** The slotted mutex. */
-  HashMutex& mutex_;
+  HashMutex<SHAREDMUTEX>& mutex_;
   /** The indices of the buckets. */
   std::vector<int64_t> bucket_indices_;
   /** Whether it is an exclusive lock. */
@@ -541,6 +547,483 @@ class TaskQueue final {
   /** The conditional variable to notify the change. */
   std::condition_variable cond_;
 };
+
+inline double GetWallTime() {
+  const auto epoch = std::chrono::time_point<std::chrono::system_clock>();
+  const auto current = std::chrono::system_clock::now();
+  const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(current - epoch);
+  return elapsed.count() / 1000000.0;
+}
+
+inline void Sleep(double sec) {
+  std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(sec * 1000000)));
+}
+
+template<typename SHAREDMUTEX>
+inline SlottedMutex<SHAREDMUTEX>::SlottedMutex(int32_t num_slots) : num_slots_(num_slots) {
+  slots_ = new SHAREDMUTEX[num_slots];
+}
+
+template<typename SHAREDMUTEX>
+inline SlottedMutex<SHAREDMUTEX>::~SlottedMutex() {
+  delete[] slots_;
+}
+
+template<typename SHAREDMUTEX>
+inline int32_t SlottedMutex<SHAREDMUTEX>::GetNumSlots() const {
+  return num_slots_;
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::LockOne(int32_t index) {
+  slots_[index].lock();
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::UnlockOne(int32_t index) {
+  slots_[index].unlock();
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::LockAll() {
+  for (int32_t i = 0; i < num_slots_; i++) {
+    slots_[i].lock();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::UnlockAll() {
+  for (int32_t i = num_slots_ - 1; i >= 0; i--) {
+    slots_[i].unlock();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::LockOneShared(int32_t index) {
+  slots_[index].lock_shared();
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::UnlockOneShared(int32_t index) {
+  slots_[index].unlock_shared();
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::LockAllShared() {
+  for (int32_t i = 0; i < num_slots_; i++) {
+    slots_[i].lock_shared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void SlottedMutex<SHAREDMUTEX>::UnlockAllShared() {
+  for (int32_t i = num_slots_ - 1; i >= 0; i--) {
+    slots_[i].unlock_shared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedSlottedLock<SHAREDMUTEX>::ScopedSlottedLock(
+    SlottedMutex<SHAREDMUTEX>& mutex, int32_t index, bool writable)
+    : mutex_(mutex), index_(index), writable_(writable) {
+  if (index_ < 0) {
+    if (writable_) {
+      mutex_.LockAll();
+    } else {
+      mutex_.LockAllShared();
+    }
+  } else {
+    if (writable_) {
+      mutex_.LockOne(index_);
+    } else {
+      mutex_.LockOneShared(index_);
+    }
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedSlottedLock<SHAREDMUTEX>::~ScopedSlottedLock() {
+  if (index_ < 0) {
+    if (writable_) {
+      mutex_.UnlockAll();
+    } else {
+      mutex_.UnlockAllShared();
+    }
+  } else {
+    if (writable_) {
+      mutex_.UnlockOne(index_);
+    } else {
+      mutex_.UnlockOneShared(index_);
+    }
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline HashMutex<SHAREDMUTEX>::HashMutex(int32_t num_slots, int64_t num_buckets,
+                            uint64_t (*hash_func)(std::string_view, uint64_t))
+    : num_slots_(num_slots), num_buckets_(num_buckets), hash_func_(hash_func) {
+  slots_ = new SHAREDMUTEX[num_slots];
+}
+
+template<typename SHAREDMUTEX>
+inline HashMutex<SHAREDMUTEX>::~HashMutex() {
+  delete[] slots_;
+}
+
+template<typename SHAREDMUTEX>
+inline int32_t HashMutex<SHAREDMUTEX>::GetNumSlots() const {
+  return num_slots_;
+}
+
+template<typename SHAREDMUTEX>
+inline int64_t HashMutex<SHAREDMUTEX>::GetNumBuckets() const {
+  return num_buckets_.load();
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::Rehash(int64_t num_buckets) {
+  num_buckets_.store(num_buckets);
+}
+
+template<typename SHAREDMUTEX>
+inline int64_t HashMutex<SHAREDMUTEX>::GetBucketIndex(std::string_view data) {
+  return hash_func_(data, num_buckets_.load());
+}
+
+template<typename SHAREDMUTEX>
+inline int64_t HashMutex<SHAREDMUTEX>::LockOne(std::string_view data) {
+  while (true) {
+    const int64_t old_num_buckets = num_buckets_.load();
+    const uint64_t bucket_index = hash_func_(data, old_num_buckets);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slots_[slot_index].lock();
+    if (num_buckets_.load() == old_num_buckets) {
+      return bucket_index;
+    }
+    slots_[slot_index].unlock();
+  }
+  return -1;
+}
+
+template<typename SHAREDMUTEX>
+inline bool HashMutex<SHAREDMUTEX>::LockOne(int64_t bucket_index) {
+  const int64_t old_num_buckets = num_buckets_.load();
+  if (bucket_index >= old_num_buckets) {
+    return false;
+  }
+  const int32_t slot_index = bucket_index % num_slots_;
+  slots_[slot_index].lock();
+  if (num_buckets_.load() == old_num_buckets) {
+    return true;
+  }
+  slots_[slot_index].unlock();
+  return false;
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockOne(int64_t bucket_index) {
+  const int32_t slot_index = bucket_index % num_slots_;
+  slots_[slot_index].unlock();
+}
+
+template<typename SHAREDMUTEX>
+inline int64_t HashMutex<SHAREDMUTEX>::LockOneShared(std::string_view data) {
+  while (true) {
+    const int64_t old_num_buckets = num_buckets_.load();
+    const uint64_t bucket_index = hash_func_(data, old_num_buckets);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slots_[slot_index].lock_shared();
+    if (num_buckets_.load() == old_num_buckets) {
+      return bucket_index;
+    }
+    slots_[slot_index].unlock_shared();
+  }
+  return -1;
+}
+
+template<typename SHAREDMUTEX>
+inline bool HashMutex<SHAREDMUTEX>::LockOneShared(int64_t bucket_index) {
+  const int64_t old_num_buckets = num_buckets_.load();
+  if (bucket_index >= old_num_buckets) {
+    return false;
+  }
+  const int32_t slot_index = bucket_index % num_slots_;
+  slots_[slot_index].lock_shared();
+  if (num_buckets_.load() == old_num_buckets) {
+    return true;
+  }
+  slots_[slot_index].unlock_shared();
+  return false;
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockOneShared(int64_t bucket_index) {
+  const int32_t slot_index = bucket_index % num_slots_;
+  slots_[slot_index].unlock_shared();
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::LockAll() {
+  for (int32_t i = 0; i < num_slots_; i++) {
+    slots_[i].lock();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockAll() {
+  for (int32_t i = num_slots_ - 1; i >= 0; i--) {
+    slots_[i].unlock();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::LockAllShared() {
+  for (int32_t i = 0; i < num_slots_; i++) {
+    slots_[i].lock_shared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockAllShared() {
+  for (int32_t i = num_slots_ - 1; i >= 0; i--) {
+    slots_[i].unlock_shared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline std::vector<int64_t> HashMutex<SHAREDMUTEX>::LockMulti(
+    const std::vector<std::string_view>& data_list) {
+  slots_[0].lock();
+  std::vector<int64_t> bucket_indices;
+  bucket_indices.reserve(data_list.size());
+  const int64_t num_buckets = num_buckets_.load();
+  std::set<int32_t> slot_indices;
+  for (const auto& data : data_list) {
+    const uint64_t bucket_index = hash_func_(data, num_buckets);
+    bucket_indices.emplace_back(bucket_index);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  bool has_zero = false;
+  for (int64_t slot_index : slot_indices) {
+    if (slot_index == 0) {
+      has_zero = true;
+    } else {
+      slots_[slot_index].lock();
+    }
+  }
+  if (!has_zero) {
+    slots_[0].unlock();
+  }
+  return bucket_indices;
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockMulti(const std::vector<int64_t>& bucket_indices) {
+  std::set<int32_t> slot_indices;
+  for (int64_t bucket_index : bucket_indices) {
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (auto it = slot_indices.rbegin(); it != slot_indices.rend(); it++) {
+    slots_[*it].unlock();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline std::vector<int64_t> HashMutex<SHAREDMUTEX>::LockMultiShared(
+    const std::vector<std::string_view>& data_list) {
+  slots_[0].lock_shared();
+  std::vector<int64_t> bucket_indices;
+  bucket_indices.reserve(data_list.size());
+  const int64_t num_buckets = num_buckets_.load();
+  std::set<int32_t> slot_indices;
+  for (const auto& data : data_list) {
+    const uint64_t bucket_index = hash_func_(data, num_buckets);
+    bucket_indices.emplace_back(bucket_index);
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  bool has_zero = false;
+  for (int64_t slot_index : slot_indices) {
+    if (slot_index == 0) {
+      has_zero = true;
+    } else {
+      slots_[slot_index].lock_shared();
+    }
+  }
+  if (!has_zero) {
+    slots_[0].unlock_shared();
+  }
+  return bucket_indices;
+}
+
+template<typename SHAREDMUTEX>
+inline void HashMutex<SHAREDMUTEX>::UnlockMultiShared(
+    const std::vector<int64_t>& bucket_indices) {
+  std::set<int32_t> slot_indices;
+  for (int64_t bucket_index : bucket_indices) {
+    const int32_t slot_index = bucket_index % num_slots_;
+    slot_indices.emplace(slot_index);
+  }
+  for (auto it = slot_indices.rbegin(); it != slot_indices.rend(); it++) {
+    slots_[*it].unlock_shared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLock<SHAREDMUTEX>::ScopedHashLock(
+    HashMutex<SHAREDMUTEX>& mutex, std::string_view data, bool writable)
+    : mutex_(mutex), bucket_index_(0), writable_(writable) {
+  if (writable_) {
+    bucket_index_ = mutex_.LockOne(data);
+  } else {
+    bucket_index_ = mutex_.LockOneShared(data);
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLock<SHAREDMUTEX>::ScopedHashLock(HashMutex<SHAREDMUTEX>& mutex, bool writable)
+    : mutex_(mutex), bucket_index_(INT64MIN), writable_(writable) {
+  if (writable_) {
+    mutex_.LockAll();
+  } else {
+    mutex_.LockAllShared();
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLock<SHAREDMUTEX>::ScopedHashLock(
+    HashMutex<SHAREDMUTEX>& mutex, int64_t bucket_index, bool writable)
+    : mutex_(mutex), bucket_index_(0), writable_(writable) {
+  if (writable_) {
+    bucket_index_ = mutex_.LockOne(bucket_index) ? bucket_index : -1;
+  } else {
+    bucket_index_ = mutex_.LockOneShared(bucket_index) ? bucket_index : -1;
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLock<SHAREDMUTEX>::~ScopedHashLock() {
+  if (bucket_index_ == INT64MIN) {
+    if (writable_) {
+      mutex_.UnlockAll();
+    } else {
+      mutex_.UnlockAllShared();
+    }
+  } else if (bucket_index_ != -1) {
+    if (writable_) {
+      mutex_.UnlockOne(bucket_index_);
+    } else {
+      mutex_.UnlockOneShared(bucket_index_);
+    }
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline int64_t ScopedHashLock<SHAREDMUTEX>::GetBucketIndex() const {
+  return bucket_index_;
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLockMulti<SHAREDMUTEX>::ScopedHashLockMulti(
+    HashMutex<SHAREDMUTEX>& mutex, std::vector<std::string_view> data_list, bool writable)
+    : mutex_(mutex), bucket_indices_(), writable_(writable) {
+  if (writable_) {
+    bucket_indices_ = mutex_.LockMulti(data_list);
+  } else {
+    bucket_indices_ = mutex_.LockMultiShared(data_list);
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline ScopedHashLockMulti<SHAREDMUTEX>::~ScopedHashLockMulti() {
+  if (writable_) {
+    mutex_.UnlockMulti(bucket_indices_);
+  } else {
+    mutex_.UnlockMultiShared(bucket_indices_);
+  }
+}
+
+template<typename SHAREDMUTEX>
+inline const std::vector<int64_t> ScopedHashLockMulti<SHAREDMUTEX>::GetBucketIndices() const {
+  return bucket_indices_;
+}
+
+inline TaskQueue::TaskQueue() :
+    queue_(), num_tasks_(0), threads_(), running_(false), mutex_(), cond_() {}
+
+inline TaskQueue::~TaskQueue() {
+  if (running_.load()) {
+    Stop(0.1);
+  }
+}
+
+inline void TaskQueue::Start(int32_t num_worker_threads) {
+  threads_.reserve(num_worker_threads);
+  running_ = true;
+  for (int32_t i = 0; i < num_worker_threads; i++) {
+    auto worker =
+        [&]() {
+          while (running_.load()) {
+            std::shared_ptr<Task> task(nullptr);
+            {
+              std::unique_lock<std::mutex> lock(mutex_);
+              if (queue_.empty()) {
+                cond_.wait(lock, [&]() { return !running_.load() || !queue_.empty(); });
+              } else {
+                task = queue_.front();
+                queue_.pop();
+                num_tasks_.store(queue_.size());
+              }
+            }
+            if (task != nullptr) {
+              task->Do();
+            }
+          }
+        };
+    threads_.emplace_back(std::thread(worker));
+  }
+}
+
+inline void TaskQueue::Stop(double timeout) {
+  const double end_time = GetWallTime() + timeout;
+  while (GetWallTime() < end_time) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (queue_.empty()) {
+        break;
+      }
+    }
+    cond_.notify_all();
+    Sleep(0.01);
+  }
+  running_.store(false);
+  cond_.notify_all();
+  for (auto& thread : threads_) {
+    thread.join();
+  }
+  threads_.clear();
+  num_tasks_.store(0);
+}
+
+
+inline void TaskQueue::Add(std::unique_ptr<Task> task) {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    queue_.push(std::move(task));
+    num_tasks_.store(queue_.size());
+  }
+  cond_.notify_one();
+}
+
+inline void TaskQueue::Add(TaskLambdaType task) {
+  Add(std::make_unique<TaskWithLambda>(task));
+}
+
+inline int32_t TaskQueue::GetSize() {
+  return num_tasks_.load();
+}
 
 }  // namespace tkrzw
 
