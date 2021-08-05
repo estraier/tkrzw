@@ -71,7 +71,7 @@ TEST(ThreadUtilTest, SpinMutex) {
 }
 
 TEST(ThreadUtilTest, SpinSharedMutex) {
-  constexpr int32_t num_threads = 5;
+  constexpr int32_t num_threads = 8;
   constexpr int32_t num_iterations = 100000;
   tkrzw::SpinSharedMutex mutex;
   int64_t count = 0;

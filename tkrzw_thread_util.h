@@ -140,6 +140,10 @@ class SpinSharedMutex final {
    */
   void lock_shared() {
     while (count_.fetch_add(1) >= INT32MAX) {
+      uint32_t old_value = count_.load();
+      if (old_value > INT32MAX) {
+        count_.compare_exchange_weak(old_value, INT32MAX);
+      }
       std::this_thread::yield();
     }
   }
@@ -149,7 +153,14 @@ class SpinSharedMutex final {
    * @return True if successful or false on failure.
    */
   bool try_lock_shared() {
-    return count_.fetch_add(1) < INT32MAX;
+    if (count_.fetch_add(1) < INT32MAX) {
+      return true;
+    }
+    uint32_t old_value = count_.load();
+    if (old_value > INT32MAX) {
+      count_.compare_exchange_weak(old_value, INT32MAX);
+    }
+    return false;
   }
 
   /**
