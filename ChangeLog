@@ -3,8 +3,8 @@
 	- Release: 0.9.50
 	- Library version: 1.39.0
 
-	- Support injection of mutex implementations.
 	- tkrzw_thread_util becomes a template library.
+	- Use spin lock mutexes for performance.
 
 2021-07-28  Mikio Hirabayashi  <hirarin@gmail.com>
 

@@ -198,9 +198,6 @@ extern "C" {
 
 #endif
 
-typedef std::mutex fast_mutex;
-typedef std::shared_mutex fast_shared_mutex;
-
 namespace tkrzw {
 
 /**

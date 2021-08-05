@@ -65,7 +65,7 @@ struct TreeLeafNode final {
   int32_t page_size;
   bool dirty;
   bool on_disk;
-  fast_shared_mutex mutex;
+  SpinSharedMutex mutex;
   TreeLeafNode(TreeDBMImpl* impl, int64_t prev_id, int64_t next_id);
   TreeLeafNode(TreeDBMImpl* impl, int64_t id, int64_t prev_id, int64_t next_id,
                std::vector<TreeRecord*>&& records, int32_t page_size);
@@ -91,12 +91,12 @@ typedef LRUCache<TreeInnerNode> InnerCache;
 
 struct LeafSlot final {
   std::unique_ptr<LeafCache> cache;
-  fast_mutex mutex;
+  SpinMutex mutex;
 };
 
 struct InnerSlot final {
   std::unique_ptr<InnerCache> cache;
-  fast_mutex mutex;
+  SpinMutex mutex;
 };
 
 class TreeDBMImpl final {
@@ -193,7 +193,7 @@ class TreeDBMImpl final {
   IteratorList iterators_;
   std::unique_ptr<HashDBM> hash_dbm_;
   std::atomic_uint32_t proc_clock_;
-  fast_shared_mutex mutex_;
+  SpinSharedMutex mutex_;
 };
 
 class TreeDBMIteratorImpl final {
@@ -247,7 +247,7 @@ TreeLeafNode::~TreeLeafNode() {
 std::shared_ptr<TreeLeafNode> TreeLeafNode::AddToCache() {
   int32_t slot_index = id % NUM_PAGE_SLOTS;
   LeafSlot* slot = impl->leaf_slots_ + slot_index;
-  std::lock_guard<fast_mutex> lock(slot->mutex);
+  std::lock_guard<SpinMutex> lock(slot->mutex);
   return slot->cache->Add(id, this);
 }
 
@@ -269,7 +269,7 @@ TreeInnerNode::~TreeInnerNode() {
 std::shared_ptr<TreeInnerNode> TreeInnerNode::AddToCache() {
   int32_t slot_index = id % NUM_PAGE_SLOTS;
   InnerSlot* slot = impl->inner_slots_ + slot_index;
-  std::lock_guard<fast_mutex> lock(slot->mutex);
+  std::lock_guard<SpinMutex> lock(slot->mutex);
   return slot->cache->Add(id, this);
 }
 
@@ -378,7 +378,7 @@ TreeDBMImpl::~TreeDBMImpl() {
 
 Status TreeDBMImpl::Open(const std::string& path, bool writable,
                          int32_t options, const TreeDBM::TuningParameters& tuning_params) {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (open_) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
@@ -492,7 +492,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
 }
 
 Status TreeDBMImpl::Close() {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -536,13 +536,13 @@ Status TreeDBMImpl::Close() {
 Status TreeDBMImpl::Process(
     std::string_view key, DBM::RecordProcessor* proc, bool writable) {
   if (writable && !reorg_ids_.IsEmpty()) {
-    std::lock_guard<fast_shared_mutex> lock(mutex_);
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -560,10 +560,10 @@ Status TreeDBMImpl::Process(
     return status;
   }
   if (writable) {
-    std::lock_guard<fast_shared_mutex> lock(leaf_node->mutex);
+    std::lock_guard<SpinSharedMutex> lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, true);
   } else {
-    std::shared_lock<fast_shared_mutex> lock(leaf_node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, false);
   }
   return AdjustCaches();
@@ -573,13 +573,13 @@ Status TreeDBMImpl::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
   if (writable && !reorg_ids_.IsEmpty()) {
-    std::lock_guard<fast_shared_mutex> lock(mutex_);
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -626,7 +626,7 @@ Status TreeDBMImpl::ProcessMulti(
 }
 
 Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -647,7 +647,7 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       return status;
     }
     if (writable) {
-      std::lock_guard<fast_shared_mutex> lock(node->mutex);
+      std::lock_guard<SpinSharedMutex> lock(node->mutex);
       std::vector<std::string> keys;
       keys.reserve(node->records.size());
       for (const auto* rec : node->records) {
@@ -657,7 +657,7 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         ProcessImpl(node.get(), key, proc, true);
       }
     } else {
-      std::shared_lock<fast_shared_mutex> lock(node->mutex);
+      std::shared_lock<SpinSharedMutex> lock(node->mutex);
       for (const auto* rec : node->records) {
         proc->ProcessFull(rec->GetKey(), rec->GetValue());
       }
@@ -673,7 +673,7 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
 }
 
 Status TreeDBMImpl::Count(int64_t* count) {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -682,7 +682,7 @@ Status TreeDBMImpl::Count(int64_t* count) {
 }
 
 Status TreeDBMImpl::GetFileSize(int64_t* size) {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -690,7 +690,7 @@ Status TreeDBMImpl::GetFileSize(int64_t* size) {
 }
 
 Status TreeDBMImpl::GetFilePath(std::string* path) {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -699,7 +699,7 @@ Status TreeDBMImpl::GetFilePath(std::string* path) {
 }
 
 Status TreeDBMImpl::Clear() {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -732,13 +732,13 @@ Status TreeDBMImpl::Clear() {
 
 Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
   if (!reorg_ids_.IsEmpty()) {
-    std::lock_guard<fast_shared_mutex> lock(mutex_);
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -767,7 +767,7 @@ Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
 }
 
 Status TreeDBMImpl::ShouldBeRebuilt(bool* tobe) {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -775,7 +775,7 @@ Status TreeDBMImpl::ShouldBeRebuilt(bool* tobe) {
 }
 
 Status TreeDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -797,7 +797,7 @@ Status TreeDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
 }
 
 std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   std::vector<std::pair<std::string, std::string>> meta;
   auto Add = [&](const std::string& name, const std::string& value) {
     meta.emplace_back(std::make_pair(name, value));
@@ -864,27 +864,27 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
 }
 
 bool TreeDBMImpl::IsOpen() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   return open_;
 }
 
 bool TreeDBMImpl::IsWritable() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   return open_ && writable_;
 }
 
 bool TreeDBMImpl::IsHealthy() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   return open_ && healthy_;
 }
 
 bool TreeDBMImpl::IsAutoRestored() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   return open_ && auto_restored_;
 }
 
 std::unique_ptr<DBM> TreeDBMImpl::MakeDBM() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TreeDBM>(hash_dbm_->GetInternalFile()->MakeFile());
 }
 
@@ -893,7 +893,7 @@ const File* TreeDBMImpl::GetInternalFile() {
 }
 
 int64_t TreeDBMImpl::GetEffectiveDataSize() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -901,7 +901,7 @@ int64_t TreeDBMImpl::GetEffectiveDataSize() {
 }
 
 double TreeDBMImpl::GetModificationTime() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -909,7 +909,7 @@ double TreeDBMImpl::GetModificationTime() {
 }
 
 int32_t TreeDBMImpl::GetDatabaseType() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return -1;
   }
@@ -917,7 +917,7 @@ int32_t TreeDBMImpl::GetDatabaseType() {
 }
 
 Status TreeDBMImpl::SetDatabaseType(uint32_t db_type) {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -928,7 +928,7 @@ Status TreeDBMImpl::SetDatabaseType(uint32_t db_type) {
 }
 
 std::string TreeDBMImpl::GetOpaqueMetadata() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return "";
   }
@@ -936,7 +936,7 @@ std::string TreeDBMImpl::GetOpaqueMetadata() {
 }
 
 Status TreeDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -948,7 +948,7 @@ Status TreeDBMImpl::SetOpaqueMetadata(const std::string& opaque) {
 }
 
 KeyComparator TreeDBMImpl::GetKeyComparator() {
-  std::shared_lock<fast_shared_mutex> lock(mutex_);
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return nullptr;
   }
@@ -956,7 +956,7 @@ KeyComparator TreeDBMImpl::GetKeyComparator() {
 }
 
 Status TreeDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
-  std::lock_guard<fast_shared_mutex> lock(mutex_);
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1098,7 +1098,7 @@ Status TreeDBMImpl::LoadLeafNode(
   int32_t slot_index = id % NUM_PAGE_SLOTS;
   LeafSlot* slot = leaf_slots_ + slot_index;
   {
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     *node = slot->cache->Get(id, promotion);
     if (*node != nullptr) {
       return Status(Status::SUCCESS);
@@ -1148,7 +1148,7 @@ Status TreeDBMImpl::LoadLeafNode(
 }
 
 Status TreeDBMImpl::SaveLeafNode(TreeLeafNode* node) {
-  std::lock_guard<fast_shared_mutex> lock(node->mutex);
+  std::lock_guard<SpinSharedMutex> lock(node->mutex);
   if (!node->dirty) {
     return Status(Status::SUCCESS);
   }
@@ -1200,7 +1200,7 @@ Status TreeDBMImpl::FlushLeafCache(bool empty) {
   Status status(Status::SUCCESS);
   for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
     LeafSlot* slot = leaf_slots_ + slot_index;
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     std::vector<std::shared_ptr<TreeLeafNode>> deferred;
     std::shared_ptr<TreeLeafNode> node;
     while ((node = slot->cache->RemoveLRU()) != nullptr) {
@@ -1243,7 +1243,7 @@ Status TreeDBMImpl::LoadInnerNode(
   int32_t slot_index = id % NUM_PAGE_SLOTS;
   InnerSlot* slot = inner_slots_ + slot_index;
   {
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     *node = slot->cache->Get(id);
     if (*node != nullptr) {
       return Status(Status::SUCCESS);
@@ -1336,7 +1336,7 @@ Status TreeDBMImpl::FlushInnerCache(bool empty) {
   Status status(Status::SUCCESS);
   for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
     InnerSlot* slot = inner_slots_ + slot_index;
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     std::vector<std::shared_ptr<TreeInnerNode>> deferred;
     std::shared_ptr<TreeInnerNode> node;
     while ((node = slot->cache->RemoveLRU()) != nullptr) {
@@ -1843,7 +1843,7 @@ Status TreeDBMImpl::AdjustCaches() {
   const int32_t slot_index = clock_div.quot % NUM_PAGE_SLOTS;
   {
     auto* slot = leaf_slots_ + slot_index;
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     std::vector<std::shared_ptr<TreeLeafNode>> deferred;
     while (slot->cache->IsSaturated()) {
       auto node = slot->cache->RemoveLRU();
@@ -1864,7 +1864,7 @@ Status TreeDBMImpl::AdjustCaches() {
   }
   {
     auto* slot = inner_slots_ + slot_index;
-    std::lock_guard<fast_mutex> lock(slot->mutex);
+    std::lock_guard<SpinMutex> lock(slot->mutex);
     std::vector<std::shared_ptr<TreeInnerNode>> deferred;
     while (slot->cache->IsSaturated()) {
       auto node = slot->cache->RemoveLRU();
@@ -1888,20 +1888,20 @@ Status TreeDBMImpl::AdjustCaches() {
 
 TreeDBMIteratorImpl::TreeDBMIteratorImpl(TreeDBMImpl* dbm)
     : dbm_(dbm), key_ptr_(nullptr), key_size_(0), leaf_id_(0) {
-  std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
+  std::lock_guard<SpinSharedMutex> lock(dbm_->mutex_);
   dbm_->iterators_.emplace_back(this);
 }
 
 TreeDBMIteratorImpl::~TreeDBMIteratorImpl() {
   if (dbm_ != nullptr) {
-    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
+    std::lock_guard<SpinSharedMutex> lock(dbm_->mutex_);
     dbm_->iterators_.remove(this);
   }
   ClearPosition();
 }
 
 Status TreeDBMIteratorImpl::First() {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1914,7 +1914,7 @@ Status TreeDBMIteratorImpl::First() {
 }
 
 Status TreeDBMIteratorImpl::Last() {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1927,7 +1927,7 @@ Status TreeDBMIteratorImpl::Last() {
 }
 
 Status TreeDBMIteratorImpl::Jump(std::string_view key) {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1937,7 +1937,7 @@ Status TreeDBMIteratorImpl::Jump(std::string_view key) {
 }
 
 Status TreeDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -1974,7 +1974,7 @@ Status TreeDBMIteratorImpl::JumpLower(std::string_view key, bool inclusive) {
 }
 
 Status TreeDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (!dbm_->open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
@@ -2006,7 +2006,7 @@ Status TreeDBMIteratorImpl::JumpUpper(std::string_view key, bool inclusive) {
 }
 
 Status TreeDBMIteratorImpl::Next() {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -2015,7 +2015,7 @@ Status TreeDBMIteratorImpl::Next() {
 }
 
 Status TreeDBMIteratorImpl::Previous() {
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -2025,13 +2025,13 @@ Status TreeDBMIteratorImpl::Previous() {
 
 Status TreeDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   if (writable && !dbm_->reorg_ids_.IsEmpty()) {
-    std::lock_guard<fast_shared_mutex> lock(dbm_->mutex_);
+    std::lock_guard<SpinSharedMutex> lock(dbm_->mutex_);
     const Status status = dbm_->ReorganizeTree();
     if (status != Status::SUCCESS) {
       return status;
     }
   }
-  std::shared_lock<fast_shared_mutex> lock(dbm_->mutex_);
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
     return Status(Status::NOT_FOUND_ERROR);
   }
@@ -2055,7 +2055,7 @@ Status TreeDBMIteratorImpl::SetPositionFirst(int64_t leaf_id) {
     if (status != Status::SUCCESS) {
       return status;
     }
-    std::shared_lock<fast_shared_mutex> lock(node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_id, records.front()->GetKey());
@@ -2074,7 +2074,7 @@ Status TreeDBMIteratorImpl::SetPositionLast(int64_t leaf_id) {
     if (status != Status::SUCCESS) {
       return status;
     }
-    std::shared_lock<fast_shared_mutex> lock(node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     if (!records.empty()) {
       SetPositionWithKey(leaf_id, records.back()->GetKey());
@@ -2114,7 +2114,7 @@ Status TreeDBMIteratorImpl::NextImpl(std::string_view key) {
   TreeRecordOnStack search_stack(key);
   const TreeRecord* search_rec = search_stack.record;
   {
-    std::shared_lock<fast_shared_mutex> lock(node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     auto it = std::upper_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -2157,7 +2157,7 @@ Status TreeDBMIteratorImpl::PreviousImpl(std::string_view key) {
   TreeRecordOnStack search_stack(key);
   const TreeRecord* search_rec = search_stack.record;
   {
-    std::shared_lock<fast_shared_mutex> lock(node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -2200,7 +2200,7 @@ Status TreeDBMIteratorImpl::SyncPosition(std::string_view key) {
   TreeRecordOnStack search_stack(key);
   const TreeRecord* search_rec = search_stack.record;
   bool hit = false;
-  std::shared_lock<fast_shared_mutex> lock(node->mutex);
+  std::shared_lock<SpinSharedMutex> lock(node->mutex);
   auto& records = node->records;
   auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
   if (it != records.end()) {
@@ -2215,7 +2215,7 @@ Status TreeDBMIteratorImpl::SyncPosition(std::string_view key) {
       if (status != Status::SUCCESS) {
         return status;
       }
-      std::shared_lock<fast_shared_mutex> lock(node->mutex);
+      std::shared_lock<SpinSharedMutex> lock(node->mutex);
       auto& records = node->records;
       if (!records.empty()) {
         TreeRecord* rec = records.front();
@@ -2251,7 +2251,7 @@ Status TreeDBMIteratorImpl::ProcessImpl(
   const TreeRecord* search_rec = search_stack.record;
   bool hit = false;
   if (writable) {
-    std::lock_guard<fast_shared_mutex> lock(node->mutex);
+    std::lock_guard<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -2261,7 +2261,7 @@ Status TreeDBMIteratorImpl::ProcessImpl(
       hit = true;
     }
   } else {
-    std::shared_lock<fast_shared_mutex> lock(node->mutex);
+    std::shared_lock<SpinSharedMutex> lock(node->mutex);
     auto& records = node->records;
     auto it = std::lower_bound(records.begin(), records.end(), search_rec, dbm_->record_comp_);
     if (it != records.end()) {
@@ -2279,7 +2279,7 @@ Status TreeDBMIteratorImpl::ProcessImpl(
         return status;
       }
       if (writable) {
-        std::lock_guard<fast_shared_mutex> lock(node->mutex);
+        std::lock_guard<SpinSharedMutex> lock(node->mutex);
         auto& records = node->records;
         if (!records.empty()) {
           TreeRecord* rec = records.front();
@@ -2291,7 +2291,7 @@ Status TreeDBMIteratorImpl::ProcessImpl(
           leaf_id = node->next_id;
         }
       } else {
-        std::shared_lock<fast_shared_mutex> lock(node->mutex);
+        std::shared_lock<SpinSharedMutex> lock(node->mutex);
         auto& records = node->records;
         if (!records.empty()) {
           TreeRecord* rec = records.front();

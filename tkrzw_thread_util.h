@@ -113,10 +113,8 @@ class SpinSharedMutex final {
    */
   void lock() {
     uint32_t old_value = 0;
-    for (uint32_t i = 1; !count_.compare_exchange_weak(old_value, UINT32MAX); i++) {
-      if (i % FREQ_YIELD == 0) {
-        std::this_thread::yield();
-      }
+    while (!count_.compare_exchange_weak(old_value, INT32MAX)) {
+      std::this_thread::yield();
       old_value = 0;
     }
   }
@@ -127,7 +125,7 @@ class SpinSharedMutex final {
    */
   bool try_lock() {
     uint32_t old_value = 0;
-    return count_.compare_exchange_strong(old_value, UINT32MAX);
+    return count_.compare_exchange_strong(old_value, INT32MAX);
   }
 
   /**
@@ -141,15 +139,12 @@ class SpinSharedMutex final {
    * Gets shared ownership of the lock.
    */
   void lock_shared() {
-    for (uint32_t i = 1; true; i++) {
-      uint32_t old_value = count_.load();
-      if (old_value != UINT32MAX &&
-          count_.compare_exchange_strong(old_value, old_value + 1)) {
+    while (true) {
+      uint32_t old_value = count_.fetch_add(1);
+      if (old_value < INT32MAX) {
         break;
       }
-      if (i % FREQ_YIELD) {
-        std::this_thread::yield();
-      }
+      std::this_thread::yield();
     }
   }
 
@@ -158,9 +153,7 @@ class SpinSharedMutex final {
    * @return True if successful or false on failure.
    */
   bool try_lock_shared() {
-    uint32_t old_value = count_.load();
-    return old_value != UINT32MAX &&
-        count_.compare_exchange_strong(old_value, old_value + 1);
+    return count_.fetch_add(1) < INT32MAX;
   }
 
   /**
