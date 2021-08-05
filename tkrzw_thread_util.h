@@ -139,11 +139,7 @@ class SpinSharedMutex final {
    * Gets shared ownership of the lock.
    */
   void lock_shared() {
-    while (true) {
-      uint32_t old_value = count_.fetch_add(1);
-      if (old_value < INT32MAX) {
-        break;
-      }
+    while (count_.fetch_add(1) >= INT32MAX) {
       std::this_thread::yield();
     }
   }
