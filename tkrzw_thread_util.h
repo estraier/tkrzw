@@ -46,25 +46,27 @@ void Sleep(double sec);
 /**
  * Spin lock mutex.
  */
-class SpinLock final {
+class SpinMutex final {
  public:
   /**
    * Constructor.
    */
-  SpinLock() {}
+  SpinMutex() {}
 
   /**
    * Copy and assignment are disabled.
    */
-  explicit SpinLock(const SpinLock& rhs) = delete;
-  SpinLock& operator =(const SpinLock& rhs) = delete;
+  explicit SpinMutex(const SpinMutex& rhs) = delete;
+  SpinMutex& operator =(const SpinMutex& rhs) = delete;
 
   /**
    * Gets exclusive ownership of the lock.
    */
   void lock() {
-    while (lock_.test_and_set(std::memory_order_acquire)) {
-      std::this_thread::yield();
+    for (uint32_t i = 1; lock_.test_and_set(std::memory_order_acquire); i++) {
+      if (i % FREQ_YIELD == 0) {
+        std::this_thread::yield();
+      }
     }
   }
 
@@ -84,6 +86,8 @@ class SpinLock final {
   }
 
  private:
+  /** The frequence of yielding thread ownership. */
+  static constexpr uint32_t FREQ_YIELD = 10000;
   /** Atomic flat of locked state. */
   std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
@@ -91,26 +95,28 @@ class SpinLock final {
 /**
  * Spin lock shared mutex.
  */
-class SpinSharedLock final {
+class SpinSharedMutex final {
  public:
   /**
    * Constructor.
    */
-  SpinSharedLock() : count_(0) {}
+  SpinSharedMutex() : count_(0) {}
 
   /**
    * Copy and assignment are disabled.
    */
-  explicit SpinSharedLock(const SpinSharedLock& rhs) = delete;
-  SpinLock& operator =(const SpinSharedLock& rhs) = delete;
+  explicit SpinSharedMutex(const SpinSharedMutex& rhs) = delete;
+  SpinMutex& operator =(const SpinSharedMutex& rhs) = delete;
 
   /**
    * Gets exclusive ownership of the lock.
    */
   void lock() {
     uint32_t old_value = 0;
-    while (!count_.compare_exchange_strong(old_value, UINT32MAX)) {
-      std::this_thread::yield();
+    for (uint32_t i = 1; !count_.compare_exchange_weak(old_value, UINT32MAX); i++) {
+      if (i % FREQ_YIELD == 0) {
+        std::this_thread::yield();
+      }
       old_value = 0;
     }
   }
@@ -135,13 +141,15 @@ class SpinSharedLock final {
    * Gets shared ownership of the lock.
    */
   void lock_shared() {
-    while (true) {
+    for (uint32_t i = 1; true; i++) {
       uint32_t old_value = count_.load();
       if (old_value != UINT32MAX &&
           count_.compare_exchange_strong(old_value, old_value + 1)) {
         break;
       }
-      std::this_thread::yield();
+      if (i % FREQ_YIELD) {
+        std::this_thread::yield();
+      }
     }
   }
 
@@ -163,8 +171,8 @@ class SpinSharedLock final {
   }
 
  private:
-  /** Mutex to guard the count. */
-  // SpinLock mutex_;
+  /** The frequence of yielding thread ownership. */
+  static constexpr uint32_t FREQ_YIELD = 10000;
   /** The count of threads sharing the lock. */
   std::atomic_uint32_t count_;
 };

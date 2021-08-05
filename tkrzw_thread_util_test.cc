@@ -37,10 +37,10 @@ TEST(ThreadUtilTest, GetWallTimeAndSleep) {
   EXPECT_GT(end_time, start_time);
 }
 
-TEST(ThreadUtilTest, SpinLock) {
+TEST(ThreadUtilTest, SpinMutex) {
   constexpr int32_t num_threads = 5;
   constexpr int32_t num_iterations = 500000;
-  tkrzw::SpinLock mutex;
+  tkrzw::SpinMutex mutex;
   int64_t count = 0;
   auto func = [&]() {
                 for (int32_t i = 0; i < num_iterations; i++) {
@@ -70,10 +70,10 @@ TEST(ThreadUtilTest, SpinLock) {
   EXPECT_EQ(num_threads * num_iterations, count);
 }
 
-TEST(ThreadUtilTest, SpinSharedLock) {
+TEST(ThreadUtilTest, SpinSharedMutex) {
   constexpr int32_t num_threads = 5;
   constexpr int32_t num_iterations = 100000;
-  tkrzw::SpinSharedLock mutex;
+  tkrzw::SpinSharedMutex mutex;
   int64_t count = 0;
   std::atomic_uint32_t count_writers(0);
   std::atomic_uint32_t count_readers(0);
