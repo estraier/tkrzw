@@ -69,6 +69,14 @@ class SpinLock final {
   }
 
   /**
+   * Tries to get exclusive ownership of the lock.
+   * @return True if successful or false on failure.
+   */
+  bool try_lock() {
+    return !lock_.test_and_set(std::memory_order_acquire);
+  }
+
+  /**
    * Releases exclusive ownership of the lock.
    */
   void unlock() {
@@ -78,6 +86,87 @@ class SpinLock final {
  private:
   /** Atomic flat of locked state. */
   std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+};
+
+/**
+ * Spin lock shared mutex.
+ */
+class SpinSharedLock final {
+ public:
+  /**
+   * Constructor.
+   */
+  SpinSharedLock() : count_(0) {}
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit SpinSharedLock(const SpinSharedLock& rhs) = delete;
+  SpinLock& operator =(const SpinSharedLock& rhs) = delete;
+
+  /**
+   * Gets exclusive ownership of the lock.
+   */
+  void lock() {
+    uint32_t old_value = 0;
+    while (!count_.compare_exchange_strong(old_value, UINT32MAX)) {
+      std::this_thread::yield();
+      old_value = 0;
+    }
+  }
+
+  /**
+   * Tries to get exclusive ownership of the lock.
+   * @return True if successful or false on failure.
+   */
+  bool try_lock() {
+    uint32_t old_value = 0;
+    return count_.compare_exchange_strong(old_value, UINT32MAX);
+  }
+
+  /**
+   * Releases exclusive ownership of the lock.
+   */
+  void unlock() {
+    return count_.store(0);
+  }
+
+  /**
+   * Gets shared ownership of the lock.
+   */
+  void lock_shared() {
+    while (true) {
+      uint32_t old_value = count_.load();
+      if (old_value != UINT32MAX &&
+          count_.compare_exchange_strong(old_value, old_value + 1)) {
+        break;
+      }
+      std::this_thread::yield();
+    }
+  }
+
+  /**
+   * Tries to get shared ownership of the lock.
+   * @return True if successful or false on failure.
+   */
+  bool try_lock_shared() {
+    uint32_t old_value = count_.load();
+    return old_value != UINT32MAX &&
+        count_.compare_exchange_strong(old_value, old_value + 1);
+  }
+
+  /**
+   * Releases shared ownership of the lock.
+   */
+  void unlock_shared() {
+    count_.fetch_sub(1);
+  }
+
+ private:
+  /** Mutex to guard the count. */
+  // SpinLock mutex_;
+  /** The count of threads sharing the lock. */
+  std::atomic_uint32_t count_;
 };
 
 /**
