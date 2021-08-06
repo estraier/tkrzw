@@ -110,6 +110,10 @@ class SpinSharedMutex final {
   void lock() {
     uint32_t old_value = 0;
     while (!count_.compare_exchange_weak(old_value, INT32MAX)) {
+      old_value = 0;
+      if (count_.compare_exchange_strong(old_value, INT32MAX)) {
+        break;
+      }
       std::this_thread::yield();
       old_value = 0;
     }
