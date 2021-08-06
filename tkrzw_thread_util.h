@@ -63,10 +63,8 @@ class SpinMutex final {
    * Gets exclusive ownership of the lock.
    */
   void lock() {
-    for (uint32_t i = 1; lock_.test_and_set(std::memory_order_acquire); i++) {
-      if (i % FREQ_YIELD == 0) {
-        std::this_thread::yield();
-      }
+    while (lock_.test_and_set(std::memory_order_acquire)) {
+      std::this_thread::yield();
     }
   }
 
@@ -86,8 +84,6 @@ class SpinMutex final {
   }
 
  private:
-  /** The frequence of yielding thread ownership. */
-  static constexpr uint32_t FREQ_YIELD = 10000;
   /** Atomic flat of locked state. */
   std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
@@ -171,8 +167,6 @@ class SpinSharedMutex final {
   }
 
  private:
-  /** The frequence of yielding thread ownership. */
-  static constexpr uint32_t FREQ_YIELD = 10000;
   /** The count of threads sharing the lock. */
   std::atomic_uint32_t count_;
 };
