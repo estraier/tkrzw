@@ -154,6 +154,7 @@ class HashDBMImpl final {
       bool readable, bool writable);
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
   Status SetBucketValue(int64_t bucket_index, int64_t value);
+  Status RebuildImpl(const HashDBM::TuningParameters& tuning_params, bool skip_broken_records);
   Status ReadNextBucketRecords(HashDBMIteratorImpl* iter);
   Status ImportFromFileForwardImpl(
       File* file, bool skip_broken_records,
@@ -195,7 +196,7 @@ class HashDBMImpl final {
   std::unique_ptr<File> file_;
   SpinSharedMutex mutex_;
   HashMutex<SpinSharedMutex> record_mutex_;
-  SpinMutex file_mutex_;
+  SpinMutex rebuild_mutex_;
 };
 
 class HashDBMIteratorImpl final {
@@ -230,7 +231,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       lock_mem_buckets_(false), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
-      file_mutex_() {}
+      rebuild_mutex_() {}
 
 HashDBMImpl::~HashDBMImpl() {
   if (open_) {
@@ -593,158 +594,11 @@ Status HashDBMImpl::Rebuild(
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable database");
   }
-  std::lock_guard<SpinMutex> file_lock(file_mutex_);
-  const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
-  const std::string tmp_path = path_ + ".tmp.rebuild";
-  int64_t est_num_records = num_records_.load();
-  if (est_num_records < HashDBM::DEFAULT_NUM_BUCKETS) {
-    const int64_t record_section_size = file_->GetSizeSimple() - record_base_;
-    const int64_t est_avg_record_size = 512;
-    est_num_records = std::max(est_num_records, record_section_size / est_avg_record_size);
-    est_num_records = std::min(est_num_records, HashDBM::DEFAULT_NUM_BUCKETS);
+  if (!rebuild_mutex_.try_lock()) {
+    return Status(Status::SUCCESS);
   }
-  HashDBM::TuningParameters tmp_tuning_params;
-  tmp_tuning_params.update_mode = HashDBM::UPDATE_IN_PLACE;
-  if (tuning_params.record_crc_mode != HashDBM::RECORD_CRC_DEFAULT) {
-    tmp_tuning_params.record_crc_mode = tuning_params.record_crc_mode;
-  } else if (crc_width_ == 1) {
-    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_8;
-  } else if (crc_width_ == 2) {
-    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_16;
-  } else if (crc_width_ == 4) {
-    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_32;
-  }
-  if (tuning_params.record_comp_mode != HashDBM::RECORD_COMP_DEFAULT) {
-    tmp_tuning_params.record_comp_mode = tuning_params.record_comp_mode;
-  } else if (compressor_ != nullptr) {
-    const auto& comp_type = compressor_->GetType();
-    if (comp_type == typeid(ZLibCompressor)) {
-      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
-    } else if (comp_type == typeid(ZStdCompressor)) {
-      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
-    } else if (comp_type == typeid(LZ4Compressor)) {
-      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZ4;
-    } else if (comp_type == typeid(LZMACompressor)) {
-      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZMA;
-    }
-  }
-  tmp_tuning_params.offset_width = tuning_params.offset_width > 0 ?
-      tuning_params.offset_width : offset_width_;
-  tmp_tuning_params.align_pow = tuning_params.align_pow >= 0 ?
-      tuning_params.align_pow : align_pow_;
-  tmp_tuning_params.num_buckets = tuning_params.num_buckets >= 0 ?
-      tuning_params.num_buckets : est_num_records * 2 + 1;
-  tmp_tuning_params.fbp_capacity = HashDBM::DEFAULT_FBP_CAPACITY;
-  tmp_tuning_params.min_read_size = tuning_params.min_read_size >= 0 ?
-      tuning_params.min_read_size : min_read_size_;
-  tmp_tuning_params.lock_mem_buckets = 0;
-  tmp_tuning_params.cache_buckets = tuning_params.cache_buckets >= 0 ?
-      tuning_params.cache_buckets : cache_buckets_;
-  HashDBM tmp_dbm(file_->MakeFile());
-  auto CleanUp = [&]() {
-    tmp_dbm.Close();
-    RemoveFile(tmp_path);
-  };
-  Status status = tmp_dbm.OpenAdvanced(tmp_path, true, File::OPEN_TRUNCATE, tmp_tuning_params);
-  if (status != Status::SUCCESS) {
-    CleanUp();
-    return status;
-  }
-  int64_t end_offset = INT64MAX;
-  {
-    ScopedHashLock record_lock(record_mutex_, true);
-    static_flags_ &= ~STATIC_FLAG_UPDATE_IN_PLACE;
-    static_flags_ |= STATIC_FLAG_UPDATE_APPENDING;
-    end_offset = file_->GetSizeSimple();
-  }
-  if (in_place) {
-    status = tmp_dbm.ImportFromFileForward(file_.get(), skip_broken_records, -1, end_offset);
-  } else {
-    status = tmp_dbm.ImportFromFileBackward(file_.get(), skip_broken_records, -1, end_offset);
-  }
-  if (status != Status::SUCCESS) {
-    CleanUp();
-    return status;
-  }
-  int64_t begin_offset = end_offset;
-  for (int32_t num_tries = 0; num_tries < REBUILD_NONBLOCKING_MAX_TRIES; num_tries++) {
-    {
-      ScopedHashLock record_lock(record_mutex_, false);
-      end_offset = file_->GetSizeSimple();
-    }
-    if (begin_offset >= end_offset - REBUILD_BLOCKING_ALLOWANCE) {
-      break;
-    }
-    status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
-    if (status != Status::SUCCESS) {
-      CleanUp();
-      return status;
-    }
-    begin_offset = end_offset;
-  }
-  {
-    ScopedHashLock record_lock(record_mutex_, true);
-    end_offset = file_->GetSizeSimple();
-    if (begin_offset < end_offset) {
-      status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
-      if (status != Status::SUCCESS) {
-        CleanUp();
-        return status;
-      }
-    }
-    if ((tuning_params.update_mode == HashDBM::UPDATE_DEFAULT && !in_place) ||
-        tuning_params.update_mode == HashDBM::UPDATE_APPENDING) {
-      status = tmp_dbm.SetUpdateModeAppending();
-      if (status != Status::SUCCESS) {
-        CleanUp();
-        return status;
-      }
-    }
-    status = tmp_dbm.Close();
-    if (status != Status::SUCCESS) {
-      CleanUp();
-      return status;
-    }
-    const uint32_t db_type = db_type_;
-    const std::string opaque = opaque_;
-    CancelIterators();
-    auto tmp_file = file_->MakeFile();
-    file_->CopyProperties(tmp_file.get());
-    status = tmp_file->Open(tmp_path, true);
-    if (status != Status::SUCCESS) {
-      CleanUp();
-      return status;
-    }
-    fbp_.Clear();
-    status |= file_->DisablePathOperations();
-    if (IS_POSIX) {
-      status |= tmp_file->Rename(path_);
-      status |= file_->Close();
-    } else {
-      status |= file_->Close();
-      status |= tmp_file->Rename(path_);
-    }
-    file_ = std::move(tmp_file);
-    if (tuning_params.fbp_capacity >= 0) {
-      fbp_.SetCapacity(tuning_params.fbp_capacity);
-    }
-    if (tuning_params.min_read_size >= 0) {
-      if (tuning_params.min_read_size > 0) {
-        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
-      } else {
-        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
-      }
-    }
-    if (tuning_params.lock_mem_buckets >= 0) {
-      lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
-    }
-    if (tuning_params.cache_buckets >= 0) {
-      cache_buckets_ = tuning_params.cache_buckets > 0;
-    }
-    status |= OpenImpl(true);
-    db_type_ = db_type;
-    opaque_ = opaque;
-  }
+  const Status status = RebuildImpl(tuning_params, skip_broken_records);
+  rebuild_mutex_.unlock();
   return status;
 }
 
@@ -754,11 +608,11 @@ Status HashDBMImpl::ShouldBeRebuilt(bool* tobe) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   if (writable_) {
-    if (!file_mutex_.try_lock()) {
+    if (!rebuild_mutex_.try_lock()) {
       *tobe = false;
       return Status(Status::SUCCESS);
     }
-    file_mutex_.unlock();
+    rebuild_mutex_.unlock();
   }
   const int64_t record_section_size = file_->GetSizeSimple() - record_base_;
   const int64_t min_record_size = sizeof(uint8_t) + offset_width_ + sizeof(uint8_t) * 3;
@@ -1657,6 +1511,162 @@ Status HashDBMImpl::SetBucketValue(int64_t bucket_index, int64_t value) {
   WriteFixNum(buf, value >> align_pow_, offset_width_);
   const int64_t offset = METADATA_SIZE + bucket_index * offset_width_;
   return file_->Write(offset, buf, offset_width_);
+}
+
+Status HashDBMImpl::RebuildImpl(
+    const HashDBM::TuningParameters& tuning_params, bool skip_broken_records) {
+  const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
+  const std::string tmp_path = path_ + ".tmp.rebuild";
+  int64_t est_num_records = num_records_.load();
+  if (est_num_records < HashDBM::DEFAULT_NUM_BUCKETS) {
+    const int64_t record_section_size = file_->GetSizeSimple() - record_base_;
+    const int64_t est_avg_record_size = 512;
+    est_num_records = std::max(est_num_records, record_section_size / est_avg_record_size);
+    est_num_records = std::min(est_num_records, HashDBM::DEFAULT_NUM_BUCKETS);
+  }
+  HashDBM::TuningParameters tmp_tuning_params;
+  tmp_tuning_params.update_mode = HashDBM::UPDATE_IN_PLACE;
+  if (tuning_params.record_crc_mode != HashDBM::RECORD_CRC_DEFAULT) {
+    tmp_tuning_params.record_crc_mode = tuning_params.record_crc_mode;
+  } else if (crc_width_ == 1) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_8;
+  } else if (crc_width_ == 2) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_16;
+  } else if (crc_width_ == 4) {
+    tmp_tuning_params.record_crc_mode = HashDBM::RECORD_CRC_32;
+  }
+  if (tuning_params.record_comp_mode != HashDBM::RECORD_COMP_DEFAULT) {
+    tmp_tuning_params.record_comp_mode = tuning_params.record_comp_mode;
+  } else if (compressor_ != nullptr) {
+    const auto& comp_type = compressor_->GetType();
+    if (comp_type == typeid(ZLibCompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZLIB;
+    } else if (comp_type == typeid(ZStdCompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_ZSTD;
+    } else if (comp_type == typeid(LZ4Compressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZ4;
+    } else if (comp_type == typeid(LZMACompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+    }
+  }
+  tmp_tuning_params.offset_width = tuning_params.offset_width > 0 ?
+      tuning_params.offset_width : offset_width_;
+  tmp_tuning_params.align_pow = tuning_params.align_pow >= 0 ?
+      tuning_params.align_pow : align_pow_;
+  tmp_tuning_params.num_buckets = tuning_params.num_buckets >= 0 ?
+      tuning_params.num_buckets : est_num_records * 2 + 1;
+  tmp_tuning_params.fbp_capacity = HashDBM::DEFAULT_FBP_CAPACITY;
+  tmp_tuning_params.min_read_size = tuning_params.min_read_size >= 0 ?
+      tuning_params.min_read_size : min_read_size_;
+  tmp_tuning_params.lock_mem_buckets = 0;
+  tmp_tuning_params.cache_buckets = tuning_params.cache_buckets >= 0 ?
+      tuning_params.cache_buckets : cache_buckets_;
+  HashDBM tmp_dbm(file_->MakeFile());
+  auto CleanUp = [&]() {
+    tmp_dbm.Close();
+    RemoveFile(tmp_path);
+  };
+  Status status = tmp_dbm.OpenAdvanced(tmp_path, true, File::OPEN_TRUNCATE, tmp_tuning_params);
+  if (status != Status::SUCCESS) {
+    CleanUp();
+    return status;
+  }
+  int64_t end_offset = INT64MAX;
+  {
+    ScopedHashLock record_lock(record_mutex_, true);
+    static_flags_ &= ~STATIC_FLAG_UPDATE_IN_PLACE;
+    static_flags_ |= STATIC_FLAG_UPDATE_APPENDING;
+    end_offset = file_->GetSizeSimple();
+  }
+  if (in_place) {
+    status = tmp_dbm.ImportFromFileForward(file_.get(), skip_broken_records, -1, end_offset);
+  } else {
+    status = tmp_dbm.ImportFromFileBackward(file_.get(), skip_broken_records, -1, end_offset);
+  }
+  if (status != Status::SUCCESS) {
+    CleanUp();
+    return status;
+  }
+  int64_t begin_offset = end_offset;
+  for (int32_t num_tries = 0; num_tries < REBUILD_NONBLOCKING_MAX_TRIES; num_tries++) {
+    {
+      ScopedHashLock record_lock(record_mutex_, false);
+      end_offset = file_->GetSizeSimple();
+    }
+    if (begin_offset >= end_offset - REBUILD_BLOCKING_ALLOWANCE) {
+      break;
+    }
+    status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
+    if (status != Status::SUCCESS) {
+      CleanUp();
+      return status;
+    }
+    begin_offset = end_offset;
+  }
+  {
+    ScopedHashLock record_lock(record_mutex_, true);
+    end_offset = file_->GetSizeSimple();
+    if (begin_offset < end_offset) {
+      status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
+      if (status != Status::SUCCESS) {
+        CleanUp();
+        return status;
+      }
+    }
+    if ((tuning_params.update_mode == HashDBM::UPDATE_DEFAULT && !in_place) ||
+        tuning_params.update_mode == HashDBM::UPDATE_APPENDING) {
+      status = tmp_dbm.SetUpdateModeAppending();
+      if (status != Status::SUCCESS) {
+        CleanUp();
+        return status;
+      }
+    }
+    status = tmp_dbm.Close();
+    if (status != Status::SUCCESS) {
+      CleanUp();
+      return status;
+    }
+    const uint32_t db_type = db_type_;
+    const std::string opaque = opaque_;
+    CancelIterators();
+    auto tmp_file = file_->MakeFile();
+    file_->CopyProperties(tmp_file.get());
+    status = tmp_file->Open(tmp_path, true);
+    if (status != Status::SUCCESS) {
+      CleanUp();
+      return status;
+    }
+    fbp_.Clear();
+    status |= file_->DisablePathOperations();
+    if (IS_POSIX) {
+      status |= tmp_file->Rename(path_);
+      status |= file_->Close();
+    } else {
+      status |= file_->Close();
+      status |= tmp_file->Rename(path_);
+    }
+    file_ = std::move(tmp_file);
+    if (tuning_params.fbp_capacity >= 0) {
+      fbp_.SetCapacity(tuning_params.fbp_capacity);
+    }
+    if (tuning_params.min_read_size >= 0) {
+      if (tuning_params.min_read_size > 0) {
+        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, tuning_params.min_read_size);
+      } else {
+        min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
+      }
+    }
+    if (tuning_params.lock_mem_buckets >= 0) {
+      lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
+    }
+    if (tuning_params.cache_buckets >= 0) {
+      cache_buckets_ = tuning_params.cache_buckets > 0;
+    }
+    status |= OpenImpl(true);
+    db_type_ = db_type;
+    opaque_ = opaque;
+  }
+  return status;
 }
 
 Status HashDBMImpl::ReadNextBucketRecords(HashDBMIteratorImpl* iter) {

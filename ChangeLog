@@ -1,3 +1,10 @@
+2021-08-07  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 0.9.51
+	- Library version: 1.39.0
+
+	- Rebuild is guarded by try lock.
+
 2021-08-02  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 0.9.50
