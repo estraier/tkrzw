@@ -31,6 +31,7 @@
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_thread_util.h"
 
 namespace tkrzw {
 
@@ -410,7 +411,7 @@ class FreeBlockPool final {
   /** The set of free blocks in order of the size. */
   std::set<FreeBlock> data_;
   /** Mutex for the data set. */
-  std::mutex mutex_;
+  SpinMutex mutex_;
 };
 
 /**

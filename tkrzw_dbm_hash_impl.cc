@@ -535,7 +535,7 @@ Status OffsetReader::ReadOffset(int64_t* offset) {
 FreeBlockPool::FreeBlockPool(int32_t capacity) : capacity_(capacity), data_(), mutex_() {}
 
 void FreeBlockPool::SetCapacity(int32_t capacity) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   capacity_ = capacity;
   while (static_cast<int32_t>(data_.size()) > capacity_) {
     data_.erase(data_.begin());
@@ -543,12 +543,12 @@ void FreeBlockPool::SetCapacity(int32_t capacity) {
 }
 
 void FreeBlockPool::Clear() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   data_.clear();
 }
 
 void FreeBlockPool::InsertFreeBlock(int64_t offset, int32_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   if (static_cast<int32_t>(data_.size()) >= capacity_) {
     auto it = data_.begin();
     if (size <= it->size) return;
@@ -558,7 +558,7 @@ void FreeBlockPool::InsertFreeBlock(int64_t offset, int32_t size) {
 }
 
 bool FreeBlockPool::FetchFreeBlock(int32_t min_size, FreeBlock* res) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   const auto it = data_.lower_bound(FreeBlock(0, min_size));
   if (it == data_.end()) {
     return false;
@@ -569,12 +569,12 @@ bool FreeBlockPool::FetchFreeBlock(int32_t min_size, FreeBlock* res) {
 }
 
 int32_t FreeBlockPool::Size() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   return data_.size();
 }
 
 std::string FreeBlockPool::Serialize(int32_t offset_width, int32_t align_pow, int32_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   const int32_t unit_size = offset_width + sizeof(uint32_t);
   const int32_t max_num = std::min<int32_t>(size / unit_size, data_.size());
   std::string str(size, 0);
@@ -592,7 +592,7 @@ std::string FreeBlockPool::Serialize(int32_t offset_width, int32_t align_pow, in
 }
 
 void FreeBlockPool::Deserialize(std::string_view str, int32_t offset_width, int32_t align_pow) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<SpinMutex> lock(mutex_);
   data_.clear();
   const int32_t unit_size = offset_width + sizeof(uint32_t);
   const int32_t max_num = std::min<int32_t>(str.size() / unit_size, capacity_);

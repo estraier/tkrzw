@@ -4,6 +4,7 @@
 	- Library version: 1.39.0
 
 	- Rebuild is guarded by try lock.
+	- FreeBlockPool is guarded by SpinMutex.
 
 2021-08-02  Mikio Hirabayashi  <hirarin@gmail.com>
 
