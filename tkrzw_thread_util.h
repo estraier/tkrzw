@@ -102,7 +102,7 @@ class SpinSharedMutex final {
    * Copy and assignment are disabled.
    */
   explicit SpinSharedMutex(const SpinSharedMutex& rhs) = delete;
-  SpinMutex& operator =(const SpinSharedMutex& rhs) = delete;
+  SpinSharedMutex& operator =(const SpinSharedMutex& rhs) = delete;
 
   /**
    * Gets exclusive ownership of the lock.
@@ -170,9 +170,142 @@ class SpinSharedMutex final {
     count_.fetch_sub(1);
   }
 
+  /**
+   * Tries to upgrade shared ownership to exclusive ownership.
+   * @param wait If true, waits while there's possibility to get exclusive ownership.
+   * @return True if successful or false on failure.
+   */
+  bool try_upgrade(bool wait = false) {
+    while (true) {
+      uint32_t old_value = 1;
+      if (count_.compare_exchange_strong(old_value, INT32MAX)) {
+        return true;
+      }
+      if (old_value < INT32MAX) {
+        return false;
+      }
+      std::this_thread::yield();
+    }
+  }
+
  private:
   /** The count of threads sharing the lock. */
   std::atomic_uint32_t count_;
+};
+
+/**
+ * Spin lock shared mutex, with write-preferring policy.
+ */
+class SpinWPSharedMutex final {
+ public:
+  /**
+   * Constructor.
+   */
+  SpinWPSharedMutex() : count_(0), wannabe_count_(0) {}
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit SpinWPSharedMutex(const SpinWPSharedMutex& rhs) = delete;
+  SpinWPSharedMutex& operator =(const SpinWPSharedMutex& rhs) = delete;
+
+  /**
+   * Gets exclusive ownership of the lock.
+   */
+  void lock() {
+    wannabe_count_.fetch_add(1);
+    uint32_t old_value = 0;
+    while (!count_.compare_exchange_weak(old_value, INT32MAX)) {
+      old_value = 0;
+      if (count_.compare_exchange_strong(old_value, INT32MAX)) {
+        break;
+      }
+      std::this_thread::yield();
+      old_value = 0;
+    }
+    wannabe_count_.fetch_sub(1);
+  }
+
+  /**
+   * Tries to get exclusive ownership of the lock.
+   * @return True if successful or false on failure.
+   */
+  bool try_lock() {
+    uint32_t old_value = 0;
+    return count_.compare_exchange_strong(old_value, INT32MAX);
+  }
+
+  /**
+   * Releases exclusive ownership of the lock.
+   */
+  void unlock() {
+    return count_.store(0);
+  }
+
+  /**
+   * Gets shared ownership of the lock.
+   */
+  void lock_shared() {
+    while (wannabe_count_.load() != 0 || count_.fetch_add(1) >= INT32MAX) {
+      uint32_t old_value = count_.load();
+      if (old_value > INT32MAX) {
+        count_.compare_exchange_weak(old_value, INT32MAX);
+      }
+      std::this_thread::yield();
+    }
+  }
+
+  /**
+   * Tries to get shared ownership of the lock.
+   * @return True if successful or false on failure.
+   */
+  bool try_lock_shared() {
+    if (wannabe_count_.load() != 0) {
+      return false;
+    }
+    if (count_.fetch_add(1) < INT32MAX) {
+      return true;
+    }
+    uint32_t old_value = count_.load();
+    if (old_value > INT32MAX) {
+      count_.compare_exchange_weak(old_value, INT32MAX);
+    }
+    return false;
+  }
+
+  /**
+   * Releases shared ownership of the lock.
+   */
+  void unlock_shared() {
+    count_.fetch_sub(1);
+  }
+
+  /**
+   * Tries to upgrade shared ownership to exclusive ownership.
+   * @param wait If true, waits while there's possibility to get exclusive ownership.
+   * @return True if successful or false on failure.
+   */
+  bool try_upgrade(bool wait = false) {
+    wannabe_count_.fetch_add(1);
+    while (true) {
+      uint32_t old_value = 1;
+      if (count_.compare_exchange_strong(old_value, INT32MAX)) {
+        wannabe_count_.fetch_sub(1);
+        return true;
+      }
+      if (!wait || (old_value < INT32MAX && wannabe_count_.load() > 1)) {
+        wannabe_count_.fetch_sub(1);
+        return false;
+      }
+      std::this_thread::yield();
+    }
+  }
+
+ private:
+  /** The count of threads sharing the lock. */
+  std::atomic_uint32_t count_;
+  /** The count of threads trying to get exclusive ownership. */
+  std::atomic_uint32_t wannabe_count_;
 };
 
 /**

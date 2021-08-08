@@ -112,7 +112,85 @@ TEST(ThreadUtilTest, SpinSharedMutex) {
                     }
                     EXPECT_EQ(0, count_writers.load());
                     count_readers.fetch_sub(1);
-                    mutex.unlock_shared();
+                    if (i % 5 == 0 && mutex.try_upgrade(i % 7 != 0)) {
+                      EXPECT_EQ(0, count_writers.fetch_add(1));
+                      EXPECT_EQ(0, count_readers.load());
+                      if (i % 8 == 0) {
+                        std::this_thread::yield();
+                      }
+                      EXPECT_EQ(1, count_writers.fetch_sub(1));
+                      EXPECT_EQ(0, count_readers.load());
+                      mutex.unlock();
+                    } else {
+                      mutex.unlock_shared();
+                    }
+                  }
+                }
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(func));
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(num_threads * num_iterations, count);
+}
+
+TEST(ThreadUtilTest, SpinWPSharedMutex) {
+  constexpr int32_t num_threads = 8;
+  constexpr int32_t num_iterations = 100000;
+  tkrzw::SpinWPSharedMutex mutex;
+  int64_t count = 0;
+  std::atomic_uint32_t count_writers(0);
+  std::atomic_uint32_t count_readers(0);
+  auto func = [&]() {
+                for (int32_t i = 0; i < num_iterations; i++) {
+                  if (i % 3 == 0) {
+                    while (!mutex.try_lock()) {
+                      std::this_thread::yield();
+                    }
+                  } else {
+                    mutex.lock();
+                  }
+                  EXPECT_EQ(0, count_writers.fetch_add(1));
+                  EXPECT_EQ(0, count_readers.load());
+                  volatile int64_t my_count = count;
+                  my_count += 1;
+                  if (i % 100 == 0) {
+                    std::this_thread::yield();
+                  }
+                  count = my_count;
+                  EXPECT_EQ(1, count_writers.fetch_sub(1));
+                  EXPECT_EQ(0, count_readers.load());
+                  mutex.unlock();
+                  for (int32_t j = 0; j < 4; j++) {
+                    if (i % 3 == 0) {
+                      while (!mutex.try_lock_shared()) {
+                        std::this_thread::yield();
+                      }
+                    } else {
+                      mutex.lock_shared();
+                    }
+                    EXPECT_EQ(0, count_writers.load());
+                    count_readers.fetch_add(1);
+                    if (i % 100 == 0) {
+                      std::this_thread::yield();
+                    }
+                    EXPECT_EQ(0, count_writers.load());
+                    count_readers.fetch_sub(1);
+                    if (i % 5 == 0 && mutex.try_upgrade(i % 7 != 0)) {
+                      EXPECT_EQ(0, count_writers.fetch_add(1));
+                      EXPECT_EQ(0, count_readers.load());
+                      if (i % 8 == 0) {
+                        std::this_thread::yield();
+                      }
+                      EXPECT_EQ(1, count_writers.fetch_sub(1));
+                      EXPECT_EQ(0, count_readers.load());
+                      mutex.unlock();
+                    } else {
+                      mutex.unlock_shared();
+                    }
                   }
                 }
               };
