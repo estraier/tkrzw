@@ -61,6 +61,7 @@ class SpinMutex final {
 
   /**
    * Gets exclusive ownership of the lock.
+   * @details Precondition: The thread doesn't have the exclusive ownership.
    */
   void lock() {
     while (lock_.test_and_set(std::memory_order_acquire)) {
@@ -71,6 +72,7 @@ class SpinMutex final {
   /**
    * Tries to get exclusive ownership of the lock.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread doesn't have the exclusive ownership.
    */
   bool try_lock() {
     return !lock_.test_and_set(std::memory_order_acquire);
@@ -78,6 +80,7 @@ class SpinMutex final {
 
   /**
    * Releases exclusive ownership of the lock.
+   * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
     lock_.clear(std::memory_order_release);
@@ -106,6 +109,7 @@ class SpinSharedMutex final {
 
   /**
    * Gets exclusive ownership of the lock.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   void lock() {
     uint32_t old_value = 0;
@@ -122,6 +126,7 @@ class SpinSharedMutex final {
   /**
    * Tries to get exclusive ownership of the lock.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   bool try_lock() {
     uint32_t old_value = 0;
@@ -130,6 +135,7 @@ class SpinSharedMutex final {
 
   /**
    * Releases exclusive ownership of the lock.
+   * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
     return count_.store(0);
@@ -137,6 +143,7 @@ class SpinSharedMutex final {
 
   /**
    * Gets shared ownership of the lock.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   void lock_shared() {
     while (count_.fetch_add(1) >= INT32MAX) {
@@ -151,6 +158,7 @@ class SpinSharedMutex final {
   /**
    * Tries to get shared ownership of the lock.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   bool try_lock_shared() {
     if (count_.fetch_add(1) < INT32MAX) {
@@ -165,6 +173,7 @@ class SpinSharedMutex final {
 
   /**
    * Releases shared ownership of the lock.
+   * @details Precondition: The thread has the shared ownership.
    */
   void unlock_shared() {
     count_.fetch_sub(1);
@@ -174,6 +183,7 @@ class SpinSharedMutex final {
    * Tries to upgrade shared ownership to exclusive ownership.
    * @param wait If true, waits while there's possibility to get exclusive ownership.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread has the shared ownership.
    */
   bool try_upgrade(bool wait = false) {
     while (true) {
@@ -211,6 +221,7 @@ class SpinWPSharedMutex final {
 
   /**
    * Gets exclusive ownership of the lock.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   void lock() {
     wannabe_count_.fetch_add(1);
@@ -229,6 +240,7 @@ class SpinWPSharedMutex final {
   /**
    * Tries to get exclusive ownership of the lock.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   bool try_lock() {
     uint32_t old_value = 0;
@@ -237,6 +249,7 @@ class SpinWPSharedMutex final {
 
   /**
    * Releases exclusive ownership of the lock.
+   * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
     return count_.store(0);
@@ -244,6 +257,7 @@ class SpinWPSharedMutex final {
 
   /**
    * Gets shared ownership of the lock.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   void lock_shared() {
     while (wannabe_count_.load() != 0 || count_.fetch_add(1) >= INT32MAX) {
@@ -258,6 +272,7 @@ class SpinWPSharedMutex final {
   /**
    * Tries to get shared ownership of the lock.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread doesn't have any ownership.
    */
   bool try_lock_shared() {
     if (wannabe_count_.load() != 0) {
@@ -275,6 +290,7 @@ class SpinWPSharedMutex final {
 
   /**
    * Releases shared ownership of the lock.
+   * @details Precondition: The thread has the shared ownership.
    */
   void unlock_shared() {
     count_.fetch_sub(1);
@@ -284,6 +300,7 @@ class SpinWPSharedMutex final {
    * Tries to upgrade shared ownership to exclusive ownership.
    * @param wait If true, waits while there's possibility to get exclusive ownership.
    * @return True if successful or false on failure.
+   * @details Precondition: The thread has the shared ownership.
    */
   bool try_upgrade(bool wait = false) {
     wannabe_count_.fetch_add(1);
