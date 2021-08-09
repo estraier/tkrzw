@@ -138,7 +138,7 @@ class SpinSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
-    count_.store(0);
+    count_.store(0, std::memory_order_release);
   }
 
   /**
@@ -176,7 +176,7 @@ class SpinSharedMutex final {
    * @details Precondition: The thread has the shared ownership.
    */
   void unlock_shared() {
-    count_.fetch_sub(1);
+    count_.fetch_sub(1, std::memory_order_release);
   }
 
   /**
@@ -203,7 +203,7 @@ class SpinSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void downgrade() {
-    count_.store(1);
+    count_.store(1, std::memory_order_release);
   }
 
  private:
@@ -260,7 +260,7 @@ class SpinWPSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
-    count_.store(0);
+    count_.store(0, std::memory_order_release);
   }
 
   /**
@@ -301,7 +301,7 @@ class SpinWPSharedMutex final {
    * @details Precondition: The thread has the shared ownership.
    */
   void unlock_shared() {
-    count_.fetch_sub(1);
+    count_.fetch_sub(1, std::memory_order_release);
   }
 
   /**
@@ -331,7 +331,7 @@ class SpinWPSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void downgrade() {
-    count_.store(1);
+    count_.store(1, std::memory_order_release);
   }
 
  private:
