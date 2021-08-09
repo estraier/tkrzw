@@ -138,7 +138,7 @@ class SpinSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
-    return count_.store(0);
+    count_.store(0);
   }
 
   /**
@@ -260,7 +260,7 @@ class SpinWPSharedMutex final {
    * @details Precondition: The thread has the exclusive ownership.
    */
   void unlock() {
-    return count_.store(0);
+    count_.store(0);
   }
 
   /**
