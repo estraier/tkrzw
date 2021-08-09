@@ -545,19 +545,19 @@ Status TreeDBMImpl::Process(
     mutex_.downgrade();
   } else {
     mutex_.lock_shared();
-  }
-  if (!open_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
-  }
-  if (writable) {
-    if (!writable_) {
+    if (!open_) {
       mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not writable database");
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
-    if (!healthy_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    if (writable) {
+      if (!writable_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not writable database");
+      }
+      if (!healthy_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not healthy database");
+      }
     }
   }
   std::shared_ptr<TreeLeafNode> leaf_node;
@@ -591,19 +591,19 @@ Status TreeDBMImpl::ProcessMulti(
     mutex_.downgrade();
   } else {
     mutex_.lock_shared();
-  }
-  if (!open_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
-  }
-  if (writable) {
-    if (!writable_) {
+    if (!open_) {
       mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not writable database");
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
-    if (!healthy_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    if (writable) {
+      if (!writable_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not writable database");
+      }
+      if (!healthy_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not healthy database");
+      }
     }
   }
   std::vector<std::shared_ptr<TreeLeafNode>> leaf_nodes;
@@ -654,19 +654,19 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     mutex_.downgrade();
   } else {
     mutex_.lock_shared();
-  }
-  if (!open_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
-  }
-  if (writable) {
-    if (!writable_) {
+    if (!open_) {
       mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not writable database");
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
     }
-    if (!healthy_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    if (writable) {
+      if (!writable_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not writable database");
+      }
+      if (!healthy_) {
+        mutex_.unlock_shared();
+        return Status(Status::PRECONDITION_ERROR, "not healthy database");
+      }
     }
   }
   proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
@@ -775,18 +775,18 @@ Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
     mutex_.downgrade();
   } else {
     mutex_.lock_shared();
-  }
-  if (!open_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
-  }
-  if (!writable_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not writable database");
-  }
-  if (!healthy_) {
-    mutex_.unlock_shared();
-    return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    if (!open_) {
+      mutex_.unlock_shared();
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      mutex_.unlock_shared();
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      mutex_.unlock_shared();
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
   }
   Status status(Status::SUCCESS);
   status |= FlushLeafCache(false);
