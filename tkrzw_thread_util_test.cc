@@ -120,7 +120,15 @@ TEST(ThreadUtilTest, SpinSharedMutex) {
                       }
                       EXPECT_EQ(1, count_writers.fetch_sub(1));
                       EXPECT_EQ(0, count_readers.load());
-                      mutex.unlock();
+                      if (i % 2 == 0) {
+                        mutex.downgrade();
+                        if (i % 100 == 0) {
+                          std::this_thread::yield();
+                        }
+                        mutex.unlock_shared();
+                      } else {
+                        mutex.unlock();
+                      }
                     } else {
                       mutex.unlock_shared();
                     }
@@ -187,7 +195,15 @@ TEST(ThreadUtilTest, SpinWPSharedMutex) {
                       }
                       EXPECT_EQ(1, count_writers.fetch_sub(1));
                       EXPECT_EQ(0, count_readers.load());
-                      mutex.unlock();
+                      if (i % 2 == 0) {
+                        mutex.downgrade();
+                        if (i % 100 == 0) {
+                          std::this_thread::yield();
+                        }
+                        mutex.unlock_shared();
+                      } else {
+                        mutex.unlock();
+                      }
                     } else {
                       mutex.unlock_shared();
                     }

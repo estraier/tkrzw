@@ -198,6 +198,14 @@ class SpinSharedMutex final {
     }
   }
 
+  /**
+   * Downgrades exclusive ownership.to shared ownership.
+   * @details Precondition: The thread has the exclusive ownership.
+   */
+  void downgrade() {
+    count_.store(1);
+  }
+
  private:
   /** The count of threads sharing the lock. */
   std::atomic_uint32_t count_;
@@ -316,6 +324,14 @@ class SpinWPSharedMutex final {
       }
       std::this_thread::yield();
     }
+  }
+
+  /**
+   * Downgrades exclusive ownership.to shared ownership.
+   * @details Precondition: The thread has the exclusive ownership.
+   */
+  void downgrade() {
+    count_.store(1);
   }
 
  private:
