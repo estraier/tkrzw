@@ -262,7 +262,7 @@ UMLIBPATH = $(SDKPATH)\um\x64
 UCRTLIBPATH = $(SDKPATH)\ucrt\x64
 ]]></code></pre>
 
-<p>Open "x86 Native Tools Command Prompt for VS 2019" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
+<p>Open "x64 Native Tools Command Prompt for VS 2019" in the control panel.  It sets command paths and other necessary environment configurations.  Set the current directory to Tkrzw's source directory.  Run the follwong command.</p>
 
 <pre><code class="language-shell-session"><![CDATA[> nmake -f VCMakefile
 > nmake -f VCMakefile check
@@ -419,66 +419,66 @@ int main(int argc, char** argv) {
 </tr>
 <tr>
 <td>HashDBM</td>
-<td class="num">1,426,925 QPS</td>
-<td class="num">1,734,473 QPS</td>
-<td class="num">1,207,978 QPS</td>
-<td class="num">28.4 MB</td>
+<td class="num">1,600,530 QPS</td>
+<td class="num">1,912,690 QPS</td>
+<td class="num">1,333,314 QPS</td>
+<td class="num">29.1 MB</td>
 <td class="num">26.8 MB</td>
 </tr>
 <tr>
 <td>TreeDBM</td>
-<td class="num">1,506,575 QPS</td>
-<td class="num">1,612,324 QPS</td>
-<td class="num">1,418,317 QPS</td>
-<td class="num">67.9 MB</td>
+<td class="num">1,688,254 QPS</td>
+<td class="num">1,781,988 QPS</td>
+<td class="num">1,575,017 QPS</td>
+<td class="num">68.2 MB</td>
 <td class="num">17.8 MB</td>
 </tr>
 <tr>
 <td>SkipDBM</td>
-<td class="num">1,144,860 QPS</td>
-<td class="num">394,145 QPS</td>
-<td class="num">1,211,729 QPS</td>
-<td class="num">64.8 MB</td>
+<td class="num">1,185,998 QPS</td>
+<td class="num">437,098 QPS</td>
+<td class="num">1,248,525 QPS</td>
+<td class="num">78.3 MB</td>
 <td class="num">19.3 MB</td>
 </tr>
 <tr>
 <td>TinyDBM</td>
-<td class="num">2,506,691 QPS</td>
-<td class="num">2,929,785 QPS</td>
-<td class="num">2,744,441 QPS</td>
-<td class="num">54.7 MB</td>
+<td class="num">2,755,223 QPS</td>
+<td class="num">3,211,469 QPS</td>
+<td class="num">3,133,763 QPS</td>
+<td class="num">52.8 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>BabyDBM</td>
-<td class="num">2,080,122 QPS</td>
-<td class="num">2,331,687 QPS</td>
-<td class="num">2,084,949 QPS</td>
-<td class="num">61.1 MB</td>
+<td class="num">2,294,810 QPS</td>
+<td class="num">2,470,148 QPS</td>
+<td class="num">2,162,560 QPS</td>
+<td class="num">63.5 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>CacheDBM</td>
-<td class="num">2,505,286 QPS</td>
-<td class="num">3,115,558 QPS</td>
-<td class="num">2,858,990 QPS</td>
-<td class="num">73.7 MB</td>
+<td class="num">2,702,272 QPS</td>
+<td class="num">3,451,943 QPS</td>
+<td class="num">3,144,269 QPS</td>
+<td class="num">71.3 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdHashDBM</td>
-<td class="num">2,012,894 QPS</td>
-<td class="num">2,920,263 QPS</td>
-<td class="num">2,661,896 QPS</td>
-<td class="num">99.1 MB</td>
+<td class="num">1,721,846 QPS</td>
+<td class="num">2,632,667 QPS</td>
+<td class="num">2,585,275 QPS</td>
+<td class="num">99.9 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdTreeDBM</td>
-<td class="num">1,331,320 QPS</td>
-<td class="num">2,957,670 QPS</td>
-<td class="num">2,751,585 QPS</td>
-<td class="num">104.5 MB</td>
+<td class="num">1,408,435 QPS</td>
+<td class="num">3,171,753 QPS</td>
+<td class="num">3,109,974 QPS</td>
+<td class="num">107.0 MB</td>
 <td class="num">n/a</td>
 </tr>
 </table>
@@ -496,66 +496,66 @@ int main(int argc, char** argv) {
 </tr>
 <tr>
 <td>HashDBM</td>
-<td class="num">2,064,218 QPS</td>
-<td class="num">4,011,795 QPS</td>
-<td class="num">2,048,902 QPS</td>
-<td class="num">28.7 MB</td>
+<td class="num">2,015,638 QPS</td>
+<td class="num">4,247,388 QPS</td>
+<td class="num">2,549,070 QPS</td>
+<td class="num">29.1 MB</td>
 <td class="num">26.8 MB</td>
 </tr>
 <tr>
 <td>TreeDBM</td>
-<td class="num">854,502 QPS</td>
-<td class="num">2,525,617 QPS</td>
-<td class="num">700,064 QPS</td>
-<td class="num">63.8 MB</td>
-<td class="num">19.0 MB</td>
+<td class="num">1,766,662 QPS</td>
+<td class="num">3,960,807 QPS</td>
+<td class="num">1,775,011 QPS</td>
+<td class="num">79.0 MB</td>
+<td class="num">19.3 MB</td>
 </tr>
 <tr>
 <td>SkipDBM</td>
-<td class="num">762,903 QPS</td>
-<td class="num">1,520,528 QPS</td>
-<td class="num">886,466 QPS</td>
-<td class="num">80.8 MB</td>
+<td class="num">900,684 QPS</td>
+<td class="num">1,820,360 QPS</td>
+<td class="num">994,752 QPS</td>
+<td class="num">86.8 MB</td>
 <td class="num">19.3 MB</td>
 </tr>
 <tr>
 <td>TinyDBM</td>
-<td class="num">5,058,370 QPS</td>
-<td class="num">8,370,093 QPS</td>
-<td class="num">6,611,346 QPS</td>
-<td class="num">54.8 MB</td>
+<td class="num">5,650,454 QPS</td>
+<td class="num">9,683,170 QPS</td>
+<td class="num">8,819,345 QPS</td>
+<td class="num"> MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>BabyDBM</td>
-<td class="num">1,136,897 QPS</td>
-<td class="num">7,395,522 QPS</td>
-<td class="num">1,213,289 QPS</td>
-<td class="num">50.5 MB</td>
+<td class="num">3,096,330 QPS</td>
+<td class="num">10,605,335 QPS</td>
+<td class="num">3,436,732 QPS</td>
+<td class="num">51.4 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>CacheDBM</td>
-<td class="num">5,238,041 QPS</td>
-<td class="num">7,387,499 QPS</td>
-<td class="num">7,382,310 QPS</td>
-<td class="num">74.0 MB</td>
+<td class="num">8,014,691 QPS</td>
+<td class="num">11,169,442 QPS</td>
+<td class="num">11,270,406 QPS</td>
+<td class="num">72.0 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdHashDBM</td>
-<td class="num">804,870 QPS</td>
-<td class="num">8,667,923 QPS</td>
-<td class="num">1,131,562 QPS</td>
-<td class="num">99.3 MB</td>
+<td class="num">1,144,803 QPS</td>
+<td class="num">14,316,594 QPS</td>
+<td class="num">1,710,431 QPS</td>
+<td class="num">100.0 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdTreeDBM</td>
-<td class="num">387,786 QPS</td>
-<td class="num">8,069,927 QPS</td>
-<td class="num">1,128,146 QPS</td>
-<td class="num">106.6 MB</td>
+<td class="num">1,124,624 QPS</td>
+<td class="num">14,376,462 QPS</td>
+<td class="num">2,130,565 QPS</td>
+<td class="num">107.2 MB</td>
 <td class="num">n/a</td>
 </tr>
 </table>
@@ -573,66 +573,66 @@ int main(int argc, char** argv) {
 </tr>
 <tr>
 <td>HashDBM</td>
-<td class="num">1,269,066 QPS</td>
-<td class="num">1,528,441 QPS</td>
-<td class="num">1,302,638 QPS</td>
-<td class="num">1787.6 MB</td>
+<td class="num">929,979 QPS</td>
+<td class="num">1,640,083 QPS</td>
+<td class="num">1,246,650 QPS</td>
+<td class="num">1788.1 MB</td>
 <td class="num">1828.2 MB</td>
 </tr>
 <tr>
 <td>TreeDBM</td>
-<td class="num">185,871 QPS</td>
-<td class="num">129,585 QPS</td>
-<td class="num">322,534 QPS</td>
-<td class="num">3903.3 MB</td>
-<td class="num">1596.8 MB</td>
+<td class="num">187,438 QPS</td>
+<td class="num">133,598 QPS</td>
+<td class="num">327,923 QPS</td>
+<td class="num">3663.1 MB</td>
+<td class="num">1714.3 MB</td>
 </tr>
 <tr>
 <td>SkipDBM</td>
-<td class="num">432,946 QPS</td>
-<td class="num">204,870 QPS</td>
-<td class="num">843,037 QPS</td>
-<td class="num">3036.5 MB</td>
+<td class="num">444,397 QPS</td>
+<td class="num">214,787 QPS</td>
+<td class="num">458,465 QPS</td>
+<td class="num">1790.8 MB</td>
 <td class="num">1225.7 MB</td>
 </tr>
 <tr>
 <td>TinyDBM</td>
-<td class="num">2,267,644 QPS</td>
-<td class="num">2,576,552 QPS</td>
-<td class="num">2,690,487 QPS</td>
-<td class="num">3573.0 MB</td>
+<td class="num">2,335,055 QPS</td>
+<td class="num">2,509,525 QPS</td>
+<td class="num">2,813,868 QPS</td>
+<td class="num">3573.5 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>BabyDBM</td>
-<td class="num">490,861 QPS</td>
-<td class="num">493,863 QPS</td>
-<td class="num">489,624 QPS</td>
-<td class="num">2963.1 MB</td>
+<td class="num">498,647 QPS</td>
+<td class="num">493,190 QPS</td>
+<td class="num">498,655 QPS</td>
+<td class="num">2951.4 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>CacheDBM</td>
-<td class="num">2,263,022 QPS</td>
-<td class="num">2,257,323 QPS</td>
-<td class="num">2,745,666 QPS</td>
-<td class="num">4999.2 MB</td>
-<td class="num">n/a</td>
+<td class="num">2,088,967 QPS</td>
+<td class="num">2,105,934 QPS</td>
+<td class="num">2,633,869 QPS</td>
+<td class="num">4753.8 MB</td>
+<td class="num">pn/a</td>
 </tr>
-<tr>
+<tr>pppppppppppp
 <td>StdHashDBM</td>
-<td class="num">1,691,914 QPS</td>
-<td class="num">2,131,297 QPS</td>
-<td class="num">2,315,516 QPS</td>
-<td class="num">6409.0 MB</td>
+<td class="num">1,802,910 QPS</td>
+<td class="num">2,242,933 QPS</td>
+<td class="num">2,598,990 QPS</td>
+<td class="num">6410.1 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdTreeDBM</td>
-<td class="num">463,928 QPS</td>
-<td class="num">516,673 QPS</td>
-<td class="num">505,744 QPS</td>
-<td class="num">6593.6 MB</td>
+<td class="num">474,017 QPS</td>
+<td class="num">519,097 QPS</td>
+<td class="num">518,196 QPS</td>
+<td class="num">6596.3 MB</td>
 <td class="num">n/a</td>
 </tr>
 </table>
@@ -650,66 +650,66 @@ int main(int argc, char** argv) {
 </tr>
 <tr>
 <td>HashDBM</td>
-<td class="num">2,134,418 QPS</td>
-<td class="num">3,729,010 QPS</td>
-<td class="num">2,631,454 QPS</td>
-<td class="num">1787.6 MB</td>
+<td class="num">2,259,227 QPS</td>
+<td class="num">5,327,723 QPS</td>
+<td class="num">3,803,961 QPS</td>
+<td class="num">1788.3 MB</td>
 <td class="num">1828.2 MB</td>
 </tr>
 <tr>
 <td>TreeDBM</td>
-<td class="num">196,209 QPS</td>
-<td class="num">509,271 QPS</td>
-<td class="num">315,559 QPS</td>
-<td class="num">4062.7 MB</td>
-<td class="num">1602.7 MB</td>
+<td class="num">339,311 QPS</td>
+<td class="num">497,981 QPS</td>
+<td class="num">536,877 QPS</td>
+<td class="num">5520.8 MB</td>
+<td class="num">1722.2 MB</td>
 </tr>
 <tr>
 <td>SkipDBM</td>
-<td class="num">380,683 QPS</td>
-<td class="num">1,325,381 QPS</td>
-<td class="num">742,633 QPS</td>
-<td class="num">3036.4 MB</td>
+<td class="num">337,258 QPS</td>
+<td class="num">1,375,100 QPS</td>
+<td class="num">334573 QPS</td>
+<td class="num">3036.8 MB</td>
 <td class="num">1225.7 MB</td>
 </tr>
 <tr>
 <td>TinyDBM</td>
-<td class="num">7,376,532 QPS</td>
-<td class="num">8,314,453 QPS</td>
-<td class="num">7,596,498 QPS</td>
-<td class="num">3573.0 MB</td>
+<td class="num">8,246,833 QPS</td>
+<td class="num">9,151,282 QPS</td>
+<td class="num">9,272,530 QPS</td>
+<td class="num">3573.4 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>BabyDBM</td>
-<td class="num">687,414 QPS</td>
-<td class="num">3,481,460 QPS</td>
-<td class="num">655,081 QPS</td>
-<td class="num">2960.3 MB</td>
+<td class="num">1,239,584 QPS</td>
+<td class="num">3,754,941 QPS</td>
+<td class="num">1,187,900 QPS</td>
+<td class="num">2970.9 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>CacheDBM</td>
-<td class="num">6,871,719 QPS</td>
-<td class="num">7,358,504 QPS</td>
-<td class="num">8,325,958 QPS</td>
-<td class="num">4999.5 MB</td>
+<td class="num">9,314,902 QPS</td>
+<td class="num">9,711,285 QPS</td>
+<td class="num">11,446,497 QPS</td>
+<td class="num">4754.0 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdHashDBM</td>
-<td class="num">711,054 QPS</td>
-<td class="num">10,794,019 QPS</td>
-<td class="num">1,334,017 QPS</td>
-<td class="num">6409.6 MB</td>
+<td class="num">1,279,515 QPS</td>
+<td class="num">13,572,641 QPS</td>
+<td class="num">1,794,882 QPS</td>
+<td class="num">6410.1 MB</td>
 <td class="num">n/a</td>
 </tr>
 <tr>
 <td>StdTreeDBM</td>
-<td class="num">103,929 QPS</td>
-<td class="num">3,944,576 QPS</td>
-<td class="num">121,817 QPS</td>
-<td class="num">6595.6 MB</td>
+<td class="num">374,263 QPS</td>
+<td class="num">4,118,937 QPS</td>
+<td class="num">407,559 QPS</td>
+<td class="num">6596.1 MB</td>
 <td class="num">n/a</td>
 </tr>
 </table>
