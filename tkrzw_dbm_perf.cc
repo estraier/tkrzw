@@ -657,8 +657,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto setting_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 key_mt(mt_seed);
-    std::mt19937 misc_mt(mt_seed * 2 + 1);
+    std::mt19937 key_mt(mt_seed + id);
+    std::mt19937 misc_mt(mt_seed * 2 + id + 1);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     char* value_buf = new char[value_size];
@@ -738,7 +738,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   }
   auto getting_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 key_mt(mt_seed);
+    std::mt19937 key_mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
@@ -799,7 +799,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   }
   auto removing_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 key_mt(mt_seed);
+    std::mt19937 key_mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     bool midline = false;
@@ -966,7 +966,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   std::atomic_int32_t master_id(0);
   auto task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 mt(mt_seed);
+    std::mt19937 mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
@@ -1173,8 +1173,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 key_mt(mt_seed);
-    std::mt19937 misc_mt(mt_seed * 2 + 1);
+    std::mt19937 key_mt(mt_seed + id);
+    std::mt19937 misc_mt(mt_seed * 2 + id + 1);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
@@ -1572,8 +1572,8 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto task = [&](std::function<void(int64_t, int64_t)> op, int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 key_mt(mt_seed);
-    std::mt19937 value_mt(mt_seed * 2 + 1);
+    std::mt19937 key_mt(mt_seed + id);
+    std::mt19937 value_mt(mt_seed * 2 + id + 1);
     std::uniform_int_distribution<int32_t> num_dist(0, num_iterations * num_threads - 1);
     bool midline = false;
     for (int32_t i = 0; i < num_iterations; i++) {

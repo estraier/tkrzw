@@ -136,7 +136,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   std::atomic_int32_t master_id(0);
   auto task = [&](int32_t id) {
     const uint32_t mt_seed = std::random_device()();
-    std::mt19937 mt(mt_seed);
+    std::mt19937 mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
     bool midline = false;

@@ -113,7 +113,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
   auto writing_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 mt(mt_seed);
+    std::mt19937 mt(mt_seed + id);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     char* write_buf = new char[record_size];
     std::memset(write_buf, '0' + id, record_size);
@@ -190,7 +190,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   }
   auto reading_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 mt(mt_seed);
+    std::mt19937 mt(mt_seed + id);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     char* read_buf = new char[record_size];
     bool midline = false;
@@ -311,7 +311,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   std::mutex file_mutex;
   auto task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
-    std::mt19937 mt(mt_seed);
+    std::mt19937 mt(mt_seed + id);
     std::uniform_int_distribution<int64_t> off_dist(0, est_file_size - record_size);
     std::uniform_int_distribution<int32_t> op_dist(0, INT32MAX);
     char* write_buf = new char[record_size];
