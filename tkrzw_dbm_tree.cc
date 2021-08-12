@@ -536,74 +536,59 @@ Status TreeDBMImpl::Close() {
 Status TreeDBMImpl::Process(
     std::string_view key, DBM::RecordProcessor* proc, bool writable) {
   if (writable && !reorg_ids_.IsEmpty()) {
-    mutex_.lock();
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
-      mutex_.unlock();
       return status;
     }
-    mutex_.downgrade();
-  } else {
-    mutex_.lock_shared();
-    if (!open_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
     }
-    if (writable) {
-      if (!writable_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not writable database");
-      }
-      if (!healthy_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not healthy database");
-      }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
     }
   }
   std::shared_ptr<TreeLeafNode> leaf_node;
-  Status status = SearchTree(key, &leaf_node);
+  const Status status = SearchTree(key, &leaf_node);
   if (status != Status::SUCCESS) {
-    mutex_.unlock_shared();
     return status;
   }
   if (writable) {
-    std::lock_guard<SpinSharedMutex> lock(leaf_node->mutex);
+    std::lock_guard<SpinSharedMutex> leaf_lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, true);
   } else {
-    std::shared_lock<SpinSharedMutex> lock(leaf_node->mutex);
+    std::shared_lock<SpinSharedMutex> leaf_lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, false);
   }
-  status = AdjustCaches();
-  mutex_.unlock_shared();
-  return status;
+  return AdjustCaches();
 }
 
 Status TreeDBMImpl::ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable) {
   if (writable && !reorg_ids_.IsEmpty()) {
-    mutex_.lock();
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
-      mutex_.unlock();
       return status;
     }
-    mutex_.downgrade();
-  } else {
-    mutex_.lock_shared();
-    if (!open_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
     }
-    if (writable) {
-      if (!writable_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not writable database");
-      }
-      if (!healthy_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not healthy database");
-      }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
     }
   }
   std::vector<std::shared_ptr<TreeLeafNode>> leaf_nodes;
@@ -612,7 +597,6 @@ Status TreeDBMImpl::ProcessMulti(
     std::shared_ptr<TreeLeafNode> leaf_node;
     const Status status = SearchTree(key_proc.first, &leaf_node);
     if (status != Status::SUCCESS) {
-      mutex_.unlock_shared();
       return status;
     }
     leaf_nodes.emplace_back(leaf_node);
@@ -638,35 +622,27 @@ Status TreeDBMImpl::ProcessMulti(
       id_leaf_node->second->mutex.unlock_shared();
     }
   }
-  const Status status = AdjustCaches();
-  mutex_.unlock_shared();
-  return status;
+  return AdjustCaches();
 }
 
 Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   if (writable && !reorg_ids_.IsEmpty()) {
-    mutex_.lock();
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
-      mutex_.unlock();
       return status;
     }
-    mutex_.downgrade();
-  } else {
-    mutex_.lock_shared();
-    if (!open_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
     }
-    if (writable) {
-      if (!writable_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not writable database");
-      }
-      if (!healthy_) {
-        mutex_.unlock_shared();
-        return Status(Status::PRECONDITION_ERROR, "not healthy database");
-      }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
     }
   }
   proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
@@ -675,11 +651,10 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     std::shared_ptr<TreeLeafNode> node;
     Status status = LoadLeafNode(leaf_id, false, &node);
     if (status != Status::SUCCESS) {
-      mutex_.unlock_shared();
       return status;
     }
     if (writable) {
-      std::lock_guard<SpinSharedMutex> lock(node->mutex);
+      std::lock_guard<SpinSharedMutex> leaf_lock(node->mutex);
       std::vector<std::string> keys;
       keys.reserve(node->records.size());
       for (const auto* rec : node->records) {
@@ -689,7 +664,7 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         ProcessImpl(node.get(), key, proc, true);
       }
     } else {
-      std::shared_lock<SpinSharedMutex> lock(node->mutex);
+      std::shared_lock<SpinSharedMutex> leaf_lock(node->mutex);
       for (const auto* rec : node->records) {
         proc->ProcessFull(rec->GetKey(), rec->GetValue());
       }
@@ -697,12 +672,10 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
     leaf_id = node->next_id;
     status = AdjustCaches();
     if (status != Status::SUCCESS) {
-      mutex_.unlock_shared();
       return status;
     }
   }
   proc->ProcessEmpty(DBM::RecordProcessor::NOOP);
-  mutex_.unlock_shared();
   return Status(Status::SUCCESS);
 }
 
@@ -766,27 +739,21 @@ Status TreeDBMImpl::Clear() {
 
 Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
   if (!reorg_ids_.IsEmpty()) {
-    mutex_.lock();
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
     if (status != Status::SUCCESS) {
-      mutex_.unlock();
       return status;
     }
-    mutex_.downgrade();
-  } else {
-    mutex_.lock_shared();
-    if (!open_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
-    }
-    if (!writable_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not writable database");
-    }
-    if (!healthy_) {
-      mutex_.unlock_shared();
-      return Status(Status::PRECONDITION_ERROR, "not healthy database");
-    }
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (!writable_) {
+    return Status(Status::PRECONDITION_ERROR, "not writable database");
+  }
+  if (!healthy_) {
+    return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
   Status status(Status::SUCCESS);
   status |= FlushLeafCache(false);
@@ -803,7 +770,6 @@ Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
     max_cached_pages_ = tuning_params.max_cached_pages;
   }
   status |= hash_dbm_->RebuildAdvanced(hash_params);
-  mutex_.unlock_shared();
   return status;
 }
 
@@ -2066,24 +2032,18 @@ Status TreeDBMIteratorImpl::Previous() {
 
 Status TreeDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   if (writable && !dbm_->reorg_ids_.IsEmpty()) {
-    dbm_->mutex_.lock();
+    std::lock_guard<SpinSharedMutex> lock(dbm_->mutex_);
     const Status status = dbm_->ReorganizeTree();
     if (status != Status::SUCCESS) {
-      dbm_->mutex_.unlock();
       return status;
     }
-    dbm_->mutex_.downgrade();
-  } else {
-    dbm_->mutex_.lock_shared();
   }
+  std::shared_lock<SpinSharedMutex> lock(dbm_->mutex_);
   if (key_ptr_ == nullptr) {
-    dbm_->mutex_.unlock_shared();
     return Status(Status::NOT_FOUND_ERROR);
   }
   const std::string_view key(key_ptr_, key_size_);
-  const Status status = ProcessImpl(key, proc, writable);
-  dbm_->mutex_.unlock_shared();
-  return status;
+  return ProcessImpl(key, proc, writable);
 }
 
 void TreeDBMIteratorImpl::ClearPosition() {
