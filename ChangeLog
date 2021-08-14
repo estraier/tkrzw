@@ -3,7 +3,7 @@
 	- Release: 0.9.53
 	- Library version: 1.43.0
 
-	- TreeDBM uses downgrade of the shared lock.
+	- SkipDBM uses SpinSharedMutex.
 
 2021-08-08  Mikio Hirabayashi  <hirarin@gmail.com>
 
