@@ -19,6 +19,7 @@
 #include <condition_variable>
 #include <functional>
 #include <queue>
+#include <set>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
