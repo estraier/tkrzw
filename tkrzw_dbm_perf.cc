@@ -661,13 +661,16 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::mt19937 misc_mt(mt_seed * 2 + id + 1);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
+    char key_buf[32];
     char* value_buf = new char[value_size];
     std::memset(value_buf, '0' + id % 10, value_size);
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const std::string& key = SPrintF("%08d", key_num);
-      std::string_view value(value_buf, is_random_value ? value_size_dist(misc_mt) : value_size);
+      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const std::string_view key(key_buf, key_size);
+      const std::string_view value(
+          value_buf, is_random_value ? value_size_dist(misc_mt) : value_size);
       const Status status = dbm->Set(key, value);
       if (status != Status::SUCCESS) {
         EPrintL("Set failed: ", status);
@@ -741,10 +744,12 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::mt19937 key_mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
+    char key_buf[32];
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const std::string& key = SPrintF("%08d", key_num);
+      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const std::string_view key(key_buf, key_size);
       const Status status = dbm->Get(key);
       if (status != Status::SUCCESS &&
           !(is_random_key && random_seed < 0 && status == Status::NOT_FOUND_ERROR)) {
@@ -802,10 +807,12 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::mt19937 key_mt(mt_seed + id);
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
+    char key_buf[32];
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const std::string& key = SPrintF("%08d", key_num);
+      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const std::string_view key(key_buf, key_size);
       const Status status = dbm->Remove(key);
       if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
         EPrintL("Remove failed: ", status);
