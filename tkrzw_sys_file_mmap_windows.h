@@ -1062,7 +1062,7 @@ Status MemoryMapAtomicFile::DisablePathOperations() {
 }
 
 MemoryMapAtomicFile::Zone::Zone(
-    MemoryMapAtomicFileImpl* file_impl, bool writable, int64_t off, size_t size, Status* status)
+    MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
     : file_(file), off_(-1), size_(0), writable_(writable) {
   if (writable) {
     file_->mutex_.lock();
