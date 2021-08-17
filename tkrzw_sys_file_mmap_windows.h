@@ -265,6 +265,9 @@ Status MemoryMapParallelFileImpl::TruncateFakely(int64_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (size > map_size_.load()) {
+    return Status(Status::INFEASIBLE_ERROR, "unable to increase the file size");
+  }
   file_size_.store(size);
   return Status(Status::SUCCESS);
 }
@@ -818,6 +821,9 @@ Status MemoryMapAtomicFileImpl::TruncateFakely(int64_t size) {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (size > map_size_) {
+    return Status(Status::INFEASIBLE_ERROR, "unable to increase the file size");
   }
   file_size_ = size;
   return Status(Status::SUCCESS);

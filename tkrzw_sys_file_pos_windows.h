@@ -345,6 +345,9 @@ Status PositionalParallelFileImpl::TruncateFakely(int64_t size) {
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
   }
+  if (size > trunc_size_.load()) {
+    return Status(Status::INFEASIBLE_ERROR, "unable to increase the file size");
+  }
   file_size_.store(size);
   return Status(Status::SUCCESS);
 }
@@ -1008,6 +1011,9 @@ Status PositionalAtomicFileImpl::TruncateFakely(int64_t size) {
   std::lock_guard<std::shared_mutex> lock(mutex_);
   if (file_handle_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
+  }
+  if (size > trunc_size_) {
+    return Status(Status::INFEASIBLE_ERROR, "unable to increase the file size");
   }
   file_size_ = size;
   return Status(Status::SUCCESS);

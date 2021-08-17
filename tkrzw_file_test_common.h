@@ -159,9 +159,10 @@ void CommonFileTest::TruncateTest(tkrzw::File* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(0, file->GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(65536));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(8192));
   EXPECT_EQ(8192, file->GetSizeSimple());
-  file->Read(4096, buf, 3);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(4096, buf, 3));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append("abc", 3, &offset));
   EXPECT_EQ(8192, offset);
   EXPECT_EQ(8195, file->GetSizeSimple());
@@ -179,10 +180,9 @@ void CommonFileTest::TruncateTest(tkrzw::File* file) {
   EXPECT_EQ(1027, file->GetSizeSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(1024, buf, 3));
   EXPECT_EQ("abc", std::string_view(buf, 3));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(1978));
-  EXPECT_EQ(1978, file->GetSizeSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(65536));
-  EXPECT_EQ(65536, file->GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->TruncateFakely(512));
+  EXPECT_EQ(512, file->GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, file->TruncateFakely(65536));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 

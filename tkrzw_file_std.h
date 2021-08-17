@@ -116,7 +116,8 @@ class StdFile final : public File {
    * @param size The new size of the file.
    * @return The result status.
    * @details This doesn't modify the actual file but modifies the internal length parameter,
-   * which affects behavior of Close, Synchronize, Append, Expand, and GetSize.
+   * which affects behavior of Close, Synchronize, Append, Expand, and GetSize.  If the
+   * specified size is more than the actual file size, the operation fails.
    */
   Status TruncateFakely(int64_t size) override;
 
