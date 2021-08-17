@@ -397,63 +397,63 @@ Status MemoryMapParallelFile::MakeZone(
 
 Status MemoryMapParallelFile::Read(int64_t off, void* buf, size_t size) {
   assert(off >= 0 && buf != nullptr);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(false, off, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, false, off, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (zone->Size() != size) {
+  if (zone.Size() != size) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
-  std::memcpy(buf, zone->Pointer(), zone->Size());
+  std::memcpy(buf, zone.Pointer(), zone.Size());
   return Status(Status::SUCCESS);
 }
 
 std::string MemoryMapParallelFile::ReadSimple(int64_t off, size_t size) {
   assert(off >= 0);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(false, off, size, &zone);
-  if (status != Status::SUCCESS || zone->Size() != size) {
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, false, off, size, &status);
+  if (status != Status::SUCCESS || zone.Size() != size) {
     return "";
   }
-  std::string result(zone->Pointer(), size);
+  std::string result(zone.Pointer(), size);
   return result;
 }
 
 Status MemoryMapParallelFile::Write(int64_t off, const void* buf, size_t size) {
   assert(off >= 0 && buf != nullptr && size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, off, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, off, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::memcpy(zone->Pointer(), buf, zone->Size());
+  std::memcpy(zone.Pointer(), buf, zone.Size());
   return Status(Status::SUCCESS);
 }
 
 Status MemoryMapParallelFile::Append(const void* buf, size_t size, int64_t* off) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, -1, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, -1, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::memcpy(zone->Pointer(), buf, zone->Size());
+  std::memcpy(zone.Pointer(), buf, zone.Size());
   if (off != nullptr) {
-    *off = zone->Offset();
+    *off = zone.Offset();
   }
   return Status(Status::SUCCESS);
 }
 
 Status MemoryMapParallelFile::Expand(size_t inc_size, int64_t* old_size) {
   assert(inc_size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, -1, inc_size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, -1, inc_size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
   if (old_size != nullptr) {
-    *old_size = zone->Offset();
+    *old_size = zone.Offset();
   }
   return Status(Status::SUCCESS);
 }
@@ -947,69 +947,69 @@ Status MemoryMapAtomicFile::Close() {
 Status MemoryMapAtomicFile::MakeZone(
     bool writable, int64_t off, size_t size, std::unique_ptr<Zone>* zone) {
   Status status(Status::SUCCESS);
-  zone->reset(new Zone(impl_, writable, off, size, &status));
+  zone.reset(new Zone(impl_, writable, off, size, &status));
   return status;
 }
 
 Status MemoryMapAtomicFile::Read(int64_t off, void* buf, size_t size) {
   assert(off >= 0 && buf != nullptr);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(false, off, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, false, off, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  if (zone->Size() != size) {
+  if (zone.Size() != size) {
     return Status(Status::INFEASIBLE_ERROR, "excessive size");
   }
-  std::memcpy(buf, zone->Pointer(), zone->Size());
+  std::memcpy(buf, zone.Pointer(), zone.Size());
   return Status(Status::SUCCESS);
 }
 
 std::string MemoryMapAtomicFile::ReadSimple(int64_t off, size_t size) {
   assert(off >= 0);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(false, off, size, &zone);
-  if (status != Status::SUCCESS || zone->Size() != size) {
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, false, off, size, &status);
+  if (status != Status::SUCCESS || zone.Size() != size) {
     return "";
   }
-  std::string result(zone->Pointer(), size);
+  std::string result(zone.Pointer(), size);
   return result;
 }
 
 Status MemoryMapAtomicFile::Write(int64_t off, const void* buf, size_t size) {
   assert(off >= 0 && buf != nullptr && size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, off, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, off, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::memcpy(zone->Pointer(), buf, zone->Size());
+  std::memcpy(zone.Pointer(), buf, zone.Size());
   return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::Append(const void* buf, size_t size, int64_t* off) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, -1, size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, -1, size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::memcpy(zone->Pointer(), buf, zone->Size());
+  std::memcpy(zone.Pointer(), buf, zone.Size());
   if (off != nullptr) {
-    *off = zone->Offset();
+    *off = zone.Offset();
   }
   return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::Expand(size_t inc_size, int64_t* old_size) {
   assert(inc_size <= MAX_MEMORY_SIZE);
-  std::unique_ptr<Zone> zone;
-  Status status = MakeZone(true, -1, inc_size, &zone);
+  Status status(Status::SUCCESS);
+  Zone zone(impl_, true, -1, inc_size, &status);
   if (status != Status::SUCCESS) {
     return status;
   }
   if (old_size != nullptr) {
-    *old_size = zone->Offset();
+    *old_size = zone.Offset();
   }
   return Status(Status::SUCCESS);
 }
