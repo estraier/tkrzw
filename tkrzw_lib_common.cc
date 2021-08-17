@@ -48,6 +48,13 @@ void* xmallocaligned(size_t alignment, size_t size) {
     throw std::bad_alloc();
   }
   return ptr;
+#elif defined(_SYS_POSIX_)
+  assert(alignment >= sizeof(void*));
+  void* ptr = nullptr;
+  if (posix_memalign(&ptr, alignment, size) != 0) {
+    throw std::bad_alloc();
+  }
+  return ptr;
 #elif defined(_SYS_WINDOWS_)
   assert(alignment >= sizeof(void*));
   size = AlignNumber(size, alignment);
@@ -69,6 +76,9 @@ void* xmallocaligned(size_t alignment, size_t size) {
 
 void xfreealigned(void* ptr) {
 #if defined(_SYS_LINUX_)
+  assert(ptr != nullptr);
+  std::free(ptr);
+#elif defined(_SYS_POSIX_)
   assert(ptr != nullptr);
   std::free(ptr);
 #elif defined(_SYS_WINDOWS_)
