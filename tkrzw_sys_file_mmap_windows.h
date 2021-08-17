@@ -947,7 +947,7 @@ Status MemoryMapAtomicFile::Close() {
 Status MemoryMapAtomicFile::MakeZone(
     bool writable, int64_t off, size_t size, std::unique_ptr<Zone>* zone) {
   Status status(Status::SUCCESS);
-  zone.reset(new Zone(impl_, writable, off, size, &status));
+  zone->reset(new Zone(impl_, writable, off, size, &status));
   return status;
 }
 
