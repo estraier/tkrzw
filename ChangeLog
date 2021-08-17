@@ -4,7 +4,8 @@
 	- Library version: 1.43.0
 
 	- Use xmallocaligned uses posix_memalign on POSIX systems.
-	- Omitimize tkrzw_dbm_perf to check memory allocation accurately.
+	- Optimize MemoryMapParallelFile and MemoryMapAtomicFile to reduce malloc calls.
+	- Optimize tkrzw_dbm_perf to check memory allocation accurately.
 
 2021-08-09  Mikio Hirabayashi  <hirarin@gmail.com>
 

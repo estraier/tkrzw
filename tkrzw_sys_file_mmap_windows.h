@@ -35,7 +35,7 @@ namespace tkrzw {
 static const char* const DUMMY_MAP = "[TKRZW_DUMMY_MAP]";
 
 class MemoryMapParallelFileImpl final {
-  friend class MemoryMapParallelFileZoneImpl;
+  friend class MemoryMapParallelFile::Zone;
  public:
   MemoryMapParallelFileImpl();
   ~MemoryMapParallelFileImpl();
@@ -65,23 +65,6 @@ class MemoryMapParallelFileImpl final {
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
   SpinSharedMutex mutex_;
-};
-
-class MemoryMapParallelFileZoneImpl final {
- public:
-  MemoryMapParallelFileZoneImpl(
-      MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size, Status* status);
-  ~MemoryMapParallelFileZoneImpl();
-  void SetLockedMutex(SpinSharedMutex* mutex);
-  int64_t Offset() const;
-  char* Pointer() const;
-  size_t Size() const;
-
- private:
-  MemoryMapParallelFileImpl* file_;
-  int64_t off_;
-  size_t size_;
-  bool writable_;
 };
 
 MemoryMapParallelFileImpl::MemoryMapParallelFileImpl() :
@@ -389,83 +372,6 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   return Status(Status::SUCCESS);
 }
 
-MemoryMapParallelFileZoneImpl::MemoryMapParallelFileZoneImpl(
-    MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
-    : file_(nullptr), off_(-1), size_(0), writable_(writable) {
-  if (file->file_handle_ == nullptr) {
-    status->Set(Status::PRECONDITION_ERROR, "not opened file");
-    return;
-  }
-  if (writable) {
-    if (!file->writable_) {
-      status->Set(Status::PRECONDITION_ERROR, "not writable file");
-      return;
-    }
-    if (off < 0) {
-      int64_t old_file_size = 0;
-      while (true) {
-        old_file_size = file->file_size_.load();
-        const int64_t end_position = old_file_size + size;
-        const Status adjust_status = file->AllocateSpace(end_position);
-        if (adjust_status != Status::SUCCESS) {
-          *status = adjust_status;
-          return;
-        }
-        if (file->file_size_.compare_exchange_weak(old_file_size, end_position)) {
-          break;
-        }
-      }
-      off = old_file_size;
-    } else {
-      const int64_t end_position = off + size;
-      const Status adjust_status = file->AllocateSpace(end_position);
-      if (adjust_status != Status::SUCCESS) {
-        *status = adjust_status;
-        return;
-      }
-      while (true) {
-        int64_t old_file_size = file->file_size_.load();
-        if (end_position <= old_file_size ||
-            file->file_size_.compare_exchange_weak(old_file_size, end_position)) {
-          break;
-        }
-      }
-    }
-  } else {
-    if (off < 0) {
-      status->Set(Status::PRECONDITION_ERROR, "negative offset");
-      return;
-    }
-    if (off > file->file_size_.load()) {
-      status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
-      return;
-    }
-    size = std::min(static_cast<int64_t>(size), file->file_size_.load() - off);
-  }
-  file_ = file;
-  file_->mutex_.lock_shared();
-  off_ = off;
-  size_ = size;
-}
-
-MemoryMapParallelFileZoneImpl::~MemoryMapParallelFileZoneImpl() {
-  if (file_ != nullptr) {
-    file_->mutex_.unlock_shared();
-  }
-}
-
-int64_t MemoryMapParallelFileZoneImpl::Offset() const {
-  return off_;
-}
-
-char* MemoryMapParallelFileZoneImpl::Pointer() const {
-  return file_->map_ + off_;
-}
-
-size_t MemoryMapParallelFileZoneImpl::Size() const {
-  return size_;
-}
-
 MemoryMapParallelFile::MemoryMapParallelFile() {
   impl_ = new MemoryMapParallelFileImpl();
 }
@@ -600,29 +506,85 @@ Status MemoryMapParallelFile::DisablePathOperations() {
 }
 
 MemoryMapParallelFile::Zone::Zone(
-    MemoryMapParallelFileImpl* file_impl, bool writable, int64_t off, size_t size,
-    Status* status) {
-  impl_ = new MemoryMapParallelFileZoneImpl(file_impl, writable, off, size, status);
+    MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size,
+    Status* status)
+    : file_(nullptr), off_(-1), size_(0), writable_(writable) {
+  if (file->file_handle_ == nullptr) {
+    status->Set(Status::PRECONDITION_ERROR, "not opened file");
+    return;
+  }
+  if (writable) {
+    if (!file->writable_) {
+      status->Set(Status::PRECONDITION_ERROR, "not writable file");
+      return;
+    }
+    if (off < 0) {
+      int64_t old_file_size = 0;
+      while (true) {
+        old_file_size = file->file_size_.load();
+        const int64_t end_position = old_file_size + size;
+        const Status adjust_status = file->AllocateSpace(end_position);
+        if (adjust_status != Status::SUCCESS) {
+          *status = adjust_status;
+          return;
+        }
+        if (file->file_size_.compare_exchange_weak(old_file_size, end_position)) {
+          break;
+        }
+      }
+      off = old_file_size;
+    } else {
+      const int64_t end_position = off + size;
+      const Status adjust_status = file->AllocateSpace(end_position);
+      if (adjust_status != Status::SUCCESS) {
+        *status = adjust_status;
+        return;
+      }
+      while (true) {
+        int64_t old_file_size = file->file_size_.load();
+        if (end_position <= old_file_size ||
+            file->file_size_.compare_exchange_weak(old_file_size, end_position)) {
+          break;
+        }
+      }
+    }
+  } else {
+    if (off < 0) {
+      status->Set(Status::PRECONDITION_ERROR, "negative offset");
+      return;
+    }
+    if (off > file->file_size_.load()) {
+      status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
+      return;
+    }
+    size = std::min(static_cast<int64_t>(size), file->file_size_.load() - off);
+  }
+  file_ = file;
+  file_->mutex_.lock_shared();
+  off_ = off;
+  size_ = size;
 }
 
 MemoryMapParallelFile::Zone::~Zone() {
-  delete impl_;
+  if (file_ != nullptr) {
+    file_->mutex_.unlock_shared();
+  }
 }
 
 int64_t MemoryMapParallelFile::Zone::Offset() const {
-  return impl_->Offset();
+  return off_;
 }
 
 char* MemoryMapParallelFile::Zone::Pointer() const {
-  return impl_->Pointer();
+  return file_->map_ + off_;
 }
 
 size_t MemoryMapParallelFile::Zone::Size() const {
-  return impl_->Size();
+  return size_;
 }
 
 class MemoryMapAtomicFileImpl final {
-  friend class MemoryMapAtomicFileZoneImpl;
+  friend class MemoryMapAtomicFile::Zone;
  public:
   MemoryMapAtomicFileImpl();
   ~MemoryMapAtomicFileImpl();
@@ -653,23 +615,6 @@ class MemoryMapAtomicFileImpl final {
   int64_t alloc_init_size_;
   double alloc_inc_factor_;
   SpinSharedMutex mutex_;
-};
-
-class MemoryMapAtomicFileZoneImpl final {
- public:
-  MemoryMapAtomicFileZoneImpl(
-      MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status);
-  ~MemoryMapAtomicFileZoneImpl();
-  void SetLockedMutex(SpinSharedMutex* mutex);
-  int64_t Offset() const;
-  char* Pointer() const;
-  size_t Size() const;
-
- private:
-  MemoryMapAtomicFileImpl* file_;
-  int64_t off_;
-  size_t size_;
-  bool writable_;
 };
 
 MemoryMapAtomicFileImpl::MemoryMapAtomicFileImpl() :
@@ -983,68 +928,6 @@ Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   return Status(Status::SUCCESS);
 }
 
-MemoryMapAtomicFileZoneImpl::MemoryMapAtomicFileZoneImpl(
-    MemoryMapAtomicFileImpl* file, bool writable, int64_t off, size_t size, Status* status)
-    : file_(file), off_(-1), size_(0), writable_(writable) {
-  if (writable) {
-    file_->mutex_.lock();
-  } else {
-    file_->mutex_.lock_shared();
-  }
-  if (file_->file_handle_ == nullptr) {
-    status->Set(Status::PRECONDITION_ERROR, "not opened file");
-    return;
-  }
-  if (writable) {
-    if (!file_->writable_) {
-      status->Set(Status::PRECONDITION_ERROR, "not writable file");
-      return;
-    }
-    if (off < 0) {
-      off = file_->file_size_;
-    }
-    const int64_t end_position = off + size;
-    const Status adjust_status = file->AllocateSpace(end_position);
-    if (adjust_status != Status::SUCCESS) {
-      *status = adjust_status;
-      return;
-    }
-    file_->file_size_ = std::max(file_->file_size_, end_position);
-  } else {
-    if (off < 0) {
-      status->Set(Status::PRECONDITION_ERROR, "negative offset");
-      return;
-    }
-    if (off > file_->file_size_) {
-      status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
-      return;
-    }
-    size = std::min(static_cast<int64_t>(size), file_->file_size_ - off);
-  }
-  off_ = off;
-  size_ = size;
-}
-
-MemoryMapAtomicFileZoneImpl::~MemoryMapAtomicFileZoneImpl() {
-  if (writable_) {
-    file_->mutex_.unlock();
-  } else {
-    file_->mutex_.unlock_shared();
-  }
-}
-
-int64_t MemoryMapAtomicFileZoneImpl::Offset() const {
-  return off_;
-}
-
-char* MemoryMapAtomicFileZoneImpl::Pointer() const {
-  return file_->map_ + off_;
-}
-
-size_t MemoryMapAtomicFileZoneImpl::Size() const {
-  return size_;
-}
-
 MemoryMapAtomicFile::MemoryMapAtomicFile() {
   impl_ = new MemoryMapAtomicFileImpl();
 }
@@ -1179,24 +1062,65 @@ Status MemoryMapAtomicFile::DisablePathOperations() {
 }
 
 MemoryMapAtomicFile::Zone::Zone(
-    MemoryMapAtomicFileImpl* file_impl, bool writable, int64_t off, size_t size, Status* status) {
-  impl_ = new MemoryMapAtomicFileZoneImpl(file_impl, writable, off, size, status);
+    MemoryMapAtomicFileImpl* file_impl, bool writable, int64_t off, size_t size, Status* status)
+    : file_(file), off_(-1), size_(0), writable_(writable) {
+  if (writable) {
+    file_->mutex_.lock();
+  } else {
+    file_->mutex_.lock_shared();
+  }
+  if (file_->file_handle_ == nullptr) {
+    status->Set(Status::PRECONDITION_ERROR, "not opened file");
+    return;
+  }
+  if (writable) {
+    if (!file_->writable_) {
+      status->Set(Status::PRECONDITION_ERROR, "not writable file");
+      return;
+    }
+    if (off < 0) {
+      off = file_->file_size_;
+    }
+    const int64_t end_position = off + size;
+    const Status adjust_status = file->AllocateSpace(end_position);
+    if (adjust_status != Status::SUCCESS) {
+      *status = adjust_status;
+      return;
+    }
+    file_->file_size_ = std::max(file_->file_size_, end_position);
+  } else {
+    if (off < 0) {
+      status->Set(Status::PRECONDITION_ERROR, "negative offset");
+      return;
+    }
+    if (off > file_->file_size_) {
+      status->Set(Status::INFEASIBLE_ERROR, "excessive offset");
+      return;
+    }
+    size = std::min(static_cast<int64_t>(size), file_->file_size_ - off);
+  }
+  off_ = off;
+  size_ = size;
 }
 
 MemoryMapAtomicFile::Zone::~Zone() {
-  delete impl_;
+  if (writable_) {
+    file_->mutex_.unlock();
+  } else {
+    file_->mutex_.unlock_shared();
+  }
 }
 
 int64_t MemoryMapAtomicFile::Zone::Offset() const {
-  return impl_->Offset();
+  return off_;
 }
 
 char* MemoryMapAtomicFile::Zone::Pointer() const {
-  return impl_->Pointer();
+  return file_->map_ + off_;
 }
 
 size_t MemoryMapAtomicFile::Zone::Size() const {
-  return impl_->Size();
+  return size_;
 }
 
 }  // namespace tkrzw

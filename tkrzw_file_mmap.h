@@ -44,7 +44,6 @@ class MemoryMapFile : public File {
 };
 
 class MemoryMapParallelFileImpl;
-class MemoryMapParallelFileZoneImpl;
 
 /**
  * File implementation by memory mapping and locking for parallel operations.
@@ -94,16 +93,23 @@ class MemoryMapParallelFile final : public MemoryMapFile {
    private:
     /**
      * Constructor.
-     * @param file_impl The file implementation object.
+     * @param file The file implementation object.
      * @param writable Whether the zone is writable.
      * @param off The offset of a region.
      * @param size The size of the data to be read.
      */
     explicit Zone(
-        MemoryMapParallelFileImpl* file_impl, bool writable,
+        MemoryMapParallelFileImpl* file, bool writable,
         int64_t off, size_t size, Status* status);
 
-    MemoryMapParallelFileZoneImpl* impl_;
+    /** The file object. */
+    MemoryMapParallelFileImpl* file_;
+    /** The offset of the region. */
+    int64_t off_;
+    /** The size of the region. */
+    size_t size_;
+    /** Whether the zone is writable. */
+    bool writable_;
   };
 
   /**
@@ -313,7 +319,6 @@ class MemoryMapParallelFile final : public MemoryMapFile {
 };
 
 class MemoryMapAtomicFileImpl;
-class MemoryMapAtomicFileZoneImpl;
 
 /**
  * File implementation by memory mapping and locking for atomic operations.
@@ -362,16 +367,23 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    private:
     /**
      * Constructor.
-     * @param file_impl The file implementation object.
+     * @param file The file implementation object.
      * @param writable Whether the zone is writable.
      * @param off The offset of a region.
      * @param size The size of the data to be read.
      */
     explicit Zone(
-        MemoryMapAtomicFileImpl* file_impl, bool writable,
+        MemoryMapAtomicFileImpl* file, bool writable,
         int64_t off, size_t size, Status* status);
 
-    MemoryMapAtomicFileZoneImpl* impl_;
+    /** The file object. */
+    MemoryMapAtomicFileImpl* file_;
+    /** The offset of the region. */
+    int64_t off_;
+    /** The size of the region. */
+    size_t size_;
+    /** Whether the zone is writable. */
+    bool writable_;
   };
 
   /**
