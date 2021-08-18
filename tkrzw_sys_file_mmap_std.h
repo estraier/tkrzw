@@ -40,9 +40,6 @@ class MemoryMapParallelFileImpl final {
 class MemoryMapParallelFileZoneImpl final {
  public:
   StdFile* file;
-  bool writable;
-  int64_t off;
-  size_t size;
   Status* status;
   char* buf;
 };
@@ -137,7 +134,8 @@ Status MemoryMapParallelFile::DisablePathOperations() {
 }
 
 MemoryMapParallelFile::Zone::Zone(
-    MemoryMapParallelFileImpl* fileimpl, bool writable, int64_t off, size_t size, Status* status) {
+    MemoryMapParallelFileImpl* fileimpl, bool writable, int64_t off, size_t size, Status* status)
+    : file_(nullptr), off_(0), size_(0), writable_(false) {
   const int64_t file_size = fileimpl->file.Lock();
   if (off < 0) {
     off = file_size;
@@ -146,41 +144,44 @@ MemoryMapParallelFile::Zone::Zone(
   if (!writable) {
     size = readable_size;
   }
-  impl_ = new MemoryMapParallelFileZoneImpl;
-  impl_->file = &fileimpl->file;
-  impl_->writable = writable;
-  impl_->off = off;
-  impl_->size = size;
-  impl_->status = status;
-  impl_->buf = new char[size + 1];
+  auto* impl = new MemoryMapParallelFileZoneImpl;
+  impl->file = &fileimpl->file;
+  impl->status = status;
+  impl->buf = new char[size + 1];
   if (readable_size > 0) {
-    *impl_->status |= impl_->file->ReadInCriticalSection(off, impl_->buf, readable_size);
+    *impl->status |= impl->file->ReadInCriticalSection(off, impl->buf, readable_size);
   }
   if (static_cast<int64_t>(size) > readable_size) {
-    std::memset(impl_->buf + readable_size, 0, size - readable_size);
+    std::memset(impl->buf + readable_size, 0, size - readable_size);
   }
+  off_ = off;
+  size_ = size;
+  writable_ = writable;
+  file_ = reinterpret_cast<MemoryMapParallelFileImpl*>(impl);
 }
 
 MemoryMapParallelFile::Zone::~Zone() {
-  StdFile* file = impl_->file;
-  if (impl_->writable) {
-    *impl_->status |= file->WriteInCriticalSection(impl_->off, impl_->buf, impl_->size);
+  auto* impl = reinterpret_cast<MemoryMapParallelFileZoneImpl*>(file_);
+  StdFile* file = impl->file;
+  if (writable_) {
+    *impl->status |= file->WriteInCriticalSection(off_, impl->buf, size_);
   }
-  delete[] impl_->buf;
-  delete impl_;
+  delete[] impl->buf;
+  delete impl;
   file->Unlock();
 }
 
 int64_t MemoryMapParallelFile::Zone::Offset() const {
-  return impl_->off;
+  return off_;
 }
 
 char* MemoryMapParallelFile::Zone::Pointer() const {
-  return impl_->buf;
+  auto* impl = reinterpret_cast<MemoryMapParallelFileZoneImpl*>(file_);
+  return impl->buf;
 }
 
 size_t MemoryMapParallelFile::Zone::Size() const {
-  return impl_->size;
+  return size_;
 }
 
 class MemoryMapAtomicFileImpl final {
@@ -191,9 +192,6 @@ class MemoryMapAtomicFileImpl final {
 class MemoryMapAtomicFileZoneImpl final {
  public:
   StdFile* file;
-  bool writable;
-  int64_t off;
-  size_t size;
   Status* status;
   char* buf;
 };
@@ -297,41 +295,44 @@ MemoryMapAtomicFile::Zone::Zone(
   if (!writable) {
     size = readable_size;
   }
-  impl_ = new MemoryMapAtomicFileZoneImpl;
-  impl_->file = &fileimpl->file;
-  impl_->writable = writable;
-  impl_->off = off;
-  impl_->size = size;
-  impl_->status = status;
-  impl_->buf = new char[size + 1];
+  auto* impl = new MemoryMapAtomicFileZoneImpl;
+  impl->file = &fileimpl->file;
+  impl->status = status;
+  impl->buf = new char[size + 1];
   if (readable_size > 0) {
-    *impl_->status |= impl_->file->ReadInCriticalSection(off, impl_->buf, readable_size);
+    *impl->status |= impl->file->ReadInCriticalSection(off, impl->buf, readable_size);
   }
   if (static_cast<int64_t>(size) > readable_size) {
-    std::memset(impl_->buf + readable_size, 0, size - readable_size);
+    std::memset(impl->buf + readable_size, 0, size - readable_size);
   }
+  writable_ = writable;
+  off_ = off;
+  size_ = size;
+  file_ = reinterpret_cast<MemoryMapAtomicFileImpl*>(impl);
 }
 
 MemoryMapAtomicFile::Zone::~Zone() {
-  StdFile* file = impl_->file;
-  if (impl_->writable) {
-    *impl_->status |= file->WriteInCriticalSection(impl_->off, impl_->buf, impl_->size);
+  auto* impl = reinterpret_cast<MemoryMapAtomicFileZoneImpl*>(file_);
+  StdFile* file = impl->file;
+  if (writable_) {
+    *impl->status |= file->WriteInCriticalSection(off_, impl->buf, size_);
   }
-  delete[] impl_->buf;
-  delete impl_;
+  delete[] impl->buf;
+  delete impl;
   file->Unlock();
 }
 
 int64_t MemoryMapAtomicFile::Zone::Offset() const {
-  return impl_->off;
+  return off_;
 }
 
 char* MemoryMapAtomicFile::Zone::Pointer() const {
-  return impl_->buf;
+  auto* impl = reinterpret_cast<MemoryMapAtomicFileZoneImpl*>(file_);
+  return impl->buf;
 }
 
 size_t MemoryMapAtomicFile::Zone::Size() const {
-  return impl_->size;
+  return size_;
 }
 
 }  // namespace tkrzw
