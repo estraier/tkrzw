@@ -682,6 +682,7 @@ void BabyDBMImpl::DivideNodes(BabyLeafNode* leaf_node, const std::string& node_k
   auto mid = records.begin() + records.size() / 2;
   auto it = mid;
   auto& new_records = new_leaf_node->records;
+  new_records.reserve(records.end() - it);
   while (it != records.end()) {
     BabyRecord* rec = *it;
     new_records.emplace_back(rec);
@@ -699,6 +700,7 @@ void BabyDBMImpl::DivideNodes(BabyLeafNode* leaf_node, const std::string& node_k
     }
   }
   records.erase(mid, records.end());
+  records.shrink_to_fit();
   void* heir = leaf_node;
   void* child = new_leaf_node;
   std::string new_node_key(new_leaf_node->records.front()->GetKey());
@@ -721,6 +723,7 @@ void BabyDBMImpl::DivideNodes(BabyLeafNode* leaf_node, const std::string& node_k
     BabyInnerNode* new_inner_node = new BabyInnerNode(link->GetChild());
     new_node_key = std::string(link->GetKey());
     auto link_it = mid + 1;
+    new_inner_node->links.reserve(links.end() - link_it);
     while (link_it != links.end()) {
       link = *link_it;
       AddLinkToInnerNode(new_inner_node, link->GetChild(), link->GetKey());
@@ -731,6 +734,7 @@ void BabyDBMImpl::DivideNodes(BabyLeafNode* leaf_node, const std::string& node_k
       FreeBabyLink(links.back());
       links.pop_back();
     }
+    links.shrink_to_fit();
     heir = inner_node;
     child = new_inner_node;
   }
