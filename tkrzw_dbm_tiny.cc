@@ -33,8 +33,8 @@ constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
 struct TinyRecord final {
   char* child;
   int32_t key_size;
-  const char* key_ptr;
   int32_t value_size;
+  const char* key_ptr;
   const char* value_ptr;
   char* Serialize() const;
   char* Reserialize(char* ptr, int32_t old_value_size) const;
