@@ -181,16 +181,48 @@ class FileIndex final {
   Status Remove(std::string_view key, std::string_view value);
 
   /**
+   * Gets the number of records.
+   * @return The number of records.
+   */
+  size_t Count();
+
+  /**
    * Removes all records.
    * @return The result status.
    */
   Status Clear();
 
   /**
-   * Gets the number of records.
-   * @return The number of records.
+   * Rebuilds the entire database.
+   * @return The result status.
    */
-  size_t Count();
+  Status Rebuild();
+
+  /**
+   * Synchronizes the content of the database to the file system.
+   * @param hard True to do physical synchronization with the hardware or false to do only
+   * logical synchronization with the file system.
+   * @return The result status.
+   */
+  Status Synchronize(bool hard);
+
+  /**
+   * Checks whether the database is open.
+   * @return True if the database is open, or false if not.
+   */
+  bool IsOpen() const;
+
+  /**
+   * Checks whether the database is writable.
+   * @return True if the database is writable, or false if not.
+   */
+  bool IsWritable() const;
+
+  /**
+   * Gets the pointer to the internal database object.
+   * @return The pointer to the internal database object, or nullptr on failure.
+   */
+  TreeDBM* GetInternalDBM() const;
 
   /**
    * Makes an iterator for each record.
@@ -323,15 +355,15 @@ class MemIndex final {
   void Remove(std::string_view key, std::string_view value);
 
   /**
-   * Removes all records.
-   */
-  void Clear();
-
-  /**
    * Gets the number of records.
    * @return The number of records.
    */
   size_t Count();
+
+  /**
+   * Removes all records.
+   */
+  void Clear();
 
   /**
    * Makes an iterator for each record.
@@ -477,15 +509,15 @@ class StdIndex final {
   void Remove(const KEYTYPE& key, const VALUETYPE& value);
 
   /**
-   * Removes all records.
-   */
-  void Clear();
-
-  /**
    * Gets the number of records.
    * @return The number of records.
    */
   size_t Count();
+
+  /**
+   * Removes all records.
+   */
+  void Clear();
 
   /**
    * Makes an iterator for each record.
@@ -639,15 +671,15 @@ class StdIndexStr final {
   void Remove(std::string_view key, std::string_view value);
 
   /**
-   * Removes all records.
-   */
-  void Clear();
-
-  /**
    * Gets the number of records.
    * @return The number of records.
    */
   size_t Count();
+
+  /**
+   * Removes all records.
+   */
+  void Clear();
 
   /**
    * Makes an iterator for each record.
@@ -719,12 +751,32 @@ inline Status FileIndex::Remove(std::string_view key, std::string_view value) {
   return dbm_.Remove(SerializeStrPair(key, value));
 }
 
+inline size_t FileIndex::Count() {
+  return dbm_.CountSimple();
+}
+
 inline Status FileIndex::Clear() {
   return dbm_.Clear();
 }
 
-inline size_t FileIndex::Count() {
-  return dbm_.CountSimple();
+inline Status FileIndex::Rebuild() {
+  return dbm_.Rebuild();
+}
+
+inline Status FileIndex::Synchronize(bool hard) {
+  return dbm_.Synchronize(hard);
+}
+
+inline bool FileIndex::IsOpen() const {
+  return dbm_.IsOpen();
+}
+
+inline bool FileIndex::IsWritable() const {
+  return dbm_.IsWritable();
+}
+
+inline TreeDBM* FileIndex::GetInternalDBM() const {
+  return const_cast<TreeDBM*>(&dbm_);
 }
 
 inline std::unique_ptr<FileIndex::Iterator> FileIndex::MakeIterator() {
@@ -809,12 +861,12 @@ inline void MemIndex::Remove(std::string_view key, std::string_view value) {
   dbm_.Remove(SerializeStrPair(key, value));
 }
 
-inline void MemIndex::Clear() {
-  dbm_.Clear();
-}
-
 inline size_t MemIndex::Count() {
   return dbm_.CountSimple();
+}
+
+inline void MemIndex::Clear() {
+  dbm_.Clear();
 }
 
 inline std::unique_ptr<MemIndex::Iterator> MemIndex::MakeIterator() {
@@ -921,18 +973,18 @@ inline void StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Remove(
 }
 
 template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
+inline size_t StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Count() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return records_.size();
+}
+
+template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
 inline void StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Clear() {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   records_.clear();
   for (auto* iterator : iterators_) {
     iterator->it_ = records_.end();
   }
-}
-
-template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
-inline size_t StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Count() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-  return records_.size();
 }
 
 template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
@@ -1070,17 +1122,17 @@ inline void StdIndexStr::Remove(std::string_view key, std::string_view value) {
   it = records_.erase(it);
 }
 
+inline size_t StdIndexStr::Count() {
+  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+  return records_.size();
+}
+
 inline void StdIndexStr::Clear() {
   std::lock_guard<std::shared_timed_mutex> lock(mutex_);
   records_.clear();
   for (auto* iterator : iterators_) {
     iterator->it_ = records_.end();
   }
-}
-
-inline size_t StdIndexStr::Count() {
-  std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-  return records_.size();
 }
 
 inline std::unique_ptr<StdIndexStr::Iterator> StdIndexStr::MakeIterator() {

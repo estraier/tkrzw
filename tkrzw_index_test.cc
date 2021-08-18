@@ -482,7 +482,15 @@ TEST(FileIndexTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             index.Open(file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   CommonIndexBasicTest<tkrzw::FileIndex>(index);
+  EXPECT_TRUE(index.IsOpen());
+  EXPECT_TRUE(index.IsWritable());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Rebuild());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Synchronize(false));
+  tkrzw::TreeDBM* tree_dbm = index.GetInternalDBM();
+  EXPECT_EQ(index.Count(), tree_dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+  EXPECT_FALSE(index.IsOpen());
+  EXPECT_FALSE(index.IsWritable());
 }
 
 TEST(FileIndexTest, Decimal) {
