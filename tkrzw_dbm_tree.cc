@@ -1489,6 +1489,7 @@ Status TreeDBMImpl::DivideNodes(TreeLeafNode* leaf_node, const std::string& node
   auto mid = records.begin() + records.size() / 2;
   auto it = mid;
   auto& new_records = new_leaf_node->records;
+  new_records.reserve(records.end() - it);
   while (it != records.end()) {
     TreeRecord* rec = *it;
     new_records.emplace_back(rec);
@@ -1509,6 +1510,7 @@ Status TreeDBMImpl::DivideNodes(TreeLeafNode* leaf_node, const std::string& node
     }
   }
   records.erase(mid, records.end());
+  records.shrink_to_fit();
   int64_t heir_id = leaf_node->id;
   int64_t child_id = new_leaf_node->id;
   std::string new_node_key(new_leaf_node->records.front()->GetKey());
@@ -1537,6 +1539,7 @@ Status TreeDBMImpl::DivideNodes(TreeLeafNode* leaf_node, const std::string& node
     inner_node->dirty = true;
     new_node_key = std::string(link->GetKey());
     auto link_it = mid + 1;
+    new_inner_node->links.reserve(links.end() - link_it);
     while (link_it != links.end()) {
       link = *link_it;
       AddLinkToInnerNode(new_inner_node.get(), link->child, link->GetKey());
@@ -1547,6 +1550,7 @@ Status TreeDBMImpl::DivideNodes(TreeLeafNode* leaf_node, const std::string& node
       FreeTreeLink(links.back());
       links.pop_back();
     }
+    links.shrink_to_fit();
     heir_id = inner_node->id;
     child_id = new_inner_node->id;
   }
