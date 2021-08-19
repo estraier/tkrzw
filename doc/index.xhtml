@@ -34,6 +34,8 @@ div.logo { text-align: center; }
 div.logo img { max-width: 30ex; }
 div.dbstructure { text-align: center; }
 div.dbstructure img { max-width: 70ex; }
+div.chart { text-align: left; }
+div.chart img { max-width: 80ex; }
 h2 a.headanc, h3 a.headanc {
   display: none;
   font-size: 8pt;
@@ -560,6 +562,8 @@ int main(int argc, char** argv) {
 </tr>
 </table>
 
+<div class="chart"><img src="chart-throughput-onemillion.svg"/></div>
+
 <p>The above test cases should show ideal performance of each database class because records are accessed sequentially and the entire data can be cached on memory by the file system.  Then, let's move on to tougher test cases.  We build a large database of 100 million records with random keys between "00000000" and "99999999".  As some keys are duplicated and such records are overwritten, the actual number of unique records is about 63 million.</p>
 
 <table>
@@ -713,6 +717,8 @@ int main(int argc, char** argv) {
 <td class="num">n/a</td>
 </tr>
 </table>
+
+<div class="chart"><img src="chart-throughput-tenmillion.svg"/></div>
 
 <p>In general, if you want a key-value storage with the highest performance, choosing the file hash database is recommended.  If you need ordered access of records, choosing the file tree database is recommended.  If you need scalability of ordered databases, choosing the file skip database is recommended.  If you need extreme performance, the on-memory hash database and the on-memory tree database are useful although they require another way to save/load records.  If you want a cache system with deletion of LRU records, the cache database is useful.</p>
 
