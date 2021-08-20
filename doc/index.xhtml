@@ -3091,7 +3091,7 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 <pre>[xxx:A:aaa][xxx:B:bbb][xxx:A:aaaaaa][xxx:A:(removed)]
 </pre>
 
-<p>All updating operations are linked from the end to the beginning.  And the hash table refers to the last operations.  Therefore, the latest state is always read.  Thanks to this structure, the existing information never breaks.  However, the size of the database file increases rapidly with any kind of updating operations.  So, you should rebuild the database frequently.</p>
+<p>All updating operations are linked from the end to the beginning.  And the hash table refers to the last operations.  Therefore, the latest state is always read.  Thanks to this structure, the existing information never breaks.  However, the size of the database file increases rapidly with any kind of updating operations.  And, whey old records accumulate in the hash chain, every record operation slows down.  So, you should rebuild the database periodically.</p>
 
 <div class="dbstructure"><img src="appending.svg"/></div>
 
