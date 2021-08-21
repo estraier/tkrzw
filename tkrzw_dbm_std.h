@@ -319,7 +319,7 @@ class StdHashDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class StdHashDBMImpl* impl_;
+  StdHashDBMImpl* impl_;
 };
 
 class StdTreeDBMImpl;
@@ -609,7 +609,7 @@ class StdTreeDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class StdTreeDBMImpl* impl_;
+  StdTreeDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

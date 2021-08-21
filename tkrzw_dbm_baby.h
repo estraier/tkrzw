@@ -345,7 +345,7 @@ class BabyDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class BabyDBMImpl* impl_;
+  BabyDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

@@ -363,7 +363,7 @@ class CacheDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class CacheDBMImpl* impl_;
+  CacheDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

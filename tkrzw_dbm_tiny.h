@@ -349,7 +349,7 @@ class TinyDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class TinyDBMImpl* impl_;
+  TinyDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

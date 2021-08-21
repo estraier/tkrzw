@@ -809,7 +809,7 @@ class HashDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class HashDBMImpl* impl_;
+  HashDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

@@ -541,7 +541,7 @@ class TreeDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class TreeDBMImpl* impl_;
+  TreeDBMImpl* impl_;
 };
 
 }  // namespace tkrzw

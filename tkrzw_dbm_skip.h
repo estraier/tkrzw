@@ -760,7 +760,7 @@ class SkipDBM final : public DBM {
 
  private:
   /** Pointer to the actual implementation. */
-  class SkipDBMImpl* impl_;
+  SkipDBMImpl* impl_;
 };
 
 }  // namespace tkrzw
