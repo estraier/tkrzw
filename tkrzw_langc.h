@@ -66,8 +66,10 @@ enum {
   TKRZW_STATUS_DUPLICATION_ERROR = 10,
   /** Error that internal data are broken. */
   TKRZW_STATUS_BROKEN_DATA_ERROR = 11,
+  /** Error caused by networking failure. */
+  TKRZW_STATUS_NETWORK_ERROR = 12,
   /** Generic error caused by the application logic. */
-  TKRZW_STATUS_APPLICATION_ERROR = 12,
+  TKRZW_STATUS_APPLICATION_ERROR = 13,
 };
 
 /**

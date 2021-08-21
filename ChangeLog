@@ -5,6 +5,7 @@
 
 	- Tune parameters for HashDBM for better concurrency.
 	- Tune parameters for TreeDBM for better concurrency.
+	- NETWORK_ERROR is added to the Status codes.
 
 2021-08-16  Mikio Hirabayashi  <hirarin@gmail.com>
 

@@ -16,9 +16,14 @@
 
 #include <limits>
 #include <iostream>
+#include <map>
+#include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 #include <cinttypes>
 #include <cstdlib>
@@ -302,8 +307,10 @@ class Status final {
     DUPLICATION_ERROR = 10,
     /** Error that internal data are broken. */
     BROKEN_DATA_ERROR = 11,
+    /** Error caused by networking failure. */
+    NETWORK_ERROR = 12,
     /** Generic error caused by the application logic. */
-    APPLICATION_ERROR = 12,
+    APPLICATION_ERROR = 13,
   };
 
   /**
@@ -581,6 +588,7 @@ class Status final {
       case INFEASIBLE_ERROR: return "INFEASIBLE_ERROR";
       case DUPLICATION_ERROR: return "DUPLICATION_ERROR";
       case BROKEN_DATA_ERROR: return "BROKEN_DATA_ERROR";
+      case NETWORK_ERROR: return "NETWORK_ERROR";
       case APPLICATION_ERROR: return "APPLICATION_ERROR";
     }
     return "unnamed error";
