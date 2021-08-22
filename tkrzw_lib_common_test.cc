@@ -138,6 +138,10 @@ TEST(LibCommonTest, SearchMap) {
   EXPECT_EQ("BB", tkrzw::SearchMap(str_map, "b", "*"));
   EXPECT_EQ("CC", tkrzw::SearchMap(str_map, "c", "*"));
   EXPECT_EQ("*", tkrzw::SearchMap(str_map, "d", "*"));
+  const std::map<std::string, int32_t> str_int_map = {{"a", 11}, {"b", 22}, {"c", 33}};
+  EXPECT_EQ(11, tkrzw::SearchMap(str_int_map, "a", 0));
+  EXPECT_EQ(33, tkrzw::SearchMap(str_int_map, "c", 0));
+  EXPECT_EQ(0, tkrzw::SearchMap(str_int_map, "d", 0));
 }
 
 TEST(LibCommonTest, GetSystemInfo) {

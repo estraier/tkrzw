@@ -64,7 +64,7 @@ TEST(LibCommonTest, HashChecksum6) {
   EXPECT_EQ(0x04, crc);
   EXPECT_EQ(0x0F, tkrzw::HashChecksum6Pair("Hello", 5, " World", 6));
   EXPECT_EQ(0x04, tkrzw::HashChecksum6Pair("こんにちは", 15, "世界", 6));
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashChecksum6(key), 61);
   }
@@ -85,7 +85,7 @@ TEST(LibCommonTest, HashChecksum8) {
   EXPECT_EQ(0x96, crc);
   EXPECT_EQ(0x30, tkrzw::HashChecksum8Pair("Hello", 5, " World", 6));
   EXPECT_EQ(0x96, tkrzw::HashChecksum8Pair("こんにちは", 15, "世界", 6));
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashChecksum8(key), 251);
   }
@@ -104,7 +104,7 @@ TEST(LibCommonTest, HashAdler6) {
   crc = tkrzw::HashAdler6Continuous("こんにちは", 15, false);
   crc = tkrzw::HashAdler6Continuous("世界", 6, true, crc);
   EXPECT_EQ(0x14, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashAdler6(key), 64);
   }
@@ -123,7 +123,7 @@ TEST(LibCommonTest, HashAdler8) {
   crc = tkrzw::HashAdler8Continuous("こんにちは", 15, false);
   crc = tkrzw::HashAdler8Continuous("世界", 6, true, crc);
   EXPECT_EQ(0x2C, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashAdler8(key), 256);
   }
@@ -142,7 +142,7 @@ TEST(LibCommonTest, HashAdler16) {
   crc = tkrzw::HashAdler16Continuous("こんにちは", 15, false);
   crc = tkrzw::HashAdler16Continuous("世界", 6, true, crc);
   EXPECT_EQ(0x9B97, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashAdler16(key), 65536);
   }
@@ -176,7 +176,7 @@ TEST(LibCommonTest, HashCRC4) {
   crc = tkrzw::HashCRC4Continuous("こんにちは", 15, false);
   crc = tkrzw::HashCRC4Continuous("世界", 6, true, crc);
   EXPECT_EQ(0xE, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashCRC4(key), 16);
   }
@@ -195,7 +195,7 @@ TEST(LibCommonTest, HashCRC8) {
   crc = tkrzw::HashCRC8Continuous("こんにちは", 15, false);
   crc = tkrzw::HashCRC8Continuous("世界", 6, true, crc);
   EXPECT_EQ(0xB7, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashCRC8(key), 256);
   }
@@ -215,7 +215,7 @@ TEST(LibCommonTest, HashCRC16) {
   crc = tkrzw::HashCRC16Continuous("こんにちは", 15, false);
   crc = tkrzw::HashCRC16Continuous("世界", 6, true, crc);
   EXPECT_EQ(0xF802, crc);
-  for (int i = 0; i < 256; i++) {
+  for (int32_t i = 0; i < 256; i++) {
     const std::string key = MakeCyclicString(i);
     EXPECT_LT(tkrzw::HashCRC16(key), 65536);
   }

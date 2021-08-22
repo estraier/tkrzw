@@ -6,6 +6,7 @@
 	- Tune parameters for HashDBM for better concurrency.
 	- Tune parameters for TreeDBM for better concurrency.
 	- NETWORK_ERROR is added to the Status codes.
+	- Fix a bug of SearchMap.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.20

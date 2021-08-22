@@ -396,7 +396,7 @@ void CommonFileTest::FileReaderTest(tkrzw::File* file) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFile(file_path, content));
     EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, false));
     tkrzw::FileReader reader(file);
-    for (int i = 0; i < 100; i++) {
+    for (int32_t i = 0; i < 100; i++) {
       std::string line;
       EXPECT_EQ(tkrzw::Status::SUCCESS, reader.ReadLine(&line));
       EXPECT_EQ(expected_line, line);

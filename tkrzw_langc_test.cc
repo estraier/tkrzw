@@ -397,7 +397,7 @@ TEST(LangCTest, Iterator) {
   TkrzwDBM* dbm = tkrzw_dbm_open(file_path.c_str(), true, "truncate=true,num_buckets=100");
   ASSERT_NE(nullptr, dbm);
   EXPECT_TRUE(tkrzw_dbm_is_ordered(dbm));
-  for (int i = 1; i <= 10; i++) {
+  for (int32_t i = 1; i <= 10; i++) {
     const std::string key = tkrzw::SPrintF("%04d", i);
     const std::string value = tkrzw::ToString(i * i);
     EXPECT_TRUE(tkrzw_dbm_set(dbm, key.c_str(), -1, value.c_str(), -1, false));

@@ -250,7 +250,7 @@ inline bool CheckMap(MAP map, const typename MAP::key_type& key) {
  * @return The value of the matching record on success, or the default value on failure.
  */
 template <typename MAP>
-inline typename MAP::value_type::first_type SearchMap(
+inline typename MAP::value_type::second_type SearchMap(
     MAP map, const typename MAP::key_type& key,
     const typename MAP::value_type::second_type& default_value) {
   const auto& it = map.find(key);
