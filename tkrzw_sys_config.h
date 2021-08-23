@@ -142,6 +142,7 @@
 #include <regex>
 #include <set>
 #include <shared_mutex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>

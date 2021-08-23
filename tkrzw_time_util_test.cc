@@ -91,19 +91,25 @@ TEST(ThreadUtilTest, GetDayOfWeek) {
 
 TEST(ThreadUtilTest, FormatDateW3CDTF) {
   char result[48];
-  tkrzw::FormatDateW3CDTF(result, 0, 0);
+  size_t size = tkrzw::FormatDateW3CDTF(result, 0, 0);
   EXPECT_STREQ("1970-01-01T00:00:00Z", result);
-  tkrzw::FormatDateW3CDTFWithFrac(result, 0, 0, 0);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateW3CDTFWithFrac(result, 0, 0, 0);
   EXPECT_STREQ("1970-01-01T00:00:00Z", result);
-  tkrzw::FormatDateW3CDTF(result, 256037405, 32400);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateW3CDTF(result, 256037405, 32400);
   EXPECT_STREQ("1978-02-11T18:30:05+09:00", result);
-  tkrzw::FormatDateW3CDTFWithFrac(result, 256037405.25, 32400, 4);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateW3CDTFWithFrac(result, 256037405.25, 32400, 4);
   EXPECT_STREQ("1978-02-11T18:30:05.2500+09:00", result);
+  EXPECT_EQ(size, std::strlen(result));
   if (tkrzw::GetLocalTimeDifference() == 32400) {
-    tkrzw::FormatDateW3CDTF(result, 1234567890);
+    size = tkrzw::FormatDateW3CDTF(result, 1234567890);
     EXPECT_STREQ("2009-02-14T08:31:30+09:00", result);
-    tkrzw::FormatDateW3CDTFWithFrac(result, 1234567890.5);
+    EXPECT_EQ(size, std::strlen(result));
+    size = tkrzw::FormatDateW3CDTFWithFrac(result, 1234567890.5);
     EXPECT_STREQ("2009-02-14T08:31:30.500000+09:00", result);
+    EXPECT_EQ(size, std::strlen(result));
   }
   tkrzw::FormatDateW3CDTF(result);
   EXPECT_EQ('2', result[0]);
@@ -113,13 +119,16 @@ TEST(ThreadUtilTest, FormatDateW3CDTF) {
 
 TEST(ThreadUtilTest, FormatDateRFC1123) {
   char result[48];
-  tkrzw::FormatDateRFC1123(result, 0, 0);
+  size_t size =tkrzw::FormatDateRFC1123(result, 0, 0);
   EXPECT_STREQ("Thu, 01 Jan 1970 00:00:00 GMT", result);
-  tkrzw::FormatDateRFC1123(result, 256037405, 32400);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateRFC1123(result, 256037405, 32400);
   EXPECT_STREQ("Sat, 11 Feb 1978 18:30:05 +0900", result);
+  EXPECT_EQ(size, std::strlen(result));
   if (tkrzw::GetLocalTimeDifference() == 32400) {
-    tkrzw::FormatDateRFC1123(result, 1234567890);
+    size = tkrzw::FormatDateRFC1123(result, 1234567890);
     EXPECT_STREQ("Sat, 14 Feb 2009 08:31:30 +0900", result);
+    EXPECT_EQ(size, std::strlen(result));
   }
   tkrzw::FormatDateRFC1123(result);
   EXPECT_GE(strlen(result), 29);

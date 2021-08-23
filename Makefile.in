@@ -793,6 +793,7 @@ testrun :
 	$(RUNENV) $(RUNCMD) ./tkrzw_hash_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_time_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_thread_util_test
+	$(RUNENV) $(RUNCMD) ./tkrzw_logger_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_compress_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_containers_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_key_comparators_test
@@ -920,6 +921,9 @@ tkrzw_time_util_test : tkrzw_time_util_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_thread_util_test : tkrzw_thread_util_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_logger_test : tkrzw_logger_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_compress_test : tkrzw_compress_test.o $(LIBRARYFILES)

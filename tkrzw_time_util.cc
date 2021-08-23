@@ -96,7 +96,7 @@ int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day) {
   return (day + ((8 + (13 * mon)) / 5) + (year + (year / 4) - (year / 100) + (year / 400))) % 7;
 }
 
-void FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
+size_t FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
   assert(buf != nullptr);
   if (wtime == INT64MIN) {
     wtime = GetWallTime();
@@ -122,12 +122,12 @@ void FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
     }
     std::sprintf(wp, "%02d:%02d", td / 60, td % 60);
   }
-  std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s",
-               uts.tm_year, uts.tm_mon, uts.tm_mday,
-               uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
+  return std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s",
+                      uts.tm_year, uts.tm_mon, uts.tm_mday,
+                      uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
 }
 
-void FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t fract_cols) {
+size_t FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t fract_cols) {
   assert(buf != nullptr);
   if (wtime < 0) {
     wtime = GetWallTime();
@@ -157,24 +157,23 @@ void FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t fr
     std::sprintf(wp, "%02d:%02d", td / 60, td % 60);
   }
   if (fract_cols < 1) {
-    std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s",
-                 uts.tm_year, uts.tm_mon, uts.tm_mday,
-                 uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
-  } else {
-    char dec[16];
-    std::sprintf(dec, "%.12f", fract);
-    char* wp = dec;
-    if (*wp == '0') {
-      wp++;
-    }
-    wp[fract_cols + 1] = '\0';
-    std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s%s",
-                 uts.tm_year, uts.tm_mon, uts.tm_mday, uts.tm_hour,
-                 uts.tm_min, uts.tm_sec, wp, tzone);
+    return std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s",
+                        uts.tm_year, uts.tm_mon, uts.tm_mday,
+                        uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
   }
+  char dec[16];
+  std::sprintf(dec, "%.12f", fract);
+  char* wp = dec;
+  if (*wp == '0') {
+    wp++;
+  }
+  wp[fract_cols + 1] = '\0';
+  return std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s%s",
+                      uts.tm_year, uts.tm_mon, uts.tm_mday, uts.tm_hour,
+                      uts.tm_min, uts.tm_sec, wp, tzone);
 }
 
-void FormatDateRFC1123(char* result, int64_t wtime, int32_t td) {
+size_t FormatDateRFC1123(char* result, int64_t wtime, int32_t td) {
   assert(result != nullptr);
   if (wtime < 0) {
     wtime = GetWallTime();
@@ -214,7 +213,7 @@ void FormatDateRFC1123(char* result, int64_t wtime, int32_t td) {
   wp += std::sprintf(wp, "%04d %02d:%02d:%02d ",
                      uts.tm_year, uts.tm_hour, uts.tm_min, uts.tm_sec);
   if (td == 0) {
-    std::sprintf(wp, "GMT");
+    wp += std::sprintf(wp, "GMT");
   } else {
     if (td < 0) {
       td *= -1;
@@ -222,8 +221,9 @@ void FormatDateRFC1123(char* result, int64_t wtime, int32_t td) {
     } else {
       *wp++ += '+';
     }
-    std::sprintf(wp, "%02d%02d", td / 60, td % 60);
+    wp += std::sprintf(wp, "%02d%02d", td / 60, td % 60);
   }
+  return wp - result;
 }
 
 double ParseDateStr(std::string_view str) {

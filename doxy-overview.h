@@ -80,6 +80,7 @@ namespace tkrzw {}
  * @file tkrzw_hash_util.h Hash utilities.
  * @file tkrzw_time_util.h Time utilities.
  * @file tkrzw_thread_util.h Threading utilities.
+ * @file tkrzw_logger.h Logger interface and implementations.
  * @file tkrzw_compress.h Data compression functions.
  * @file tkrzw_containers.h Miscellaneous data containers.
  * @file tkrzw_key_comparators.h Built-in comparators for record keys.
