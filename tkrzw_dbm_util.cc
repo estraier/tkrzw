@@ -140,7 +140,7 @@ static void PrintUsageAndDie() {
     SkipDBM::DEFAULT_MAX_LEVEL);
   P("  --sort_mem_size num : Sets the memory size used for sorting. (default: %lld)\n",
     SkipDBM::DEFAULT_SORT_MEM_SIZE);
-  P("  --insert_in_order : Inserts records in ascending order order of the key.\n");
+  P("  --insert_in_order : Inserts records in ascending order of the key.\n");
   P("\n");
   P("Options for PolyDBM and ShardDBM:\n");
   P("  --params str : Sets the parameters in \"key=value,key=value\" format.\n");

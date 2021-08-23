@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     Die("Set failed: ", status);
   }
 
-  // Opens the exisiting database as a reader mode.
+  // Opens the existing database as a reader mode.
   status = dbm.Open("casket.tkt", false);
   if (status != Status::SUCCESS) {
     // Failure of the Open operation is critical so we stop.

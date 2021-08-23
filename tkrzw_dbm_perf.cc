@@ -133,7 +133,7 @@ static void PrintUsageAndDie() {
     SkipDBM::DEFAULT_MAX_LEVEL);
   P("  --sort_mem_size num : Sets the memory size used for sorting. (default: %lld)\n",
     SkipDBM::DEFAULT_SORT_MEM_SIZE);
-  P("  --insert_in_order : Inserts records in ascending order order of the key.\n");
+  P("  --insert_in_order : Inserts records in ascending order of the key.\n");
   P("  --max_cached_records num : Sets the number of cached records (default: %d)\n",
     SkipDBM::DEFAULT_MAX_CACHED_RECORDS);
   P("  --reducer func : Sets the reducer: none, first, second, last, concat, total."

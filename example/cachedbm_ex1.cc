@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     dbm.Set(ToString(i), ToString(i));
   }
 
-  // Check the number of records records.
+  // Check the number of records.
   std::cout << "count: " << dbm.CountSimple() << std::endl;
 
   // Recent records should be alive.

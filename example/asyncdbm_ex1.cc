@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   
   {
     // Makes an asynchronouns adapter with 10 worker threads.
-    // We limit its scope to destroye it bofore the database instance.
+    // We limit its scope to destroy it bofore the database instance.
     AsyncDBM async(&dbm, 10);
 
     // Sets records without checking the results of operations.

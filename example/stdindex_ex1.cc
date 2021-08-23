@@ -23,7 +23,7 @@ using namespace tkrzw;
 typedef StdIndex<int64_t, int64_t> DivisionIndex;
 
 // Structure for an employee.
-// Acutually, you should use a serious implementaton like Protocol Buffers.
+// Actually, you should use a serious implementaton like Protocol Buffers.
 struct Employee {
   int64_t employee_id = 0;
   std::string name;
