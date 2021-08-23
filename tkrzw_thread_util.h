@@ -29,14 +29,9 @@
 #include <cinttypes>
 
 #include "tkrzw_lib_common.h"
+#include "tkrzw_time_util.h"
 
 namespace tkrzw {
-
-/**
- * Gets the number of seconds since the UNIX epoch.
- * @return The number of seconds since the UNIX epoch with microsecond precision.
- */
-double GetWallTime();
 
 /**
  * Sleeps the current thread.
@@ -809,13 +804,6 @@ class TaskQueue final {
   /** The conditional variable to notify the change. */
   std::condition_variable cond_;
 };
-
-inline double GetWallTime() {
-  const auto epoch = std::chrono::time_point<std::chrono::system_clock>();
-  const auto current = std::chrono::system_clock::now();
-  const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(current - epoch);
-  return elapsed.count() / 1000000.0;
-}
 
 inline void Sleep(double sec) {
   std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(sec * 1000000)));

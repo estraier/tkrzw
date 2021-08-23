@@ -791,6 +791,7 @@ testrun :
 	$(RUNENV) $(RUNCMD) ./tkrzw_lib_common_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_str_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_hash_util_test
+	$(RUNENV) $(RUNCMD) ./tkrzw_time_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_thread_util_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_compress_test
 	$(RUNENV) $(RUNCMD) ./tkrzw_containers_test
@@ -915,7 +916,7 @@ tkrzw_str_util_test : tkrzw_str_util_test.o $(LIBRARYFILES)
 tkrzw_hash_util_test : tkrzw_hash_util_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
-tkrzw_cmd_util_test : tkrzw_cmd_util_test.o $(LIBRARYFILES)
+tkrzw_time_util_test : tkrzw_time_util_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_thread_util_test : tkrzw_thread_util_test.o $(LIBRARYFILES)
@@ -988,6 +989,9 @@ tkrzw_dbm_async_test : tkrzw_dbm_async_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_index_test : tkrzw_index_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_cmd_util_test : tkrzw_cmd_util_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_langc_test : tkrzw_langc_test.o $(LIBRARYFILES)

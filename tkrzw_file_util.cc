@@ -19,6 +19,7 @@
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"
+#include "tkrzw_time_util.h"
 
 namespace tkrzw {
 

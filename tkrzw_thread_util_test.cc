@@ -20,6 +20,7 @@
 #include "tkrzw_hash_util.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"
+#include "tkrzw_time_util.h"
 
 using namespace testing;
 
@@ -29,9 +30,8 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(ThreadUtilTest, GetWallTimeAndSleep) {
+TEST(ThreadUtilTest, Sleep) {
   const double start_time = tkrzw::GetWallTime();
-  EXPECT_GT(start_time, 0);
   tkrzw::Sleep(0.001);
   const double end_time = tkrzw::GetWallTime();
   EXPECT_GT(end_time, start_time);
