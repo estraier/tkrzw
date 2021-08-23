@@ -92,10 +92,18 @@ void xfreealigned(void* ptr) {
 #endif
 }
 
+int64_t GetProcessID() {
+#if defined(_SYS_WINDOWS_)
+  return GetCurrentProcessId();
+#else
+  return getpid();
+#endif
+}
+
 std::map<std::string, std::string> GetSystemInfo() {
   std::map<std::string, std::string> info;
 #if defined(_SYS_LINUX_)
-  info["proc_id"] = SPrintF("%lld", (long long)getpid());
+  info["proc_id"] = SPrintF("%lld", (long long)GetProcessID());
   struct rusage rbuf;
   std::memset(&rbuf, 0, sizeof(rbuf));
   if (getrusage(RUSAGE_SELF, &rbuf) == 0) {
@@ -164,7 +172,7 @@ std::map<std::string, std::string> GetSystemInfo() {
     ifs.close();
   }
 #elif defined(_SYS_POSIX_)
-  info["proc_id"] = SPrintF("%lld", (long long)getpid());
+  info["proc_id"] = SPrintF("%lld", (long long)GetProcessID());
   struct rusage rbuf;
   std::memset(&rbuf, 0, sizeof(rbuf));
   if (getrusage(RUSAGE_SELF, &rbuf) == 0) {

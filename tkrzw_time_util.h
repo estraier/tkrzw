@@ -18,6 +18,8 @@
 #include <string_view>
 
 #include <cinttypes>
+#include <cmath>
+#include <ctime>
 
 #include "tkrzw_lib_common.h"
 
@@ -28,6 +30,83 @@ namespace tkrzw {
  * @return The number of seconds since the UNIX epoch with microsecond precision.
  */
 double GetWallTime();
+
+/**
+ * Gets the local calendar of a time.
+ * @param wtime the time since the UNIX epoch.
+ * @param cal the pointer to a calendar object to store the result.
+ */
+void GetLocalCalendar(int64_t wtime, struct std::tm* cal);
+
+/**
+ * Gets the universal calendar of a time.
+ * @param wtime the time since the UNIX epoch.
+ * @param cal the pointer to a calendar object to store the result.
+ */
+void GetUniversalCalendar(int64_t wtime, struct std::tm* cal);
+
+/**
+ * Makes the UNIX time from a universal calendar.
+ * @param cal the time struct of the universal calendar.
+ * @return the UNIX time of the universal calendar
+ */
+int64_t MakeUniversalTime(struct std::tm& cal);
+
+/**
+ * Gets the time difference of the local time zone.
+ * @return the time difference of the local time zone in seconds, which is positive in the east
+ * of the prime meridian and negative in the west.
+ */
+int32_t GetLocalTimeDifference();
+
+/**
+ * Gets the day of week of a date.
+ * @param year the year of the date.
+ * @param mon the month of the date.
+ * @param day the day of the date.
+ * @return the day of week of the date.  0 means Sunday and 6 means Saturday.
+ */
+int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day);
+
+/**
+ * Formats a date as a string in W3CDTF.
+ * @param result the pointer to the region into which the result string is written.  The size of
+ * the buffer should be equal to or more than 48 bytes.
+ * @param wtime the time since the UNIX epoch.  If it is INT64MIN, the current time is specified.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ */
+void FormatDateW3CDTF(char* result, int64_t wtime = INT64MIN, int32_t td = INT32MIN);
+
+/**
+ * Formats a date as a string in W3CDTF.
+ * @param result the pointer to the region into which the result string is written.  The size of
+ * the buffer should be equal to or more than 48 bytes.
+ * @param wtime the time since the UNIX epoch.  If it is negative, the current time is specified.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ * @param fract_cols The number of columns for the fraction part.
+ */
+void FormatDateW3CDTFWithFrac(char* result, double wtime = -1, int32_t td = INT32MIN,
+                              int32_t fract_cols = 6);
+
+/**
+ * Formats a date as a string in RFC 1123 format.
+ * @param result the pointer to the region into which the result string is written.  The size of
+ * the buffer should be equal to or more than 48 bytes.
+ * @param wtime the time since the UNIX epoch.  If it is INT64MIN, the current time is specified.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ */
+void FormatDateRFC1123(char* result, int64_t wtime = INT64MIN, int32_t td = INT32MIN);
+
+/**
+ * Parses a date string to get the time value since the UNIX epoch.
+ * @param str the date string in decimal, hexadecimal, W3CDTF, or RFC 822 (1123).  Decimal can
+ * be trailed by "s" for in seconds, "m" for in minutes, "h" for in hours, and "d" for in days.
+ * @return the time value of the date or NaN if the format is invalid.
+ */
+double ParseDateStr(std::string_view str);
 
 }  // namespace tkrzw
 

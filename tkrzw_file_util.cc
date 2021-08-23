@@ -35,7 +35,6 @@ const char* const TMP_DIR_CANDIDATES[] = {
   "\\tmp", "\\temp", "\\var\\tmp", "\\",
 };
 
-#define getpid _getpid
 #define open _open
 #define close _close
 #define read _read
@@ -66,10 +65,9 @@ const char* const TMP_DIR_CANDIDATES[] = {
 std::string MakeTemporaryName() {
   static std::atomic_uint32_t count(0);
   const uint32_t current_count = count++;
-  int32_t pid = getpid();
-  double wtime = GetWallTime();
-  std::unique_ptr<int> ptr(new int(0));
-  const std::string& joined = SPrintF("%x:%x:%f:%p", current_count, pid, wtime, ptr.get());
+  const uint32_t pid = GetProcessID();
+  const double wtime = GetWallTime();
+  const std::string& joined = SPrintF("%x:%x:%f", current_count, pid, wtime);
   const std::string& hashed =
       SPrintF("%04d%016llx", count % 10000, static_cast<unsigned long long>(HashFNV(joined)));
   return hashed;

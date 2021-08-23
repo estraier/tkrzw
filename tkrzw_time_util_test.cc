@@ -36,4 +36,124 @@ TEST(ThreadUtilTest, GetWallTime) {
   EXPECT_GT(end_time, start_time);
 }
 
+TEST(ThreadUtilTest, GetCalendar) {
+  struct std::tm lts;
+  tkrzw::GetLocalCalendar(72000, &lts);
+  EXPECT_EQ(70, lts.tm_year);
+  EXPECT_EQ(0, lts.tm_mon);
+  EXPECT_TRUE(lts.tm_mday == 1 || lts.tm_mday == 2);
+  EXPECT_TRUE(lts.tm_wday == 4 || lts.tm_wday == 5);
+  EXPECT_TRUE(lts.tm_yday == 0 || lts.tm_yday == 1);
+  struct std::tm uts;
+  tkrzw::GetUniversalCalendar(72000, &uts);
+  EXPECT_EQ(70, uts.tm_year);
+  EXPECT_EQ(0, uts.tm_mon);
+  EXPECT_EQ(1, uts.tm_mday);
+  EXPECT_EQ(20, uts.tm_hour);
+  EXPECT_EQ(0, uts.tm_min);
+  EXPECT_EQ(0, uts.tm_sec);
+  EXPECT_EQ(4, uts.tm_wday);
+  EXPECT_EQ(0, uts.tm_yday);
+}
+
+TEST(ThreadUtilTest, MakeUniversalTime) {
+  struct std::tm uts;
+  std::memset(&uts, 0, sizeof(uts));
+  uts.tm_year = 70;
+  uts.tm_mon = 0;
+  uts.tm_mday = 1;
+  EXPECT_EQ(0, tkrzw::MakeUniversalTime(uts));
+  tkrzw::GetUniversalCalendar(1234567890, &uts);
+  EXPECT_EQ(1234567890, tkrzw::MakeUniversalTime(uts));
+}
+
+TEST(ThreadUtilTest, GetLocalTimeDifference) {
+  const int32_t td = tkrzw::GetLocalTimeDifference();
+  EXPECT_TRUE(td > -86400 && td < 86400);
+  EXPECT_EQ(td, tkrzw::GetLocalTimeDifference());
+  if (td == 32400) {
+    struct std::tm lts;
+    tkrzw::GetLocalCalendar(0, &lts);
+    EXPECT_EQ(9, lts.tm_hour);
+    EXPECT_EQ(0, lts.tm_min);
+    EXPECT_EQ(0, lts.tm_sec);
+  }
+}
+
+TEST(ThreadUtilTest, GetDayOfWeek) {
+  EXPECT_EQ(4, tkrzw::GetDayOfWeek(1970, 1, 1));
+  EXPECT_EQ(5, tkrzw::GetDayOfWeek(1970, 1, 2));
+  EXPECT_EQ(6, tkrzw::GetDayOfWeek(1978, 2, 11));
+  EXPECT_EQ(0, tkrzw::GetDayOfWeek(1978, 2, 12));
+  EXPECT_EQ(0, tkrzw::GetDayOfWeek(2000, 12, 31));
+  EXPECT_EQ(1, tkrzw::GetDayOfWeek(2001, 1, 1));
+}
+
+TEST(ThreadUtilTest, FormatDateW3CDTF) {
+  char result[48];
+  tkrzw::FormatDateW3CDTF(result, 0, 0);
+  EXPECT_STREQ("1970-01-01T00:00:00Z", result);
+  tkrzw::FormatDateW3CDTFWithFrac(result, 0, 0, 0);
+  EXPECT_STREQ("1970-01-01T00:00:00Z", result);
+  tkrzw::FormatDateW3CDTF(result, 256037405, 32400);
+  EXPECT_STREQ("1978-02-11T18:30:05+09:00", result);
+  tkrzw::FormatDateW3CDTFWithFrac(result, 256037405.25, 32400, 4);
+  EXPECT_STREQ("1978-02-11T18:30:05.2500+09:00", result);
+  if (tkrzw::GetLocalTimeDifference() == 32400) {
+    tkrzw::FormatDateW3CDTF(result, 1234567890);
+    EXPECT_STREQ("2009-02-14T08:31:30+09:00", result);
+    tkrzw::FormatDateW3CDTFWithFrac(result, 1234567890.5);
+    EXPECT_STREQ("2009-02-14T08:31:30.500000+09:00", result);
+  }
+  tkrzw::FormatDateW3CDTF(result);
+  EXPECT_EQ('2', result[0]);
+  tkrzw::FormatDateW3CDTFWithFrac(result);
+  EXPECT_EQ('2', result[0]);
+}
+
+TEST(ThreadUtilTest, FormatDateRFC1123) {
+  char result[48];
+  tkrzw::FormatDateRFC1123(result, 0, 0);
+  EXPECT_STREQ("Thu, 01 Jan 1970 00:00:00 GMT", result);
+  tkrzw::FormatDateRFC1123(result, 256037405, 32400);
+  EXPECT_STREQ("Sat, 11 Feb 1978 18:30:05 +0900", result);
+  if (tkrzw::GetLocalTimeDifference() == 32400) {
+    tkrzw::FormatDateRFC1123(result, 1234567890);
+    EXPECT_STREQ("Sat, 14 Feb 2009 08:31:30 +0900", result);
+  }
+  tkrzw::FormatDateRFC1123(result);
+  EXPECT_GE(strlen(result), 29);
+}
+
+TEST(ThreadUtilTest, ParseDateStr) {
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("")));
+  EXPECT_EQ(0x123, tkrzw::ParseDateStr("0x123"));
+  EXPECT_EQ(0xABCD, tkrzw::ParseDateStr(" 0XABCD"));
+  EXPECT_EQ(-123, tkrzw::ParseDateStr(" -0123"));
+  EXPECT_EQ(10, tkrzw::ParseDateStr("10 s "));
+  EXPECT_EQ(-600, tkrzw::ParseDateStr("-10 m"));
+  EXPECT_EQ(37800, tkrzw::ParseDateStr("10.5h"));
+  EXPECT_EQ(864000, tkrzw::ParseDateStr("10d"));
+  EXPECT_DOUBLE_EQ(0, tkrzw::ParseDateStr("1970-01-01T00:00:00"));
+  EXPECT_DOUBLE_EQ(36610, tkrzw::ParseDateStr("1970-01-01T10:10:10"));
+  EXPECT_DOUBLE_EQ(10, tkrzw::ParseDateStr("1970-01-01T09:10:10+09:10"));
+  EXPECT_DOUBLE_EQ(-45000, tkrzw::ParseDateStr("1970-01-01T00:00:00+12:30"));
+  EXPECT_DOUBLE_EQ(45000, tkrzw::ParseDateStr("1970-01-01T00:00:00-12:30"));
+  EXPECT_DOUBLE_EQ(256037405.25, (tkrzw::ParseDateStr("1978/02/11 18:30:05.2500+09:00")));
+  EXPECT_DOUBLE_EQ(1234567890.12345, tkrzw::ParseDateStr("2009:02:14 08:31:30.12345+09:00"));
+  EXPECT_DOUBLE_EQ(0, tkrzw::ParseDateStr("Thu, 01 Jan 1970"));
+  EXPECT_DOUBLE_EQ(256003200, tkrzw::ParseDateStr("Sat, 11 Feb 1978"));
+  EXPECT_DOUBLE_EQ(0, tkrzw::ParseDateStr("Thu, 01 Jan 1970 00:00:00 GMT"));
+  EXPECT_DOUBLE_EQ(-32400, tkrzw::ParseDateStr("Thu, 01 Jan 1970 00:00:00 JST"));
+  EXPECT_DOUBLE_EQ(28800, tkrzw::ParseDateStr("Thu, 01 Jan 1970 00:00:00 PST"));
+  EXPECT_DOUBLE_EQ(0, tkrzw::ParseDateStr("Thu, 01 Jan 1970 09:00:00 JST"));
+  EXPECT_DOUBLE_EQ(256037405, tkrzw::ParseDateStr("Sat, 11 Feb 1978 18:30:05 +0900"));
+  EXPECT_DOUBLE_EQ(1234567890, tkrzw::ParseDateStr("Sat, 14 Feb 2009 08:31:30 +0900"));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("hoge")));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("2001-")));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("2001-11-")));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("Thu, ")));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("Thu, 01 xyz 1970")));
+}
+
 // END OF FILE

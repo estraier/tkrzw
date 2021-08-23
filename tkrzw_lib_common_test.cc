@@ -144,6 +144,12 @@ TEST(LibCommonTest, SearchMap) {
   EXPECT_EQ(0, tkrzw::SearchMap(str_int_map, "d", 0));
 }
 
+TEST(LibCommonTest, GetProcessID) {
+  const int64_t pid = tkrzw::GetProcessID();
+  EXPECT_GT(pid, 0);
+  EXPECT_EQ(pid, tkrzw::GetProcessID());
+}
+
 TEST(LibCommonTest, GetSystemInfo) {
   const auto& info = tkrzw::GetSystemInfo();
   EXPECT_TRUE(tkrzw::CheckMap(info, "mem_size"));

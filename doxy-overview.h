@@ -78,7 +78,7 @@ namespace tkrzw {}
  * @file tkrzw_lib_common.h Common library features.
  * @file tkrzw_str_util.h String utilities.
  * @file tkrzw_hash_util.h Hash utilities.
- * @file tkrzw_cmd_util.h Command-line utilities.
+ * @file tkrzw_time_util.h Time utilities.
  * @file tkrzw_thread_util.h Threading utilities.
  * @file tkrzw_compress.h Data compression functions.
  * @file tkrzw_containers.h Miscellaneous data containers.
@@ -105,6 +105,7 @@ namespace tkrzw {}
  * @file tkrzw_dbm_shard.h Sharding database manager adapter.
  * @file tkrzw_dbm_async.h Asynchronous database manager adapter.
  * @file tkrzw_index.h Secondary index implementations.
+ * @file tkrzw_cmd_util.h Command-line utilities.
  * @file tkrzw_langc.h C language binding of Tkrzw.
  */
 
