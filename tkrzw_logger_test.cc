@@ -55,6 +55,13 @@ TEST(LoggerTest, Basic) {
   EXPECT_EQ(std::string::npos, out2.str().find("Z | [WARN] | warn"));
   EXPECT_NE(std::string::npos, out2.str().find("Z | [ERROR] | error: 123"));
   EXPECT_NE(std::string::npos, out2.str().find("Z | [FATAL] | fatal: hello"));
+  out1.str("");
+  out2.str("");
+  logger.SetStream(nullptr);
+  logger.SetMinLevel(tkrzw::Logger::DEBUG);
+  logger.Log(tkrzw::Logger::ERROR, "error");
+  EXPECT_TRUE(out1.str().empty());
+  EXPECT_TRUE(out2.str().empty());
 }
 
 // END OF FILE

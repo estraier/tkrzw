@@ -283,6 +283,9 @@ class StreamLogger : public BaseLogger {
    */
   virtual void WriteRaw(std::string_view raw_data) {
     std::lock_guard lock(mutex_);
+    if (stream_ == nullptr) {
+      return;
+    }
     *stream_ << raw_data << std::endl;
   }
 
