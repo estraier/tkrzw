@@ -96,8 +96,57 @@ int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day) {
   return (day + ((8 + (13 * mon)) / 5) + (year + (year / 4) - (year / 100) + (year / 400))) % 7;
 }
 
+size_t FormatDateSimple(char* result, int64_t wtime, int32_t td) {
+  assert(result != nullptr);
+  if (wtime == INT64MIN) {
+    wtime = GetWallTime();
+  }
+  if (td == INT32MIN) {
+    td = GetLocalTimeDifference();
+  }
+  struct std::tm uts;
+  GetUniversalCalendar(static_cast<time_t>(wtime + td), &uts);
+  uts.tm_year += 1900;
+  uts.tm_mon += 1;
+  return std::sprintf(result, "%04d/%02d/%02d %02d:%02d:%02d",
+                      uts.tm_year, uts.tm_mon, uts.tm_mday,
+                      uts.tm_hour, uts.tm_min, uts.tm_sec);
+}
+
+size_t FormatDateSimpleWithFrac(char* result, double wtime, int32_t td, int32_t frac_cols) {
+  assert(result != nullptr);
+  if (wtime < 0) {
+    wtime = GetWallTime();
+  }
+  if (td == INT32MIN) {
+    td = GetLocalTimeDifference();
+  }
+  double integ, frac;
+  frac = std::modf(wtime, &integ);
+  frac_cols = std::min(frac_cols, 12);
+  struct std::tm uts;
+  GetUniversalCalendar(static_cast<time_t>(integ + td), &uts);
+  uts.tm_year += 1900;
+  uts.tm_mon += 1;
+  if (frac_cols < 1) {
+    return std::sprintf(result, "%04d/%02d/%02d %02d:%02d:%02d",
+                        uts.tm_year, uts.tm_mon, uts.tm_mday,
+                        uts.tm_hour, uts.tm_min, uts.tm_sec);
+  }
+  char dec[16];
+  std::sprintf(dec, "%.12f", frac);
+  char* wp = dec;
+  if (*wp == '0') {
+    wp++;
+  }
+  wp[frac_cols + 1] = '\0';
+  return std::sprintf(result, "%04d/%02d/%02d %02d:%02d:%02d%s",
+                      uts.tm_year, uts.tm_mon, uts.tm_mday, uts.tm_hour,
+                      uts.tm_min, uts.tm_sec, wp);
+}
+
 size_t FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
-  assert(buf != nullptr);
+  assert(result != nullptr);
   if (wtime == INT64MIN) {
     wtime = GetWallTime();
   }
@@ -127,17 +176,17 @@ size_t FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
                       uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
 }
 
-size_t FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t fract_cols) {
-  assert(buf != nullptr);
+size_t FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t frac_cols) {
+  assert(result != nullptr);
   if (wtime < 0) {
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
     td = GetLocalTimeDifference();
   }
-  double integ, fract;
-  fract = std::modf(wtime, &integ);
-  fract_cols = std::min(fract_cols, 12);
+  double integ, frac;
+  frac = std::modf(wtime, &integ);
+  frac_cols = std::min(frac_cols, 12);
   struct std::tm uts;
   GetUniversalCalendar(static_cast<time_t>(integ + td), &uts);
   uts.tm_year += 1900;
@@ -156,18 +205,18 @@ size_t FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t 
     }
     std::sprintf(wp, "%02d:%02d", td / 60, td % 60);
   }
-  if (fract_cols < 1) {
+  if (frac_cols < 1) {
     return std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s",
                         uts.tm_year, uts.tm_mon, uts.tm_mday,
                         uts.tm_hour, uts.tm_min, uts.tm_sec, tzone);
   }
   char dec[16];
-  std::sprintf(dec, "%.12f", fract);
+  std::sprintf(dec, "%.12f", frac);
   char* wp = dec;
   if (*wp == '0') {
     wp++;
   }
-  wp[fract_cols + 1] = '\0';
+  wp[frac_cols + 1] = '\0';
   return std::sprintf(result, "%04d-%02d-%02dT%02d:%02d:%02d%s%s",
                       uts.tm_year, uts.tm_mon, uts.tm_mday, uts.tm_hour,
                       uts.tm_min, uts.tm_sec, wp, tzone);
@@ -284,7 +333,7 @@ double ParseDateStr(std::string_view str) {
   uts.tm_isdst = 0;
   if (len >= 10 && (rp[4] == '-' || rp[4] == '/' || rp[4] == ':') &&
       (rp[7] == '-' || rp[7] == '/' || rp[7] == ':')) {
-    double fract = 0;
+    double frac = 0;
     int32_t td = 0;
     uts.tm_year = StrToInt(std::string_view(rp + 0, 4)) - 1900;
     uts.tm_mon = StrToInt(std::string_view(rp + 5, 2)) - 1;
@@ -298,7 +347,7 @@ double ParseDateStr(std::string_view str) {
       rp += 19;
       len -= 19;
       if (len > 0 && *rp == '.') {
-        fract = StrToDouble(rp, len);
+        frac = StrToDouble(rp, len);
         rp++;
         len--;
         while (len > 0 && (*rp >= '0' && *rp <= '9')) {
@@ -320,7 +369,7 @@ double ParseDateStr(std::string_view str) {
         }
       }
     }
-    return std::mktime(&uts) + fract + GetLocalTimeDifference() - td;
+    return std::mktime(&uts) + frac + GetLocalTimeDifference() - td;
   }
   if (len >= 4 && rp[3] == ',') {
     rp += 4;

@@ -28,32 +28,33 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(LoggerTest, LoggerBase) {
-  std::stringstream output;
-  tkrzw::StreamLogger logger(&output);
+TEST(LoggerTest, Basic) {
+  std::stringstream out1, out2;
+  tkrzw::StreamLogger logger(&out1);
   logger.Log(tkrzw::Logger::DEBUG, "debug");
   logger.Log(tkrzw::Logger::INFO, "info");
   logger.Log(tkrzw::Logger::WARN, "warn");
   logger.LogF(tkrzw::Logger::ERROR, "error: %d", 123);
   logger.LogF(tkrzw::Logger::FATAL, "fatal: %s", "hello");
-  EXPECT_EQ(std::string::npos, output.str().find(" [DEBUG] debug"));
-  EXPECT_NE(std::string::npos, output.str().find(" [INFO] info"));
-  EXPECT_NE(std::string::npos, output.str().find(" [WARN] warn"));
-  EXPECT_NE(std::string::npos, output.str().find(" [ERROR] error: 123"));
-  EXPECT_NE(std::string::npos, output.str().find(" [FATAL] fatal: hello"));
-  output.str("");
+  EXPECT_EQ(std::string::npos, out1.str().find(" [DEBUG] debug"));
+  EXPECT_NE(std::string::npos, out1.str().find(" [INFO] info"));
+  EXPECT_NE(std::string::npos, out1.str().find(" [WARN] warn"));
+  EXPECT_NE(std::string::npos, out1.str().find(" [ERROR] error: 123"));
+  EXPECT_NE(std::string::npos, out1.str().find(" [FATAL] fatal: hello"));
+  logger.SetStream(&out2);
   logger.SetMinLevel(tkrzw::Logger::ERROR);
   logger.SetSeparator(" | ");
+  logger.SetDateFormat(tkrzw::BaseLogger::DATE_W3CDTF_MICRO, 0);
   logger.Log(tkrzw::Logger::DEBUG, "debug");
   logger.Log(tkrzw::Logger::INFO, "info");
   logger.Log(tkrzw::Logger::WARN, "warn");
   logger.LogF(tkrzw::Logger::ERROR, "error: %d", 123);
   logger.LogF(tkrzw::Logger::FATAL, "fatal: %s", "hello");
-  EXPECT_EQ(std::string::npos, output.str().find(" | [DEBUG] | debug"));
-  EXPECT_EQ(std::string::npos, output.str().find(" | [INFO] | info"));
-  EXPECT_EQ(std::string::npos, output.str().find(" | [WARN] | warn"));
-  EXPECT_NE(std::string::npos, output.str().find(" | [ERROR] | error: 123"));
-  EXPECT_NE(std::string::npos, output.str().find(" | [FATAL] | fatal: hello"));
+  EXPECT_EQ(std::string::npos, out2.str().find("Z | [DEBUG] | debug"));
+  EXPECT_EQ(std::string::npos, out2.str().find("Z | [INFO] | info"));
+  EXPECT_EQ(std::string::npos, out2.str().find("Z | [WARN] | warn"));
+  EXPECT_NE(std::string::npos, out2.str().find("Z | [ERROR] | error: 123"));
+  EXPECT_NE(std::string::npos, out2.str().find("Z | [FATAL] | fatal: hello"));
 }
 
 // END OF FILE

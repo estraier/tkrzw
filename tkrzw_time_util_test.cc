@@ -89,6 +89,34 @@ TEST(ThreadUtilTest, GetDayOfWeek) {
   EXPECT_EQ(1, tkrzw::GetDayOfWeek(2001, 1, 1));
 }
 
+TEST(ThreadUtilTest, FormatDateSimple) {
+  char result[48];
+  size_t size = tkrzw::FormatDateSimple(result, 0, 0);
+  EXPECT_STREQ("1970/01/01 00:00:00", result);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateSimpleWithFrac(result, 0, 0, 0);
+  EXPECT_STREQ("1970/01/01 00:00:00", result);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateSimple(result, 256037405, 32400);
+  EXPECT_STREQ("1978/02/11 18:30:05", result);
+  EXPECT_EQ(size, std::strlen(result));
+  size = tkrzw::FormatDateSimpleWithFrac(result, 256037405.25, 32400, 4);
+  EXPECT_STREQ("1978/02/11 18:30:05.2500", result);
+  EXPECT_EQ(size, std::strlen(result));
+  if (tkrzw::GetLocalTimeDifference() == 32400) {
+    size = tkrzw::FormatDateSimple(result, 1234567890);
+    EXPECT_STREQ("2009/02/14 08:31:30", result);
+    EXPECT_EQ(size, std::strlen(result));
+    size = tkrzw::FormatDateSimpleWithFrac(result, 1234567890.5);
+    EXPECT_STREQ("2009/02/14 08:31:30.500000", result);
+    EXPECT_EQ(size, std::strlen(result));
+  }
+  EXPECT_EQ(19, tkrzw::FormatDateSimple(result));
+  EXPECT_EQ('2', result[0]);
+  EXPECT_EQ(26, tkrzw::FormatDateSimpleWithFrac(result));
+  EXPECT_EQ('2', result[0]);
+}
+
 TEST(ThreadUtilTest, FormatDateW3CDTF) {
   char result[48];
   size_t size = tkrzw::FormatDateW3CDTF(result, 0, 0);
@@ -119,7 +147,7 @@ TEST(ThreadUtilTest, FormatDateW3CDTF) {
 
 TEST(ThreadUtilTest, FormatDateRFC1123) {
   char result[48];
-  size_t size =tkrzw::FormatDateRFC1123(result, 0, 0);
+  size_t size = tkrzw::FormatDateRFC1123(result, 0, 0);
   EXPECT_STREQ("Thu, 01 Jan 1970 00:00:00 GMT", result);
   EXPECT_EQ(size, std::strlen(result));
   size = tkrzw::FormatDateRFC1123(result, 256037405, 32400);
@@ -148,6 +176,7 @@ TEST(ThreadUtilTest, ParseDateStr) {
   EXPECT_DOUBLE_EQ(10, tkrzw::ParseDateStr("1970-01-01T09:10:10+09:10"));
   EXPECT_DOUBLE_EQ(-45000, tkrzw::ParseDateStr("1970-01-01T00:00:00+12:30"));
   EXPECT_DOUBLE_EQ(45000, tkrzw::ParseDateStr("1970-01-01T00:00:00-12:30"));
+  EXPECT_DOUBLE_EQ(3666.75, tkrzw::ParseDateStr("1970/01/01 01:01:06.75"));
   EXPECT_DOUBLE_EQ(256037405.25, (tkrzw::ParseDateStr("1978/02/11 18:30:05.2500+09:00")));
   EXPECT_DOUBLE_EQ(1234567890.12345, tkrzw::ParseDateStr("2009:02:14 08:31:30.12345+09:00"));
   EXPECT_DOUBLE_EQ(0, tkrzw::ParseDateStr("Thu, 01 Jan 1970"));

@@ -78,10 +78,39 @@ class Logger {
 class BaseLogger : public Logger {
  public:
   /**
+   * Enumeration of date formats.
+   */
+  enum DateFormat : int32_t {
+    /** No date data. */
+    DATE_NONE = 0,
+    /** Simple format. */
+    DATE_SIMPLE = 1,
+    /** Simple format in microseconds. */
+    DATE_SIMPLE_MICRO = 2,
+    /** W3CDTF format. */
+    DATE_W3CDTF = 3,
+    /** Simple format in microseconds. */
+    DATE_W3CDTF_MICRO = 4,
+    /** RFC1123 format. */
+    DATE_RFC1123 = 5,
+    /** Decimal number of the UNIX epoch. */
+    DATE_EPOCH = 6,
+    /** Decimal number of the UNIX epoch in microseconds. */
+    DATE_EPOCH_MICRO = 7,
+  };
+
+  /**
    * Constructor.
    * @param min_level The minimum log level to be stored.
+   * @param separator The separator string between fields.
+   * @param date_format The date format.
+   * @param date_td the time difference of the timze zone.  If it is INT32MIN, the local time
+   * zone is specified.
    */
-  explicit BaseLogger(Level min_level = INFO) : min_level_(min_level), separator_(" ") {}
+  explicit BaseLogger(Level min_level = INFO, const char* separator = " ",
+                      DateFormat date_format = DATE_SIMPLE, int32_t date_td = INT32MIN)
+      : min_level_(min_level), separator_(separator),
+        date_format_(date_format), date_td_(date_td) {}
 
   /**
    * Destructor.
@@ -105,6 +134,17 @@ class BaseLogger : public Logger {
   }
 
   /**
+   * Sets the data format of each log.
+   * @param date_format The date format.
+   * @param date_td the time difference of the timze zone.  If it is INT32MIN, the local time
+   * zone is specified.
+   */
+  virtual void SetDateFormat(DateFormat date_format, int32_t date_td = INT32MIN) {
+    date_format_ = date_format;
+    date_td_ = date_td;
+  }
+
+  /**
    * Writes a log into the media.
    * @param raw_data Formatted log data.
    */
@@ -118,9 +158,35 @@ class BaseLogger : public Logger {
   virtual void WriteProperties(Level level, std::string_view message) {
     char stack_buf[1024];
     char* wp = stack_buf;
-    wp += FormatDateW3CDTFWithFrac(wp, -1, INT32MIN, 6);
-    std::memcpy(wp, separator_.data(), separator_.size());
-    wp += separator_.size();
+    switch (date_format_) {
+      case DATE_SIMPLE:
+        wp += FormatDateSimple(wp, INT64MIN, date_td_);
+        break;
+      case DATE_SIMPLE_MICRO:
+        wp += FormatDateSimpleWithFrac(wp, -1, date_td_, 6);
+        break;
+      case DATE_W3CDTF:
+        wp += FormatDateW3CDTF(wp, INT64MIN, date_td_);
+        break;
+      case DATE_W3CDTF_MICRO:
+        wp += FormatDateW3CDTFWithFrac(wp, -1, date_td_, 6);
+        break;
+      case DATE_RFC1123:
+        wp += FormatDateRFC1123(wp, INT64MIN, date_td_);
+        break;
+      case DATE_EPOCH:
+        wp += std::sprintf(wp, "%.0f", GetWallTime());
+        break;
+      case DATE_EPOCH_MICRO:
+        wp += std::sprintf(wp, "%.6f", GetWallTime());
+        break;
+      default:
+        break;
+    }
+    if (wp > stack_buf) {
+      std::memcpy(wp, separator_.data(), separator_.size());
+      wp += separator_.size();
+    }
     switch (level) {
       case DEBUG: wp += std::sprintf(wp, "[DEBUG]"); break;
       case INFO: wp += std::sprintf(wp, "[INFO]"); break;
@@ -178,6 +244,10 @@ class BaseLogger : public Logger {
   Level min_level_;
   /** The separator between fields. */
   std::string_view separator_;
+  /** The date format. */
+  DateFormat date_format_;
+  /** The date time difference. */
+  int32_t date_td_;
 };
 
 /**
@@ -187,14 +257,25 @@ class StreamLogger : public BaseLogger {
  public:
   /**
    * Constructor.
-   * @param stream The pointer to the output stream.  The ownership is not taken.
+   * @param stream The pointer to the output stream.  The ownership is not taken.  If it is
+   * nullptr, logging is not done.
    */
-  StreamLogger(std::ostream* stream) : stream_(stream), mutex_() {}
+  explicit StreamLogger(std::ostream* stream = nullptr) : stream_(stream), mutex_() {}
 
   /**
    * Destructor.
    */
   virtual ~StreamLogger() = default;
+
+  /**
+   * Sets the stream object.
+   * @param stream The pointer to the output stream.  The ownership is not taken.  If it is
+   * nullptr, logging is not done.
+   */
+  virtual void SetStream(std::ostream* stream) {
+    std::lock_guard lock(mutex_);
+    stream_ = stream;
+  }
 
   /**
    * Writes a log into the media.

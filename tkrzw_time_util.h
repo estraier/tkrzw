@@ -69,6 +69,30 @@ int32_t GetLocalTimeDifference();
 int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day);
 
 /**
+ * Formats a date as a simple string in "YYYY/MM/DD hh:mm:ss" format.
+ * @param result the pointer to the region into which the result string is written.  The size of
+ * the buffer should be equal to or more than 48 bytes.
+ * @param wtime the time since the UNIX epoch.  If it is INT64MIN, the current time is specified.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ * @return The size of the result string excluding the sentinel null code.
+ */
+size_t FormatDateSimple(char* result, int64_t wtime = INT64MIN, int32_t td = INT32MIN);
+
+/**
+ * Formats a date as a simple string in "YYYY/MM/DD hh:mm:ss" format.
+ * @param result the pointer to the region into which the result string is written.  The size of
+ * the buffer should be equal to or more than 48 bytes.
+ * @param wtime the time since the UNIX epoch.  If it is negative, the current time is specified.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ * @param frac_cols The number of columns for the fraction part.
+ * @return The size of the result string excluding the sentinel null code.
+ */
+size_t FormatDateSimpleWithFrac(char* result, double wtime = -1, int32_t td = INT32MIN,
+                                int32_t frac_cols = 6);
+
+/**
  * Formats a date as a string in W3CDTF.
  * @param result the pointer to the region into which the result string is written.  The size of
  * the buffer should be equal to or more than 48 bytes.
@@ -86,11 +110,11 @@ size_t FormatDateW3CDTF(char* result, int64_t wtime = INT64MIN, int32_t td = INT
  * @param wtime the time since the UNIX epoch.  If it is negative, the current time is specified.
  * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
  * specified.
- * @param fract_cols The number of columns for the fraction part.
+ * @param frac_cols The number of columns for the fraction part.
  * @return The size of the result string excluding the sentinel null code.
  */
 size_t FormatDateW3CDTFWithFrac(char* result, double wtime = -1, int32_t td = INT32MIN,
-                                int32_t fract_cols = 6);
+                                int32_t frac_cols = 6);
 
 /**
  * Formats a date as a string in RFC 1123 format.
