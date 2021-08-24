@@ -24,6 +24,7 @@
 #include <ctime>
 #include <cstdarg>
 
+#include "tkrzw_cmd_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_thread_util.h"
