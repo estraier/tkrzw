@@ -41,6 +41,9 @@ inline Status PReadSequence(int32_t fd, int64_t off, void* buf, size_t size) {
   while (size > 0) {
     const int32_t rsiz = pread(fd, wp, size, off);
     if (rsiz < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
       return GetErrnoStatus("pread", errno);
     }
     if (rsiz == 0) {
@@ -66,6 +69,9 @@ inline Status PWriteSequence(int32_t fd, int64_t off, const void* buf, size_t si
   while (size > 0) {
     const int32_t rsiz = pwrite(fd, rp, size, off);
     if (rsiz < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
       return GetErrnoStatus("pwrite", errno);
     }
     off += rsiz;
