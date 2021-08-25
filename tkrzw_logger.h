@@ -114,7 +114,7 @@ class Logger {
 
   /**
    * Parses a string to get an enum of log levels.
-   * @param The string to parse
+   * @param str The string to parse
    * @return The result enum of log levels.
    */
   static Level ParseLevelStr(std::string_view str) {
@@ -254,6 +254,7 @@ class BaseLogger : public Logger {
       case WARN: wp += std::sprintf(wp, "[WARN]"); break;
       case ERROR: wp += std::sprintf(wp, "[ERROR]"); break;
       case FATAL: wp += std::sprintf(wp, "[FATAL]"); break;
+      default: break;
     }
     std::memcpy(wp, separator_.data(), separator_.size());
     wp += separator_.size();
@@ -284,7 +285,7 @@ class BaseLogger : public Logger {
 
   /**
    * Parses a string to get an enum of date formats.
-   * @param The string to parse
+   * @param str The string to parse
    * @return The result enum of date formats.
    */
   static DateFormat ParseDateFormatStr(std::string_view str) {

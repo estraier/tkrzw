@@ -109,7 +109,10 @@ std::string NormalizePath(const std::string& path) {
       continue;
     }
     if (elem == PARENT_DIR_NAME) {
-      if (!output_elems.empty()) {
+      if (output_elems.empty() && is_absolute) {
+      } else if (output_elems.empty() || output_elems.back() == PARENT_DIR_NAME) {
+        output_elems.emplace_back(PARENT_DIR_NAME);
+      } else {
         output_elems.pop_back();
       }
       continue;

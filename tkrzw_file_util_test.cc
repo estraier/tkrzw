@@ -60,6 +60,11 @@ TEST(FileUtilTest, NormalizePath) {
   EXPECT_EQ("a", tkrzw::NormalizePath("a/b/c/../.."));
   EXPECT_EQ("/a/d", tkrzw::NormalizePath("/a/./b/./c/../../d"));
   EXPECT_EQ("/d", tkrzw::NormalizePath("/a/../b/../c/../../d"));
+  EXPECT_EQ("../tako", tkrzw::NormalizePath("../tako"));
+  EXPECT_EQ("../../tako", tkrzw::NormalizePath(".././../tako"));
+  EXPECT_EQ("../tako", tkrzw::NormalizePath("../tako/ika/.."));
+  EXPECT_EQ("..", tkrzw::NormalizePath("../tako/ika/../.."));
+  EXPECT_EQ("../..", tkrzw::NormalizePath("../tako/ika/../../.."));
   EXPECT_EQ("c:/tako/uni/kani", tkrzw::NormalizePath("c:/tako/ika/../uni/./kani"));
 }
 
