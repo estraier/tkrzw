@@ -29,10 +29,10 @@
 
 namespace tkrzw {
 
-constexpr int32_t MAX_LEAF_NODE_RECORDS = 256;
-constexpr int32_t MAX_INNER_NODE_BRANCHES = 256;
-constexpr int32_t TREE_LEVEL_MAX = 20;
-constexpr int32_t ITER_BUFFER_SIZE = 128;
+static constexpr int32_t MAX_LEAF_NODE_RECORDS = 256;
+static constexpr int32_t MAX_INNER_NODE_BRANCHES = 256;
+static constexpr int32_t TREE_LEVEL_MAX = 20;
+static constexpr int32_t ITER_BUFFER_SIZE = 128;
 
 struct BabyRecord final {
   int32_t key_size;
@@ -947,8 +947,14 @@ Status BabyDBMImpl::ImportRecords() {
 }
 
 Status BabyDBMImpl::ExportRecords() {
-  Status status = file_->Truncate(0);
+  Status status = file_->Close();
   if (status != Status::SUCCESS) {
+    return status;
+  }
+  const std::string export_path = path_ + ".tmp.export";
+  status = file_->Open(export_path, true, File::OPEN_TRUNCATE);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
     return status;
   }
   FlatRecord flat_rec(file_.get());
@@ -956,18 +962,22 @@ Status BabyDBMImpl::ExportRecords() {
   while (leaf_node != nullptr) {
     std::shared_lock<SpinSharedMutex> page_lock(leaf_node->mutex);
     for (const auto* rec : leaf_node->records) {
-      status = flat_rec.Write(rec->GetKey());
+      status |= flat_rec.Write(rec->GetKey());
+      status |= flat_rec.Write(rec->GetValue());
       if (status != Status::SUCCESS) {
-        return status;
-      }
-      status = flat_rec.Write(rec->GetValue());
-      if (status != Status::SUCCESS) {
-        return status;
+        break;
       }
     }
     leaf_node = leaf_node->next;
   }
-  return Status(Status::SUCCESS);
+  status |= file_->Close();
+  status |= RenameFile(export_path, path_);
+  RemoveFile(export_path);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
+    return status;
+  }
+  return file_->Open(path_, true);
 }
 
 void BabyDBMImpl::ProcessImpl(

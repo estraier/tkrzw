@@ -5,6 +5,7 @@
 
 	- Clean up Makefile.
 	- HashDBM::Synchrhonize syncs the record metadata section properly.
+	- TinyDBM, BabyDBM, StdHashDBM, and StdTreeDBM exports data atomically.
 
 2021-08-23  Mikio Hirabayashi  <hirarin@gmail.com>
 

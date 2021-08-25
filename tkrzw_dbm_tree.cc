@@ -30,29 +30,29 @@
 
 namespace tkrzw {
 
-constexpr char META_MAGIC_DATA[] = "TDB";
-constexpr int32_t META_OFFSET_NUM_RECORDS = 4;
-constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 10;
-constexpr int32_t META_OFFSET_ROOT_ID = 16;
-constexpr int32_t META_OFFSET_FIRST_ID = 22;
-constexpr int32_t META_OFFSET_LAST_ID = 28;
-constexpr int32_t META_OFFSET_NUM_LEAF_NODES = 34;
-constexpr int32_t META_OFFSET_NUM_INNER_NODES = 40;
-constexpr int32_t META_OFFSET_MAX_PAGE_SIZE = 46;
-constexpr int32_t META_OFFSET_MAX_BRANCHES = 49;
-constexpr int32_t META_OFFSET_TREE_LEVEL = 52;
-constexpr int32_t META_OFFSET_KEY_COMPARATOR = 53;
-constexpr int32_t META_OFFSET_OPAQUE = 54;
-constexpr int32_t NUM_PAGE_SLOTS = 64;
-constexpr double INNER_PAGE_CACHE_RATIO = 0.25;
-constexpr double HOT_CACHE_RATIO = 0.35;
-constexpr int32_t PAGE_ID_WIDTH = 6;
-constexpr int32_t ADJUST_CACHES_INV_FREQ = 4;
-constexpr int64_t LEAF_NODE_ID_BASE = 1LL;
-constexpr int64_t INNER_NODE_ID_BASE = (1LL << (8 * PAGE_ID_WIDTH - 2)) * 3;
-constexpr int32_t WRITE_BUFFER_SIZE = 16384;
-constexpr int32_t TREE_LEVEL_MAX = 32;
-constexpr int32_t ITER_BUFFER_SIZE = 128;
+static constexpr char META_MAGIC_DATA[] = "TDB";
+static constexpr int32_t META_OFFSET_NUM_RECORDS = 4;
+static constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 10;
+static constexpr int32_t META_OFFSET_ROOT_ID = 16;
+static constexpr int32_t META_OFFSET_FIRST_ID = 22;
+static constexpr int32_t META_OFFSET_LAST_ID = 28;
+static constexpr int32_t META_OFFSET_NUM_LEAF_NODES = 34;
+static constexpr int32_t META_OFFSET_NUM_INNER_NODES = 40;
+static constexpr int32_t META_OFFSET_MAX_PAGE_SIZE = 46;
+static constexpr int32_t META_OFFSET_MAX_BRANCHES = 49;
+static constexpr int32_t META_OFFSET_TREE_LEVEL = 52;
+static constexpr int32_t META_OFFSET_KEY_COMPARATOR = 53;
+static constexpr int32_t META_OFFSET_OPAQUE = 54;
+static constexpr int32_t NUM_PAGE_SLOTS = 64;
+static constexpr double INNER_PAGE_CACHE_RATIO = 0.25;
+static constexpr double HOT_CACHE_RATIO = 0.35;
+static constexpr int32_t PAGE_ID_WIDTH = 6;
+static constexpr int32_t ADJUST_CACHES_INV_FREQ = 4;
+static constexpr int64_t LEAF_NODE_ID_BASE = 1LL;
+static constexpr int64_t INNER_NODE_ID_BASE = (1LL << (8 * PAGE_ID_WIDTH - 2)) * 3;
+static constexpr int32_t WRITE_BUFFER_SIZE = 16384;
+static constexpr int32_t TREE_LEVEL_MAX = 32;
+static constexpr int32_t ITER_BUFFER_SIZE = 128;
 
 class TreeDBMImpl;
 

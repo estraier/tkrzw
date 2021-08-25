@@ -27,8 +27,8 @@
 
 namespace tkrzw {
 
-constexpr int32_t RECORD_MUTEX_NUM_SLOTS = 128;
-constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
+static constexpr int32_t RECORD_MUTEX_NUM_SLOTS = 128;
+static constexpr int64_t MAX_NUM_BUCKETS = 1099511627689LL;
 
 struct TinyRecord final {
   char* child;
@@ -496,8 +496,14 @@ Status TinyDBMImpl::ImportRecords() {
 }
 
 Status TinyDBMImpl::ExportRecords() {
-  Status status = file_->Truncate(0);
+  Status status = file_->Close();
   if (status != Status::SUCCESS) {
+    return status;
+  }
+  const std::string export_path = path_ + ".tmp.export";
+  status = file_->Open(export_path, true, File::OPEN_TRUNCATE);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
     return status;
   }
   FlatRecord flat_rec(file_.get());
@@ -506,18 +512,22 @@ Status TinyDBMImpl::ExportRecords() {
     char* ptr = buckets_[bucket_index];
     while (ptr != nullptr) {
       rec.Deserialize(ptr);
-      status = flat_rec.Write(std::string_view(rec.key_ptr, rec.key_size));
+      status |= flat_rec.Write(std::string_view(rec.key_ptr, rec.key_size));
+      status |= flat_rec.Write(std::string_view(rec.value_ptr, rec.value_size));
       if (status != Status::SUCCESS) {
-        return status;
-      }
-      status = flat_rec.Write(std::string_view(rec.value_ptr, rec.value_size));
-      if (status != Status::SUCCESS) {
-        return status;
+        break;
       }
       ptr = rec.child;
     }
   }
-  return Status(Status::SUCCESS);
+  status |= file_->Close();
+  status |= RenameFile(export_path, path_);
+  RemoveFile(export_path);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
+    return status;
+  }
+  return file_->Open(path_, true);
 }
 
 void TinyDBMImpl::ProcessImpl(

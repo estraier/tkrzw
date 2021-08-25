@@ -447,24 +447,34 @@ Status StdDBMImpl<STRMAP>::ImportRecords() {
 
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::ExportRecords() {
-  Status status = file_->Truncate(0);
+  Status status = file_->Close();
   if (status != Status::SUCCESS) {
+    return status;
+  }
+  const std::string export_path = path_ + ".tmp.export";
+  status = file_->Open(export_path, true, File::OPEN_TRUNCATE);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
     return status;
   }
   FlatRecord rec(file_.get());
   auto it = map_.begin();
   while (it != map_.end()) {
-    status = rec.Write(it->first);
+    status |= rec.Write(it->first);
+    status |= rec.Write(it->second);
     if (status != Status::SUCCESS) {
-      return status;
-    }
-    status = rec.Write(it->second);
-    if (status != Status::SUCCESS) {
-      return status;
+      break;
     }
     ++it;
   }
-  return Status(Status::SUCCESS);
+  status |= file_->Close();
+  status |= RenameFile(export_path, path_);
+  RemoveFile(export_path);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true);
+    return status;
+  }
+  return file_->Open(path_, true);
 }
 
 template <class STRMAP>
