@@ -644,9 +644,15 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   mod_time_ = GetWallTime() * 1000000;
   Status status(Status::SUCCESS);
   if (hard) {
-    status |= file_->Synchronize(true, record_base_, 0);
+    int64_t record_sync_off = 0;
+    int64_t meta_sync_size = METADATA_SIZE;
+    if (record_base_ >= PAGE_SIZE * 2) {
+      record_sync_off = record_base_ - PAGE_SIZE;
+      meta_sync_size = record_sync_off;
+    }
+    status |= file_->Synchronize(true, record_sync_off, 0);
     status |= SaveMetadata(true);
-    status |= file_->Synchronize(true, 0, record_base_);
+    status |= file_->Synchronize(true, 0, meta_sync_size);
   } else {
     status |= SaveMetadata(true);
     status |= file_->Synchronize(false);

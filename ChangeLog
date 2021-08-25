@@ -4,6 +4,7 @@
 	- Library version: 1.47.0
 
 	- Clean up Makefile.
+	- HashDBM::Synchrhonize syncs the record metadata section properly.
 
 2021-08-23  Mikio Hirabayashi  <hirarin@gmail.com>
 
