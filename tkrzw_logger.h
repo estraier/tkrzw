@@ -37,11 +37,6 @@ namespace tkrzw {
 class Logger {
  public:
   /**
-   * Destructor.
-   */
-  virtual ~Logger() = default;
-
-  /**
    * Enumeration of log levels.
    */
   enum Level : int32_t {
@@ -58,6 +53,25 @@ class Logger {
   };
 
   /**
+   * Constructor.
+   * @param min_level The minimum log level to be stored.
+   */
+  explicit Logger(Level min_level = INFO) : min_level_(min_level) {}
+
+  /**
+   * Destructor.
+   */
+  virtual ~Logger() = default;
+
+  /**
+   * Sets the minimum log level.
+   * @param min_level The minimum log level to be stored.
+   */
+  virtual void SetMinLevel(Level min_level) {
+    min_level_ = min_level;
+  }
+
+  /**
    * Logs a message.
    * @param level The log level.
    * @param message The message to write.
@@ -70,7 +84,35 @@ class Logger {
    * @param format The format string.
    * @param ... The other arguments.
    */
-  virtual void LogF(Level level, const char* format, ...) = 0;
+  virtual void LogF(Level level, const char* format, ...) {
+    if (level < min_level_) {
+      return;
+    }
+    std::string msg;
+    va_list ap;
+    va_start(ap, format);
+    tkrzw::VSPrintF(&msg, format, ap);
+    va_end(ap);
+    Log(level, msg);
+  }
+
+  /**
+   * Logs a message made of substrings.
+   * @param level The log level.
+   * @param first The first substring.
+   * @param rest The rest substrings.
+   */
+  template <typename FIRST, typename... REST>
+  void LogCat(Level level, const FIRST& first, const REST&... rest) {
+    if (level < min_level_) {
+      return;
+    }
+    Log(level, StrCat(first, rest...));
+  }
+
+ protected:
+  /** The minimum log level to be stored. */
+  Level min_level_;
 };
 
 /**
@@ -110,21 +152,13 @@ class BaseLogger : public Logger {
    */
   explicit BaseLogger(Level min_level = INFO, const char* separator = " ",
                       DateFormat date_format = DATE_SIMPLE, int32_t date_td = INT32MIN)
-      : min_level_(min_level), separator_(separator),
+      : Logger(min_level), separator_(separator),
         date_format_(date_format), date_td_(date_td) {}
 
   /**
    * Destructor.
    */
   virtual ~BaseLogger() = default;
-
-  /**
-   * Sets the minimum log level.
-   * @param min_level The minimum log level to be stored.
-   */
-  virtual void SetMinLevel(Level min_level) {
-    min_level_ = min_level;
-  }
 
   /**
    * Sets the separator string between fields.
@@ -222,27 +256,7 @@ class BaseLogger : public Logger {
     WriteProperties(level, message);
   }
 
-  /**
-   * Logs a formatted message.
-   * @param level The log level.
-   * @param format The format string.
-   * @param ... The other arguments.
-   */
-  virtual void LogF(Level level, const char* format, ...) {
-    if (level < min_level_) {
-      return;
-    }
-    std::string msg;
-    va_list ap;
-    va_start(ap, format);
-    tkrzw::VSPrintF(&msg, format, ap);
-    va_end(ap);
-    WriteProperties(level, msg);
-  }
-
  protected:
-  /** The minimum log level to be stored. */
-  Level min_level_;
   /** The separator between fields. */
   std::string_view separator_;
   /** The date format. */
@@ -260,8 +274,17 @@ class StreamLogger : public BaseLogger {
    * Constructor.
    * @param stream The pointer to the output stream.  The ownership is not taken.  If it is
    * nullptr, logging is not done.
+   * @param min_level The minimum log level to be stored.
+   * @param separator The separator string between fields.
+   * @param date_format The date format.
+   * @param date_td the time difference of the timze zone.  If it is INT32MIN, the local time
+   * zone is specified.
    */
-  explicit StreamLogger(std::ostream* stream = nullptr) : stream_(stream), mutex_() {}
+  explicit StreamLogger(std::ostream* stream = nullptr,
+                        Level min_level = INFO, const char* separator = " ",
+                        DateFormat date_format = DATE_SIMPLE, int32_t date_td = INT32MIN)
+      : BaseLogger(min_level, separator, date_format, date_td),
+        stream_(stream), mutex_() {}
 
   /**
    * Destructor.
@@ -296,10 +319,6 @@ class StreamLogger : public BaseLogger {
   /** The mutex for the stream. */
   SpinMutex mutex_;
 };
-
-
-
-
 
 }  // namespace tkrzw
 
