@@ -40,16 +40,18 @@ class Logger {
    * Enumeration of log levels.
    */
   enum Level : int32_t {
+    /** No log is recorded. */
+    NONE = 0,
     /** For data only for debugging. */
-    DEBUG = 0,
+    DEBUG = 1,
     /** For data informative for normal operations. */
-    INFO = 1,
+    INFO = 2,
     /** For issues which potentially cause application oddities. */
-    WARN = 2,
+    WARN = 3,
     /** For errors which should be fixed. */
-    ERROR = 3,
+    ERROR = 4,
     /** For critical errors which immediately stop the service. */
-    FATAL = 4,
+    FATAL = 5,
   };
 
   /**
@@ -68,7 +70,7 @@ class Logger {
    * @param min_level The minimum log level to be stored.
    */
   virtual void SetMinLevel(Level min_level) {
-    min_level_ = min_level;
+    min_level_ = min_level == NONE ? static_cast<Level>(INT32MAX) : min_level;
   }
 
   /**
@@ -108,6 +110,30 @@ class Logger {
       return;
     }
     Log(level, StrCat(first, rest...));
+  }
+
+  /**
+   * Parses a string to get an enum of log levels.
+   * @param The string to parse
+   * @return The result enum of log levels.
+   */
+  static Level ParseLevelStr(std::string_view str) {
+    if (StrCaseCompare(str, "debug") == 0) {
+      return DEBUG;
+    }
+    if (StrCaseCompare(str, "info") == 0) {
+      return INFO;
+    }
+    if (StrCaseCompare(str, "warn") == 0) {
+      return WARN;
+    }
+    if (StrCaseCompare(str, "error") == 0) {
+      return ERROR;
+    }
+    if (StrCaseCompare(str, "fatal") == 0) {
+      return FATAL;
+    }
+    return NONE;
   }
 
  protected:
@@ -254,6 +280,39 @@ class BaseLogger : public Logger {
       return;
     }
     WriteProperties(level, message);
+  }
+
+  /**
+   * Parses a string to get an enum of date formats.
+   * @param The string to parse
+   * @return The result enum of date formats.
+   */
+  static DateFormat ParseDateFormatStr(std::string_view str) {
+    if (str.size() > 5 && StrCaseCompare(str.substr(0, 5), "date_") == 0) {
+      str = str.substr(5);
+    }
+    if (StrCaseCompare(str, "simple") == 0) {
+      return DATE_SIMPLE;
+    }
+    if (StrCaseCompare(str, "simple_micro") == 0) {
+      return DATE_SIMPLE_MICRO;
+    }
+    if (StrCaseCompare(str, "w3cdtf") == 0) {
+      return DATE_W3CDTF;
+    }
+    if (StrCaseCompare(str, "w3cdtf_micro") == 0) {
+      return DATE_W3CDTF_MICRO;
+    }
+    if (StrCaseCompare(str, "rfc1123") == 0) {
+      return DATE_RFC1123;
+    }
+    if (StrCaseCompare(str, "epoch") == 0) {
+      return DATE_EPOCH;
+    }
+    if (StrCaseCompare(str, "epoch_micro") == 0) {
+      return DATE_EPOCH_MICRO;
+    }
+    return DATE_NONE;
   }
 
  protected:

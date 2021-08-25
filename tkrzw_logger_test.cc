@@ -62,6 +62,40 @@ TEST(LoggerTest, Basic) {
   logger.Log(tkrzw::Logger::ERROR, "error");
   EXPECT_TRUE(out1.str().empty());
   EXPECT_TRUE(out2.str().empty());
+  tkrzw::StreamLogger logger2(&out1, tkrzw::Logger::NONE, "|",
+                              tkrzw::BaseLogger::DATE_NONE, 0);
+  logger.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  EXPECT_TRUE(out1.str().empty());
+  logger2.SetMinLevel(tkrzw::Logger::FATAL);
+  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  EXPECT_EQ("[FATAL]|hopstep", tkrzw::StrStripLine(out1.str()));
+}
+
+TEST(LoggerTest, ParseLevelStr) {
+  EXPECT_EQ(tkrzw::Logger::NONE, tkrzw::Logger::ParseLevelStr(""));
+  EXPECT_EQ(tkrzw::Logger::DEBUG, tkrzw::Logger::ParseLevelStr("debug"));
+  EXPECT_EQ(tkrzw::Logger::INFO, tkrzw::Logger::ParseLevelStr("INFO"));
+  EXPECT_EQ(tkrzw::Logger::WARN, tkrzw::Logger::ParseLevelStr("Warn"));
+  EXPECT_EQ(tkrzw::Logger::ERROR, tkrzw::Logger::ParseLevelStr("error"));
+  EXPECT_EQ(tkrzw::Logger::FATAL, tkrzw::Logger::ParseLevelStr("FATAL"));
+}
+
+TEST(LoggerTest, ParseDateFormatStr) {
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_NONE, tkrzw::BaseLogger::ParseDateFormatStr(""));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_SIMPLE,
+            tkrzw::BaseLogger::ParseDateFormatStr("date_simple"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_SIMPLE_MICRO,
+            tkrzw::BaseLogger::ParseDateFormatStr("simple_micro"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_W3CDTF,
+            tkrzw::BaseLogger::ParseDateFormatStr("DATE_W3CDTF"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_W3CDTF_MICRO,
+            tkrzw::BaseLogger::ParseDateFormatStr("W3CDTF_MICRO"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_RFC1123,
+            tkrzw::BaseLogger::ParseDateFormatStr("RFC1123"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_EPOCH,
+            tkrzw::BaseLogger::ParseDateFormatStr("epoch"));
+  EXPECT_EQ(tkrzw::BaseLogger::DATE_EPOCH_MICRO,
+            tkrzw::BaseLogger::ParseDateFormatStr("DATE_epoch_MICRO"));
 }
 
 // END OF FILE
