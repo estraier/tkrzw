@@ -81,6 +81,21 @@ inline Status PWriteSequence(int32_t fd, int64_t off, const void* buf, size_t si
   return Status(Status::SUCCESS);
 }
 
+/**
+ * Truncates the file of a file descriptor.
+ * @param fd The file descriptor.
+ * @param length The new length of the file.
+ * @return The result status.
+ */
+inline Status TruncateFile(int32_t fd, int64_t length) {
+  while (ftruncate(fd, length) != 0) {
+    if (errno != EINTR) {
+      return GetErrnoStatus("ftruncate", errno);
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
 }  // namespace tkrzw
 
 #endif  // _TKRZW_SYS_UTIL_POSIX_H

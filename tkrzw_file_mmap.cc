@@ -28,6 +28,7 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_sys_util_posix.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {
@@ -159,8 +160,8 @@ Status MemoryMapParallelFileImpl::Open(
     map_size = std::max(map_size, alloc_init_size_);
     map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
-    if (ftruncate(fd, map_size) != 0) {
-      const Status status = GetErrnoStatus("ftruncate", errno);
+    const Status status = TruncateFile(fd, map_size);
+    if (status != Status::SUCCESS) {
       close(fd);
       return status;
     }
@@ -200,8 +201,8 @@ Status MemoryMapParallelFileImpl::Close() {
   }
 
   // Truncates the file.
-  if (writable_ && ftruncate(fd_, file_size_.load()) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
+  if (writable_) {
+    status |= TruncateFile(fd_, file_size_.load());
   }
 
   // Unlocks the file.
@@ -261,8 +262,9 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   AdviseMemoryRandomAccessPattern(new_map, new_map_size);
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
-  if (ftruncate(fd_, new_map_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  const Status status = TruncateFile(fd_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   file_size_.store(size);
   return Status(Status::SUCCESS);
@@ -287,11 +289,8 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
-  Status status(Status::SUCCESS);
   map_size_.store(file_size_.load());
-  if (ftruncate(fd_, map_size_.load()) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
-  }
+  Status status = TruncateFile(fd_, map_size_.load());
   if (hard) {
     if (size == 0) {
       size = map_size_;
@@ -392,12 +391,13 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_.load() * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
   new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
-  if (ftruncate(fd_, new_map_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  Status status = TruncateFile(fd_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
   if (new_map == MAP_FAILED) {
-    const Status status = GetErrnoStatus("mremap", errno);
+    status = GetErrnoStatus("mremap", errno);
     map_ = nullptr;
     close(fd_);
     fd_ = -1;
@@ -735,8 +735,8 @@ Status MemoryMapAtomicFileImpl::Open(
     map_size = std::max(map_size, alloc_init_size_);
     map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
-    if (ftruncate(fd, map_size) != 0) {
-      const Status status = GetErrnoStatus("ftruncate", errno);
+    const Status status = TruncateFile(fd, map_size);
+    if (status != Status::SUCCESS) {
       close(fd);
       return status;
     }
@@ -777,8 +777,8 @@ Status MemoryMapAtomicFileImpl::Close() {
   }
 
   // Truncates the file.
-  if (writable_ && ftruncate(fd_, file_size_) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
+  if (writable_) {
+    status |= TruncateFile(fd_, file_size_);
   }
 
   // Unlocks the file.
@@ -838,8 +838,9 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   }
   map_ = static_cast<char*>(new_map);
   map_size_ = new_map_size;
-  if (ftruncate(fd_, new_map_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  const Status status = TruncateFile(fd_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   file_size_ = size;
   return Status(Status::SUCCESS);
@@ -865,11 +866,8 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  Status status(Status::SUCCESS);
   map_size_ = file_size_;
-  if (ftruncate(fd_, map_size_) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
-  }
+  Status status = TruncateFile(fd_, map_size_);
   if (hard) {
     if (size == 0) {
       size = map_size_;
@@ -973,12 +971,13 @@ Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_ * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
   new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
-  if (ftruncate(fd_, new_map_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  Status status = TruncateFile(fd_, new_map_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
   if (new_map == MAP_FAILED) {
-    const Status status = GetErrnoStatus("mremap", errno);
+    status = GetErrnoStatus("mremap", errno);
     map_ = nullptr;
     close(fd_);
     fd_ = -1;

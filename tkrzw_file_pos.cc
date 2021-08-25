@@ -189,8 +189,8 @@ Status PositionalParallelFileImpl::Open(const std::string& path, bool writable, 
   if (writable) {
     trunc_size = std::max(trunc_size, alloc_init_size_);
     trunc_size = AlignNumber(trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-    if (ftruncate(fd, trunc_size) != 0) {
-      const Status status = GetErrnoStatus("ftruncate", errno);
+    const Status status = TruncateFile(fd, trunc_size);
+    if (status != Status::SUCCESS) {
       close(fd);
       return status;
     }
@@ -243,9 +243,7 @@ Status PositionalParallelFileImpl::Close() {
     if (access_options_ & PositionalFile::ACCESS_PADDING) {
       trunc_size = AlignNumber(trunc_size, block_size_);
     }
-    if (ftruncate(fd_, trunc_size) != 0) {
-      status |= GetErrnoStatus("ftruncate", errno);
-    }
+    status |= TruncateFile(fd_, trunc_size);
   }
 
   // Unlocks the file.
@@ -358,11 +356,10 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  if (ftruncate(fd_, new_trunc_size) == 0) {
+  status |= TruncateFile(fd_, new_trunc_size);
+  if (status == Status::SUCCESS) {
     file_size_.store(size);
     trunc_size_.store(new_trunc_size);
-  } else {
-    status |= GetErrnoStatus("ftruncate", errno);
   }
   if (page_cache_ != nullptr) {
     page_cache_->SetRegionSize(trunc_size_.load());
@@ -396,9 +393,7 @@ Status PositionalParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t s
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_.store(AlignNumber(file_size_.load(), block_size_));
-  if (ftruncate(fd_, trunc_size_.load()) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
-  }
+  status |= TruncateFile(fd_, trunc_size_.load());
   if (hard) {
     if (size == 0) {
       size = trunc_size_;
@@ -535,8 +530,9 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_trunc_size =
       std::max(min_size, static_cast<int64_t>(trunc_size_.load() * alloc_inc_factor_));
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  if (ftruncate(fd_, new_trunc_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  const Status status = TruncateFile(fd_, new_trunc_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   trunc_size_.store(new_trunc_size);
   if (page_cache_ != nullptr) {
@@ -869,8 +865,8 @@ Status PositionalAtomicFileImpl::Open(const std::string& path, bool writable, in
   if (writable) {
     trunc_size = std::max(trunc_size, alloc_init_size_);
     trunc_size = AlignNumber(trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-    if (ftruncate(fd, trunc_size) != 0) {
-      const Status status = GetErrnoStatus("ftruncate", errno);
+    const Status status = TruncateFile(fd, trunc_size);
+    if (status != Status::SUCCESS) {
       close(fd);
       return status;
     }
@@ -924,9 +920,7 @@ Status PositionalAtomicFileImpl::Close() {
     if (access_options_ & PositionalFile::ACCESS_PADDING) {
       trunc_size = AlignNumber(trunc_size, block_size_);
     }
-    if (ftruncate(fd_, trunc_size) != 0) {
-      status |= GetErrnoStatus("ftruncate", errno);
-    }
+    status |= TruncateFile(fd_, trunc_size);
   }
 
   // Unlocks the file.
@@ -1032,11 +1026,10 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
   int64_t new_trunc_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  if (ftruncate(fd_, new_trunc_size) == 0) {
+  status |= TruncateFile(fd_, new_trunc_size);
+  if (status == Status::SUCCESS) {
     file_size_ = size;
     trunc_size_ = new_trunc_size;
-  } else{
-    status |= GetErrnoStatus("ftruncate", errno);
   }
   if (page_cache_ != nullptr) {
     page_cache_->SetRegionSize(trunc_size_);
@@ -1072,9 +1065,7 @@ Status PositionalAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t siz
     status |= PWriteSequence(fd_, 0, head_buffer_, head_buffer_size_);
   }
   trunc_size_ = AlignNumber(file_size_, block_size_);
-  if (ftruncate(fd_, trunc_size_) != 0) {
-    status |= GetErrnoStatus("ftruncate", errno);
-  }
+  status |= TruncateFile(fd_, trunc_size_);
   if (hard) {
     if (size == 0) {
       size = trunc_size_;
@@ -1216,8 +1207,9 @@ Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   int64_t new_trunc_size =
       std::max(min_size, static_cast<int64_t>(trunc_size_ * alloc_inc_factor_));
   new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
-  if (ftruncate(fd_, new_trunc_size) != 0) {
-    return GetErrnoStatus("ftruncate", errno);
+  const Status status = TruncateFile(fd_, new_trunc_size);
+  if (status != Status::SUCCESS) {
+    return status;
   }
   trunc_size_ = new_trunc_size;
   if (page_cache_ != nullptr) {

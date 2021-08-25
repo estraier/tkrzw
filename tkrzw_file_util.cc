@@ -18,6 +18,7 @@
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_sys_util_posix.h"
 #include "tkrzw_thread_util.h"
 #include "tkrzw_time_util.h"
 
@@ -417,13 +418,12 @@ Status CopyFileData(const std::string& src_path, const std::string& dest_path) {
     close(src_fd);
     return status;
   }
-  if (ftruncate(dest_fd, 0) != 0) {
-    const Status status = GetErrnoStatus("open", errno);
+  Status status = TruncateFile(dest_fd, 0);
+  if (status != Status::SUCCESS) {
     close(src_fd);
     close(dest_fd);
     return status;
   }
-  Status status(Status::SUCCESS);
   if (ioctl(dest_fd, FICLONE, src_fd) != 0) {
     while (file_size > 0) {
       const int64_t sent_size =
