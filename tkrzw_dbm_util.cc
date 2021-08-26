@@ -71,6 +71,8 @@ static void PrintUsageAndDie() {
   P("\n");
   P("Options for the set subcommand:\n");
   P("  --no_overwrite : Fails if there's an existing record wit the same key.\n");
+  P("  --append str : Appends the value at the end after the given delimiter.\n");
+  P("  --incr num : Increments the value with the given initial value.\n");
   P("  --reducer func : Sets the reducer for the skip database:"
     " none, first, second, last, concat, concatnull, concattab, concatline, total."
     " (default: none)\n");
@@ -744,7 +746,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--no_overwrite", 0}, {"--reducer", 1},
+    {"--no_overwrite", 0}, {"--append", 1}, {"--incr", 1}, {"--reducer", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -767,6 +769,8 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
+  const std::string append_delim = GetStringArgument(cmd_args, "--append", 0, "[\xFF|\xFF|\xFF]");
+  const int64_t incr_init = GetIntegerArgument(cmd_args, "--incr", 0, INT64MIN);
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   if (file_path.empty()) {
     Die("The file path must be specified");
@@ -782,11 +786,29 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = false;
-  const Status status = dbm->Set(key, value, !with_no_overwrite);
-  if (status == Status::SUCCESS) {
-    ok = true;
+  if (incr_init != INT64MIN) {
+    int64_t current = 0;
+    const Status status = dbm->Increment(key, StrToInt(value), &current, incr_init);
+    if (status == Status::SUCCESS) {
+      PrintL(current);
+      ok = true;
+    } else {
+      EPrintL("Increment failed: ", status);
+    }
+  } else if (append_delim != "[\xFF|\xFF|\xFF]") {
+    const Status status = dbm->Append(key, value, append_delim);
+    if (status == Status::SUCCESS) {
+      ok = true;
+    } else {
+      EPrintL("Append failed: ", status);
+    }
   } else {
-    EPrintL("Set failed: ", status);
+    const Status status = dbm->Set(key, value, !with_no_overwrite);
+    if (status == Status::SUCCESS) {
+      ok = true;
+    } else {
+      EPrintL("Set failed: ", status);
+    }
   }
   const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(SkipDBM)) {
