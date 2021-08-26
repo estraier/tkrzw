@@ -551,7 +551,7 @@ class SkipDBM final : public DBM {
    * @details Accessing the internal file viorates encapsulation policy.  This should be used
    * only for testing and debugging.
    */
-  const File* GetInternalFile() const;
+  File* GetInternalFile() const;
 
   /**
    * Gets the effective data size.

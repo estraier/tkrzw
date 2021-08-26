@@ -5,11 +5,11 @@
 #================================================================
 
 # Package name
-AC_INIT([tkrzw], [1.0.4])
+AC_INIT([tkrzw], [1.0.5])
 
 # Package information
 MYLIBVER=1
-MYLIBREV=47
+MYLIBREV=48
 MYLIBFMT=0
 
 # Targets

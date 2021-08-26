@@ -68,6 +68,7 @@ class TinyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  File* GetInternalFile() const;
 
  private:
   void CancelIterators();
@@ -436,6 +437,10 @@ bool TinyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> TinyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TinyDBM>(file_->MakeFile(), num_buckets_);
+}
+
+File* TinyDBMImpl::GetInternalFile() const {
+  return file_.get();
 }
 
 void TinyDBMImpl::CancelIterators() {
@@ -840,6 +845,10 @@ std::unique_ptr<DBM::Iterator> TinyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> TinyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+File* TinyDBM::GetInternalFile() const {
+  return impl_->GetInternalFile();
 }
 
 TinyDBM::Iterator::Iterator(TinyDBMImpl* dbm_impl) {

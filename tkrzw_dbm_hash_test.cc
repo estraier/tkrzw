@@ -1470,7 +1470,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
             file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-        tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        tkrzw::File* file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
@@ -1503,7 +1503,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
         tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_SYNC;
@@ -1526,7 +1526,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
-        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
         tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
@@ -1572,7 +1572,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
-        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Expand(256 * 1024));
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
@@ -1588,7 +1588,7 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         tuning_params.num_buckets = 1;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-        file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+        file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
         char bucket_buf[4];
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(128, bucket_buf, 4));

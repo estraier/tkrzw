@@ -104,6 +104,7 @@ class CacheDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  File* GetInternalFile() const;
   int64_t GetEffectiveDataSize();
   int64_t GetMemoryUsage();
 
@@ -755,6 +756,10 @@ std::unique_ptr<DBM> CacheDBMImpl::MakeDBM() {
   return std::make_unique<CacheDBM>(file_->MakeFile(), cap_rec_num_, cap_mem_size_);
 }
 
+File* CacheDBMImpl::GetInternalFile() const {
+  return file_.get();
+}
+
 int64_t CacheDBMImpl::GetEffectiveDataSize() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   int64_t eff_data_size = 0;
@@ -1046,6 +1051,10 @@ std::unique_ptr<DBM::Iterator> CacheDBM::MakeIterator() {
 
 std::unique_ptr<DBM> CacheDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+File* CacheDBM::GetInternalFile() const {
+  return impl_->GetInternalFile();
 }
 
 int64_t CacheDBM::GetEffectiveDataSize() {

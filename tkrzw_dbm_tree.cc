@@ -129,7 +129,7 @@ class TreeDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
-  const File* GetInternalFile();
+  File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
   int32_t GetDatabaseType();
@@ -895,7 +895,7 @@ std::unique_ptr<DBM> TreeDBMImpl::MakeDBM() {
   return std::make_unique<TreeDBM>(hash_dbm_->GetInternalFile()->MakeFile());
 }
 
-const File* TreeDBMImpl::GetInternalFile() {
+File* TreeDBMImpl::GetInternalFile() {
   return hash_dbm_->GetInternalFile();
 }
 
@@ -2421,7 +2421,7 @@ std::unique_ptr<DBM> TreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
 }
 
-const File* TreeDBM::GetInternalFile() const {
+File* TreeDBM::GetInternalFile() const {
   return impl_->GetInternalFile();
 }
 

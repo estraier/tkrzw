@@ -232,4 +232,24 @@ TEST_F(BabyDBMTest, Comparator) {
   }
 }
 
+TEST_F(BabyDBMTest, GetInternalFile) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::BabyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set("one", "first"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set("two", "second"));
+  tkrzw::File* file = dbm.GetInternalFile();
+  EXPECT_EQ(0, file->GetSizeSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Open(file_path, true));
+  EXPECT_EQ(2, dbm.CountSimple());
+  EXPECT_EQ("first", dbm.GetSimple("one"));
+  EXPECT_EQ("second", dbm.GetSimple("two"));
+  const int64_t file_size = file->GetSizeSimple();
+  EXPECT_GT(file_size, 0);
+  EXPECT_EQ(dbm.GetFileSizeSimple(), file_size);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
 // END OF FILE

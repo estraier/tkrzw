@@ -338,6 +338,14 @@ class BabyDBM final : public DBM {
   std::unique_ptr<DBM> MakeDBM() const override;
 
   /**
+   * Gets the pointer to the internal file object.
+   * @return The pointer to the internal file object.
+   * @details Accessing the internal file viorates encapsulation policy.  This should be used
+   * only for testing and debugging.
+   */
+  File* GetInternalFile() const;
+
+  /**
    * Gets the comparator of record keys.
    * @return the key comparator function, or nullptr on failure.
    */

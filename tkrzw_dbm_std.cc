@@ -54,6 +54,7 @@ class StdDBMImpl {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  File* GetInternalFile() const;
 
  private:
   void CancelIterators();
@@ -407,6 +408,11 @@ std::unique_ptr<DBM> StdDBMImpl<StringHashMap>::MakeDBM() {
 }
 
 template <class STRMAP>
+File* StdDBMImpl<STRMAP>::GetInternalFile() const {
+  return file_.get();
+}
+
+template <class STRMAP>
 void StdDBMImpl<STRMAP>::CancelIterators() {
   for (auto* iterator : iterators_) {
     iterator->it_ = map_.end();
@@ -753,6 +759,10 @@ std::unique_ptr<DBM> StdHashDBM::MakeDBM() const {
   return impl_->MakeDBM();
 }
 
+File* StdHashDBM::GetInternalFile() const {
+  return impl_->GetInternalFile();
+}
+
 StdHashDBM::Iterator::Iterator(StdHashDBMImpl* dbm_impl) {
   impl_ = new StdHashDBMIteratorImpl(dbm_impl);
 }
@@ -895,6 +905,10 @@ std::unique_ptr<DBM::Iterator> StdTreeDBM::MakeIterator() {
 
 std::unique_ptr<DBM> StdTreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+File* StdTreeDBM::GetInternalFile() const {
+  return impl_->GetInternalFile();
 }
 
 StdTreeDBM::Iterator::Iterator(StdTreeDBMImpl* dbm_impl) {

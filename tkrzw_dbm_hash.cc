@@ -110,7 +110,7 @@ class HashDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
-  const File* GetInternalFile();
+  File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
   int32_t GetDatabaseType();
@@ -745,7 +745,7 @@ std::unique_ptr<DBM> HashDBMImpl::MakeDBM() {
   return std::make_unique<HashDBM>(file_->MakeFile());
 }
 
-const File* HashDBMImpl::GetInternalFile() {
+File* HashDBMImpl::GetInternalFile() {
   return file_.get();
 }
 
@@ -2305,7 +2305,7 @@ std::unique_ptr<DBM> HashDBM::MakeDBM() const {
   return impl_->MakeDBM();
 }
 
-const File* HashDBM::GetInternalFile() const {
+File* HashDBM::GetInternalFile() const {
   return impl_->GetInternalFile();
 }
 

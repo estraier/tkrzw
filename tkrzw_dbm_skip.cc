@@ -95,7 +95,7 @@ class SkipDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
-  const File* GetInternalFile();
+  File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
   int32_t GetDatabaseType();
@@ -837,7 +837,7 @@ std::unique_ptr<DBM> SkipDBMImpl::MakeDBM() {
   return std::make_unique<SkipDBM>(file_->MakeFile());
 }
 
-const File* SkipDBMImpl::GetInternalFile() {
+File* SkipDBMImpl::GetInternalFile() {
   return file_.get();
 }
 
@@ -1750,7 +1750,7 @@ std::unique_ptr<DBM> SkipDBM::MakeDBM() const {
   return impl_->MakeDBM();
 }
 
-const File* SkipDBM::GetInternalFile() const {
+File* SkipDBM::GetInternalFile() const {
   return impl_->GetInternalFile();
 }
 

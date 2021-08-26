@@ -701,7 +701,7 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
-  tkrzw::File* file = const_cast<tkrzw::File*>(dbm->GetInternalFile());
+  tkrzw::File* file = dbm->GetInternalFile();
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
   auto tmp_file = std::make_unique<tkrzw::MemoryMapParallelFile>();

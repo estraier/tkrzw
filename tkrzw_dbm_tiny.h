@@ -347,6 +347,14 @@ class TinyDBM final : public DBM {
    */
   std::unique_ptr<DBM> MakeDBM() const override;
 
+  /**
+   * Gets the pointer to the internal file object.
+   * @return The pointer to the internal file object.
+   * @details Accessing the internal file viorates encapsulation policy.  This should be used
+   * only for testing and debugging.
+   */
+  File* GetInternalFile() const;
+
  private:
   /** Pointer to the actual implementation. */
   TinyDBMImpl* impl_;

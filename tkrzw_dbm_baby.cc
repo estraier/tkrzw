@@ -139,6 +139,7 @@ class BabyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  File* GetInternalFile() const;
   KeyComparator GetKeyComparator();
 
  private:
@@ -570,6 +571,10 @@ bool BabyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> BabyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<BabyDBM>(file_->MakeFile());
+}
+
+File* BabyDBMImpl::GetInternalFile() const {
+  return file_.get();
 }
 
 KeyComparator BabyDBMImpl::GetKeyComparator() {
@@ -1442,6 +1447,10 @@ std::unique_ptr<DBM::Iterator> BabyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> BabyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+File* BabyDBM::GetInternalFile() const {
+  return impl_->GetInternalFile();
 }
 
 KeyComparator BabyDBM::GetKeyComparator() const {
