@@ -58,7 +58,8 @@ class Logger {
    * Constructor.
    * @param min_level The minimum log level to be stored.
    */
-  explicit Logger(Level min_level = INFO) : min_level_(min_level) {}
+  explicit Logger(Level min_level = INFO)
+      : min_level_(min_level == NONE ? static_cast<Level>(INT32MAX) : min_level) {}
 
   /**
    * Destructor.
@@ -71,6 +72,14 @@ class Logger {
    */
   virtual void SetMinLevel(Level min_level) {
     min_level_ = min_level == NONE ? static_cast<Level>(INT32MAX) : min_level;
+  }
+
+  /**
+   * Checks whether a log level is worth storing.
+   * @return True if the log level is worth storing.
+   */
+  virtual bool CheckLevel(Level level) const {
+    return level >= min_level_;
   }
 
   /**

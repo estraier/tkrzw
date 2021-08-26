@@ -31,6 +31,8 @@ int main(int argc, char** argv) {
 TEST(LoggerTest, Basic) {
   std::stringstream out1, out2;
   tkrzw::StreamLogger logger(&out1);
+  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::DEBUG));
+  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::INFO));
   logger.Log(tkrzw::Logger::DEBUG, "debug");
   logger.Log(tkrzw::Logger::INFO, "info");
   logger.LogF(tkrzw::Logger::WARN, "warn: %d", 123);
@@ -45,6 +47,8 @@ TEST(LoggerTest, Basic) {
   logger.SetMinLevel(tkrzw::Logger::ERROR);
   logger.SetSeparator(" | ");
   logger.SetDateFormat(tkrzw::BaseLogger::DATE_W3CDTF_MICRO, 0);
+  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::INFO));
+  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::ERROR));
   logger.Log(tkrzw::Logger::DEBUG, "debug");
   logger.Log(tkrzw::Logger::INFO, "info");
   logger.LogF(tkrzw::Logger::WARN, "warn: %d", 123);
@@ -64,7 +68,11 @@ TEST(LoggerTest, Basic) {
   EXPECT_TRUE(out2.str().empty());
   tkrzw::StreamLogger logger2(&out1, tkrzw::Logger::NONE, "|",
                               tkrzw::BaseLogger::DATE_NONE, 0);
-  logger.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::FATAL));
+  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  logger.SetMinLevel(tkrzw::Logger::NONE);
+  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::FATAL));
+  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
   EXPECT_TRUE(out1.str().empty());
   logger2.SetMinLevel(tkrzw::Logger::FATAL);
   logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
