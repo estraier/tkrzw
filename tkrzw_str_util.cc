@@ -1126,6 +1126,17 @@ std::string StrStripLine(std::string_view str) {
   return std::string(str.data(), size);
 }
 
+void StrStripLine(std::string* str) {
+  assert(str != nullptr);
+  while (!str->empty()) {
+    const int32_t c = str->back();
+    if (c != '\r' && c != '\n') {
+      break;
+    }
+    str->resize(str->size() - 1);
+  }
+}
+
 std::string StrSqueezeAndStripSpace(std::string_view str) {
   std::string converted;
   converted.reserve(str.size());

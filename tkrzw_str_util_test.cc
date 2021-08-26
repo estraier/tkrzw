@@ -600,6 +600,12 @@ TEST(StrUtilTest, StrStripLine) {
   EXPECT_EQ("ABC", tkrzw::StrStripLine("ABC\r"));
   EXPECT_EQ(" ABC ", tkrzw::StrStripLine(" ABC \r"));
   EXPECT_EQ("", tkrzw::StrStripLine("\n\r"));
+  std::string str(" hello \r\n\r\n");
+  tkrzw::StrStripLine(&str);
+  EXPECT_EQ(" hello ", str);
+  str = "\r\n";
+  tkrzw::StrStripLine(&str);
+  EXPECT_EQ("", str);
 }
 
 TEST(StrUtilTest, StrSqueezeAndStripSpace) {

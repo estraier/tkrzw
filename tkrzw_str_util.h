@@ -499,6 +499,12 @@ std::string StrStripSpace(std::string_view str);
 std::string StrStripLine(std::string_view str);
 
 /**
+ * Remove linefeed characters from the end of a string in-place.
+ * @param str The string to modify.
+ */
+void StrStripLine(std::string* str);
+
+/**
  * Squeezes space characters in a string and removes spaces at both ends.
  * @param str The string to convert.
  * @return The converted string.
