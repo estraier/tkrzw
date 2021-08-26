@@ -97,7 +97,7 @@ TEST(LoggerTest, ParseDateFormatStr) {
   EXPECT_EQ(tkrzw::BaseLogger::DATE_W3CDTF,
             tkrzw::BaseLogger::ParseDateFormatStr("DATE_W3CDTF"));
   EXPECT_EQ(tkrzw::BaseLogger::DATE_W3CDTF_MICRO,
-            tkrzw::BaseLogger::ParseDateFormatStr("W3CDTF_MICRO"));
+            tkrzw::BaseLogger::ParseDateFormatStr("W3CDTF-MICRO"));
   EXPECT_EQ(tkrzw::BaseLogger::DATE_RFC1123,
             tkrzw::BaseLogger::ParseDateFormatStr("RFC1123"));
   EXPECT_EQ(tkrzw::BaseLogger::DATE_EPOCH,

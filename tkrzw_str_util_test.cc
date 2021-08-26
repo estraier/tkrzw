@@ -310,11 +310,23 @@ TEST(StrUtilTest, StrSplit) {
 TEST(StrUtilTest, StrUpperCase) {
   EXPECT_EQ("[I LOVE YOU.]", tkrzw::StrUpperCase("[i love you.]"));
   EXPECT_EQ("AあいうえおZ", tkrzw::StrUpperCase("aあいうえおz"));
+  std::string str = "[i love you.]";
+  tkrzw::StrUpperCase(&str);
+  EXPECT_EQ("[I LOVE YOU.]", str);
+  str = "aあいうえおz";
+  tkrzw::StrUpperCase(&str);
+  EXPECT_EQ("AあいうえおZ", str);
 }
 
 TEST(StrUtilTest, StrLowerCase) {
   EXPECT_EQ("[i love you.]", tkrzw::StrLowerCase("[I LOVE YOU.]"));
   EXPECT_EQ("aあいうえおz", tkrzw::StrLowerCase("AあいうえおZ"));
+  std::string str = "[I LOVE YOU.]";
+  tkrzw::StrLowerCase(&str);
+  EXPECT_EQ("[i love you.]", str);
+  str = "AあいうえおZ";
+  tkrzw::StrLowerCase(&str);
+  EXPECT_EQ("aあいうえおz", str);
 }
 
 TEST(StrUtilTest, StrReplace) {
@@ -328,6 +340,21 @@ TEST(StrUtilTest, StrReplace) {
   EXPECT_EQ("abcabc", tkrzw::StrReplace("abcabc", "abcdefg", "x"));
   EXPECT_EQ("abcabc", tkrzw::StrReplace("abcabc", "", "x"));
   EXPECT_EQ("あいxえお", tkrzw::StrReplace("あいうえお", "う", "x"));
+}
+
+TEST(StrUtilTest, StrReplaceCharacters) {
+  std::string str;
+  tkrzw::StrReplaceCharacters(&str, "", "");
+  EXPECT_EQ("", str);
+  str = "abcde";
+  tkrzw::StrReplaceCharacters(&str, "bcd", "BCD");
+  EXPECT_EQ("aBCDe", str);
+  str = "abcde";
+  tkrzw::StrReplaceCharacters(&str, "bcd", "BD");
+  EXPECT_EQ("aBDe", str);
+  str = "あAいBうCえDお";
+  tkrzw::StrReplaceCharacters(&str, "ABCD", "ab");
+  EXPECT_EQ("あaいbうえお", str);
 }
 
 TEST(StrUtilTest, StrContains) {

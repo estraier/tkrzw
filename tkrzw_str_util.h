@@ -289,11 +289,23 @@ std::map<std::string, std::string> StrSplitIntoMap(
 std::string StrUpperCase(std::string_view str);
 
 /**
+ * Converts letters of a string into upper case in-place.
+ * @param str The pointer to the string to modify.
+ */
+void StrUpperCase(std::string* str);
+
+/**
  * Converts letters of a string into lower case.
  * @param str The string to convert.
  * @return The converted string.
  */
 std::string StrLowerCase(std::string_view str);
+
+/**
+ * Converts letters of a string into lower case in-place.
+ * @param str The pointer to the string to modify.
+ */
+void StrLowerCase(std::string* str);
 
 /**
  * Converts a string by replacing substrings to diffent substrings.
@@ -303,6 +315,15 @@ std::string StrLowerCase(std::string_view str);
  * @return The converted string.
  */
 std::string StrReplace(std::string_view str, std::string_view before, std::string_view after);
+
+/**
+ * Modifies a string by replacing characters to diffent characters in-place.
+ * @param str The pointer to the string to modify.
+ * @param before The characters to remove.
+ * @param after The characters to insert.  The character at the same index as the index of the
+ * before character is used.  If there's no counterpart, no character is inserted.
+ */
+void StrReplaceCharacters(std::string* str, std::string_view before, std::string_view after);
 
 /**
  * Checks whether a text contains a pattern.
@@ -500,7 +521,7 @@ std::string StrStripLine(std::string_view str);
 
 /**
  * Remove linefeed characters from the end of a string in-place.
- * @param str The string to modify.
+ * @param str The pointer to the string to modify.
  */
 void StrStripLine(std::string* str);
 

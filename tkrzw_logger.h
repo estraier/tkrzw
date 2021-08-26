@@ -301,25 +301,27 @@ class BaseLogger : public Logger {
     if (str.size() > 5 && StrCaseCompare(str.substr(0, 5), "date_") == 0) {
       str = str.substr(5);
     }
-    if (StrCaseCompare(str, "simple") == 0) {
+    std::string norm_str = StrLowerCase(str);
+    StrReplaceCharacters(&norm_str, "-_", "");
+    if (norm_str == "simple") {
       return DATE_SIMPLE;
     }
-    if (StrCaseCompare(str, "simple_micro") == 0) {
+    if (norm_str == "simplemicro") {
       return DATE_SIMPLE_MICRO;
     }
-    if (StrCaseCompare(str, "w3cdtf") == 0) {
+    if (norm_str == "w3cdtf") {
       return DATE_W3CDTF;
     }
-    if (StrCaseCompare(str, "w3cdtf_micro") == 0) {
+    if (norm_str == "w3cdtfmicro") {
       return DATE_W3CDTF_MICRO;
     }
-    if (StrCaseCompare(str, "rfc1123") == 0) {
+    if (norm_str == "rfc1123") {
       return DATE_RFC1123;
     }
-    if (StrCaseCompare(str, "epoch") == 0) {
+    if (norm_str == "epoch") {
       return DATE_EPOCH;
     }
-    if (StrCaseCompare(str, "epoch_micro") == 0) {
+    if (norm_str == "epochmicro") {
       return DATE_EPOCH_MICRO;
     }
     return DATE_NONE;

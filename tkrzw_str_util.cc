@@ -552,6 +552,16 @@ std::string StrUpperCase(std::string_view str) {
   return converted;
 }
 
+void StrUpperCase(std::string* str) {
+  assert(str != nullptr);
+  for (auto it = str->begin(); it != str->end(); ++it) {
+    int32_t c = *it;
+    if (c >= 'a' && c <= 'z') {
+      *it = c - ('a' - 'A');
+    }
+  }
+}
+
 std::string StrLowerCase(std::string_view str) {
   std::string converted;
   converted.reserve(str.size());
@@ -562,6 +572,16 @@ std::string StrLowerCase(std::string_view str) {
     converted.push_back(c);
   }
   return converted;
+}
+
+void StrLowerCase(std::string* str) {
+  assert(str != nullptr);
+  for (auto it = str->begin(); it != str->end(); ++it) {
+    int32_t c = *it;
+    if (c >= 'A' && c <= 'Z') {
+      *it = c + ('a' - 'A');
+    }
+  }
 }
 
 std::string StrReplace(std::string_view str, std::string_view before, std::string_view after) {
@@ -592,6 +612,26 @@ std::string StrReplace(std::string_view str, std::string_view before, std::strin
     result.append(str.substr(i));
   }
   return result;
+}
+
+void StrReplaceCharacters(std::string* str, std::string_view before, std::string_view after) {
+  size_t out_size = 0;
+  for (size_t in_size = 0; in_size < str->size(); in_size++) {
+    const char c = (*str)[in_size];
+    size_t match_index = std::string::npos;
+    for (size_t i = 0; i < before.size(); i++) {
+      if (c == before[i]) {
+        match_index = i;
+        break;
+      }
+    }
+    if (match_index == std::string::npos) {
+      (*str)[out_size++] = c;
+    } else if (match_index < after.size()) {
+      (*str)[out_size++] = after[match_index];
+    }
+  }
+  str->resize(out_size);
 }
 
 bool StrContains(std::string_view text, std::string_view pattern) {
