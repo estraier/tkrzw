@@ -134,6 +134,7 @@ class HashDBMImpl final {
   Status ImportFromFileBackward(
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset);
+  Status ValidateHashBuckets();
   Status ValidateRecords(int64_t record_base, int64_t end_offset);
   Status CheckZeroRegion(int64_t offset, int64_t end_offset);
   Status CheckHashChain(int64_t offset, const HashRecord& rec, int64_t bucket_index);
@@ -166,6 +167,7 @@ class HashDBMImpl final {
       File* file, bool skip_broken_records,
       int64_t record_base, int64_t end_offset,
       const std::string& offset_path, const std::string& dead_path);
+  Status ValidateHashBucketsImpl();
   Status ValidateRecordsImpl(int64_t record_base, int64_t end_offset,
                              int64_t* null_end_offset, int64_t* count, int64_t* eff_data_size);
 
@@ -277,7 +279,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-               file_size_ == act_file_size) {
+               file_size_ == act_file_size && ValidateHashBucketsImpl() == Status::SUCCESS) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
@@ -961,6 +963,14 @@ Status HashDBMImpl::ImportFromFileBackward(
   }
   return ImportFromFileBackwardImpl(file, skip_broken_records, record_base, end_offset,
                                     offset_path, dead_path);
+}
+
+Status HashDBMImpl::ValidateHashBuckets() {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return ValidateHashBucketsImpl();
 }
 
 Status HashDBMImpl::ValidateRecords(int64_t record_base, int64_t end_offset) {
@@ -1966,6 +1976,62 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
   return status;
 }
 
+Status HashDBMImpl::ValidateHashBucketsImpl() {
+  Status status(Status::SUCCESS);
+  const int64_t batch_capacity = std::min<int64_t>(num_buckets_, 32 * 1024 * 1024);
+  struct Bucket {
+    int64_t index;
+    int64_t offset;
+  };
+  Bucket* batch = new Bucket[batch_capacity];
+  int64_t batch_size = 0;
+  auto ProcessBatch =
+      [&]() {
+        std::sort(batch, batch + batch_size,
+                  [](const Bucket& a, const Bucket& b) {
+                    return a.offset < b.offset;
+                  });
+        HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+        for (int64_t i = 0; i < batch_size; i++) {
+          const auto& bucket = batch[i];
+          status |= rec.ReadMetadataKey(bucket.offset, HashDBM::DEFAULT_MIN_READ_SIZE);
+          if (status != Status::SUCCESS) {
+            break;
+          }
+          if (PrimaryHash(rec.GetKey(), num_buckets_) != static_cast<uint64_t>(bucket.index)) {
+            status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent hash value");
+            break;
+          }
+        }
+        batch_size = 0;
+      };
+  int64_t bucket_index = 0;
+  while (bucket_index < num_buckets_) {
+    int64_t offset = 0;
+    status |= GetBucketValue(bucket_index, &offset);
+    if (status != Status::SUCCESS) {
+      break;
+    }
+    if (offset != 0) {
+      batch[batch_size] = {bucket_index, offset};
+      batch_size++;
+      if (batch_size >= batch_capacity) {
+        ProcessBatch();
+        if (status != Status::SUCCESS) {
+          break;
+        }
+      }
+    }
+    bucket_index++;
+  }
+  if (batch_size > 0 && status == Status::SUCCESS) {
+    ProcessBatch();
+  }
+  delete[] batch;
+  return status;
+}
+
+
 Status HashDBMImpl::ValidateRecordsImpl(
     int64_t record_base, int64_t end_offset,
     int64_t* null_end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
@@ -2394,6 +2460,10 @@ Status HashDBM::ImportFromFileBackward(
     File* file, bool skip_broken_records, int64_t record_base, int64_t end_offset) {
   assert(file != nullptr);
   return impl_->ImportFromFileBackward(file, skip_broken_records, record_base, end_offset);
+}
+
+Status HashDBM::ValidateHashBuckets() {
+  return impl_->ValidateHashBuckets();
 }
 
 Status HashDBM::ValidateRecords(int64_t record_base, int64_t end_offset) {

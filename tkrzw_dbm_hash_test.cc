@@ -1316,12 +1316,14 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", "xxxx"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("y", "yyyy"));
   EXPECT_EQ(2, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ValidateRecords(-1, -1));
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.OpenAdvanced(
       second_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ImportFromFileForward(
       first_file_path, false, -1, 0));
   EXPECT_EQ(1, second_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
   EXPECT_EQ("xxx", second_dbm.GetSimple("x"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Close());
@@ -1337,6 +1339,7 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ImportFromFileBackward(
       first_file_path, false, -1, 0));
   EXPECT_EQ(2, second_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
   EXPECT_EQ("xx", second_dbm.GetSimple("x"));
   EXPECT_EQ("yy", second_dbm.GetSimple("y"));
@@ -1350,6 +1353,7 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ("0123456789", second_dbm.GetOpaqueMetadata().substr(0, 10));
   EXPECT_EQ(tkrzw::HashDBM::UPDATE_APPENDING, second_dbm.GetUpdateMode());
   EXPECT_EQ(3, second_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
   EXPECT_EQ("xx", second_dbm.GetSimple("x"));
   EXPECT_EQ("yy", second_dbm.GetSimple("y"));
@@ -1367,6 +1371,7 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ("0123456789", second_dbm.GetOpaqueMetadata().substr(0, 10));
   EXPECT_EQ(tkrzw::HashDBM::UPDATE_IN_PLACE, second_dbm.GetUpdateMode());
   EXPECT_EQ(3, second_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
   EXPECT_EQ("xx", second_dbm.GetSimple("x"));
   EXPECT_EQ("yy", second_dbm.GetSimple("y"));
@@ -1379,6 +1384,7 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ("0123456789", second_dbm.GetOpaqueMetadata().substr(0, 10));
   EXPECT_EQ(tkrzw::HashDBM::UPDATE_IN_PLACE, second_dbm.GetUpdateMode());
   EXPECT_EQ(3, second_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
   EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
   EXPECT_EQ("xx", second_dbm.GetSimple("x"));
   EXPECT_EQ("yy", second_dbm.GetSimple("y"));
@@ -1421,6 +1427,7 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Open(second_file_path, false));
     EXPECT_TRUE(second_dbm.IsHealthy());
     EXPECT_EQ(dbm->CountSimple(), second_dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
     EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
     int64_t count = 0;
     auto iter = second_dbm.MakeIterator();

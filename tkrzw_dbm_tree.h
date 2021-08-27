@@ -499,6 +499,12 @@ class TreeDBM final : public DBM {
   KeyComparator GetKeyComparator() const;
 
   /**
+   * Validate all buckets in the hash table.
+   * @return The result status.
+   */
+  Status ValidateHashBuckets();
+
+  /**
    * Validates records in a region.
    * @param record_base The beginning offset of records to check.  Negative means the beginning
    * of the record section.

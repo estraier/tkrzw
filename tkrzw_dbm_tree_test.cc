@@ -989,6 +989,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ(123, new_dbm.GetDatabaseType());
     EXPECT_EQ("0123456789", new_dbm.GetOpaqueMetadata().substr(0, 10));
     EXPECT_EQ(num_records, new_dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.ValidateHashBuckets());
     EXPECT_EQ(tkrzw::Status::SUCCESS, new_dbm.ValidateRecords(-1, -1));
     for (int32_t i = 0; i < 100; i++) {
       const std::string key = tkrzw::ToString(i * i);
@@ -1038,6 +1039,7 @@ void TreeDBMTest::TreeDBMRestoreTest(tkrzw::TreeDBM* dbm) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.Open(second_file_path, false));
     EXPECT_TRUE(second_dbm.IsHealthy());
     EXPECT_EQ(dbm->CountSimple(), second_dbm.CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateHashBuckets());
     EXPECT_EQ(tkrzw::Status::SUCCESS, second_dbm.ValidateRecords(-1, -1));
     int64_t count = 0;
     auto iter = second_dbm.MakeIterator();

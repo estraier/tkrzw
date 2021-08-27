@@ -723,6 +723,12 @@ class HashDBM final : public DBM {
       int64_t record_base, int64_t end_offset);
 
   /**
+   * Validate all buckets in the hash table.
+   * @return The result status.
+   */
+  Status ValidateHashBuckets();
+
+  /**
    * Validates records in a region.
    * @param record_base The beginning offset of records to check.  Negative means the beginning
    * of the record section.  0 means the size when the database is synched or closed properly.
