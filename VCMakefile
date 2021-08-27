@@ -582,31 +582,31 @@ check-index-perf :
 
 check-tran :
 	-del casket* /F /Q > NUL: 2>&1
-	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tkh --iter 30000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
-	tkrzw_dbm_tran.exe build casket.tkh --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tkh --iter 30000 --threads 4 \
 	  --sync_freq 100 --async 3 --rebuild --remove --params "record_crc_mode=8"
 	tkrzw_dbm_tran.exe check casket.tkh
-	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tkt --iter 30000 --threads 4 \
 	  --sync_freq 100 --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
-	tkrzw_dbm_tran.exe build casket.tkt --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tkt --iter 30000 --threads 4 \
 	  --sync_freq 100 --async 3 --rebuild --remove --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
-	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tks --iter 30000 --threads 4 \
 	  --sync_freq 10000
 	tkrzw_dbm_tran.exe check casket.tks
-	tkrzw_dbm_tran.exe build casket.tks --iter 50000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tks --iter 30000 --threads 4 \
 	  --sync_freq 10000 --async 3 --rebuild --remove
 	tkrzw_dbm_tran.exe check casket.tks
-	tkrzw_dbm_tran.exe async casket.tkh --iter 25000 --threads 4 \
+	tkrzw_dbm_tran.exe async casket.tkh --iter 15000 --threads 4 \
 	  --params "num_buckets=100000" --rebuild --async 0
-	tkrzw_dbm_tran.exe async casket.tkh --iter 25000 --threads 4 \
+	tkrzw_dbm_tran.exe async casket.tkh --iter 15000 --threads 4 \
 	  --params "num_buckets=100000" --rebuild --async 4 --wait_freq 1000
-	tkrzw_dbm_tran.exe async casket.tkt --iter 25000 --threads 4 \
+	tkrzw_dbm_tran.exe async casket.tkt --iter 15000 --threads 4 \
 	  --params "num_buckets=10000,max_page_size=1024" --rebuild --async 0
-	tkrzw_dbm_tran.exe async casket.tkt --iter 25000 --threads 4 \
+	tkrzw_dbm_tran.exe async casket.tkt --iter 15000 --threads 4 \
 	  --params "num_buckets=10000,max_page_size=1024" --rebuild --async 4 --wait_freq 1000
 
 check-langc :

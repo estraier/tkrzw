@@ -1151,6 +1151,9 @@ void HashDBMImpl::CancelIterators() {
 
 Status HashDBMImpl::SaveMetadata(bool finish) {
   cyclic_magic_++;
+  if (cyclic_magic_ == 0) {
+    cyclic_magic_ = 1;
+  }
   char meta[METADATA_SIZE];
   std::memset(meta, 0, METADATA_SIZE);
   std::memcpy(meta, META_MAGIC_DATA, sizeof(META_MAGIC_DATA) - 1);
