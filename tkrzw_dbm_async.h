@@ -379,6 +379,7 @@ class AsyncDBM final {
    * Rebuilds the entire database.
    * @param params Optional parameters.
    * @return The result status.
+   * @details The parameters work in the same way as with PolyDBM::RebuildAdvanced.
    */
   std::future<Status> Rebuild(const std::map<std::string, std::string>& params = {});
 
@@ -391,6 +392,7 @@ class AsyncDBM final {
    * If it is nullptr, it is not used.
    * @param params Optional parameters.
    * @return The result status.
+   * @details The parameters work in the same way as with PolyDBM::Synchronize.
    */
   std::future<Status> Synchronize(bool hard, std::unique_ptr<DBM::FileProcessor> proc = nullptr,
                                   const std::map<std::string, std::string>& params = {});
