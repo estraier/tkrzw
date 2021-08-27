@@ -4,6 +4,7 @@
 	- Library version: 1.48.0
 
 	- GetInternalFile is added to TinyDBM, BabyDBM, StdHashDBM, and StdTreeDBM.
+	- TreeDBM::Rebuild has the restore parameter.
 
 2021-08-25  Mikio Hirabayashi  <hirarin@gmail.com>
 

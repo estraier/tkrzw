@@ -2263,7 +2263,8 @@ Status HashDBM::Clear() {
   return impl_->Clear();
 }
 
-Status HashDBM::RebuildAdvanced(const TuningParameters& tuning_params, bool skip_broken_records) {
+Status HashDBM::RebuildAdvanced(
+    const TuningParameters& tuning_params, bool skip_broken_records) {
   return impl_->Rebuild(tuning_params, skip_broken_records);
 }
 

@@ -1148,10 +1148,13 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
     mod_time_ = GetWallTime() * 1000000;
     status |= SaveMetadata(sorted_file_.get(), true);
     file_->DisablePathOperations();
-    if (!IS_POSIX) {
-      file_->Close();
+    if (IS_POSIX) {
+      status |= sorted_file_->Rename(path_);
+      status |= file_->Close();
+    } else {
+      status |= file_->Close();
+      status |= sorted_file_->Rename(path_);
     }
-    status |= sorted_file_->Rename(path_);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -1241,10 +1244,13 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
     mod_time_ = GetWallTime() * 1000000;
     status |= SaveMetadata(merged_file.get(), true);
     file_->DisablePathOperations();
-    if (!IS_POSIX) {
-      file_->Close();
+    if (IS_POSIX) {
+      status |= merged_file->Rename(path_);
+      status |= file_->Close();
+    } else {
+      status |= file_->Close();
+      status |= merged_file->Rename(path_);
     }
-    status |= merged_file->Rename(path_);
     if (status != Status::SUCCESS) {
       return status;
     }

@@ -120,7 +120,7 @@ class TreeDBMImpl final {
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
   Status Clear();
-  Status Rebuild(const TreeDBM::TuningParameters& tuning_params);
+  Status Rebuild(const TreeDBM::TuningParameters& tuning_params, bool skip_broken_records);
   Status ShouldBeRebuilt(bool* tobe);
   Status Synchronize(bool hard, DBM::FileProcessor* proc);
   std::vector<std::pair<std::string, std::string>> Inspect();
@@ -737,7 +737,8 @@ Status TreeDBMImpl::Clear() {
   return status;
 }
 
-Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
+Status TreeDBMImpl::Rebuild(
+    const TreeDBM::TuningParameters& tuning_params, bool skip_broken_records) {
   if (!reorg_ids_.IsEmpty()) {
     std::lock_guard<SpinSharedMutex> lock(mutex_);
     const Status status = ReorganizeTree();
@@ -769,7 +770,7 @@ Status TreeDBMImpl::Rebuild(const TreeDBM::TuningParameters& tuning_params) {
   if (tuning_params.max_cached_pages > 0) {
     max_cached_pages_ = tuning_params.max_cached_pages;
   }
-  status |= hash_dbm_->RebuildAdvanced(hash_params);
+  status |= hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records);
   return status;
 }
 
@@ -2379,8 +2380,9 @@ Status TreeDBM::Clear() {
   return impl_->Clear();
 }
 
-Status TreeDBM::RebuildAdvanced(const TuningParameters& tuning_params) {
-  return impl_->Rebuild(tuning_params);
+Status TreeDBM::RebuildAdvanced(
+    const TuningParameters& tuning_params, bool skip_broken_records) {
+  return impl_->Rebuild(tuning_params, skip_broken_records);
 }
 
 Status TreeDBM::ShouldBeRebuilt(bool* tobe) {
