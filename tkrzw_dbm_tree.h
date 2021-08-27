@@ -348,9 +348,11 @@ class TreeDBM final : public DBM {
    * Rebuilds the entire database, in an advanced way.
    * @param tuning_params A structure for tuning parameters.  The default value of each
    * parameter means that the current setting is succeeded or calculated implicitly.
-   * @return The result status.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
+   * @param sync_hard True to do physical synchronization with the hardware before finishing the
+   * rebuilt file.
+   * @return The result status.
    * @details Precondition: The database is opened as writable.
    * @details Rebuilding a database is useful to reduce the size of the file by solving
    * fragmentation.  Tuning parameters for the underlying hash database are reflected on the
@@ -359,7 +361,7 @@ class TreeDBM final : public DBM {
    */
   Status RebuildAdvanced(
       const TuningParameters& tuning_params = TuningParameters(),
-      bool skip_broken_records = false);
+      bool skip_broken_records = false, bool sync_hard = false);
 
   /**
    * Checks whether the database should be rebuilt.

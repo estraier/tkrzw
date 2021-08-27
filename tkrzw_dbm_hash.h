@@ -493,6 +493,8 @@ class HashDBM final : public DBM {
    * parameter means that the current setting is succeeded or calculated implicitly.
    * @param skip_broken_records If true, the operation continues even if there are broken records
    * which can be skipped.
+   * @param sync_hard True to do physical synchronization with the hardware before finishing the
+   * rebuilt file.
    * @return The result status.
    * @details Precondition: The database is opened as writable.
    * @details Rebuilding a database is useful to reduce the size of the file by solving
@@ -500,7 +502,7 @@ class HashDBM final : public DBM {
    */
   Status RebuildAdvanced(
       const TuningParameters& tuning_params = TuningParameters(),
-      bool skip_broken_records = false);
+      bool skip_broken_records = false, bool sync_hard = false);
 
   /**
    * Checks whether the database should be rebuilt.

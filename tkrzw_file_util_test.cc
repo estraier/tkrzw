@@ -240,6 +240,11 @@ TEST(FileUtilTest, DirectoryOperation) {
   child_names.clear();
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadDirectory(new_dir_path, &child_names));
   EXPECT_THAT(child_names, UnorderedElementsAre("child"));
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SynchronizeFile(new_dir_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            tkrzw::SynchronizeFile(tkrzw::JoinPath(new_dir_path, "child")));
+
 }
 
 TEST(FileUtilTest, TemporaryDirectory) {

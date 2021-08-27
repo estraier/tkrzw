@@ -101,7 +101,8 @@ class HashDBMImpl final {
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
   Status Clear();
-  Status Rebuild(const HashDBM::TuningParameters& tuning_params, bool skip_broken_records);
+  Status Rebuild(
+      const HashDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
   Status ShouldBeRebuilt(bool* tobe);
   Status Synchronize(bool hard, DBM::FileProcessor* proc);
   std::vector<std::pair<std::string, std::string>> Inspect();
@@ -155,7 +156,8 @@ class HashDBMImpl final {
       bool readable, bool writable);
   Status GetBucketValue(int64_t bucket_index, int64_t* value);
   Status SetBucketValue(int64_t bucket_index, int64_t value);
-  Status RebuildImpl(const HashDBM::TuningParameters& tuning_params, bool skip_broken_records);
+  Status RebuildImpl(
+      const HashDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
   Status ReadNextBucketRecords(HashDBMIteratorImpl* iter);
   Status ImportFromFileForwardImpl(
       File* file, bool skip_broken_records,
@@ -587,7 +589,7 @@ Status HashDBMImpl::Clear() {
 }
 
 Status HashDBMImpl::Rebuild(
-    const HashDBM::TuningParameters& tuning_params, bool skip_broken_records) {
+    const HashDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
@@ -598,7 +600,7 @@ Status HashDBMImpl::Rebuild(
   if (!rebuild_mutex_.try_lock()) {
     return Status(Status::SUCCESS);
   }
-  const Status status = RebuildImpl(tuning_params, skip_broken_records);
+  const Status status = RebuildImpl(tuning_params, skip_broken_records, sync_hard);
   rebuild_mutex_.unlock();
   return status;
 }
@@ -1515,7 +1517,7 @@ Status HashDBMImpl::SetBucketValue(int64_t bucket_index, int64_t value) {
 }
 
 Status HashDBMImpl::RebuildImpl(
-    const HashDBM::TuningParameters& tuning_params, bool skip_broken_records) {
+    const HashDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
   const std::string tmp_path = path_ + ".tmp.rebuild";
   int64_t est_num_records = num_records_.load();
@@ -1584,6 +1586,9 @@ Status HashDBMImpl::RebuildImpl(
   } else {
     status = tmp_dbm.ImportFromFileBackward(file_.get(), skip_broken_records, -1, end_offset);
   }
+  if (sync_hard) {
+    status |= tmp_dbm.Synchronize(true);
+  }
   if (status != Status::SUCCESS) {
     CleanUp();
     return status;
@@ -1598,6 +1603,9 @@ Status HashDBMImpl::RebuildImpl(
       break;
     }
     status = tmp_dbm.ImportFromFileForward(file_.get(), false, begin_offset, end_offset);
+    if (sync_hard) {
+      status |= tmp_dbm.Synchronize(true);
+    }
     if (status != Status::SUCCESS) {
       CleanUp();
       return status;
@@ -1638,6 +1646,9 @@ Status HashDBMImpl::RebuildImpl(
       return status;
     }
     fbp_.Clear();
+    if (sync_hard) {
+      status |= tmp_file->Synchronize(true);
+    }
     status |= file_->DisablePathOperations();
     if (IS_POSIX) {
       status |= tmp_file->Rename(path_);
@@ -1645,6 +1656,16 @@ Status HashDBMImpl::RebuildImpl(
     } else {
       status |= file_->Close();
       status |= tmp_file->Rename(path_);
+    }
+    if (sync_hard) {
+      std::string real_path;
+      status |= GetRealPath(path_, &real_path);
+      if (status == Status::SUCCESS) {
+        const std::string dir_path = PathToDirectoryName(real_path);
+        if (!dir_path.empty()) {
+          status |= SynchronizeFile(dir_path);
+        }
+      }
     }
     file_ = std::move(tmp_file);
     if (tuning_params.fbp_capacity >= 0) {
@@ -2264,8 +2285,8 @@ Status HashDBM::Clear() {
 }
 
 Status HashDBM::RebuildAdvanced(
-    const TuningParameters& tuning_params, bool skip_broken_records) {
-  return impl_->Rebuild(tuning_params, skip_broken_records);
+    const TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
+  return impl_->Rebuild(tuning_params, skip_broken_records, sync_hard);
 }
 
 Status HashDBM::ShouldBeRebuilt(bool* tobe) {

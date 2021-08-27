@@ -228,6 +228,13 @@ Status MakeDirectory(const std::string& path, bool recursive = false);
 Status RemoveDirectory(const std::string& path, bool recursive = false);
 
 /**
+ * Synchronizes a file or a directory.
+ * @param path The path of the file or the directory.
+ * @return The result status.
+ */
+Status SynchronizeFile(const std::string& path);
+
+/**
  * Temporary directory whose life duration is bound with the object.
  */
 class TemporaryDirectory {

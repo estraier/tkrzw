@@ -86,7 +86,8 @@ class SkipDBMImpl final {
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
   Status Clear();
-  Status Rebuild(const SkipDBM::TuningParameters& tuning_params);
+  Status Rebuild(
+      const SkipDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
   Status ShouldBeRebuilt(bool* tobe);
   Status Synchronize(bool hard, DBM::FileProcessor* proc, SkipDBM::ReducerType reducer);
   std::vector<std::pair<std::string, std::string>> Inspect();
@@ -618,7 +619,8 @@ Status SkipDBMImpl::Clear() {
   return status;
 }
 
-Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
+Status SkipDBMImpl::Rebuild(
+    const SkipDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
@@ -718,6 +720,9 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
     CleanUp();
     return status;
   }
+  if (sync_hard) {
+    status |= rebuild_file->Synchronize(true);
+  }
   status |= file_->DisablePathOperations();
   if (IS_POSIX) {
     status |= rebuild_file->Rename(path_);
@@ -725,6 +730,16 @@ Status SkipDBMImpl::Rebuild(const SkipDBM::TuningParameters& tuning_params) {
   } else {
     status |= file_->Close();
     status |= rebuild_file->Rename(path_);
+  }
+  if (sync_hard) {
+    std::string real_path;
+    status |= GetRealPath(path_, &real_path);
+    if (status == Status::SUCCESS) {
+      const std::string dir_path = PathToDirectoryName(real_path);
+      if (!dir_path.empty()) {
+        status |= SynchronizeFile(dir_path);
+      }
+    }
   }
   file_ = std::move(rebuild_file);
   const uint32_t db_type = db_type_;
@@ -1713,8 +1728,9 @@ Status SkipDBM::Clear() {
   return impl_->Clear();
 }
 
-Status SkipDBM::RebuildAdvanced(const TuningParameters& tuning_params) {
-  return impl_->Rebuild(tuning_params);
+Status SkipDBM::RebuildAdvanced(
+    const TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
+  return impl_->Rebuild(tuning_params, skip_broken_records, sync_hard);
 }
 
 Status SkipDBM::ShouldBeRebuilt(bool* tobe) {

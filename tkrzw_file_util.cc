@@ -609,6 +609,44 @@ Status RemoveDirectory(const std::string& path, bool recursive) {
   return status;
 }
 
+Status SynchronizeFile(const std::string& path) {
+#if defined(_SYS_WINDOWS_)
+  if (PathIsDirectory(path)) {
+    return Status(Status::SUCCESS);
+  }
+  const DWORD amode = GENERIC_READ;
+  const DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+  const DWORD cmode = OPEN_EXISTING;
+  const DWORD flags = FILE_FLAG_RANDOM_ACCESS;
+  const HANDLE file_handle =
+      CreateFile(path.c_str(), amode, smode, nullptr, cmode, flags, nullptr);
+  if (file_handle == nullptr || file_handle == INVALID_HANDLE_VALUE) {
+    return GetSysErrorStatus("CreateFile", GetLastError());
+  }
+  Status status(Status::SUCCESS);
+  if (!FlushFileBuffers(file_handle)) {
+    status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+  }
+  if (!CloseHandle(file_handle)) {
+    status |= GetSysErrorStatus("CloseHandle", GetLastError());
+  }
+  return status;
+#else
+  const int32_t fd = open(path.c_str(), O_RDONLY);
+  if (fd < 0) {
+    return GetErrnoStatus("open", errno);
+  }
+  Status status(Status::SUCCESS);
+  if (fsync(fd) != 0) {
+    status = GetErrnoStatus("fsync", errno);
+  }
+  if (close(fd) != 0) {
+    status |= GetErrnoStatus("close", errno);
+  }
+  return status;
+#endif
+}
+
 TemporaryDirectory::TemporaryDirectory(
     bool cleanup, const std::string& prefix, const std::string& base_dir)
     : cleanup_(cleanup) {

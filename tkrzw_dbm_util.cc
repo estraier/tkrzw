@@ -461,7 +461,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     tuning_params.num_buckets = num_buckets;
     tuning_params.lock_mem_buckets = -1;
     tuning_params.cache_buckets = -1;
-    const Status status = hash_dbm->RebuildAdvanced(tuning_params, restore);
+    const Status status = hash_dbm->RebuildAdvanced(tuning_params, restore, true);
     if (status != Status::SUCCESS) {
       EPrintL("RebuildAdvanced failed: ", status);
       has_error = true;
@@ -502,7 +502,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     tuning_params.cache_buckets = -1;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
-    const Status status = tree_dbm->RebuildAdvanced(tuning_params, restore);
+    const Status status = tree_dbm->RebuildAdvanced(tuning_params, restore, true);
     if (status != Status::SUCCESS) {
       EPrintL("RebuildAdvanced failed: ", status);
       has_error = true;
@@ -514,7 +514,7 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
     tuning_params.offset_width = offset_width;
     tuning_params.step_unit = step_unit;
     tuning_params.max_level = max_level;
-    const Status status = skip_dbm->RebuildAdvanced(tuning_params);
+    const Status status = skip_dbm->RebuildAdvanced(tuning_params, restore, true);
     if (status != Status::SUCCESS) {
       EPrintL("RebuildAdvanced failed: ", status);
       has_error = true;
