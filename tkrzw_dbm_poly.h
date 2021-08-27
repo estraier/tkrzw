@@ -463,6 +463,11 @@ class PolyDBM final : public ParamDBM {
    * @param params Optional parameters.
    * @return The result status.
    * @details Tuning options can be given by the optional parameters, as with the Open method.
+   * In addition, HashDBM, TreeDBM, and SkipDBM supports the following parameters.
+   *   - skip_broken_records (bool): If true, the operation continues even if there are broken
+   *     records which can be skipped.
+   *   - sync_hard (bool): If true, physical synchronization with the hardware is done before
+   *     finishing the rebuilt file.
    */
   Status RebuildAdvanced(const std::map<std::string, std::string>& params = {}) override;
 

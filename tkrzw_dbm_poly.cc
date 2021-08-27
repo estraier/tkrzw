@@ -558,32 +558,42 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
     HashDBM::TuningParameters tuning_params;
     SetHashTuningParams(&mod_params, &tuning_params);
     const bool skip_broken_records = StrToBool(SearchMap(params, "skip_broken_records", "false"));
+    const bool sync_hard = StrToBool(SearchMap(params, "sync_hard", "false"));
     mod_params.erase("skip_broken_records");
+    mod_params.erase("sync_hard");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    return hash_dbm->RebuildAdvanced(tuning_params, skip_broken_records);
+    return hash_dbm->RebuildAdvanced(tuning_params, skip_broken_records, sync_hard);
   }
   if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm_.get());
     TreeDBM::TuningParameters tuning_params;
     SetTreeTuningParams(&mod_params, &tuning_params);
+    const bool skip_broken_records = StrToBool(SearchMap(params, "skip_broken_records", "false"));
+    const bool sync_hard = StrToBool(SearchMap(params, "sync_hard", "false"));
+    mod_params.erase("skip_broken_records");
+    mod_params.erase("sync_hard");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    return tree_dbm->RebuildAdvanced(tuning_params);
+    return tree_dbm->RebuildAdvanced(tuning_params, skip_broken_records, sync_hard);
   }
   if (dbm_type == typeid(SkipDBM)) {
     SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm_.get());
     SkipDBM::TuningParameters tuning_params;
     SetSkipTuningParams(&mod_params, &tuning_params);
+    const bool skip_broken_records = StrToBool(SearchMap(params, "skip_broken_records", "false"));
+    const bool sync_hard = StrToBool(SearchMap(params, "sync_hard", "false"));
+    mod_params.erase("skip_broken_records");
+    mod_params.erase("sync_hard");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
                     StrCat("unsupported parameter: ", mod_params.begin()->first));
     }
-    return skip_dbm->RebuildAdvanced(tuning_params);
+    return skip_dbm->RebuildAdvanced(tuning_params, skip_broken_records, sync_hard);
   }
   if (dbm_type == typeid(TinyDBM)) {
     TinyDBM* tiny_dbm = dynamic_cast<TinyDBM*>(dbm_.get());
