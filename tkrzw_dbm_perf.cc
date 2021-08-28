@@ -1385,7 +1385,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     Print("Validating records: ... ");
     const double valid_start_time = GetWallTime();
     if (!ValidateDBM(dbm.get())) {
-        has_error = true;
+      has_error = true;
     }
     const double valid_end_time = GetWallTime();
     PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
