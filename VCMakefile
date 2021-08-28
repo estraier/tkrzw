@@ -234,7 +234,7 @@ check-hashdbm-util :
 	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket-2.tkh
 	tkrzw_dbm_util.exe import --dbm hash casket-2.tkh casket.flat
 	tkrzw_dbm_util.exe list --dbm hash casket-2.tkh
-	tkrzw_dbm_util.exe list --dbm hash --jump three --items 2 casket-2.tkh
+	tkrzw_dbm_util.exe list --dbm hash --move jump --jump_key three --items 2 casket-2.tkh
 	tkrzw_dbm_util.exe export --dbm hash --tsv casket.tkh casket.tsv
 	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket-3.tkh
 	tkrzw_dbm_util.exe import --dbm hash --tsv casket-3.tkh casket.tsv
@@ -328,7 +328,7 @@ check-treedbm-util :
 	tkrzw_dbm_util.exe create --dbm tree --buckets 10 casket-2.tkt
 	tkrzw_dbm_util.exe import --dbm tree casket-2.tkt casket.flat
 	tkrzw_dbm_util.exe list --dbm tree casket-2.tkt
-	tkrzw_dbm_util.exe list --dbm tree --jump three --items 2 casket-2.tkt
+	tkrzw_dbm_util.exe list --dbm tree --move jump --jump_key three --items 2 casket-2.tkt
 	tkrzw_dbm_util.exe export --dbm tree --tsv casket.tkt casket.tsv
 	tkrzw_dbm_util.exe create --dbm tree --buckets 10 casket-3.tkt
 	tkrzw_dbm_util.exe import --dbm tree --tsv casket-3.tkt casket.tsv
@@ -394,7 +394,7 @@ check-skipdbm-util :
 	tkrzw_dbm_util.exe create --dbm skip --buckets 10 casket-2.tks
 	tkrzw_dbm_util.exe import --dbm skip casket-2.tks casket.flat
 	tkrzw_dbm_util.exe list --dbm skip casket-2.tks
-	tkrzw_dbm_util.exe list --dbm skip --jump one --items 2 casket-2.tks
+	tkrzw_dbm_util.exe list --dbm skip --move jump --jump_key one --items 2 casket-2.tks
 	tkrzw_dbm_util.exe export --dbm skip --tsv casket.tks casket.tsv
 	tkrzw_dbm_util.exe create --dbm skip --buckets 10 casket-3.tks
 	tkrzw_dbm_util.exe import --dbm skip --tsv casket-3.tks casket.tsv
@@ -506,7 +506,7 @@ check-polydbm-util :
 	tkrzw_dbm_util.exe create --dbm poly --buckets 10 casket-2.tkh
 	tkrzw_dbm_util.exe import --dbm poly casket-2.tkh casket.flat
 	tkrzw_dbm_util.exe list --dbm poly casket-2.tkh
-	tkrzw_dbm_util.exe list --dbm poly --jump three --items 2 casket-2.tkh
+	tkrzw_dbm_util.exe list --dbm poly --move jump --jump_key three --items 2 casket-2.tkh
 	tkrzw_dbm_util.exe export --dbm poly --tsv casket.tkh casket.tsv
 	tkrzw_dbm_util.exe create --dbm poly --buckets 10 casket-3.tkh
 	tkrzw_dbm_util.exe import --dbm poly --tsv casket-3.tkh casket.tsv
@@ -550,7 +550,7 @@ check-sharddbm-util :
 	  --params "lock_mem_buckets=false,num_shards=4"
 	tkrzw_dbm_util.exe import --dbm shard casket-2.tkt casket.flat
 	tkrzw_dbm_util.exe list --dbm shard casket-2.tkt
-	tkrzw_dbm_util.exe list --dbm shard --jump three --items 2 casket-2.tkt
+	tkrzw_dbm_util.exe list --dbm shard --move jump --jump_key three --items 2 casket-2.tkt
 	tkrzw_dbm_util.exe export --dbm shard --tsv casket.tkt casket.tsv
 	tkrzw_dbm_util.exe create --dbm shard --buckets 10 casket-3.tkt
 	tkrzw_dbm_util.exe import --dbm shard --tsv casket-3.tkt casket.tsv

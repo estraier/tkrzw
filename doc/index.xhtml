@@ -2923,7 +2923,8 @@ int main(int argc, char** argv) {
 <dd><code>--incr <var>num</var></code> : Increments the value with the given initial value.</dd>
 <dd><code>--reducer <var>func</var></code> : Sets the reducer for the skip database: none, first, second, last, concat, concatnull, concattab, concatline, total. (default: none)</dd>
 <dt>Options for the list subcommand:</dt>
-<dd><code>--jump <var>pattern</var></code> : Jumps to the position of the pattern.</dd>
+<dd><code>--move <var>type</var></code> : Type of movement: first, jump, jumplower, jumplowerinc, jumpupper, jumpupperinc. (default: first)</dd>
+<dd><code>--jump_key <var>str</var></code> : Specifies the jump key. (default: empty string)</dd>
 <dd><code>--items <var>num</var></code> : The number of items to print.</dd>
 <dd><code>--escape</code> : C-style escape is applied to the TSV data.</dd>
 <dt>Options for the rebuild subcommand:</dt>
@@ -2989,7 +2990,7 @@ Korea  Seoul
 
 <p>You can look up words which forward-match a pattern.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util list --jump appl --max 3 casket.tks
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util list --move jump --jump_key appl --max 3 casket.tks
 applaud To praise by clapping.
 apple   A delicious red fruit.
 applet  A small application.

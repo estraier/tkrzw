@@ -78,7 +78,9 @@ static void PrintUsageAndDie() {
     " (default: none)\n");
   P("\n");
   P("Options for the list subcommand:\n");
-  P("  --jump pattern : Jumps to the position of the pattern.\n");
+  P("  --move type : Type of movement:"
+    " first, jump, jumplower, jumplowerinc, jumpupper, jumpupperinc. (default: first)\n");
+  P("  --jump_key str : Specifies the jump key. (default: empty string)\n");
   P("  --items num : The number of items to print.\n");
   P("  --escape : C-style escape is applied to the TSV data.\n");
   P("\n");
@@ -656,9 +658,9 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       Status status = hash_dbm->ValidateHashBuckets();
       double end_time = GetWallTime();
       if (status == Status::SUCCESS) {
-        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
       } else {
-        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
@@ -667,9 +669,9 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       status = hash_dbm->ValidateRecords(-1, -1);
       end_time = GetWallTime();
       if (status == Status::SUCCESS) {
-        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
       } else {
-        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
@@ -681,9 +683,9 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       Status status = tree_dbm->ValidateHashBuckets();
       double end_time = GetWallTime();
       if (status == Status::SUCCESS) {
-        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
       } else {
-        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
@@ -694,7 +696,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       if (status == Status::SUCCESS) {
         PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
       } else {
-        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
@@ -708,7 +710,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
       if (status == Status::SUCCESS) {
         PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
       } else {
-        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
@@ -805,7 +807,8 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
-  const std::string append_delim = GetStringArgument(cmd_args, "--append", 0, "[\xFF|\xFF|\xFF]");
+  const std::string append_delim =
+      GetStringArgument(cmd_args, "--append", 0, SkipDBM::REMOVING_VALUE);
   const int64_t incr_init = GetIntegerArgument(cmd_args, "--incr", 0, INT64MIN);
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   if (file_path.empty()) {
@@ -831,7 +834,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
     } else {
       EPrintL("Increment failed: ", status);
     }
-  } else if (append_delim != "[\xFF|\xFF|\xFF]") {
+  } else if (append_delim != SkipDBM::REMOVING_VALUE) {
     const Status status = dbm->Append(key, value, append_delim);
     if (status == Status::SUCCESS) {
       ok = true;
@@ -922,7 +925,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--jump", 1}, {"--items", 1}, {"--escape", 0},
+    {"--move", 1}, {"--jump_key", 1}, {"--items", 1}, {"--escape", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -931,7 +934,6 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     PrintUsageAndDie();
   }
   const std::string file_path = GetStringArgument(cmd_args, "", 0, "");
-  const std::string key = GetStringArgument(cmd_args, "", 1, "");
   const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -943,7 +945,8 @@ static int32_t ProcessList(int32_t argc, const char** args) {
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
-  const std::string jump_pattern = GetStringArgument(cmd_args, "--jump", 0, "");
+  const std::string jump_key = GetStringArgument(cmd_args, "--jump_key", 0, "");
+  const std::string move_type = GetStringArgument(cmd_args, "--move", 0, "first");
   const int64_t num_items = GetIntegerArgument(cmd_args, "--items", 0, INT64MAX);
   const bool with_escape = CheckMap(cmd_args, "--escape");
   if (file_path.empty()) {
@@ -960,7 +963,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = true;
-  if (jump_pattern.empty() && num_items == INT64MAX) {
+  if (move_type == "first" && num_items == INT64MAX) {
     class Printer final : public DBM::RecordProcessor {
      public:
       explicit Printer(bool escape) : escape_(escape) {}
@@ -980,20 +983,47 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     }
   } else {
     auto iter = dbm->MakeIterator();
-    if (jump_pattern.empty()) {
+    bool forward = true;
+    if (move_type == "jump") {
+      const Status status = iter->Jump(jump_key);
+      if (status != Status::SUCCESS) {
+        EPrintL("Jump failed: ", status);
+        ok = false;
+      }
+    } else if (move_type == "jumplower") {
+      const Status status = iter->JumpLower(jump_key, false);
+      if (status != Status::SUCCESS) {
+        EPrintL("JumpLower failed: ", status);
+        ok = false;
+      }
+    } else if (move_type == "jumplowerinc") {
+      const Status status = iter->JumpLower(jump_key, true);
+      if (status != Status::SUCCESS) {
+        EPrintL("JumpLower failed: ", status);
+        ok = false;
+      }
+    } else if (move_type == "jumpupper") {
+      const Status status = iter->JumpUpper(jump_key, false);
+      if (status != Status::SUCCESS) {
+        EPrintL("JumpUpper failed: ", status);
+        ok = false;
+      }
+      forward = false;
+    } else if (move_type == "jumpupperinc") {
+      const Status status = iter->JumpUpper(jump_key, true);
+      if (status != Status::SUCCESS) {
+        EPrintL("JumpUpper failed: ", status);
+        ok = false;
+      }
+      forward = false;
+    } else {
       const Status status = iter->First();
       if (status != Status::SUCCESS) {
         EPrintL("First failed: ", status);
         ok = false;
       }
-    } else {
-      const Status status = iter->Jump(jump_pattern);
-      if (status != Status::SUCCESS) {
-        EPrintL("Jump failed: ", status);
-        ok = false;
-      }
     }
-    for (int64_t count = 0; count < num_items; count++) {
+    for (int64_t count = 0; ok && count < num_items; count++) {
       std::string key, value;
       Status status = iter->Get(&key, &value);
       if (status != Status::SUCCESS) {
@@ -1006,7 +1036,11 @@ static int32_t ProcessList(int32_t argc, const char** args) {
       const std::string& esc_key = with_escape ? StrEscapeC(key) : StrTrimForTSV(key);
       const std::string& esc_value = with_escape ? StrEscapeC(value) : StrTrimForTSV(value, true);
       PrintL(esc_key, "\t", esc_value);
-      status = iter->Next();
+      if (forward) {
+        status = iter->Next();
+      } else {
+        status = iter->Previous();
+      }
       if (status != Status::SUCCESS) {
         EPrintL("Next failed: ", status);
         ok = false;
