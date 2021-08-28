@@ -542,20 +542,25 @@ bool ValidateDBM(DBM* dbm) {
   const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
     HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
-    Status status = hash_dbm->ValidateRecords(-1, -1);
-    if (status != Status::SUCCESS) {
-      EPrintL("ValidateRecords failed: ", status);
-      has_error = true;
-    }
-    status = hash_dbm->ValidateHashBuckets();
+    Status status = hash_dbm->ValidateHashBuckets();
     if (status != Status::SUCCESS) {
       EPrintL("ValidateHashBuckets failed: ", status);
+      has_error = true;
+    }
+    status = hash_dbm->ValidateRecords(-1, -1);
+    if (status != Status::SUCCESS) {
+      EPrintL("ValidateRecords failed: ", status);
       has_error = true;
     }
   }
   if (dbm_type == typeid(TreeDBM)) {
     TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
-    const Status status = tree_dbm->ValidateRecords(-1, -1);
+    Status status = tree_dbm->ValidateHashBuckets();
+    if (status != Status::SUCCESS) {
+      EPrintL("ValidateHashBuckets failed: ", status);
+      has_error = true;
+    }
+    status = tree_dbm->ValidateRecords(-1, -1);
     if (status != Status::SUCCESS) {
       EPrintL("ValidateRecords failed: ", status);
       has_error = true;

@@ -648,35 +648,71 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
   PrintF("Should be Rebuilt: %s\n", dbm->ShouldBeRebuiltSimple() ? "true" : "false");
   bool has_error = false;
   if (with_validate) {
-    Print("Validating records: ... ");
-    const double valid_start_time = GetWallTime();
     const auto& dbm_type = dbm->GetType();
     if (dbm_type == typeid(HashDBM)) {
       HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm.get());
-      const Status status = hash_dbm->ValidateRecords(-1, -1);
-      if (status != Status::SUCCESS) {
+      Print("Validating hash buckets: ... ");
+      double start_time = GetWallTime();
+      Status status = hash_dbm->ValidateHashBuckets();
+      double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        EPrintL("ValidateRecords failed: ", status);
+        has_error = true;
+      }
+      Print("Validating records: ... ");
+      start_time = GetWallTime();
+      status = hash_dbm->ValidateRecords(-1, -1);
+      end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
     if (dbm_type == typeid(TreeDBM)) {
       TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm.get());
-      const Status status = tree_dbm->ValidateRecords(-1, -1);
-      if (status != Status::SUCCESS) {
+      Print("Validating hash buckets: ... ");
+      double start_time = GetWallTime();
+      Status status = tree_dbm->ValidateHashBuckets();
+      double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);      
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
+        EPrintL("ValidateRecords failed: ", status);
+        has_error = true;
+      }
+      Print("Validating records: ... ");
+      start_time = GetWallTime();
+      status = tree_dbm->ValidateRecords(-1, -1);
+      end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
     if (dbm_type == typeid(SkipDBM)) {
       SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm.get());
+      Print("Validating records: ... ");
+      double start_time = GetWallTime();
       const Status status = skip_dbm->ValidateRecords();
-      if (status != Status::SUCCESS) {
+      double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);      
         EPrintL("ValidateRecords failed: ", status);
         has_error = true;
       }
     }
-    const double valid_end_time = GetWallTime();
-    PrintF("done (elapsed=%.6f)\n", valid_end_time - valid_start_time);
   }
   if (!CloseDBM(dbm.get())) {
     return 1;

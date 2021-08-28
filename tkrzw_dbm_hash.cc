@@ -279,12 +279,14 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
-               file_size_ == act_file_size && ValidateHashBucketsImpl() == Status::SUCCESS) {
+               file_size_ == act_file_size &&
+               ValidateHashBucketsImpl() == Status::SUCCESS) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
     } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
                file_size_ <= act_file_size &&
+               ValidateHashBucketsImpl() == Status::SUCCESS &&
                ValidateRecordsImpl(record_base_, act_file_size,
                                    &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
@@ -303,6 +305,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ <= act_file_size &&
+               ValidateHashBucketsImpl() == Status::SUCCESS &&
                ValidateRecordsImpl(file_size_, act_file_size,
                                    &null_end_offset, &act_count, &act_eff_data_size) ==
                Status::SUCCESS) {
@@ -1994,7 +1997,11 @@ Status HashDBMImpl::ValidateHashBucketsImpl() {
         HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
         for (int64_t i = 0; i < batch_size; i++) {
           const auto& bucket = batch[i];
-          status |= rec.ReadMetadataKey(bucket.offset, HashDBM::DEFAULT_MIN_READ_SIZE);
+          status |= rec.ReadMetadataKey(bucket.offset, min_read_size_);
+          if (status != Status::SUCCESS) {
+            break;
+          }
+          status = rec.CheckCRC();
           if (status != Status::SUCCESS) {
             break;
           }
