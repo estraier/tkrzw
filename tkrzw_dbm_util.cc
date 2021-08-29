@@ -535,6 +535,26 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
   return !has_error;
 }
 
+// Prints metadata of a database file.
+void PrintDBMMetadata(const char* label, DBM* dbm) {
+  PrintF("%s Number of Records: %lld\n", label, dbm->CountSimple());
+  PrintF("%s File Size: %lld\n", label, dbm->GetFileSizeSimple());
+  const auto& dbm_type = dbm->GetType();
+  if (dbm_type == typeid(HashDBM)) {
+    HashDBM* hash_dbm = dynamic_cast<HashDBM*>(dbm);
+    PrintF("%s Effective Data Size: %lld\n", label, hash_dbm->GetEffectiveDataSize());
+    PrintF("%s Number of Buckets: %lld\n", label, hash_dbm->CountBuckets());
+  }
+  if (dbm_type == typeid(TreeDBM)) {
+    TreeDBM* tree_dbm = dynamic_cast<TreeDBM*>(dbm);
+    PrintF("%s Effective Data Size: %lld\n", label, tree_dbm->GetEffectiveDataSize());
+  }
+  if (dbm_type == typeid(SkipDBM)) {
+    SkipDBM* skip_dbm = dynamic_cast<SkipDBM*>(dbm);
+    PrintF("%s Effective Data Size: %lld\n", label, skip_dbm->GetEffectiveDataSize());
+  }
+}
+
 // Processes the create subcommand.
 static int32_t ProcessCreate(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
@@ -1111,12 +1131,22 @@ static int32_t ProcessRebuild(int32_t argc, const char** args) {
                poly_params)) {
     return 1;
   }
+  PrintDBMMetadata("Old", dbm.get());
+  const double start_time = GetWallTime();
+  Print("Optimizing the database: ... ");
   const bool ok = RebuildDBM(dbm.get(), is_in_place, is_append, record_crc, record_comp,
                              offset_width, align_pow, num_buckets,
                              max_page_size, max_branches,
                              step_unit, max_level,
                              poly_params,
                              with_restore);
+  const double end_time = GetWallTime();
+  if (ok) {
+    PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+  } else {
+    PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
+  }
+  PrintDBMMetadata("New", dbm.get());
   if (!CloseDBM(dbm.get())) {
     return 1;
   }
@@ -1157,8 +1187,14 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
   const std::string dbm_impl_mod = GetDBMImplName(dbm_impl, old_file_path);
   if (dbm_impl_mod == "hash") {
     if(auto_mode == "none") {
+      Print("Restoring the database: ... ");
+      const double start_time = GetWallTime();
       const Status status = HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("RestoreDatabase failed: ", status);
         has_error = true;
       }
@@ -1172,17 +1208,29 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }
+      Print("Opening the database with restoring: ... ");
+      const double start_time = GetWallTime();
       const Status status =
           dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("OpenAdvanced failed: ", status);
         has_error = true;
       }
     }
   } else if (dbm_impl_mod == "tree") {
     if(auto_mode == "none") {
+      Print("Restoring the database: ... ");
+      const double start_time = GetWallTime();
       const Status status = TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("RestoreDatabase failed: ", status);
         has_error = true;
       }
@@ -1196,17 +1244,29 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }
+      Print("Opening the database with restoring: ... ");
+      const double start_time = GetWallTime();
       const Status status =
           dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("OpenAdvanced failed: ", status);
         has_error = true;
       }
     }
   } else if (dbm_impl_mod == "skip") {
     if(auto_mode == "none") {
+      Print("Restoring the database: ... ");
+      const double start_time = GetWallTime();
       const Status status = SkipDBM::RestoreDatabase(old_file_path, new_file_path);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("RestoreDatabase failed: ", status);
         has_error = true;
       }
@@ -1220,18 +1280,30 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }
+      Print("Opening the database with restoring: ... ");
+      const double start_time = GetWallTime();
       const Status status =
           dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("OpenAdvanced failed: ", status);
         has_error = true;
       }
     }
   } else if (dbm_impl_mod == "poly") {
     if(auto_mode == "none") {
+      Print("Restoring the database: ... ");
+      const double start_time = GetWallTime();
       const Status status = PolyDBM::RestoreDatabase(
           old_file_path, new_file_path, class_name, end_offset);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("RestoreDatabase failed: ", status);
         has_error = true;
       }
@@ -1240,18 +1312,30 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       std::map<std::string, std::string> tuning_params =
           tkrzw::StrSplitIntoMap(poly_params, ",", "=");
       tuning_params["restore_mode"] = auto_mode;
+      Print("Opening the database with restoring: ... ");
+      const double start_time = GetWallTime();
       const Status status =
           dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("OpenAdvanced failed: ", status);
         has_error = true;
       }
     }
   } else if (dbm_impl_mod == "shard") {
     if(auto_mode == "none") {
+      Print("Restoring the database: ... ");
+      const double start_time = GetWallTime();
       const Status status = ShardDBM::RestoreDatabase(
           old_file_path, new_file_path, class_name, end_offset);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("RestoreDatabase failed: ", status);
         has_error = true;
       }
@@ -1260,9 +1344,15 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       std::map<std::string, std::string> tuning_params =
           tkrzw::StrSplitIntoMap(poly_params, ",", "=");
       tuning_params["restore_mode"] = auto_mode;
+      Print("Opening the database with restoring: ... ");
+      const double start_time = GetWallTime();
       const Status status =
           dbm.OpenAdvanced(old_file_path, true, File::OPEN_NO_CREATE, tuning_params);
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("OpenAdvanced failed: ", status);
         has_error = true;
       }
@@ -1353,9 +1443,15 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
       EPrintL("MergeSkipDatabase failed: ", status);
       has_error = true;
     }
+    Print("Synchronizing: ... ");
+    const double start_time = GetWallTime();
     status = skip_dbm->SynchronizeAdvanced(
         false, nullptr, GetReducerOrDie(reducer_name));
-    if (status != Status::SUCCESS) {
+    const double end_time = GetWallTime();
+    if (status == Status::SUCCESS) {
+      PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+    } else {
+      PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
       EPrintL("SynchronizeAdvanced failed: ", status);
       has_error = true;
     }
@@ -1369,8 +1465,14 @@ static int32_t ProcessMerge(int32_t argc, const char** args) {
         has_error = true;
         break;
       }
+      Print("Exporting: ... ");
+      const double start_time = GetWallTime();
       status = src_dbm->Export(dbm.get());
-      if (status != Status::SUCCESS) {
+      const double end_time = GetWallTime();
+      if (status == Status::SUCCESS) {
+        PrintF("ok (elapsed=%.6f)\n", end_time - start_time);
+      } else {
+        PrintF("failed (elapsed=%.6f)\n", end_time - start_time);
         EPrintL("Export failed: ", status);
         has_error = true;
         break;
