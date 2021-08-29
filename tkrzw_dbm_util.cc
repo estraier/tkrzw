@@ -24,7 +24,7 @@ static void PrintUsageAndDie() {
   P("Usage:\n");
   P("  %s create [common_options] [tuning_options] [options] file\n", progname);
   P("    : Creates a database file.\n");
-  P("  %s inspect [common_options] file\n", progname);
+  P("  %s inspect [common_options] file [attr]\n", progname);
   P("    : Prints inspection of a database file.\n");
   P("  %s get [common_options] file key\n", progname);
   P("    : Gets a record and prints it.\n");
@@ -623,7 +623,7 @@ static int32_t ProcessCreate(int32_t argc, const char** args) {
 // Processes the inspect subcommand.
 static int32_t ProcessInspect(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 1}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -636,6 +636,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
     PrintUsageAndDie();
   }
   const std::string file_path = GetStringArgument(cmd_args, "", 0, "");
+  const std::string attr_name = GetStringArgument(cmd_args, "", 1, "");
   const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
@@ -661,13 +662,21 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
                "")) {
     return 1;
   }
-  PrintF("Inspection:\n");
-  for (const auto& meta : dbm->Inspect()) {
-    PrintL(StrCat("  ", meta.first, "=", meta.second));
+  if (attr_name.empty()) {
+    PrintF("Inspection:\n");
+    for (const auto& meta : dbm->Inspect()) {
+      PrintL(StrCat("  ", meta.first, "=", meta.second));
+    }
+    PrintF("Actual File Size: %lld\n", dbm->GetFileSizeSimple());
+    PrintF("Number of Records: %lld\n", dbm->CountSimple());
+    PrintF("Should be Rebuilt: %s\n", dbm->ShouldBeRebuiltSimple() ? "true" : "false");
+  } else {
+    for (const auto& meta : dbm->Inspect()) {
+      if (meta.first == attr_name) {
+        PrintL(meta.second);
+      }
+    }
   }
-  PrintF("Actual File Size: %lld\n", dbm->GetFileSizeSimple());
-  PrintF("Number of Records: %lld\n", dbm->CountSimple());
-  PrintF("Should be Rebuilt: %s\n", dbm->ShouldBeRebuiltSimple() ? "true" : "false");
   bool has_error = false;
   if (with_validate) {
     const auto& dbm_type = dbm->GetType();

@@ -5,6 +5,7 @@
 
 	- PolyDBM::RebuildAdvanced supports skip_broken_records and sync_hard parameters.
 	- Extra metadata and time are printed by tkrzw_dbm_util.
+	- The inspect subcommand of tkrzw_dbm_util supports a filter.
 
 2021-08-26  Mikio Hirabayashi  <hirarin@gmail.com>
 
