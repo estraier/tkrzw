@@ -4,6 +4,7 @@
 	- Library version: 1.49.0
 
 	- PolyDBM::RebuildAdvanced supports skip_broken_records and sync_hard parameters.
+	- Extra metadata and time are printed by tkrzw_dbm_util.
 
 2021-08-26  Mikio Hirabayashi  <hirarin@gmail.com>
 
