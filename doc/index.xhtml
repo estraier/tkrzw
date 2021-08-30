@@ -246,6 +246,8 @@ window.onload = function(){
 
 <p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
 
+<p>If you want to share databases among multiple processes and programs on remote machines, use the database service of <a href="https://dbmx.net/tkrzw-rpc/">Tkrzw-RPC</a>.</p>
+
 <h2 id="download">Download</h2>
 
 <p>You can download source packages in the following directories.</p>
@@ -4436,7 +4438,7 @@ $ tkrzw_dbm_perf sequence --dbm stdtree --iter 10000000 --random_key --threads 1
 <dt>Q: What's the relationship between Tkrzw and Kyoto Cabinet (Tokyo Cabinet, QDBM)?</dt>
 <dd>A: Tkrzw is a successor of them, utilizing C++17 features.  I believe Tkrzw is superior in many aspects to them.  Because API and data formats have been changed, there's no compatibility with the predecessors.</dd>
 <dt>Q: Do you have a plan to write a database server like Kyoto Tycoon?</dt>
-<dd>A: I don't so far.  I could consider it if there are demands.</dd>
+<dd>A: Please see <a href="https://dbmx.net/tkrzw-rpc/">Tkrzw-RPC</a>.</dd>
 <dt>Q: Do you have a plan to host binary packages?</dt>
 <dd>A: I cannot do it myself.  I appreciate people who maintain binary packages for various environments.</dd>
 </dl>
