@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   status = dbm.Close();
   if (status != Status::SUCCESS) {
     // The Close operation shouldn't fail.  So we stop if it happens.
-    Die("Set failed: ", status);
+    Die("Close failed: ", status);
   }
 
   // Opens the existing database as a reader mode.
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
   status = dbm.Close();
   if (status != Status::SUCCESS) {
     // The Close operation shouldn't fail.  So we stop if it happens.
-    Die("Set failed: ", status);
+    Die("Close failed: ", status);
   }
 
   return 0;
