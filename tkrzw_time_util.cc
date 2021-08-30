@@ -29,12 +29,14 @@ double GetWallTime() {
 void GetLocalCalendar(int64_t wtime, struct std::tm* cal) {
 #if defined(_SYS_WINDOWS_)
   assert(cal != nullptr);
-  if (localtime_s(cal, &wtime) != 0) {
+  time_t twtime = wtime;
+  if (localtime_s(cal, &twtime) != 0) {
     throw std::runtime_error("localtime_s failed");
   }
 #else
   assert(cal != nullptr);
-  if (localtime_r(&wtime, cal) == nullptr) {
+  time_t twtime = wtime;
+  if (localtime_r(&twtime, cal) == nullptr) {
     throw std::runtime_error("localtime_r failed");
   }
 #endif
@@ -43,12 +45,14 @@ void GetLocalCalendar(int64_t wtime, struct std::tm* cal) {
 void GetUniversalCalendar(int64_t wtime, struct std::tm* cal) {
 #if defined(_SYS_WINDOWS_)
   assert(cal != nullptr);
-  if (gmtime_s(cal, &wtime) != 0) {
+  time_t twtime = wtime;
+  if (gmtime_s(cal, &twtime) != 0) {
     throw std::runtime_error("gmtime_s failed");
   }
 #else
   assert(cal != nullptr);
-  if (gmtime_r(&wtime, cal) == nullptr) {
+  time_t twtime = wtime;
+  if (gmtime_r(&twtime, cal) == nullptr) {
     throw std::runtime_error("gmtime_r failed");
   }
 #endif

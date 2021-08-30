@@ -163,6 +163,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 
 #if defined(_SYS_POSIX_)
 
@@ -179,6 +180,7 @@ extern "C" {
 #include <sys/resource.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <time.h>
 }  // extern "C"
 
 #endif
