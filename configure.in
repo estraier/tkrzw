@@ -61,6 +61,20 @@ use_zstd=""
 use_lz4=""
 use_lzma=""
 
+# Specify the installation prefix of extra packages
+AC_ARG_WITH(extra,
+  AS_HELP_STRING([--with-extra=DIR], [search DIR/include and DIR/lib for extra packages]))
+if test -n "$with_extra"
+then
+  MYCPPFLAGS="$MYCPPFLAGS -I$with_extra/include"
+  MYLDFLAGS="$MYLDFLAGS -L$with_extra/lib"
+  CPATH="$CPATH:$with_extra/include"
+  LIBRARY_PATH="$LIBRARY_PATH:$with_extra/lib"
+  LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$with_extra/lib"
+  PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$with_extra/lib/pkgconfig"
+  PATH="$with_extra/bin:$PATH"
+fi
+
 # Development mode
 AC_ARG_ENABLE(devel,
   AS_HELP_STRING([--enable-devel], [build for development]))
