@@ -583,7 +583,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0},
-    {"--set_only", 0}, {"--get_only", 0}, {"--remove_only", 0}, {"--validate", 0}, {"--copy", 1},
+    {"--set_only", 0}, {"--get_only", 0}, {"--iter_only", 0}, {"--remove_only", 0},
+    {"--validate", 0}, {"--copy", 1},
     {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
@@ -610,9 +611,10 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const bool is_verbose = CheckMap(cmd_args, "--verbose");
   const bool is_random_key = CheckMap(cmd_args, "--random_key");
   const bool is_random_value = CheckMap(cmd_args, "--random_value");
-  const bool is_get_only = CheckMap(cmd_args, "--get_only");
-  const bool is_set_only = CheckMap(cmd_args, "--set_only");
-  const bool is_remove_only = CheckMap(cmd_args, "--remove_only");
+  bool is_get_only = CheckMap(cmd_args, "--get_only");
+  bool is_iter_only = CheckMap(cmd_args, "--iter_only");
+  bool is_set_only = CheckMap(cmd_args, "--set_only");
+  bool is_remove_only = CheckMap(cmd_args, "--remove_only");
   const bool with_validate = CheckMap(cmd_args, "--validate");
   const std::string copy_path = GetStringArgument(cmd_args, "--copy", 0, "");
   const std::string file_path = GetStringArgument(cmd_args, "--path", 0, "");
@@ -656,6 +658,12 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   }
   if (num_threads < 1) {
     Die("Invalid number of threads");
+  }
+  if (!is_set_only && !is_get_only && !is_iter_only && !is_remove_only) {
+    is_set_only = true;
+    is_get_only = true;
+    is_iter_only = true;
+    is_remove_only = true;
   }
   const int64_t start_mem_rss = GetMemoryUsage();
   std::unique_ptr<DBM> dbm =
@@ -701,7 +709,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     delete[] value_buf;
   };
-  if (!is_get_only && !is_remove_only) {
+  if (is_set_only) {
     if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
@@ -780,7 +788,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       PrintF(" (%08d)\n", num_iterations);
     }
   };
-  if (!is_set_only && !is_remove_only) {
+  if (is_get_only) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
@@ -812,6 +820,88 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     PrintL();
   }
+  auto iterating_task = [&](int32_t id) {
+    const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
+    std::mt19937 key_mt(mt_seed + id);
+    std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
+    std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
+    char key_buf[32];
+    bool midline = false;
+    std::unique_ptr<tkrzw::DBM::Iterator> iter;
+    for (int32_t i = 0; !has_error && i < num_iterations; i++) {
+      if (i % 100 == 0) {
+        iter = dbm->MakeIterator();
+      }
+      const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
+      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const std::string_view key(key_buf, key_size);
+      Status status = iter->Jump(key);
+      if (status != Status::SUCCESS &&
+          !(is_random_key && random_seed < 0 && status == Status::NOT_FOUND_ERROR)) {
+        EPrintL("Jump failed: ", status);
+        has_error = true;
+        break;
+      }
+      std::string rec_key, rec_value;
+      status = iter->Get(&rec_key, &rec_value);
+      if (status != Status::SUCCESS &&
+          !(is_random_key && random_seed < 0 && status == Status::NOT_FOUND_ERROR)) {
+        EPrintL("Get failed: ", status);
+        has_error = true;
+        break;
+      }
+      if (id == 0 && (i + 1) % dot_mod == 0) {
+        PutChar('.');
+        midline = true;
+        if ((i + 1) % fold_mod == 0) {
+          PrintF(" (%08d)\n", i + 1);
+          midline = false;
+        }
+      }
+    }
+    if (midline) {
+      PrintF(" (%08d)\n", num_iterations);
+    }
+  };
+  if (is_iter_only) {
+    if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
+                  is_append, record_crc, record_comp,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  lock_mem_buckets, cache_buckets,
+                  max_page_size, max_branches, max_cached_pages,
+                  step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
+                  poly_params)) {
+      has_error = true;
+    }
+    PrintF("Iterating: impl=%s num_iterations=%d value_size=%d num_threads=%d\n",
+           dbm_impl.c_str(), num_iterations, value_size, num_threads);
+    const double start_time = GetWallTime();
+    std::vector<std::thread> threads;
+    for (int32_t i = 0; i < num_threads; i++) {
+      threads.emplace_back(std::thread(iterating_task, i));
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    const double end_time = GetWallTime();
+    const double elapsed_time = end_time - start_time;
+    const int64_t num_records = dbm->CountSimple();
+    const int64_t mem_usage = GetMemoryUsage() - start_mem_rss;
+    PrintF("Iterating done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
+           elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
+           mem_usage);
+    if (!TearDownDBM(dbm.get(), file_path, is_verbose)) {
+      has_error = true;
+    }
+    PrintL();
+  }
+
+
+
+
+
+
+
   auto removing_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
     std::mt19937 key_mt(mt_seed + id);
@@ -842,7 +932,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       PrintF(" (%08d)\n", num_iterations);
     }
   };
-  if (!is_set_only && !is_get_only) {
+  if (is_remove_only) {
     if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
