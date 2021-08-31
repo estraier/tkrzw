@@ -198,9 +198,9 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
       record_comp_mode == "lzma" || record_comp_mode == "xz") {
     tuning_params->record_comp_mode = HashDBM::RECORD_COMP_LZMA;
   }
-  tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
-  tuning_params->align_pow = StrToInt(SearchMap(*params, "align_pow", "-1"));
-  tuning_params->num_buckets = StrToInt(SearchMap(*params, "num_buckets", "-1"));
+  tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
+  tuning_params->align_pow = StrToIntMetric(SearchMap(*params, "align_pow", "-1"));
+  tuning_params->num_buckets = StrToIntMetric(SearchMap(*params, "num_buckets", "-1"));
   const std::string restore_mode = StrLowerCase(SearchMap(*params, "restore_mode", ""));
   if (restore_mode == "restore_sync" || restore_mode == "sync") {
     tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
@@ -208,10 +208,10 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
     tuning_params->restore_mode = HashDBM::RESTORE_READ_ONLY;
   }
-  tuning_params->fbp_capacity = StrToInt(SearchMap(*params, "fbp_capacity", "-1"));
-  tuning_params->min_read_size = StrToInt(SearchMap(*params, "min_read_size", "-1"));
-  tuning_params->lock_mem_buckets = StrToIntOrBool(SearchMap(*params, "lock_mem_buckets", "-1"));
-  tuning_params->cache_buckets = StrToIntOrBool(SearchMap(*params, "cache_buckets", "-1"));
+  tuning_params->fbp_capacity = StrToIntMetric(SearchMap(*params, "fbp_capacity", "-1"));
+  tuning_params->min_read_size = StrToIntMetric(SearchMap(*params, "min_read_size", "-1"));
+  tuning_params->lock_mem_buckets = StrToBool(SearchMap(*params, "lock_mem_buckets", "false"));
+  tuning_params->cache_buckets = StrToBool(SearchMap(*params, "cache_buckets", "false"));
   params->erase("update_mode");
   params->erase("record_crc_mode");
   params->erase("record_comp_mode");
@@ -228,10 +228,11 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
 void SetTreeTuningParams(std::map<std::string, std::string>* params,
                          TreeDBM::TuningParameters* tuning_params) {
   SetHashTuningParams(params, tuning_params);
-  tuning_params->max_page_size = StrToInt(SearchMap(*params, "max_page_size", "-1"));
-  tuning_params->max_branches = StrToInt(SearchMap(*params, "max_branches", "-1"));
-  tuning_params->max_cached_pages = StrToInt(SearchMap(*params, "max_cached_pages", "-1"));
-  tuning_params->key_comparator = GetKeyComparatorByName(SearchMap(*params, "key_comparator", ""));
+  tuning_params->max_page_size = StrToIntMetric(SearchMap(*params, "max_page_size", "-1"));
+  tuning_params->max_branches = StrToIntMetric(SearchMap(*params, "max_branches", "-1"));
+  tuning_params->max_cached_pages = StrToIntMetric(SearchMap(*params, "max_cached_pages", "-1"));
+  tuning_params->key_comparator =
+      GetKeyComparatorByName(SearchMap(*params, "key_comparator", ""));
   params->erase("max_page_size");
   params->erase("max_branches");
   params->erase("max_cached_pages");
@@ -240,9 +241,9 @@ void SetTreeTuningParams(std::map<std::string, std::string>* params,
 
 void SetSkipTuningParams(std::map<std::string, std::string>* params,
                          SkipDBM::TuningParameters* tuning_params) {
-  tuning_params->offset_width = StrToInt(SearchMap(*params, "offset_width", "-1"));
-  tuning_params->step_unit = StrToInt(SearchMap(*params, "step_unit", "-1"));
-  tuning_params->max_level = StrToInt(SearchMap(*params, "max_level", "-1"));
+  tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
+  tuning_params->step_unit = StrToIntMetric(SearchMap(*params, "step_unit", "-1"));
+  tuning_params->max_level = StrToIntMetric(SearchMap(*params, "max_level", "-1"));
   const std::string restore_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
   if (restore_mode == "restore_sync" || restore_mode == "sync") {
     tuning_params->restore_mode = SkipDBM::RESTORE_SYNC;
@@ -250,9 +251,10 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
     tuning_params->restore_mode = SkipDBM::RESTORE_READ_ONLY;
   }
-  tuning_params->sort_mem_size = StrToInt(SearchMap(*params, "sort_mem_size", "-1"));
+  tuning_params->sort_mem_size = StrToIntMetric(SearchMap(*params, "sort_mem_size", "-1"));
   tuning_params->insert_in_order = StrToBool(SearchMap(*params, "insert_in_order", "false"));
-  tuning_params->max_cached_records = StrToInt(SearchMap(*params, "max_cached_records", "-1"));
+  tuning_params->max_cached_records =
+      StrToIntMetric(SearchMap(*params, "max_cached_records", "-1"));
   params->erase("offset_width");
   params->erase("step_unit");
   params->erase("max_level");
@@ -348,7 +350,7 @@ Status PolyDBM::OpenAdvanced(
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
-    const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
+    const int64_t num_buckets = StrToIntMetric(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
@@ -396,8 +398,8 @@ Status PolyDBM::OpenAdvanced(
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
-    const int64_t cap_rec_num = StrToInt(SearchMap(mod_params, "cap_rec_num", "-1"));
-    const int64_t cap_mem_size = StrToInt(SearchMap(mod_params, "cap_mem_size", "-1"));
+    const int64_t cap_rec_num = StrToIntMetric(SearchMap(mod_params, "cap_rec_num", "-1"));
+    const int64_t cap_mem_size = StrToIntMetric(SearchMap(mod_params, "cap_mem_size", "-1"));
     mod_params.erase("cap_rec_num");
     mod_params.erase("cap_mem_size");
     if (!mod_params.empty()) {
@@ -418,7 +420,7 @@ Status PolyDBM::OpenAdvanced(
     if (file == nullptr) {
       return Status(Status::INVALID_ARGUMENT_ERROR, "unknown File class");
     }
-    const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
+    const int64_t num_buckets = StrToIntMetric(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
@@ -597,7 +599,7 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
   }
   if (dbm_type == typeid(TinyDBM)) {
     TinyDBM* tiny_dbm = dynamic_cast<TinyDBM*>(dbm_.get());
-    const int64_t num_buckets = StrToInt(SearchMap(mod_params, "num_buckets", "-1"));
+    const int64_t num_buckets = StrToIntMetric(SearchMap(mod_params, "num_buckets", "-1"));
     mod_params.erase("num_buckets");
     if (!mod_params.empty()) {
       return Status(Status::INVALID_ARGUMENT_ERROR,
@@ -607,8 +609,8 @@ Status PolyDBM::RebuildAdvanced(const std::map<std::string, std::string>& params
   }
   if (dbm_type == typeid(CacheDBM)) {
     CacheDBM* cache_dbm = dynamic_cast<CacheDBM*>(dbm_.get());
-    const int64_t cap_rec_num = StrToInt(SearchMap(mod_params, "cap_rec_num", "-1"));
-    const int64_t cap_mem_size = StrToInt(SearchMap(mod_params, "cap_mem_size", "-1"));
+    const int64_t cap_rec_num = StrToIntMetric(SearchMap(mod_params, "cap_rec_num", "-1"));
+    const int64_t cap_mem_size = StrToIntMetric(SearchMap(mod_params, "cap_mem_size", "-1"));
     mod_params.erase("cap_rec_num");
     mod_params.erase("cap_mem_size");
     if (!mod_params.empty()) {

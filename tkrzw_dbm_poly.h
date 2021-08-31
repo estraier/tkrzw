@@ -296,8 +296,8 @@ class PolyDBM final : public ParamDBM {
    *     "RESTORE_NOOP" to do nothing.  By default, as many records as possible are restored.
    *   - fbp_capacity (int): The capacity of the free block pool.
    *   - min_read_size (int): The minimum reading size to read a record.
-   *   - lock_mem_buckets (int): Positive to lock the memory for the hash buckets.
-   *   - cache_buckets (int): Positive to cache the hash buckets on memory.
+   *   - lock_mem_buckets (bool): True to lock the memory for the hash buckets.
+   *   - cache_buckets (bool): True to cache the hash buckets on memory.
    * @details For TreeDBM, all optional parameters for HashDBM are available.  In addition,
    * these optional parameters are supported.
    *   - max_page_size (int): The maximum size of a page.

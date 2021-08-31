@@ -2043,7 +2043,7 @@ Status HashDBMImpl::ValidateRecordsImpl(
     int64_t record_base, int64_t end_offset,
     int64_t* null_end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
   const bool in_place = static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE;
-  *null_end_offset =-1;
+  *null_end_offset = -1;
   int64_t offset = record_base;
   HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
   HashRecord child_rec(file_.get(), crc_width_, offset_width_, align_pow_);
