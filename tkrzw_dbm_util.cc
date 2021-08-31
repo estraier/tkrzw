@@ -1696,7 +1696,9 @@ int main(int argc, char** argv) {
   }
   int32_t rv = 0;
   try {
-    if (std::strcmp(args[1], "create") == 0) {
+    if (std::strcmp(args[1], "--version") == 0) {
+      tkrzw::PrintL("Tkrzw utilities ", tkrzw::PACKAGE_VERSION);
+    } else if (std::strcmp(args[1], "create") == 0) {
       rv = tkrzw::ProcessCreate(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "inspect") == 0) {
       rv = tkrzw::ProcessInspect(argc - 1, args + 1);
