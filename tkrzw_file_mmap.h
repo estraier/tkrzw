@@ -120,7 +120,7 @@ class MemoryMapParallelFile final : public MemoryMapFile {
   /**
    * Destructor.
    */
-  virtual ~MemoryMapParallelFile();
+  ~MemoryMapParallelFile();
 
   /**
    * Copy and assignment are disabled.
@@ -395,7 +395,7 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
   /**
    * Destructor.
    */
-  virtual ~MemoryMapAtomicFile();
+  ~MemoryMapAtomicFile();
 
   /**
    * Copy and assignment are disabled.

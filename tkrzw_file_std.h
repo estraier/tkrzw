@@ -43,7 +43,7 @@ class StdFile final : public File {
   /**
    * Destructor.
    */
-  virtual ~StdFile();
+  ~StdFile();
 
   /**
    * Copy and assignment are disabled.

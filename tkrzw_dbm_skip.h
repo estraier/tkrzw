@@ -65,7 +65,7 @@ class SkipDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -270,7 +270,7 @@ class SkipDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~SkipDBM();
+  ~SkipDBM();
 
   /**
    * Copy and assignment are disabled.

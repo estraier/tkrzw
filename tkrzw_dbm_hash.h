@@ -64,7 +64,7 @@ class HashDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -329,7 +329,7 @@ class HashDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~HashDBM();
+  ~HashDBM();
 
   /**
    * Copy and assignment are disabled.

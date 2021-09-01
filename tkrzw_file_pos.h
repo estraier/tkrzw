@@ -98,7 +98,7 @@ class PositionalParallelFile final : public PositionalFile {
   /**
    * Destructor.
    */
-  virtual ~PositionalParallelFile();
+  ~PositionalParallelFile();
 
   /**
    * Copy and assignment are disabled.
@@ -311,7 +311,7 @@ class PositionalAtomicFile final : public PositionalFile {
   /**
    * Destructor.
    */
-  virtual ~PositionalAtomicFile();
+  ~PositionalAtomicFile();
 
   /**
    * Copy and assignment are disabled.

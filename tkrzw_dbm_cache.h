@@ -53,7 +53,7 @@ class CacheDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -172,7 +172,7 @@ class CacheDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~CacheDBM();
+  ~CacheDBM();
 
   /**
    * Copy and assignment are disabled.

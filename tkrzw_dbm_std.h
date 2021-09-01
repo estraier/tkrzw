@@ -53,7 +53,7 @@ class StdHashDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -157,7 +157,7 @@ class StdHashDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~StdHashDBM();
+  ~StdHashDBM();
 
   /**
    * Copy and assignment are disabled.
@@ -352,7 +352,7 @@ class StdTreeDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -455,7 +455,7 @@ class StdTreeDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~StdTreeDBM();
+  ~StdTreeDBM();
 
   /**
    * Copy and assignment are disabled.

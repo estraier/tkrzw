@@ -53,7 +53,7 @@ class TinyDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -165,7 +165,7 @@ class TinyDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~TinyDBM();
+  ~TinyDBM();
 
   /**
    * Copy and assignment are disabled.

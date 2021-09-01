@@ -51,7 +51,7 @@ class BabyDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -159,7 +159,7 @@ class BabyDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~BabyDBM();
+  ~BabyDBM();
 
   /**
    * Copy and assignment are disabled.

@@ -69,7 +69,7 @@ class TreeDBM final : public DBM {
     /**
      * Destructor.
      */
-    virtual ~Iterator();
+    ~Iterator();
 
     /**
      * Copy and assignment are disabled.
@@ -221,7 +221,7 @@ class TreeDBM final : public DBM {
   /**
    * Destructor.
    */
-  virtual ~TreeDBM();
+  ~TreeDBM();
 
   /**
    * Copy and assignment are disabled.
