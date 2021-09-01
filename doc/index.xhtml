@@ -47,18 +47,38 @@ h2:hover a.headanc, h3:hover a.headanc {
   font-size: 10pt;
   vertical-align: super;
 }
+#toc_div { zoom: 85%; }
+.toc_line_h2 { margin-left: 2ex; }
+.toc_line_h3 { margin-left: 5ex; }
 /*]]>*/</style>
 <script type="text/javascript">/*<![CDATA[*/
-window.onload = function(){
-  for (let tag of ['h2', 'h3']) {
-    for (let header of document.getElementsByTagName(tag)) {
-      let anchor = document.createElement('a');
-      anchor.textContent = "#"
-      anchor.href = "#" + header.id;
-      anchor.className = "headanc";
-      header.appendChild(anchor);
+function insert_toc() {
+  let first_head = document.querySelector("h2, h3");
+  let toc_div = document.createElement('div');
+  toc_div.id = "toc_div";
+  let toc_head = document.createElement('h2');
+  toc_head.textContent = "Table of Contents";
+  toc_head.id = "toc";
+  toc_div.appendChild(toc_head);
+  first_head.parentNode.insertBefore(toc_div, first_head);
+  for (let header of document.querySelectorAll("h2, h3")) {
+    if (header != toc_head) {
+      let toc_line = document.createElement('div');
+      toc_line.className = "toc_line_" + header.tagName;
+      let toc_anchor = document.createElement('a');
+      toc_anchor.href = "#" + header.id;
+      toc_anchor.textContent = header.textContent
+      toc_line.appendChild(toc_anchor);
+      toc_div.appendChild(toc_line);
     }
+    let anchor = document.createElement('a');
+    anchor.textContent = "#"
+    anchor.href = "#" + header.id;
+    anchor.className = "headanc";
+    header.appendChild(anchor);
   }
+}
+function modify_title() {
   let elem = document.getElementById("title");
   let now = new Date();
   if ((now.getFullYear() + now.getMonth() + now.getDate() + now.getHours()) % 5 == 0) {
@@ -77,6 +97,8 @@ window.onload = function(){
     let text = texts[Math.floor(now.getTime() / 60000) % texts.length];
     elem.firstChild.nodeValue = "Tkrzw: " + text;
   }
+}
+function insert_slides() {
   let slide_url = "https://docs.google.com/presentation/d/e/2PACX-1vSUIwfUHh791MQzPPGbh7uoCSiAhLvCsj550IH3dR7_PylF4e8pucIZ66aOUU8aGtA4kCuLf2mCBWmR/embed?start=false&loop=false&delayms=1000000";
   if (navigator.language == "ja") {
     slide_url = "https://docs.google.com/presentation/d/e/2PACX-1vTbBrc0VUoT6y-9uSynhP1fNUfkF528Dsg2JBjsk0cDRFzvVOBeUpJa8WzWI2Q1MbeD1fA_FRtwnJgI/embed?start=false&loop=false&delayms=1000000";
@@ -96,6 +118,11 @@ window.onload = function(){
     logo.appendChild(slides);
   }
 }
+window.onload = function(){
+  insert_toc();
+  modify_title();
+  insert_slides();
+}
 /*]]>*/</script>
 </head>
 <body>
@@ -105,115 +132,6 @@ window.onload = function(){
 <h1 id="title">Tkrzw: a set of implementations of DBM</h1>
 
 <div id="logo" class="logo"><img src="ilove-logo.png"/></div>
-
-<h2 id="toc">Table of Contents</h2>
-
-<!--regenerate TOC with "perl make_doc.pl index.html index.html.toc"-->
-<!--TOC_STARTS_HERE: leave this line in the file-->
-<ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#download">Download</a></li>
-<li><a href="#api_documents">API Documents</a></li>
-<li><a href="#installation">Installation</a></li>
-<ul>
-<li><a href="#installation_unix">For UNIX</a></li>
-<li><a href="#installation_windows">For Windows</a></li>
-</ul>
-<li><a href="#performance">Performance</a></li>
-<li><a href="#hashdbm_overview">HashDBM: The File Hash Database</a></li>
-<ul>
-<li><a href="#hashdbm_example">Example Code</a></li>
-<li><a href="#hashdbm_format">Format</a></li>
-</ul>
-<li><a href="#treedbm_overview">TreeDBM: The File Tree Database</a></li>
-<ul>
-<li><a href="#treedbm_example">Example Code</a></li>
-<li><a href="#treedbm_format">Format</a></li>
-</ul>
-<li><a href="#skipdbm_overview">SkipDBM: The File Skip Database</a></li>
-<ul>
-<li><a href="#skipdbm_example">Example Code</a></li>
-<li><a href="#skipdbm_format">Format</a></li>
-</ul>
-<li><a href="#tinydbm_overview">TinyDBM: The On-memory Hash Database</a></li>
-<ul>
-<li><a href="#tinydbm_example">Example Code</a></li>
-</ul>
-<li><a href="#babydbm_overview">BabyDBM: The On-memory Tree Database</a></li>
-<ul>
-<li><a href="#babydbm_example">Example Code</a></li>
-</ul>
-<li><a href="#cachedbm_overview">CacheDBM: The On-memory Cache Database with LRU Deletion</a></li>
-<ul>
-<li><a href="#cachedbm_example">Example Code</a></li>
-</ul>
-<li><a href="#stddbm_overview">Std(Hash|Tree)DBM: The STL On-memory Databases</a></li>
-<ul>
-<li><a href="#hashdbm_example2">Example Code</a></li>
-</ul>
-<li><a href="#polydbm_overview">(Poly|Shard)DBM: Polymorphic and Sharding DBM Adapters</a></li>
-<ul>
-<li><a href="#polydbm_example">Example Code</a></li>
-</ul>
-<li><a href="#asyncdbm_overview">AsyncDBM: Asynchronous Database Manager Adapter</a></li>
-<ul>
-<li><a href="#asyncdbm_example">Example Code</a></li>
-</ul>
-<li><a href="#index_overview">(File|Mem)Index: Secondary Indices</a></li>
-<ul>
-<li><a href="#index_example">Example Code</a></li>
-</ul>
-<li><a href="#langc_overview">C Language Interface</a></li>
-<ul>
-<li><a href="#langc_example">Example Code</a></li>
-</ul>
-<li><a href="#commands">Command Line Utilities</a></li>
-<ul>
-<li><a href="#commands_tkrzw_build_util">tkrzw_build_util: Build Utilities</a></li>
-<li><a href="#commands_tkrzw_dbm_util">tkrzw_dbm_util: DBM Utilities</a></li>
-<li><a href="#commands_tkrzw_dbm_perf">tkrzw_dbm_perf: DBM Performance Checker</a></li>
-</ul>
-<li><a href="#tips">Tips</a></li>
-<ul>
-<li><a href="#tips_hashdbm_tune">Tuning HashDBM</a></li>
-<li><a href="#tips_hashdbm_update_modes">Update Modes of HashDBM and TreeDBM</a></li>
-<ul>
-<li><a href="#tips_hashdbm_update_modes_inplace">In-Place</a></li>
-<li><a href="#tips_hashdbm_update_modes_appending">Appending</a></li>
-<li><a href="#tips_hashdbm_update_modes_perf">Performance Comparison</a></li>
-</ul>
-<li><a href="#tips_treedbm_tune">Tuning TreeDBM</a></li>
-<li><a href="#tips_treedbm_comparators">Comparators of TreeDBM</a></li>
-<li><a href="#tips_skipdbm_tune">Tuning SkipDBM</a></li>
-<li><a href="#tips_skipdbm_building">Building SkipDBM</a></li>
-<li><a href="#tips_skipdbm_mapreduce">SkipDBM as a MapReduce</a></li>
-<li><a href="#tips_memdbm_tune">Tuning TinyDBM, BabyDBM, and CacheDBM</a></li>
-<li><a href="#tips_lambda_processor">Record Processor with Lambda Function</a></li>
-<li><a href="#tips_multi_rec_tx">Multi-record Transaction</a></li>
-<li><a href="#tips_inverted_index">Inverted Index for Full-text Search</a></li>
-<li><a href="#tips_index_performance">Performance of ShardDBM</a></li>
-<li><a href="#tips_index_performance2">Performance of Secondary Indices</a></li>
-<li><a href="#tips_restore">ACID and Restoring Broken Databases</a></li>
-<ul>
-<li><a href="#tips_restore_threat">Threat Model: What Can Go Wrong</a></li>
-<li><a href="#tips_restore_hash">HashDBM and TreeDBM</a></li>
-<li><a href="#tips_restore_skip">SkipDBM</a></li>
-<li><a href="#tips_restore_how">How Broken Databases Are Detected</a></li>
-<li><a href="#tips_restore_snapshot">Snapshot Reproduction</a></li>
-</ul>
-<li><a href="#tips_compression">Data Compression</a></li>
-<li><a href="#tips_hashdbm_backup">Making Backup Data Online</a></li>
-<li><a href="#tips_migration">Data Migration</a></li>
-<li><a href="#tips_util_funcs">Utility Functions</a></li>
-<li><a href="#tips_multitasking">Multitasking</a></li>
-<li><a href="#tips_file_classes">File Classes</a></li>
-<li><a href="#tips_direct_io">Direct I/O</a></li>
-<li><a href="#tips_dbm_performance_tests">DBM Performance Tests</a></li>
-</ul>
-<li><a href="#tips_faq">Frequently Asked Questions</a></li>
-<li><a href="#license">License</a></li>
-</ul>
-<!--TOC_ENDS_HERE: leave this line in the file-->
 
 <h2 id="overview">Overview</h2>
 
