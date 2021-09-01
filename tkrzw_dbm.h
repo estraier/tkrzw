@@ -1324,15 +1324,16 @@ class DBM {
   /**
    * Copies the content of the database file to another file.
    * @param dest_path A path to the destination file.
+   * @param sync_hard True to do physical synchronization with the hardware.
    * @return The result status.
    * @details Copying is done while the content is synchronized and stable.  So, this method is
    * suitable for making a backup file while running a database service.
    */
-  virtual Status CopyFileData(const std::string& dest_path) {
+  virtual Status CopyFileData(const std::string& dest_path, bool sync_hard = false) {
     Status impl_status(Status::SUCCESS);
     FileProcessorCopyFileData proc(&impl_status, dest_path);
     if (IsWritable()) {
-      const Status status = Synchronize(false, &proc);
+      const Status status = Synchronize(sync_hard, &proc);
       if (status != Status::SUCCESS) {
         return status;
       }

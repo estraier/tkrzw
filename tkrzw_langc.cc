@@ -825,10 +825,10 @@ bool tkrzw_dbm_synchronize(
   return last_status == Status::SUCCESS;
 }
 
-bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path) {
+bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path, bool sync_hard) {
   assert(dbm != nullptr && dest_path != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-  last_status = xdbm->CopyFileData(dest_path);
+  last_status = xdbm->CopyFileData(dest_path, sync_hard);
   return last_status == Status::SUCCESS;
 }
 
@@ -839,7 +839,6 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm) {
   last_status = xdbm->Export(dest_xdbm);
   return last_status == Status::SUCCESS;
 }
-
 
 bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file) {
   assert(dbm != nullptr && dest_file != nullptr);
@@ -1357,10 +1356,12 @@ TkrzwFuture* tkrzw_async_dbm_synchronize(
       xasync->Synchronize(hard, nullptr, xparams)));
 }
 
-TkrzwFuture* tkrzw_async_dbm_copy_file_data(TkrzwAsyncDBM* async, const char* dest_path) {
+TkrzwFuture* tkrzw_async_dbm_copy_file_data(
+    TkrzwAsyncDBM* async, const char* dest_path, bool sync_hard) {
   assert(async != nullptr && dest_path != nullptr);
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
-  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->CopyFileData(dest_path)));
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
+      xasync->CopyFileData(dest_path, sync_hard)));
 }
 
 TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm) {

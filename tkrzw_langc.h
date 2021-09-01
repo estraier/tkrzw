@@ -742,11 +742,12 @@ bool tkrzw_dbm_synchronize(
  * Copies the content of the database files to other files.
  * @param dbm The database object.
  * @param dest_path The path prefix to the destination files.
+ * @param sync_hard True to do physical synchronization with the hardware.
  * @return True on success or false on failure.
  * @details Copying is done while the content is synchronized and stable.  So, this method is
  * suitable for making a backup file while running a database service.
  */
-bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path);
+bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path, bool sync_hard);
 
 /**
  * Exports all records to another database.
@@ -1227,12 +1228,14 @@ TkrzwFuture* tkrzw_async_dbm_synchronize(
  * Copies the content of the database files to other files.
  * @param async the asynchronous database adapter.
  * @param dest_path The path prefix to the destination files.
+ * @param sync_hard True to do physical synchronization with the hardware.
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
  * @details Copying is done while the content is synchronized and stable.  So, this method is
  * suitable for making a backup file while running a database service.
  */
-TkrzwFuture* tkrzw_async_dbm_copy_file_data(TkrzwAsyncDBM* async, const char* dest_path);
+TkrzwFuture* tkrzw_async_dbm_copy_file_data(
+    TkrzwAsyncDBM* async, const char* dest_path, bool sync_hard);
 
 /**
  * Exports all records to another database.

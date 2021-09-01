@@ -460,14 +460,15 @@ std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FilePr
   return future;
 }
 
-std::future<Status> AsyncDBM::CopyFileData(const std::string& dest_path) {
+std::future<Status> AsyncDBM::CopyFileData(const std::string& dest_path, bool sync_hard) {
   struct CopyFileTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
     std::string dest_path;
+    bool sync_hard;
     std::promise<Status> promise;
     void Do() override {
-      Status status = dbm->CopyFileData(dest_path);
+      Status status = dbm->CopyFileData(dest_path, sync_hard);
       if (postproc != nullptr) {
         postproc->Postprocess("CopyFileData", status);
       }
@@ -478,6 +479,7 @@ std::future<Status> AsyncDBM::CopyFileData(const std::string& dest_path) {
   task->dbm = dbm_;
   task->postproc = postproc_.get();
   task->dest_path = dest_path;
+  task->sync_hard = sync_hard;
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));
   return future;

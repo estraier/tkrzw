@@ -281,7 +281,7 @@ TEST(LangCTest, Basic) {
   std::string path_str;
   EXPECT_TRUE(tkrzw_dbm_synchronize(dbm, false, file_proc_check, &path_str, ""));
   EXPECT_EQ(file_path, path_str);
-  EXPECT_TRUE(tkrzw_dbm_copy_file_data(dbm, copy_path.c_str()));
+  EXPECT_TRUE(tkrzw_dbm_copy_file_data(dbm, copy_path.c_str(), false));
   EXPECT_TRUE(tkrzw_dbm_clear(dbm));
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
@@ -818,7 +818,7 @@ TEST(LangCTest, Async) {
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(sync_future);
   EXPECT_EQ(103, tkrzw_dbm_count(dbm));
-  TkrzwFuture* copy_future = tkrzw_async_dbm_copy_file_data(async, copy_path.c_str());
+  TkrzwFuture* copy_future = tkrzw_async_dbm_copy_file_data(async, copy_path.c_str(), false);
   tkrzw_future_get(copy_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   tkrzw_future_free(copy_future);

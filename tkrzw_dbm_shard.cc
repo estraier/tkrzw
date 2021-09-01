@@ -431,14 +431,14 @@ Status ShardDBM::SynchronizeAdvanced(
   return status;
 }
 
-Status ShardDBM::CopyFileData(const std::string& dest_path) {
+Status ShardDBM::CopyFileData(const std::string& dest_path, bool sync_hard) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   for (int32_t i = 0; i < static_cast<int32_t>(dbms_.size()); i++) {
     const std::string shard_path = StrCat(dest_path, SPrintF(
         "-%05d-of-%05d", i, static_cast<int32_t>(dbms_.size())));
-    const Status status = dbms_[i]->CopyFileData(shard_path);
+    const Status status = dbms_[i]->CopyFileData(shard_path, sync_hard);
     if (status != Status::SUCCESS) {
       return status;
     }

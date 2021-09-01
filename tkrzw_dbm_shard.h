@@ -442,12 +442,13 @@ class ShardDBM final : public ParamDBM {
   /**
    * Copies the content of the database files to other files.
    * @param dest_path A path prefix to the destination files.
+   * @param sync_hard True to do physical synchronization with the hardware.
    * @return The result status.
    * @details Copying is done while the content is synchronized and stable.  So, this method is
    * suitable for making a backup file while running a database service.  Each shard file is
    * copied and the destination file also has the same suffix.
    */
-  Status CopyFileData(const std::string& dest_path) override;
+  Status CopyFileData(const std::string& dest_path, bool sync_hard = false) override;
 
   /**
    * Inspects the database.
