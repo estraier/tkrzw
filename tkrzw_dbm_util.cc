@@ -1004,7 +1004,7 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
     if (status == Status::SUCCESS || status == Status::NOT_FOUND_ERROR) {
       ok = true;
     } else {
-      EPrintL("GetMulti failed: ", status);
+      EPrintL("RemoveMulti failed: ", status);
     }
   } else {
     const Status status = dbm->Remove(key);
