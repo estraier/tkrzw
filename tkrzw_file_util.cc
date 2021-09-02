@@ -18,24 +18,11 @@
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
-#include "tkrzw_sys_util_posix.h"
 #include "tkrzw_thread_util.h"
 #include "tkrzw_time_util.h"
 
-namespace tkrzw {
-
 #if defined(_SYS_WINDOWS_)
-
-const char DIR_SEP_CHR = '\\';
-const char* const DIR_SEP_STR = "\\";
-const char EXT_SEP_CHR = '.';
-const char* const EXT_SEP_STR = ".";
-const char* const CURRENT_DIR_NAME = ".";
-const char* const PARENT_DIR_NAME = "..";
-const char* const TMP_DIR_CANDIDATES[] = {
-  "\\tmp", "\\temp", "\\var\\tmp", "\\",
-};
-
+#include "tkrzw_sys_util_windows.h"
 #define open _open
 #define close _close
 #define read _read
@@ -43,24 +30,37 @@ const char* const TMP_DIR_CANDIDATES[] = {
 #define unlink _unlink
 #define mkdir(a,b) _mkdir(a)
 #define rmdir _rmdir
-
+const char* const TMP_DIR_CANDIDATES[] = {
+  "\\tmp", "\\temp", "\\var\\tmp", "\\",
+};
 #else
+#include "tkrzw_sys_util_posix.h"
+const char* const TMP_DIR_CANDIDATES[] = {
+  "/tmp", "/temp", "/var/tmp", "/",
+};
+#endif
 
+#if defined(_SYS_LINUX_)
+#include <sys/sendfile.h>
+#include <linux/fs.h>
+#endif
+
+namespace tkrzw {
+
+#if defined(_SYS_WINDOWS_)
+const char DIR_SEP_CHR = '\\';
+const char* const DIR_SEP_STR = "\\";
+const char EXT_SEP_CHR = '.';
+const char* const EXT_SEP_STR = ".";
+const char* const CURRENT_DIR_NAME = ".";
+const char* const PARENT_DIR_NAME = "..";
+#else
 const char DIR_SEP_CHR = '/';
 const char* const DIR_SEP_STR = "/";
 const char EXT_SEP_CHR = '.';
 const char* const EXT_SEP_STR = ".";
 const char* const CURRENT_DIR_NAME = ".";
 const char* const PARENT_DIR_NAME = "..";
-const char* const TMP_DIR_CANDIDATES[] = {
-  "/tmp", "/temp", "/var/tmp", "/",
-};
-
-#endif
-
-#if defined(_SYS_LINUX_)
-#include <sys/sendfile.h>
-#include <linux/fs.h>
 #endif
 
 std::string MakeTemporaryName() {

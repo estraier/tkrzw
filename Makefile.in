@@ -283,7 +283,7 @@ check-hashdbm-perf :
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
 	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
-	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
 	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
@@ -383,7 +383,7 @@ check-treedbm-perf :
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
 	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
 	  --max_page_size 200 --max_branches 8 \
-	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --iterator --clear --rebuild

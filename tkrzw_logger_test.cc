@@ -31,29 +31,29 @@ int main(int argc, char** argv) {
 TEST(LoggerTest, Basic) {
   std::stringstream out1, out2;
   tkrzw::StreamLogger logger(&out1);
-  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::DEBUG));
-  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::INFO));
-  logger.Log(tkrzw::Logger::DEBUG, "debug");
-  logger.Log(tkrzw::Logger::INFO, "info");
-  logger.LogF(tkrzw::Logger::WARN, "warn: %d", 123);
-  logger.LogF(tkrzw::Logger::ERROR, "error: %s", "hello");
-  logger.LogCat(tkrzw::Logger::FATAL, "fatal: ", "bye");
+  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::LEVEL_DEBUG));
+  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::LEVEL_INFO));
+  logger.Log(tkrzw::Logger::LEVEL_DEBUG, "debug");
+  logger.Log(tkrzw::Logger::LEVEL_INFO, "info");
+  logger.LogF(tkrzw::Logger::LEVEL_WARN, "warn: %d", 123);
+  logger.LogF(tkrzw::Logger::LEVEL_ERROR, "error: %s", "hello");
+  logger.LogCat(tkrzw::Logger::LEVEL_FATAL, "fatal: ", "bye");
   EXPECT_EQ(std::string::npos, out1.str().find(" [DEBUG] debug"));
   EXPECT_NE(std::string::npos, out1.str().find(" [INFO] info"));
   EXPECT_NE(std::string::npos, out1.str().find(" [WARN] warn: 123"));
   EXPECT_NE(std::string::npos, out1.str().find(" [ERROR] error: hello"));
   EXPECT_NE(std::string::npos, out1.str().find(" [FATAL] fatal: bye"));
   logger.SetStream(&out2);
-  logger.SetMinLevel(tkrzw::Logger::ERROR);
+  logger.SetMinLevel(tkrzw::Logger::LEVEL_ERROR);
   logger.SetSeparator(" | ");
   logger.SetDateFormat(tkrzw::BaseLogger::DATE_W3CDTF_MICRO, 0);
-  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::INFO));
-  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::ERROR));
-  logger.Log(tkrzw::Logger::DEBUG, "debug");
-  logger.Log(tkrzw::Logger::INFO, "info");
-  logger.LogF(tkrzw::Logger::WARN, "warn: %d", 123);
-  logger.LogF(tkrzw::Logger::ERROR, "error: %s", "hello");
-  logger.LogCat(tkrzw::Logger::FATAL, "fatal: ", "bye");
+  EXPECT_FALSE(logger.CheckLevel(tkrzw::Logger::LEVEL_INFO));
+  EXPECT_TRUE(logger.CheckLevel(tkrzw::Logger::LEVEL_ERROR));
+  logger.Log(tkrzw::Logger::LEVEL_DEBUG, "debug");
+  logger.Log(tkrzw::Logger::LEVEL_INFO, "info");
+  logger.LogF(tkrzw::Logger::LEVEL_WARN, "warn: %d", 123);
+  logger.LogF(tkrzw::Logger::LEVEL_ERROR, "error: %s", "hello");
+  logger.LogCat(tkrzw::Logger::LEVEL_FATAL, "fatal: ", "bye");
   EXPECT_EQ(std::string::npos, out2.str().find("Z | [DEBUG] | debug"));
   EXPECT_EQ(std::string::npos, out2.str().find("Z | [INFO] | info"));
   EXPECT_EQ(std::string::npos, out2.str().find("Z | [WARN] | warn: 123"));
@@ -62,30 +62,30 @@ TEST(LoggerTest, Basic) {
   out1.str("");
   out2.str("");
   logger.SetStream(nullptr);
-  logger.SetMinLevel(tkrzw::Logger::DEBUG);
-  logger.Log(tkrzw::Logger::ERROR, "error");
+  logger.SetMinLevel(tkrzw::Logger::LEVEL_DEBUG);
+  logger.Log(tkrzw::Logger::LEVEL_ERROR, "error");
   EXPECT_TRUE(out1.str().empty());
   EXPECT_TRUE(out2.str().empty());
-  tkrzw::StreamLogger logger2(&out1, tkrzw::Logger::NONE, "|",
+  tkrzw::StreamLogger logger2(&out1, tkrzw::Logger::LEVEL_NONE, "|",
                               tkrzw::BaseLogger::DATE_NONE, 0);
-  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::FATAL));
-  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
-  logger.SetMinLevel(tkrzw::Logger::NONE);
-  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::FATAL));
-  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::LEVEL_FATAL));
+  logger2.LogCat(tkrzw::Logger::LEVEL_FATAL, "hop", "step");
+  logger.SetMinLevel(tkrzw::Logger::LEVEL_NONE);
+  EXPECT_FALSE(logger2.CheckLevel(tkrzw::Logger::LEVEL_FATAL));
+  logger2.LogCat(tkrzw::Logger::LEVEL_FATAL, "hop", "step");
   EXPECT_TRUE(out1.str().empty());
-  logger2.SetMinLevel(tkrzw::Logger::FATAL);
-  logger2.LogCat(tkrzw::Logger::FATAL, "hop", "step");
+  logger2.SetMinLevel(tkrzw::Logger::LEVEL_FATAL);
+  logger2.LogCat(tkrzw::Logger::LEVEL_FATAL, "hop", "step");
   EXPECT_EQ("[FATAL]|hopstep", tkrzw::StrStripLine(out1.str()));
 }
 
 TEST(LoggerTest, ParseLevelStr) {
-  EXPECT_EQ(tkrzw::Logger::NONE, tkrzw::Logger::ParseLevelStr(""));
-  EXPECT_EQ(tkrzw::Logger::DEBUG, tkrzw::Logger::ParseLevelStr("debug"));
-  EXPECT_EQ(tkrzw::Logger::INFO, tkrzw::Logger::ParseLevelStr("INFO"));
-  EXPECT_EQ(tkrzw::Logger::WARN, tkrzw::Logger::ParseLevelStr("Warn"));
-  EXPECT_EQ(tkrzw::Logger::ERROR, tkrzw::Logger::ParseLevelStr("error"));
-  EXPECT_EQ(tkrzw::Logger::FATAL, tkrzw::Logger::ParseLevelStr("FATAL"));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_NONE, tkrzw::Logger::ParseLevelStr(""));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_DEBUG, tkrzw::Logger::ParseLevelStr("debug"));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_INFO, tkrzw::Logger::ParseLevelStr("LEVEL_INFO"));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_WARN, tkrzw::Logger::ParseLevelStr("Level_Warn"));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_ERROR, tkrzw::Logger::ParseLevelStr("error"));
+  EXPECT_EQ(tkrzw::Logger::LEVEL_FATAL, tkrzw::Logger::ParseLevelStr("FATAL"));
 }
 
 TEST(LoggerTest, ParseDateFormatStr) {

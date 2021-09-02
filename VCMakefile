@@ -203,7 +203,7 @@ check-hashdbm-perf :
 	  --random_key --random_value --keys 10000 --rebuild --append --record_crc 8 --validate
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
-	  --random_key --random_value --keys 5000 --rebuild --append  --record_crc 16 --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append  --record_crc 16 --sleep 0.00001
 	tkrzw_dbm_perf.exe wicked --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets \
 	  --iterator --clear --rebuild
@@ -298,7 +298,7 @@ check-treedbm-perf :
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
 	  --max_page_size 200 --max_branches 8 \
-	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.0001
+	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	tkrzw_dbm_perf.exe wicked --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --iterator --clear --rebuild

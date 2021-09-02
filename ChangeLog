@@ -5,6 +5,7 @@
 
 	- CopyFileData supports sync_hard option.
 	- tkrzw_dbm_util supports --multi flag.
+	- Fix compilation errors on Windows.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.21

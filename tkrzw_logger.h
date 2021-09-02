@@ -41,25 +41,25 @@ class Logger {
    */
   enum Level : int32_t {
     /** No log is recorded. */
-    NONE = 0,
+    LEVEL_NONE = 0,
     /** For data only for debugging. */
-    DEBUG = 1,
+    LEVEL_DEBUG = 1,
     /** For data informative for normal operations. */
-    INFO = 2,
+    LEVEL_INFO = 2,
     /** For issues which potentially cause application oddities. */
-    WARN = 3,
+    LEVEL_WARN = 3,
     /** For errors which should be fixed. */
-    ERROR = 4,
+    LEVEL_ERROR = 4,
     /** For critical errors which immediately stop the service. */
-    FATAL = 5,
+    LEVEL_FATAL = 5,
   };
 
   /**
    * Constructor.
    * @param min_level The minimum log level to be stored.
    */
-  explicit Logger(Level min_level = INFO)
-      : min_level_(min_level == NONE ? static_cast<Level>(INT32MAX) : min_level) {}
+  explicit Logger(Level min_level = LEVEL_INFO)
+      : min_level_(min_level == LEVEL_NONE ? static_cast<Level>(INT32MAX) : min_level) {}
 
   /**
    * Destructor.
@@ -71,7 +71,7 @@ class Logger {
    * @param min_level The minimum log level to be stored.
    */
   virtual void SetMinLevel(Level min_level) {
-    min_level_ = min_level == NONE ? static_cast<Level>(INT32MAX) : min_level;
+    min_level_ = min_level == LEVEL_NONE ? static_cast<Level>(INT32MAX) : min_level;
   }
 
   /**
@@ -127,22 +127,25 @@ class Logger {
    * @return The result enum of log levels.
    */
   static Level ParseLevelStr(std::string_view str) {
+    if (str.size() > 6 && StrCaseCompare(str.substr(0, 6), "level_") == 0) {
+      str = str.substr(6);
+    }
     if (StrCaseCompare(str, "debug") == 0) {
-      return DEBUG;
+      return LEVEL_DEBUG;
     }
     if (StrCaseCompare(str, "info") == 0) {
-      return INFO;
+      return LEVEL_INFO;
     }
     if (StrCaseCompare(str, "warn") == 0) {
-      return WARN;
+      return LEVEL_WARN;
     }
     if (StrCaseCompare(str, "error") == 0) {
-      return ERROR;
+      return LEVEL_ERROR;
     }
     if (StrCaseCompare(str, "fatal") == 0) {
-      return FATAL;
+      return LEVEL_FATAL;
     }
-    return NONE;
+    return LEVEL_NONE;
   }
 
  protected:
@@ -185,7 +188,7 @@ class BaseLogger : public Logger {
    * @param date_td the time difference of the timze zone.  If it is INT32MIN, the local time
    * zone is specified.
    */
-  explicit BaseLogger(Level min_level = INFO, const char* separator = " ",
+  explicit BaseLogger(Level min_level = LEVEL_INFO, const char* separator = " ",
                       DateFormat date_format = DATE_SIMPLE, int32_t date_td = INT32MIN)
       : Logger(min_level), separator_(separator),
         date_format_(date_format), date_td_(date_td) {}
@@ -258,11 +261,11 @@ class BaseLogger : public Logger {
       wp += separator_.size();
     }
     switch (level) {
-      case DEBUG: wp += std::sprintf(wp, "[DEBUG]"); break;
-      case INFO: wp += std::sprintf(wp, "[INFO]"); break;
-      case WARN: wp += std::sprintf(wp, "[WARN]"); break;
-      case ERROR: wp += std::sprintf(wp, "[ERROR]"); break;
-      case FATAL: wp += std::sprintf(wp, "[FATAL]"); break;
+      case LEVEL_DEBUG: wp += std::sprintf(wp, "[DEBUG]"); break;
+      case LEVEL_INFO: wp += std::sprintf(wp, "[INFO]"); break;
+      case LEVEL_WARN: wp += std::sprintf(wp, "[WARN]"); break;
+      case LEVEL_ERROR: wp += std::sprintf(wp, "[ERROR]"); break;
+      case LEVEL_FATAL: wp += std::sprintf(wp, "[FATAL]"); break;
       default: break;
     }
     std::memcpy(wp, separator_.data(), separator_.size());
@@ -352,7 +355,7 @@ class StreamLogger : public BaseLogger {
    * zone is specified.
    */
   explicit StreamLogger(std::ostream* stream = nullptr,
-                        Level min_level = INFO, const char* separator = " ",
+                        Level min_level = LEVEL_INFO, const char* separator = " ",
                         DateFormat date_format = DATE_SIMPLE, int32_t date_td = INT32MIN)
       : BaseLogger(min_level, separator, date_format, date_td),
         stream_(stream), mutex_() {}
