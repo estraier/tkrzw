@@ -4,6 +4,7 @@
 	- Library version: 1.50.0
 
 	- CopyFileData supports sync_hard option.
+	- tkrzw_dbm_util supports --multi flag.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.21

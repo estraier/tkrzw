@@ -312,6 +312,10 @@ check-hashdbm-util :
 	$(RUNENV) ./tkrzw_dbm_util remove --dbm hash casket.tkh four
 	$(RUNENV) ./tkrzw_dbm_util set --dbm hash casket.tkh five fifth
 	$(RUNENV) ./tkrzw_dbm_util get --dbm hash casket.tkh two
+	$(RUNENV) ./tkrzw_dbm_util set --dbm hash --multi casket.tkh 1 ichi 2 ni
+	$(RUNENV) ./tkrzw_dbm_util set --dbm hash --multi --append ":" casket.tkh 1 a 2 b
+	$(RUNENV) ./tkrzw_dbm_util get --dbm hash --multi casket.tkh 1 2 3
+	$(RUNENV) ./tkrzw_dbm_util remove --dbm hash --multi casket.tkh 1 2 3
 	$(RUNENV) ./tkrzw_dbm_util export --dbm hash casket.tkh casket.flat
 	$(RUNENV) ./tkrzw_dbm_util create --dbm hash --record_crc 8 --buckets 10 casket-2.tkh
 	$(RUNENV) ./tkrzw_dbm_util import --dbm hash casket-2.tkh casket.flat
@@ -405,6 +409,10 @@ check-treedbm-util :
 	$(RUNENV) ./tkrzw_dbm_util remove --dbm tree casket.tkt four
 	$(RUNENV) ./tkrzw_dbm_util set --dbm tree casket.tkt five fifth
 	$(RUNENV) ./tkrzw_dbm_util get --dbm tree casket.tkt two
+	$(RUNENV) ./tkrzw_dbm_util set --dbm tree --multi casket.tkt 1 ichi 2 ni
+	$(RUNENV) ./tkrzw_dbm_util set --dbm tree --multi --append ":" casket.tkt 1 a 2 b
+	$(RUNENV) ./tkrzw_dbm_util get --dbm tree --multi casket.tkt 1 2 3
+	$(RUNENV) ./tkrzw_dbm_util remove --dbm tree --multi casket.tkt 1 2 3
 	$(RUNENV) ./tkrzw_dbm_util export --dbm tree casket.tkt casket.flat
 	$(RUNENV) ./tkrzw_dbm_util create --dbm tree --buckets 10 casket-2.tkt
 	$(RUNENV) ./tkrzw_dbm_util import --dbm tree casket-2.tkt casket.flat

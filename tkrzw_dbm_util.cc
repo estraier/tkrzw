@@ -62,6 +62,7 @@ static void PrintUsageAndDie() {
   P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
   P("  --padding : Enables padding at the end of the file.\n");
   P("  --pagecache : Enables the mini page cache in the process.\n");
+  P("  --multi : Calls xxxMulti methods for get, set, and remove subcommands.\n");
   P("\n");
   P("Options for the create subcommand:\n");
   P("  --truncate : Truncates an existing database file.\n");
@@ -754,10 +755,10 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
 // Processes the get subcommand.
 static int32_t ProcessGet(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
-    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
+    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -778,8 +779,12 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
+  const bool is_multi = CheckMap(cmd_args, "--multi");
   if (file_path.empty()) {
     Die("The file path must be specified");
+  }
+  if (!is_multi && cmd_args[""].size() != 2) {
+    Die("The key must be specified");
   }
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
@@ -792,13 +797,31 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = false;
-  std::string value;
-  const Status status = dbm->Get(key, &value);
-  if (status == Status::SUCCESS) {
-    PrintL(value);
-    ok = true;
+  if (is_multi) {
+    std::vector<std::string_view> keys;
+    const auto& rec_args = cmd_args[""];
+    for (int32_t i = 1; i < static_cast<int32_t>(rec_args.size()); i++) {
+      keys.emplace_back(rec_args[i]);
+    }
+    std::map<std::string, std::string> records;
+    const Status status = dbm->GetMulti(keys, &records);
+    if (status == Status::SUCCESS || status == Status::NOT_FOUND_ERROR) {
+      for (const auto& record : records) {
+        PrintL(record.first, "\t", record.second);
+      }
+      ok = true;
+    } else {
+      EPrintL("GetMulti failed: ", status);
+    }
   } else {
-    EPrintL("Get failed: ", status);
+    std::string value;
+    const Status status = dbm->Get(key, &value);
+    if (status == Status::SUCCESS) {
+      PrintL(value);
+      ok = true;
+    } else {
+      EPrintL("Get failed: ", status);
+    }
   }
   if (!CloseDBM(dbm.get())) {
     return 1;
@@ -809,10 +832,10 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
 // Processes the set subcommand.
 static int32_t ProcessSet(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 3}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
-    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
+    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
     {"--no_overwrite", 0}, {"--append", 1}, {"--incr", 1}, {"--reducer", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
@@ -835,6 +858,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
+  const bool is_multi = CheckMap(cmd_args, "--multi");
   const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
   const std::string append_delim =
       GetStringArgument(cmd_args, "--append", 0, SkipDBM::REMOVING_VALUE);
@@ -842,6 +866,9 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   if (file_path.empty()) {
     Die("The file path must be specified");
+  }
+  if (!is_multi && cmd_args[""].size() != 3) {
+    Die("The key and the value must be specified");
   }
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
@@ -864,18 +891,46 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
       EPrintL("Increment failed: ", status);
     }
   } else if (append_delim != SkipDBM::REMOVING_VALUE) {
-    const Status status = dbm->Append(key, value, append_delim);
-    if (status == Status::SUCCESS) {
-      ok = true;
+    if (is_multi) {
+      std::map<std::string_view, std::string_view> records;
+      const auto& rec_args = cmd_args[""];
+      for (int32_t i = 1; i < static_cast<int32_t>(rec_args.size()) - 1; i += 2) {
+        records.emplace(rec_args[i], rec_args[i + 1]);
+      }
+      const Status status = dbm->AppendMulti(records, append_delim);
+      if (status == Status::SUCCESS) {
+        ok = true;
+      } else {
+        EPrintL("AppendMulti failed: ", status);
+      }
     } else {
-      EPrintL("Append failed: ", status);
+      const Status status = dbm->Append(key, value, append_delim);
+      if (status == Status::SUCCESS) {
+        ok = true;
+      } else {
+        EPrintL("Append failed: ", status);
+      }
     }
   } else {
-    const Status status = dbm->Set(key, value, !with_no_overwrite);
-    if (status == Status::SUCCESS) {
-      ok = true;
+    if (is_multi) {
+      std::map<std::string_view, std::string_view> records;
+      const auto& rec_args = cmd_args[""];
+      for (int32_t i = 1; i < static_cast<int32_t>(rec_args.size()) - 1; i += 2) {
+        records.emplace(rec_args[i], rec_args[i + 1]);
+      }
+      const Status status = dbm->SetMulti(records, !with_no_overwrite);
+      if (status == Status::SUCCESS) {
+        ok = true;
+      } else {
+        EPrintL("SetMulti failed: ", status);
+      }
     } else {
-      EPrintL("Set failed: ", status);
+      const Status status = dbm->Set(key, value, !with_no_overwrite);
+      if (status == Status::SUCCESS) {
+        ok = true;
+      } else {
+        EPrintL("Set failed: ", status);
+      }
     }
   }
   const auto& dbm_type = dbm->GetType();
@@ -897,10 +952,10 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
 // Processes the remove subcommand.
 static int32_t ProcessRemove(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 2}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
-    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
+    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -921,8 +976,12 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
   const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
+  const bool is_multi = CheckMap(cmd_args, "--multi");
   if (file_path.empty()) {
     Die("The file path must be specified");
+  }
+  if (!is_multi && cmd_args[""].size() != 2) {
+    Die("The key must be specified");
   }
   std::unique_ptr<DBM> dbm =
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
@@ -935,11 +994,25 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = false;
-  const Status status = dbm->Remove(key);
-  if (status == Status::SUCCESS) {
-    ok = true;
+  if (is_multi) {
+    std::vector<std::string_view> keys;
+    const auto& rec_args = cmd_args[""];
+    for (int32_t i = 1; i < static_cast<int32_t>(rec_args.size()); i++) {
+      keys.emplace_back(rec_args[i]);
+    }
+    const Status status = dbm->RemoveMulti(keys);
+    if (status == Status::SUCCESS || status == Status::NOT_FOUND_ERROR) {
+      ok = true;
+    } else {
+      EPrintL("GetMulti failed: ", status);
+    }
   } else {
-    EPrintL("Remove failed: ", status);
+    const Status status = dbm->Remove(key);
+    if (status == Status::SUCCESS) {
+      ok = true;
+    } else {
+      EPrintL("Remove failed: ", status);
+    }
   }
   if (!CloseDBM(dbm.get())) {
     return 1;
