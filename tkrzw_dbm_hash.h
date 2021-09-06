@@ -221,6 +221,8 @@ class HashDBM final : public DBM {
     RESTORE_READ_ONLY = 2,
     /** To do nothing. */
     RESTORE_NOOP = 3,
+    /** Additional bit to not apply shortcuts. */
+    RESTORE_NO_SHORTCUTS = 0x10000,
   };
 
   /**
@@ -274,7 +276,7 @@ class HashDBM final : public DBM {
      * parameter is not saved as a metadata of the database, it should be set each time when
      * opening the database.
      */
-    RestoreMode restore_mode = RESTORE_DEFAULT;
+    int32_t restore_mode = RESTORE_DEFAULT;
     /**
      * The capacity of the free block pool.
      * @details The free block pool is for reusing dead space of removed or moved records in

@@ -176,6 +176,8 @@ class SkipDBM final : public DBM {
 
   /**
    * Enumeration for restore modes.
+   * @detail Currently, RESTORE_DEFAULT and RESTORE_SYNC has the same meaning, and
+   * RESTORE_NO_SHORTCUTS is ignored.
    */
   enum RestoreMode : int32_t {
     /** The default behavior: to restore as many records as possible. */
@@ -186,6 +188,8 @@ class SkipDBM final : public DBM {
     RESTORE_READ_ONLY = 2,
     /** To do nothing. */
     RESTORE_NOOP = 3,
+    /** Additional bit to not apply shortcuts. */
+    RESTORE_NO_SHORTCUTS = 0x10000,
   };
 
   /**
@@ -226,7 +230,7 @@ class SkipDBM final : public DBM {
      * parameter is not saved as a metadata of the database, it should be set each time when
      * opening the database.
      */
-    RestoreMode restore_mode = RESTORE_DEFAULT;
+    int32_t restore_mode = RESTORE_DEFAULT;
     /**
      * The memory size used for sorting to build the database in the at-random mode.
      * @details When total size of records exceeds this value, records are written in a temporary

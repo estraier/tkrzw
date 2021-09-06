@@ -89,8 +89,8 @@ static void PrintUsageAndDie() {
   P("  --restore : Skips broken records to restore a broken database.\n");
   P("\n");
   P("Options for the restore subcommand:\n");
-  P("  --auto str : The restore mode automatically done: none, default, sync."
-    " (default: none)\n");
+  P("  --auto str : The restore mode automatically done:"
+    " none, default, default-ns, sync, sync-ns. (default: none)\n");
   P("  --end_offset : The exclusive end offset of records to read. (default: -1)\n");
   P("  --class : The class name given to PolyDBM or ShardDBM.\n");
   P("\n");
@@ -1285,8 +1285,12 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       tkrzw::HashDBM::TuningParameters tuning_params;
       if (auto_mode == "default") {
         tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "default-ns") {
+        tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT | HashDBM::RESTORE_NO_SHORTCUTS;
       } else if (auto_mode == "sync") {
         tuning_params.restore_mode = HashDBM::RESTORE_SYNC;
+      } else if (auto_mode == "sync-ns") {
+        tuning_params.restore_mode = HashDBM::RESTORE_SYNC | HashDBM::RESTORE_NO_SHORTCUTS;
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }
@@ -1321,8 +1325,12 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       tkrzw::TreeDBM::TuningParameters tuning_params;
       if (auto_mode == "default") {
         tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "default-ns") {
+        tuning_params.restore_mode = HashDBM::RESTORE_DEFAULT | HashDBM::RESTORE_NO_SHORTCUTS;
       } else if (auto_mode == "sync") {
         tuning_params.restore_mode = HashDBM::RESTORE_SYNC;
+      } else if (auto_mode == "sync-ns") {
+        tuning_params.restore_mode = HashDBM::RESTORE_SYNC | HashDBM::RESTORE_NO_SHORTCUTS;
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }
@@ -1357,8 +1365,12 @@ static int32_t ProcessRestore(int32_t argc, const char** args) {
       tkrzw::SkipDBM::TuningParameters tuning_params;
       if (auto_mode == "default") {
         tuning_params.restore_mode = SkipDBM::RESTORE_DEFAULT;
+      } else if (auto_mode == "default-ns") {
+        tuning_params.restore_mode = SkipDBM::RESTORE_DEFAULT | SkipDBM::RESTORE_NO_SHORTCUTS;
       } else if (auto_mode == "sync") {
         tuning_params.restore_mode = SkipDBM::RESTORE_SYNC;
+      } else if (auto_mode == "sync-ns") {
+        tuning_params.restore_mode = SkipDBM::RESTORE_SYNC | SkipDBM::RESTORE_NO_SHORTCUTS;
       } else {
         Die("Unknown auto restore mode: ", auto_mode);
       }

@@ -201,12 +201,24 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToIntMetric(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToIntMetric(SearchMap(*params, "num_buckets", "-1"));
-  const std::string restore_mode = StrLowerCase(SearchMap(*params, "restore_mode", ""));
-  if (restore_mode == "restore_sync" || restore_mode == "sync") {
-    tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
+  bool restore_no_shortcut = false;
+  for (const auto& expr : StrSplit(SearchMap(*params, "restore_mode", ""), ':')) {
+    const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
+    if (norm_expr == "restore_sync" || norm_expr == "sync") {
+      tuning_params->restore_mode = HashDBM::RESTORE_SYNC;
+    }
+    if (norm_expr == "restore_read_only" || norm_expr == "read_only") {
+      tuning_params->restore_mode = HashDBM::RESTORE_READ_ONLY;
+    }
+    if (norm_expr == "restore_noop" || norm_expr == "noop") {
+      tuning_params->restore_mode = HashDBM::RESTORE_NOOP;
+    }
+    if (norm_expr == "restore_no_shortcuts" || norm_expr == "no_shortcuts") {
+      restore_no_shortcut = true;
+    }
   }
-  if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
-    tuning_params->restore_mode = HashDBM::RESTORE_READ_ONLY;
+  if (restore_no_shortcut) {
+    tuning_params->restore_mode |= HashDBM::RESTORE_NO_SHORTCUTS;
   }
   tuning_params->fbp_capacity = StrToIntMetric(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToIntMetric(SearchMap(*params, "min_read_size", "-1"));
@@ -244,12 +256,24 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
   tuning_params->step_unit = StrToIntMetric(SearchMap(*params, "step_unit", "-1"));
   tuning_params->max_level = StrToIntMetric(SearchMap(*params, "max_level", "-1"));
-  const std::string restore_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
-  if (restore_mode == "restore_sync" || restore_mode == "sync") {
-    tuning_params->restore_mode = SkipDBM::RESTORE_SYNC;
+  bool restore_no_shortcut = false;
+  for (const auto& expr : StrSplit(SearchMap(*params, "restore_mode", ""), ':')) {
+    const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
+    if (norm_expr == "restore_sync" || norm_expr == "sync") {
+      tuning_params->restore_mode = SkipDBM::RESTORE_SYNC;
+    }
+    if (norm_expr == "restore_read_only" || norm_expr == "read_only") {
+      tuning_params->restore_mode = SkipDBM::RESTORE_READ_ONLY;
+    }
+    if (norm_expr == "restore_noop" || norm_expr == "noop") {
+      tuning_params->restore_mode = SkipDBM::RESTORE_NOOP;
+    }
+    if (norm_expr == "restore_no_shortcuts" || norm_expr == "no_shortcuts") {
+      restore_no_shortcut = true;
+    }
   }
-  if (restore_mode == "restore_read_only" || restore_mode == "read_only") {
-    tuning_params->restore_mode = SkipDBM::RESTORE_READ_ONLY;
+  if (restore_no_shortcut) {
+    tuning_params->restore_mode |= SkipDBM::RESTORE_NO_SHORTCUTS;
   }
   tuning_params->sort_mem_size = StrToIntMetric(SearchMap(*params, "sort_mem_size", "-1"));
   tuning_params->insert_in_order = StrToBool(SearchMap(*params, "insert_in_order", "false"));

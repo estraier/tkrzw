@@ -278,12 +278,14 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     if (tuning_params.restore_mode == HashDBM::RESTORE_NOOP) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
-    } else if ((static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
+    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
+               (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ == act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
-    } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
+               tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
                file_size_ <= act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS &&
@@ -302,7 +304,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
       auto_restored_ = true;
-    } else if (tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
+               tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ <= act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS &&
