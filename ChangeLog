@@ -1,16 +1,9 @@
-<<<<<<< HEAD
 2021-09-06  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.8
 	- Library version: 1.51.0
-=======
-2021-09-01  Mikio Hirabayashi  <hirarin@gmail.com>
 
-	- Release: 1.0.8
-	- Library version: 1.59.0
-
-	- Update test cases.
->>>>>>> 5fa04be313bf6506e9a0f3e2f2690e0c4e83c0ff
+	- Add RESTORE_NO_SHORTCUTS to the restore options.
 
 2021-08-31  Mikio Hirabayashi  <hirarin@gmail.com>
 
