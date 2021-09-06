@@ -72,6 +72,7 @@ if test -n "$with_extra"
 then
   MYCPPFLAGS="$MYCPPFLAGS -I$with_extra/include"
   MYLDFLAGS="$MYLDFLAGS -L$with_extra/lib"
+  MYCMDLDFLAGS="$MYCMDLDFLAGS -L$with_extra/lib"
   CPATH="$CPATH:$with_extra/include"
   LIBRARY_PATH="$LIBRARY_PATH:$with_extra/lib"
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$with_extra/lib"

@@ -428,7 +428,7 @@ TEST_P(StrSearchStaticTest, StrSearchStatic) {
   EXPECT_EQ(-1, search("AB", "ABC"));
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchStatic, StrSearchStaticTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchStatic, StrSearchStaticTest, Values(
     tkrzw::StrSearch, tkrzw::StrSearchDoubleLoop, tkrzw::StrSearchMemchr,
     tkrzw::StrSearchMemmem, tkrzw::StrSearchKMP, tkrzw::StrSearchBM,
     tkrzw::StrSearchRK, tkrzw::StrSearchZ));
@@ -461,7 +461,7 @@ TEST_P(StrSearchRandomTest, StrSearchRandom) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchRandom, StrSearchRandomTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchRandom, StrSearchRandomTest, Values(
     tkrzw::StrSearchDoubleLoop, tkrzw::StrSearchMemchr,
     tkrzw::StrSearchMemmem, tkrzw::StrSearchKMP, tkrzw::StrSearchBM,
     tkrzw::StrSearchRK, tkrzw::StrSearchZ));
@@ -488,7 +488,7 @@ TEST_P(StrSearchWholeStaticTest, StrSearchWholeStatic) {
   EXPECT_THAT(search("aabbaaaaaa", "aa", 3), ElementsAre(0, 4, 5));
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchWholeStatic, StrSearchWholeStaticTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchWholeStatic, StrSearchWholeStaticTest, Values(
     tkrzw::StrSearchWhole,
     tkrzw::StrSearchWholeKMP, tkrzw::StrSearchWholeBM, tkrzw::StrSearchWholeRK));
 
@@ -520,7 +520,7 @@ TEST_P(StrSearchWholeRandomTest, StrSearchWholeRandom) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchWholeRandom, StrSearchWholeRandomTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchWholeRandom, StrSearchWholeRandomTest, Values(
     tkrzw::StrSearchWholeKMP, tkrzw::StrSearchWholeBM,tkrzw::StrSearchWholeRK));
 
 class StrSearchBatchStaticTest : public TestWithParam<
@@ -571,7 +571,7 @@ TEST_P(StrSearchBatchStaticTest, StrSearchBatchStatic) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchBatchStatic, StrSearchBatchStaticTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchBatchStatic, StrSearchBatchStaticTest, Values(
     tkrzw::StrSearchBatch,
     tkrzw::StrSearchBatchKMP, tkrzw::StrSearchBatchBM, tkrzw::StrSearchBatchRK));
 
@@ -610,7 +610,7 @@ TEST_P(StrSearchBatchRandomTest, StrSearchBatchRandom) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(StrSearchBatchRandom, StrSearchBatchRandomTest, Values(
+INSTANTIATE_TEST_SUITE_P(StrSearchBatchRandom, StrSearchBatchRandomTest, Values(
     tkrzw::StrSearchBatchKMP, tkrzw::StrSearchBatchBM, tkrzw::StrSearchBatchRK));
 
 TEST(StrUtilTest, StrStripSpace) {
