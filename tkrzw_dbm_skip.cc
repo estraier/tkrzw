@@ -281,9 +281,11 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
       }
     }
   }
+  const int32_t restore_mode = tuning_params.restore_mode & 0xffff;
+  const int32_t restore_options = tuning_params.restore_mode & 0xffff0000;
   auto_restored_ = false;
-  if (writable && !healthy && tuning_params.restore_mode != SkipDBM::RESTORE_READ_ONLY) {
-    if (invalid_file_size && tuning_params.restore_mode != SkipDBM::RESTORE_NOOP) {
+  if (writable && !healthy && restore_mode != SkipDBM::RESTORE_READ_ONLY) {
+    if (invalid_file_size && restore_mode != SkipDBM::RESTORE_NOOP) {
       file_->Close();
       const std::string tmp_path = norm_path + ".tmp.restore";
       RemoveFile(tmp_path);
@@ -292,10 +294,23 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
         RemoveFile(tmp_path);
         return status;
       }
+      if (restore_options & SkipDBM::RESTORE_WITH_HARDSYNC) {
+        status = SynchronizeFile(tmp_path);
+        if (status != Status::SUCCESS) {
+          RemoveFile(tmp_path);
+          return status;
+        }
+      }
       status = RenameFile(tmp_path, norm_path);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);
         return status;
+      }
+      if (restore_options & SkipDBM::RESTORE_WITH_HARDSYNC) {
+        status = SynchronizeFile(norm_path);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
       }
       status = file_->Open(norm_path, writable, options);
       if (status != Status::SUCCESS) {

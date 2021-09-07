@@ -82,7 +82,7 @@ Status TransferByCompareExchange(
   constexpr int32_t max_tries = 100;
   for (int32_t num_tries = 0; num_tries < max_tries; num_tries++) {
 
-    // Gets balance of the source account.
+    // Gets the balance of the source account.
     std::string src_value;
     Status status = dbm->Get(src_key, &src_value);
     if (!status.IsOK()) {
@@ -93,7 +93,7 @@ Status TransferByCompareExchange(
       return Status(Status::INFEASIBLE_ERROR, "insufficient balance");
     }
 
-    // Gets balance of the destination account.
+    // Gets the balance of the destination account.
     std::string dest_value;
     status = dbm->Get(dest_key, &dest_value);
     if (!status.IsOK()) {
@@ -105,7 +105,7 @@ Status TransferByCompareExchange(
     const std::string src_new_value = ToString(src_balance - amount);
     const std::string dest_new_value = ToString(dest_balance + amount);
     
-    // Finish transaction atomically if the balances are not modified.
+    // Finish the transaction atomically if the balances are not modified.
     const std::vector<std::pair<std::string_view, std::string_view>> expected =
         {{src_key, src_value}, {dest_key, dest_value}};
     const std::vector<std::pair<std::string_view, std::string_view>> desired =

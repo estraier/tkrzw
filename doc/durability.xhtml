@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Durability Discussion of Tkrzw</title>
+<link href="prism.css" rel="stylesheet"/>
+<link href="tk-icon.png" rel="icon" type="image/png" sizes="144x144"/>
+<style>/*<![CDATA[*/
+html,body,article,p,pre,code,li,dt,dd,td,th,div { font-size: 12pt; }
+html { margin: 0; padding: 0; background: #eeeeee; }
+body { width: 100%; margin: 0; padding: 0; background: #eeeeee; text-align: center; }
+body { animation: fadeIn 0.8s ease 0s 1 normal; -webkit-animation: fadeIn 0.8s ease 0s 1 normal; }
+article { display: inline-block; max-width: 100ex; overflow: hidden; border: 1px solid #aaaaaa; border-radius: 2ex;
+  margin: 2ex 1ex; padding: 3ex 3ex; background: #ffffff; text-align: left; line-height: 1.6; color: #111111; }
+h1,h2,h3,h4,h5,h6 { color: #000000; margin: 2ex 0 0 0; text-indent: 0; }
+h1 { text-align: center; margin: 2ex 0 3ex 0; }
+p { text-indent: 2ex; }
+pre { margin-left: 1.5ex; padding: 0.4ex 0.6ex; border: solid 1px #dddddd; border-radius: 0.5ex;
+  white-space: pre-wrap; word-wrap: break-word; line-height: 1.2; text-indent: 0; font-size: 10pt; }
+code { font-weight: bold; }
+pre[class*="language-"] { font-size: 10pt; line-height: 120%; padding: 0.5ex 0.8ex; background: #f8f8f8;
+  max-height: 70ex; }
+li { margin-left: 0.2ex; }
+dt { margin-left: 2.0ex; }
+dd { margin-left: 5.0ex; }
+table { margin-left: 1.5ex; border-collapse: collapse; }
+td,th { padding: 0 0.5ex; border: 1px solid #dddddd; }
+td { font-size: 11pt; }
+td.num { text-align: right; }
+th { font-size: 10pt; font-weight: normal; background: #eeeeee; }
+a { color: #004488; }
+div.logo { text-align: center; }
+div.logo img { max-width: 30ex; }
+div.dbstructure { text-align: center; }
+div.dbstructure img { max-width: 70ex; }
+div.chart { text-align: left; }
+div.chart img { max-width: 80ex; }
+h2 a.headanc, h3 a.headanc {
+  display: none;
+  font-size: 8pt;
+  vertical-align: super;
+  padding-left: 0.5ex;
+}
+h2:hover a.headanc, h3:hover a.headanc {
+  display: inline;
+  font-size: 10pt;
+  vertical-align: super;
+}
+#toc_div { zoom: 85%; }
+.toc_line_h2 { margin-left: 2ex; }
+.toc_line_h3 { margin-left: 5ex; }
+/*]]>*/</style>
+<script type="text/javascript">/*<![CDATA[*/
+function insert_toc() {
+  let first_head = document.querySelector("h2, h3");
+  let toc_div = document.createElement('div');
+  toc_div.id = "toc_div";
+  let toc_head = document.createElement('h2');
+  toc_head.textContent = "Table of Contents";
+  toc_head.id = "toc";
+  toc_div.appendChild(toc_head);
+  first_head.parentNode.insertBefore(toc_div, first_head);
+  for (let header of document.querySelectorAll("h2, h3")) {
+    if (header != toc_head) {
+      let toc_line = document.createElement('div');
+      toc_line.className = "toc_line_" + header.tagName;
+      let toc_anchor = document.createElement('a');
+      toc_anchor.href = "#" + header.id;
+      toc_anchor.textContent = header.textContent
+      toc_line.appendChild(toc_anchor);
+      toc_div.appendChild(toc_line);
+    }
+    let anchor = document.createElement('a');
+    anchor.textContent = "#"
+    anchor.href = "#" + header.id;
+    anchor.className = "headanc";
+    header.appendChild(anchor);
+  }
+}
+function check_links() {
+  let ids = {};
+  for (let link of document.querySelectorAll("*")) {
+    if (link.id) {
+      ids[link.id] = true;
+    }
+  }
+  let doc_url = document.location.href.replace(/#.*/, "") + "#";
+  for (let link of document.querySelectorAll("a")) {
+    if (link.href && link.href.startsWith(doc_url)) {
+      let target = link.href.substr(link.href.indexOf("#") + 1);
+      if (!ids[target]) {
+        console.warn(target + " is missing link");
+      }
+    }
+  }
+}
+window.onload = function(){
+  insert_toc();
+  check_links();
+}
+/*]]>*/</script>
+</head>
+<body>
+<script src="prism.js"/>
+<article>
+
+<h1 id="title">Durability Discussion of Tkrzw</h1>
+
+<h2 id="overview">Overview</h2>
+
+<p>In this document, we describe the design and implementation of durability features of Tkrzw.  Most contents in this document and some of tips in the main document are written through discussions with Chris Pirazzi. (Thanks!)</p>
+
+<h2 id="restore_suit">Which Durability Settings Suit Your Application?</h2>
+
+<p>With a proper <a href="index.xhtml#tips_durability_settings">durability setting</a>, we can expect ACID property of transactions.  Hereinafter, We call the setting "ACID mode".  We introduced the key durability benefit of ACID mode: after any crash, Tkzrw will cleanly roll back your database to the state before any current transaction that is in progress.</p>
+
+<p>But if you think about it, that claim is absurd on its face.  Suppose a system crash deletes the database file, or wipes the whole drive.  Obviously Tkzrw cannot recover the file in those cases.  So clearly Tkzrw cannot cleanly rollback your database on "any crash".</p>
+
+<p>In reality, each layer of your computer system (your application, Tkzrw, operating system, drivers, hardware) faces certain threats coming up from the layer below it.  Each threat has a certain probability of happening to that layer at all, and a certain probability that the layer can detect when the threat does happen so that the layer can respond if needed.  A given layer can employ a variety of techniques (e.g. redundancy, checksums, digests, ECC, ...) to greatly reduce the probability of having to pass up certain threats to the layer above it, and/or greatly increase the probablility of the layer above it being able to detect those threats.</p>
+
+<p>In order for you, the application developer, to actually know if ACID mode (or any particular set of Tkzrw durability settings) is suitable for the needs of your application, you need to know the set of all the potential threats that come up to your application through Tkzrw, along with the probability that each threat might happen and the probability that you can detect the threat and respond accordingly if needed.  Then you can decide for yourself if the overall probabilities are acceptable or not, given the performance tradeoffs that come with them.</p>
+
+<p>In the ideal world, every disk device and every operating system would come with a detailed threat analysis which Tkzrw could then process to present you with an accurate, detailed picture of threats and their probabilities on any given target hardware/software environment where your application will run, written in Tkzrw-specific terminology that is meaningful to you.  And ideally you could even further process and pass that information onto your application user, in terminology that is meaningful to them, which would allow them to test if a given hardware/software environment would give suitable durability with your application, or find a hardware/software environment that does.  Perhaps, some day, computer design will become that mature.</p>
+
+<p>But for now, operating system and driver writers seldom even think about their sofware's overall threat profile, let alone spend even the tiniest amount of energy to document it.  The documentation for standardized high-level interfaces like POSIX and Win32 provide even less information, often failing to specify what happens in critical failure cases entirely.  Hardware vendors can often provide decent and useful threat profiles for their devices, but written in a low-level language of bus behaviors that is only meaningful to device driver writers.  And in most cases there are too many hardware vendors to keep track of anyway.</p>
+
+<p>So, given the sad state of the art, the closest we can get to the ideal model above is to present you with a complete list of typical potential threats to your data that we are aware of (threats which could rob you of the ACID mode guarantee that your database will cleanly rollback on a crash, or otherwise cause you to lose data), along with rough ideas of their probability and probability of detection.  We present each threat in enough detail that, on a particular operating system with a particular hardware, you may actually be able to compute a more exact threat profile if needed.  It is not perfect, but it is the best we (or any database software, even the Big Guys&#8482;) can do.</p>
+
+<p>As we do this, we will be careful about how we use words like "guarantee" and "safe" and "always."  If Tkzrw, or a layer below Tkzrw, uses a probabilistic technique to reduce the chances of a threat or increase the chances of its detection (for example, a 16-bit checksum protects data 99.999975% against single-bit errors), we will never claim that it "guarantees" that threat will never occur or "guarantees" 100% detection of that threat, no matter how close the probability is to 100%.  Since the threats coming up from the lowest layers of hardware are essentially probabilistic, generally speaking, Tkzrw (or any software or hardware layer) can only say it "guarantees" something in a context where we are explicitly assuming that certain specified threats will not occur, even though they could occur in reality.  As we'll see below, ACID mode only "guarantees" that your database will cleanly rollback if we ignore certain specified (unlikely, but possible) threats that might occur during a crash.</p>
+
+<h2 id="restore_assumptions">Assumptions: What Can't Go Wrong</h2>
+
+<p>Tkzrw makes certain assumptions about your hardware and operating system environment.  These are threats to your data that exist but that Tkzrw either cannot, or does not, attempt to handle for you.</p>
+
+<p><b>fsync() actually works:</b> Tkzrw assumes that if it calls fsync(fd) and fsync() returns successfully, then all previously issued write()s to the file or directory fd are now safely stored on the disk in a non-volatile way, meaning we can successfully read() those changes back even if a crash or power failure happens after fsync() returns.  As of September 2021, we appear to have a working fsync() on Linux/macOS/BSD UNIX and Windows (on macOS, fsync() itself is broken but we use an alternate system call that does work; on Windows, FlushFileBuffers() appears suitable).  If you have an operating system where fsync() is broken and Tkzrw has no workaround (including an operating system with certain dubious non-default "performance" settings that turn fsync() into a nop) or you have disk drive hardware that ignores sync requests and/or fails to actually flush your data to non-volatile storage (like some poorly designed hardware RAID controllers do), the durability benefits described below do not apply.  <font color="#ff0000">XXXX need to implement the macOS workaround.</font></p>
+
+<p><b>rename() is atomic:</b> Tkzrw assumes that an overwriting rename() (a rename() of a file A to the name of another existing file B, overwriting file B) is atomic, meaning that in the presence of crashes, power failures, etc., either the rename() does nothing (so both files are still on the disk intact), or the rename() completely succeeds (so we are left with a single file on the disk, with the name A and the complete contents of B).  We assume other results are not possible (e.g., being left with A as a 0-byte file or partial copy of B).  As of August 2021, atomic rename() is available for locally mounted filesystems on Linux/macOS/BSD UNIX flavors and Windows (on Windows, rename() not atomic but we use an alternate API that works).  But currently no operating system that we are aware of offers atomic rename() on network-shared filesystems (e.g. NFS, Windows Networking).  So any durability guarantees and probabilities below only apply to local disks.  <font color="#ff0000">XXXX need to implement the Windoze rename() workaround.</font></p>
+
+<h2 id="restore_threat">Threat Model: What Can Go Wrong</h2>
+
+<p>we will now define certain threats to your data that come up to Tkrzw from lower layers (operating system, hardware).  In later sections, we will explain how, and to what degree, Tkrzw hides those threats from your application, or at least reduces their chances of happening or increases the chances of you detecting them if they do occur.  We have chosen to define these particular threats to make it easy to understand what protection Tkrzw offers; there is nothing fundamantal or universal about these particular definitions.</p>
+
+<ul>
+<li><a id="restore_threat1"></a><b>Level 1: Crashes Between Writes:</b>  It is possible that one or more threads or your whole process might:
+<ul>
+<li>crash due to a software or hardware problem</li>
+<li>be terminated (e.g. by a signal or Task Manager or due to low memory, high usage, or power failure)</li>
+<li>be suspended indefinitely</li>
+</ul>
+which we will abbreviate as just "crash."  That crash can happen at any point in your code or in the code of Tkrzw, including at sensitive spots where the code needs to write to the database in multiple places atomically.  A Level 1 threat is defined as the case where, due to the crash, a write to a given location in the database completely fails to happen at all (as opposed to only partially happening, or happening with different data from what Tkrzw wrote).  For example, we might want to write to the database to subtract money from one customer account and write to the database again to add money to another customer account atomically, but due to the crash, only the first write happens, leaving the database in an inconsistent state where both accounts have the same money.
+<p>More precisely: suppose a process calls write(), and then later a process (the same one or a new one) calls read() to read back the same region of the file.   When considering Level 1 threats, there are only two possible outcomes:</p>
+<ul>
+<li>either the read() returns all of the new data,</li>
+<li>or the read() returns all of the old data, as if we had never called write().</li>
+</ul>
+<p>This guarantee only applies to a single write() (not a group of write()s in succession; each write() in a group of write()s could have either outcome above, regardless of the order in which we issue the write()s).</p>
+<p>If a process calls write() one or more times and then fsync(), and the fsync() returns successfully, then there is only one possible outcome: a subsequent read() (by any process) will return all of the new data from any of those write()s.  So after an fsync(), each write() is no longer vulnerable to Level 1 threats.</p></li>
+<li><a id="restore_threat2"></a><b>Level 2: Corrupt Writes:</b> A Level 2 threat is where a write(), interrupted by a "crash" as defined above, only partially completes or even leaves garbage bytes in the database file. A level 2 threat can arise from several sources:
+<ul>
+<li><b>mmap() + crash</b>: If your app is accessing the database via mmap()ed memory (MemoryMapFile subclass), then Tkrzw writes to the file by using a pointer or memcpy() to set bytes in a virtual memory region rather than calling the write() system call.  This opens up the possibility that the process might crash or get terminated in the middle of writing some part of the file (say, for example, the file metadata header), leading to a partial write where the first part of the write goes into the file but the second part of the write retains its old value in the file.</li>
+<li><b>restarted write() + crash</b>: This is possible if your app is accessing the database via write() or pwrite() (PositionalAtomicFile, PositionalParallelFile, StdFile subclasses).  On some UNIX flavors it is possible for a write()/pwrite() to complete partially if the process has has hooked signal handlers without the SA_RESTART flag, forcing the user-mode process to repeat the write()/pwrite() multiple times to get the job done (more info <a href="https://linux.die.net/man/7/signal">here</a> and <a href="https://bugs.mysql.com/bug.php?id=60788">here</a> and <a href="https://bugs.mysql.com/bug.php?id=54430">here</a> and <a href="https://linux.die.net/man/3/pwrite">here</a> and <a href="http://skarnet.org/software/skalibs/libstddjb/safewrappers.html">here</a>).  This opens up the possibility the process might crash or get terminated after writing some, but not all, of the data.  This can lead to the same problems as the mmap() case above.</li>
+<li><b>Disk Power Failures</b>: If your computer experiences a power failure or other hardware problem, it is possible that a block of data that Tkrzw has attempted to write to your database file will only partially be written.  For example, as it is losing power, the disk may write the first few bytes of a block but then corrupt the rest of the block.  This issue can happen even if Tkrzw is writing just one byte, since typically a disk only allows reads and writes in units of a block (a block is typically between 512 bytes and 16k bytes in size).  This threat is much more rare than Level 1 (especially with modern drives) but it can happen.  If it does happen, we assume the damage is limited to only that disk block, not (for example) adjacent disk blocks.  But the damage can definitely affect other bytes of the same block other than the bytes that the application tried to change.</li>
+</ul>
+
+<p>More precisely: suppose a process calls write(), and then later a process (the same one or a new one) calls read() to read back the same region of the file.  For simplicity of explanation (and without loss of generality) let's assume the write() is aligned on a disk block boundary and has a size of exactly one disk block (if the write() doesn't cover all of a given block, extend it to include the existing block contents and apply the possibilities below assuming the write() itself included the full block of data, including existing data already on the disk, in its buffer; if the write() spans multiple blocks, split it into per-block write()s and apply the possibilities below to each block separately).   When a Level 2 threat occurs, the read() could return literally anything, but the patterns of corruption have different probabilities:</p>
+<ul>
+<li><a id="restore_threat2a"></a><b>Level 2a: "new-then-old:"</b> Most commonly, the read() will return a "new-then-old" buffer that starts with some of the newly written bytes, but then switches to the old bytes that were already in the file for the rest of the buffer.  Any level 2 failure from "mmap() + crash" or "restarted write() + crash" is guaranteed to be "new-then-old."</li>
+<li><a id="restore_threat2b"></a><b>Level 2b: "new-then-zero:"</b> Somewhat commonly for disk devices, the read() might return a "new-then-zeroes" buffer that starts with some of the newly written bytes, but then switches to zeroes for the rest of the buffer.  This case is especially likely if the write() is appending to the file, but it could happen in any part of the file.  Some operating systems may also return a buffer of zeroes (rather than read() error status) if the disk block had detectable errors on its media.</li>
+<li><a id="restore_threat2c"></a><b>Level 2c: "random:"</b> In the general case for disk devices, each byte that read() returns could be any random byte, with equal probability for any byte value.  For example, when it is losing power, a drive may write a random signal to the block that read()s back as garbage.  As far as we know, no modern drive does this, so we consider this threat extremely unlikely.  Typically if a block has garbage data, it will also have garbage error detection codes and so the drive will flag an error when we attempt to read the block, causing the operating system to either return error status from write(), or at least to read the block out as all zeroes, which would be Level 2b above.  And on modern, non-embedded operating systems, it's unlikely that read() would return random bytes that used to be part of another file, because this would be a severe security violation that would get reported and fixed quickly.  Operating systems are likely to zero out and sync a block before re-using that block for another file.</li>
+<li><a id="restore_threat2d"></a><b>Level 2d: "new+random:"</b> Another possible scenario is that the disk drive writes some of the new bytes but then (as it is losing power, at some unknown byte offset) it writes random bytes where every byte value is equally likely.  This is as unlikely as Level 2c.</li>
+<li><a id="restore_threat2e"></a><b>Level 2e: "mosaic:"</b> In theory, the disk might write some bytes, leave some bytes unmodified, then write more bytes, and so on, creating a "mosaic" of new+old+new+old bytes in the same block other than the Level 2a "new-then-old" pattern.  This pattern is particularly nasty, more nasty than "random," because it defeats common techniques that databases including Tkrzw use to detect Level 2 threats with high probability.  More on how this affects Tkzrw below.  As far as we know, no modern drive does this, so we consider this threat extremely unlikely.</li>
+</ul>
+<p>No matter which pattern of corruption occurs, Level 2 threats are significantly more nasty than Level 1 threats.  However, Level 2 threats still give you a little bit of sanity: if a process calls write() and then fsync(), and the fsync() returns successfully, then a subsequent read() (by any process) will return all of the new data.  So after an fsync(), that write() is no longer vulnerable to Level 2 threats.
+</p></li>
+<li><a id="restore_threat3"></a><b>Level 3: Bit Rot and Hackers:</b> Although every computer system is designed with mechanisms for error detection and correction, none are perfect.  Due to anything from malware to corruption that gets past CRC/ECC to cosmic rays, it is possible that the data in your database file will become corrupt even if there is no crash, and even if nobody has recently attempted to write to it.  This threat is much more rare than Level 2 but it can happen, especially with large datasets.  We spoke with one provider who hosts nearly 2 exabytes of continuously running traditional+SSD disk storage; by comparing digests/hashes that they programmed in user-mode, they measured that about 12 bits out of their 2 exabytes of data flip per year in a way that goes completely undetected by the drives' CRC/ECC and by the operating system.  Level 3 threats also include the case where a crash, a hacker, an errant sysadmin, or a reaper process corrupts or completely deletes your database file.
+<p>More precisely: suppose a process calls write(), and then later a process (the same one or a new one) calls read() to read back the same region of the file.   When a Level 3 threat occurs, the read() could return literally anything (just like Level 2 threats), and it does not help if the process calls fsync().  Data could go bad at any moment.  All processes are always vulnerable to Level 3 threats forever no matter how they are coded.  This is as nasty as it can get.</p></li>
+</ul>
+
+<p>Each of the threats above could potentially leave the database in a corrupted state.  And even if the database is consistent at the low-level from Tkrzw's point of view, the database could still be in an inconsistent state as far as your application's business logic is concerned (e.g. money still in two accounts instead of one account after a transfer).</p>
+
+<h2 id="restore_hash">Durability with HashDBM and TreeDBM</h2>
+
+<p>Now we have the machinery we need to define the durability benefits of ACID mode in a way that is useful for your application, as laid out in our strategy <a href="#restore_suit">above</a>.</p>
+
+<p>Version note: everything we write here requires that you must be using Tkzrw version 1.0.6 or later and you must have created a new database file, or Close()d or Synchronize()d an old database file in read-write mode, at least once with software version 1.0.6 or later.  <font color="#ff0000">XXXX update this when we are done changing code.</font></p>
+
+<p>If you have configured HashDBM/TreeDBM in ACID mode, then after a crash,</p>
+
+<ul>
+
+<li>CASE A: In the presence of no threats, or only Level 1, Level 2a ("new-then-old"), and Level 2b ("new-then-zero") threats, the database is guaranteed to cleanly rollback to its exact state before the current transaction, if any.  This is true regardlesss of the file offset of the failing write()s (header, buckets, free list, records, etc.).  Under this threat level assumption, you never need to worry about corruption to your record key/values (and you don't need to increase the <a href="index.xhtml#detecting_corruption">checksum size</a>) because newly added/modified records only become part of the database if Synchronize()/fsync() returns, at which point your keys/values become safe from threats at these levels.
+
+<p><font color="#ff0000">XXXX this is NOT right: we still cannot say "guarantee," for several reasons described below in the <a href="#restore_hashguts">guts section</a></font></p>
+
+</li>
+
+<li>CASE B: In the presence of only Level 2c-e threats, there is a probability of less than:
+<ul>
+  <li><a href="#restore_threat2c">Level 2c: "random:"</a> 1/(6 * 10^32)</li>
+  <li><a href="#restore_threat2d">Level 2d: "new-then-random:"</a> 1/255</li>
+  <li><a href="#restore_threat2e">Level 2e: "mosaic:"</a> 1/2</li>
+</ul>
+that Tkzrw may roll the file back to the wrong state (the wrong point in the history of changes to the database), returning successful results from Open() with no detection of the error.  Otherwise, the outcome will be as in CASE A above.</li>
+
+<li>CASE C: In the presence of Level 3 threats, which can occur at any time regardless of fsync() and regardless of whether there is even a crash, Tkrzw can offer no guarantees of the durability of your data.  As described <a href="index.xhtml#detecting_corruption">above</a>, Tkzrw only guarantees that it will not crash your process due to corrupt file metadata, and will make best-effort to detect, and sometimes even correct, corruption in the file metadata.  If Level 3 threats are possible, we recommend increasing the checksum size on your key/value data to an acceptable level of probability, but even with the maximum checksum size and no misses on the checksums, you may still lose records due to corruption of the file metadata.</li>
+
+</ul>
+
+<p>In a <a href="#restore_hashguts">later section</a> we will describe in detail exactly how the implementation of Tkrzw can offer the durability benefits above.</p>
+
+<h2 id="restore_skip">Durability with SkipDBM</h2>
+
+<p>As explained <a href="index.xhtml#skipdbm_overview">above</a>, any batch of changes that you make to a SkipDBM database become visible to readers (including yourself) only after calling the Synchronize() method to rebuild the database file.  In ACID mode, a SkipDBM database file never gets corrupted even if the process crashes during the Synchronize() method, because the Synchronize() method first builds a temporary file, then calls fsync() on the temporary file due to hard==true (making the file safe from all Level 1 and 2 threats if fsync() succeeds), and only then then replaces the existing database file <a href="#restore_assumptions">atomically</a> with the rename() system call.  So, SkipDBM offers complete protection from Level 1 and Level 2a, 2b, 2c, 2d and 2e threats by its very design.  One "transaction" is one completed rebuild+rename.  RESTORE_DEFAULT and RESTORE_SYNC are equivalent for SkipDBM.</p>
+
+<p>Currently, SkipDBM does not offer the same protection from Level 1 and 2 threats when you create a ShardDBM database of SkipDBM databases.</p>
+
+<p>As with HashDBM/TreeDBM, in the presence of Level 3 threats, which can occur at any time regardless of fsync() and regardless of whether there is even a crash, Tkrzw can offer no guarantees of the durability of your data.</p>
+
+<p>SkipDBM does not use checksums on database data, as HashDBM/TreeDBM do, to reduce the risk of failing to detect Level 2 and 3 threats.</p>
+
+<p>When you open a SkipDBM file, Tkrzw will check for Level 3 corruption by comparing the file metadata for internal consistency and consistency with the actual file length.  If any problem is found, Tkrzw will make a best-effort attempt to recover as much of the database as possible.</p>
+
+<p>As explained below, a Tkrzw database has a "closed" flag to detect if the database is "unhealthy" because the application failed to close a database file, but Tkrzw ignores this flag for SkipDBM since all changes are protected by an atomic rename() operation.</p>
+
+<h2 id="restore_hashguts">HashDBM and TreeDBM, Under the Covers</h2>
+
+<p>In the spirit of open-source projects like OpenSSL, which demonstrate that more openness and more public scrutiny leads to better software, here we present a detailed description of exactly how HashDBM/TreeDBM can deliver the detailed durability benefits described in <a href="#restore_hash">Durability with HashDBM and TreeDBM</a> when you configure Tkzrw in ACID mode.</p>
+
+<p>This description is useful both for those who are curious about the internals, and also those who want to be clear about exactly what durability Tkrzw offers and be confident that it works.</p>
+
+<p>You will want to review <a href="index.xhtml#hashdbm_format">Format</a> above, where we explain that a HashDBM/TreeDBM file starts with a "metadata section," consisting of a header, hash buckets, and a few other items, and then finishes with a "record section" consisting of a series of records.  Warning: <b>there are two different meanings of the word "record."</b>  The most intuitive meaning, and the one used in almost all of this API documentation, is simply a key-value pair of your data (i.e. you add or modify a record with Set() and remove a record with Remove()).  But at the HashDBM implementation level, the "record section" consists of a series of add, set, and remove "records", so here a "record" represents one <b>change</b> to your data.  In this section we use the word "record" with this meaning.  This is critical to understanding how durability works.</p>
+
+<p>Also glance over <a href="index.xhtml#tips_restore">How Broken Databases Are Detected</a>, which describes the "opened"/"closed" flag in the database metadata header that is only set to "closed" when the application calls Close(), so can indicate that a crash has occurred.</p>
+
+<p>If you'd like to follow along in the source code, refer to <a href="https://github.com/estraier/tkrzw/blob/master/tkrzw_dbm_hash.cc">tkzrw_dbm_hash.cc</a>.</p>
+
+<p>As we explained in ACID mode above, you must use UPDATE_APPENDING, call Synchronize() with hard==true at the end of transactions, open the database with RESTORE_SYNC|RESTORE_SYNC_HARD|RESTORE_REBUILD_UNHEALTHY, use single files (not ShardDBM), call Rebuild() with sync_hard==true, and store your database locally (not on a network filesystem).  This magical combination of settings gives you the durability properties in <a href="#restore_hash">Durability with HashDBM and TreeDBM</a> because:</p>
+
+<ul>
+<li>UPDATE_APPENDING causes Tkrzw to append all add, set, or remove records for modifications (e.g. Set(), Remove(), etc.) that you make to the database during your transaction to the end of the file's record section.  All previous add, set, or remove records from before the transaction remain unmodified.  This makes it possible to rollback on a crash.  You can think of the record section as being divided between the "existing record section" (modifications before the transaction, going back to when the database was first created or last rebuilt) and, at the end, the "new record section" (modifications during the transaction).</li>
+<li>When the application wants to commit a transaction, it calls Synchronize().</li>
+<li>At the time of the call to Synchronize(), Tkrzw has already done many different write()s to various areas of the metadata section (possibly including the hash buckets) and record section (again, only the "new record section") of the file on behalf of the application.  At this time, Synchronize() itself may now do a few more write()s of record or bucket data that Tkrzw was caching in memory for performance.</li>
+<li>Importantly though, Synchronize() does <b>not</b> attempt to write() the header in the metadata section at this time.  In fact, <b>no</b> Tkrzw operation ever writes to the header except for Open*(), Close(), Rebuild(), and (later) Synchronize().  This is crucial, as we will see below.  Remember that Level 2 threats can <a href="#restore_threat2">corrupt whole disk blocks</a>, so we need to be sure that write()s to nearby file metadata (such as the hash buckets) doesn't inadvertently corrupt the header.  <font color="#ff0000">XXXX right now there is no padding betwen the header and the first buckets, not even if we set TuningParameters.align_pow, so bucket write()s can corrupt the header at this stage.  we either need to add padding to make analysis simple, or this analysis needs to get a lot more complex to cover all the cases.  see below.</font></li>
+<li>Because nobody has called fsync() yet, we cannot be sure if any of those write()s above have really made it to the disk so that they can definitely be read() by a future process.  They might fall victim to Level 1 or Level 2 threats if there is a crash.</li>
+<li>So Synchronize() calls fsync() (let's call this "fsync() #1") to wait for the hardware to confirm that all write()s to the database file are completely written to disk.  The fsync() itself covers the entire file including the header, but remember we didn't write() any changes to the header yet.  At this point, one of two things can happen:</li>
+
+<li><b>CASE A:</b> The app crashes before fsync() #1 returns.
+<ul>
+<li>After the crash, the database is left in a state where some write()s to the file may have made it to disk and some write()s may have failed to happen or even corrupted their whole disk block, as we describe above for <a href="#restore_threat">Level 1 and Level 2 threats</a>, and there is no way for us to tell which is which.  Any write()s could have failed; it does not even matter which order the writes() appear in the source code.  It might seem that the file is now in a hopeless mess that we cannot reliably untangle.  However, this is where the first clever bit comes in.  Remember that nobody has yet done any write() in the file's metadata header.  That header contains the "closed"/"open" flag (which will definitely be "open" after a crash, since nobody called Close() and nobody else modified the header yet) and an 8-byte integer file offset called file_size, which points to the end of the record section in the database file.  Because file_size has not been updated since the end of the last transaction (the last Synchronize() or Open*()), file_size points to the end of the "existing record section," which is also the start of the "new record section" where we have appended records for all the updates we have made during this transaction.</li>
+<li>Because the app crashed, we now run a new instance of the app and we Open*() the file again using RESTORE_SYNC|RESTORE_SYNC_HARD|RESTORE_REBUILD_UNHEALTHY as required for ACID mode.  Open*() notices that the closed"/"open" flag is set to "open," meaning the app must have previously crashed.  As Open*() examines the file further, there are two possibilities:
+<ul>
+<li><b>CASE A.1:</b> If none of the write()s to the new record section completed, the record section will be exactly as it was before the transaction began, and the file_size value in the header will equal GetFileSize() (the actual size of the database according to the filesystem, i.e. the 'ls -l' size).</li>
+<li><b>CASE A.2:</b> If one or more of the write()s to the new record section completed, GetFileSize() will be larger than the file_size value in the header (though GetFileSize() will not necessarily include all the new record section data we wrote before).</li>
+</ul></li>
+<li>Either way, it is still possible that some write()s to the hash buckets in the metadata section completed, possibly even with Level 2 corruption, so at this point, based only on seeing the "open" flag, Open*() must assume that the hash buckets are corrupted and need to be rebuit (Open*() assumes this only because we pass the RESTORE_REBUILD_UNHEALTHY flag that is required for ACID mode). <font color="#ff0000">XXXX RESTORE_REBUILD_UNHEALTHY not implemented yet.  We need RESTORE_REBUILD_UNHEALTHY for CASE A.1 so we can bypass the existing Open*() shortcut that tests for UPDATE_APPENDING &amp;&amp; file_size_ == GetFileSize() &amp;&amp; ValidateHashBuckets(), because that shortcut is still probabilistic (and also because ValidateHashBuckets() doesn't check zeroed-out buckets (including buckets zeroed by Level 2 "new-then-zero") so its probability of succeding is not that great either).  In <a href="#restore_hash">Durability with HashDBM and TreeDBM</a>, we want to be able to 100% GUARANTEE rollback in the case of Level 1, Level 2a, and Level 2b threats.  But we cannot do this if there is still a probabilistic check.  It would be MUCH more satisfying, and also simpler to analyze and be confident about, if we can offer a guaranteed solution in this case.  RESTORE_REBUILD_UNHEALTHY is an optional flag so it will not affect high performance in default configurations.</font></li>
+<li>So Open*() calls HashDBM::RestoreDatabase() to fix the file.  RestoreDatabase() creates a new "temporary database file" and copies all the valid data from the original "unhealthy database file" to the "temporary database file."</li>
+<li>By default, RestoreDatabase() will attempt to copy all records found up to the very end of the unhealthy database file (RESTORE_DEFAULT, corresponding to a RestoreDatabase() end_offset argument of -1).  But since ACID mode requires us to pass the RESTORE_SYNC flag, Open*() passes end_offset=0 to RestoreDatabase(), causing RestoreDatabase()/ImportFromFileBackwardImpl() to only copy records up to file_size value in the header of the unhealthy file (the end of its "existing record section"), omitting all records (if any) in the "new record section" of the unhealthy file.  This means that the record section of the temporary file will be in the pristine state that the unhealthy file was in at the beginning of the transaction.  Let's double-check that we are not vulnerable to Level 1 or Level 2 threats in the record section of the unhealthy file:
+<ul>
+<li>There cannot be any Level 1 or Level 2 threats to the "existing record section" because we didn't write() the "existing record section" during the transaction (thanks to UPDATE_APPENDING).</li>
+<li>We did write() to the "new record section" a lot, but even if Level 1 or Level 2 threats corrupted this area, it doesn't matter, because RestoreDatabase() isn't even looking at them.</li>
+<li>Remember that Level 2 threats can <a href="#restore_threat2">corrupt whole disk blocks</a>.  But the "existing record section" and "new record section" are safely isolated from one another because, as part of the requirements for ACID mode, we set the TuningParameters.align_pow argument to at least the disk block size.  <font color="#ff0000">XXXX this works, but is VERY wasteful, because padding is only needed between the "existing record section" and the "new record section:" should find another solution that only adds padding at that one point between the "existing record section" and the "new record section."</font> </li>
+</ul></li>
+<li>As it creates the temporary database file, RestoreDatabase() completely rebuilds the metadata section of the temporary file, including the hash buckets.  RestoreDatabase() doesn't even look at the hash buckets of the unhealthy file.  So we are not vulnerable to Level 1 or Level 2 threats that corrupt the unhealthy file's hash buckets.</li>
+<li>Finally, because we passed RESTORE_SYNC_HARD, Open*() will fsync() the temporary database file before attempting to rename() it.  This guarantees that the temporary file will not fall victim to Level 1 or Level 2 threats (or, if it does, it will not get rename()d to overwrite the original database file). <font color="#ff0000">XXXX need RESTORE_SYNC_HARD implementation, otherwise we are vulnerable to Level 1/2 threats at this point and we cannot guarantee rollback in our <a href="#restore_hash">list of durability benefits</a>.</font></li>
+<li>Now Open*() overwrites the unhealthy database file with the pristine new file <a href="#restore_assumptions">atomically</a> with the rename() system call.</li>
+<li>So the end result is that we correctly rollback the transaction.</li>
+</ul></li>
+
+<li><b>CASE B:</b> There is no crash and fsync() #1 returns success.
+<ul>
+
+<li>We are now guaranteed that all the write()s throughout the file (including record section and hash buckets) have safely been written to disk and are <a href="#restore_threat">safe from future Level 1 and 2 threats</a>.</li>
+<li>Now Synchronize() makes a single call to write() the entire metadata header.  The new header "closed"/"open" flag is still set to "open," since nobody called Close().  The new header has a larger file_size value that now includes all the new records in the new record section corresponding to our transaction.</li>
+<li>Even if the single write() to the header falls victim to a Level 2 threat and corrupts its disk block, this will not affect the adjacent hash buckets or records because we guaranteed the header is on its own disk block.  <font color="#ff0000">XXXX not done yet: see similar comment above</font>.</li>
+<li>Because we passed hard==true to Synchronize() as part of ACID mode, Synchronize() then calls fsync() again (let's call this "fsync #2") to wait for the hardware to confirm that the write() to the metadata header is completely written to disk.  It happens that the source code uses sync_file_range() (if available) to only sync the metadata header, but this is only an optimization: a full fsync() would yield the same durability properties.  At this point, one of two things can happen:</li>
+
+<li><b>CASE B.1:</b> The app crashes before fsync() #2 returns.  After the crash, there are three possible outcomes:
+
+<ul>
+  <li><b>CASE B.1.1</b>: If the metadata header write() did complete, then we actually have an entirely valid database: metadata and records are completely valid and consistent with each other, and the transaction completed since file_size matches GetFileSize() and includes the new records.  The only thing amiss with the database is that its "closed"/"open" is still set to "open," since nobody called Close().  So the next time we Open*() the database, Open*() will RestoreDatabase(), and RestoreDatabase() will follow the same steps in section A.2 above to create a valid database file, but in this case since file_size includes all the new records, we end up with a database file where the transaction has committed and no rollback is needed.</li>
+  <li><b>CASE B.1.2</b>: If the metadata header write() did not happen at all (<a href="#restore_threat1">Level 1 threat</a>), we are in exactly the same state as CASE A.2 above, so we will correctly rollback the transaction the next time we run the app, as explained above.</li>
+  <li><b>CASE B.1.3</b>: If the metadata header write() corrupted the header (<a href="#restore_threat2">Level 2 threat</a>), then we enter a tricky state.  Fortunately, because of fsync() #1, the entire rest of the file (including the rest of the metadata section and the whole record section) are guaranteed valid.  But with a corrupted header, how can we guarantee to <a href="#restore_hash">correctly rollback the database</a> as we promised?  Here we encounter more clever tricks.  If Open*() can detect that the header has been corrupted (more on that later), it will call RestoreDatabase(), and RestoreDatabase() can actually reconstruct the header completely, in the following way:
+  <ul>
+    <li>Because the record section is completely valid on disk at this time, then as long as we can find the byte offset of the record section in the file, RestoreDatabase() can manually scan each record to reconstruct a database that represents the correct state of your data after the transaction completed (no need to rollback), and while doing that, compute correct values for the header fields file_size, num_records, and eff_data_size.</li>
+    <li>Using the byte offset of the record section, RestoreDatabase() can also reverse-engineer the num_buckets header field (since RestoreDatabase() will scan records manually in the record section, it doesn't need to access the actual hash buckets in the unhealthy file, but it does need the bucket count for the new file).</li>
+    <li>So that leaves the header fields static_flags, offset_width, and align_pow, plus we still need a way to find the byte offset of the record section.  That is the purpose of the record header section located in the metadata section just before the record section.  The record header section was covered by fsync() #1, so it is guaranteed valid at this time.  When we created the database, we snuck away an extra copy of static_flags, offset_width, and align_pow in the record header section and we gave the record section a distinct 8-byte magic number and constrained it to appear in the file at a fixed file byte offset mod 4096.  This means we can efficiently search the file for the record header section by jumping forward and looking for the magic value 4096 bytes a time, and when we find it, we know the offset of the record section. <font color="#ff0000">XXXX this is probabilistic, so it is another thing preventing us from guaranteeing rollback in the presence of Level 2a and Level 2b threats.  It is unlikely but possible that Tkzrw will find a wrong false-positive record header section and get the wrong offset for the record section, losing some records.  If we have to accept this probabilistic solution, we need to talk about what happens in the false positive case.</font></li>
+  </ul>
+  <p>Using these tricks, RestoreDatabase() can build a new database that has the exact state of your data after the transaction completes.  So by the time RestoreDatabase() is done, your transaction has committed and no rollback is needed.</p>
+  <p>All of this depends on Open*() being able to detect header corruption in the first place.  Here is where the distinction between Level 2a-e comes into play.  Let's look at the possible ways a Level 2 threat might corrupt the header.  Remember the header starts at byte 0 of the file, so it's definitely aligned on a disk block boundary, and the header is 128 bytes long, so it definitely fits on one disk block.  This means our <a href="#restore_threat2">Level 2a-e corruption patterns</a> always begin with the first byte of the header.  Also remember the header is padded out to 4096 so it's on its own disk block <font color="#ff0000">(XXXX not implemented yet)</font>, so even if a Level 2 threat corrupts byte 128 to 4096, we don't care.  We only need to detect Level 2 threats to byte 0 to 128.</p>
+  <p>As you will see, some of the checks below are probabilistic, meaning there is a chance of a false positive where Tkzrw could be tricked into using a corrupt header as a real header.  A notable example of this is a corrupt value of the important "file_size" header field, which is the byte offset of the end of the record region that changes each time you commit a transaction.  Corruption to that value would cause some of your changes to disappear without detection.  For the scenario to really happen, the corrupt offset would have to pass Tkzrw's sanity checks that it points to the start of a plausible-looking record.  The probability of that depends on your file size and record size, so is difficult to set an upper bound that always applies.  The probabilities we give below are simple upper bounds that don't consider data dependencies like these.</p>
+  <ul>
+  <li><a href="#restore_threat2a">Level 2a: "new-then-old:"</a> Tkzrw can detect a "new-then-old" corruption 100% of the time because there is an 8-bit field cyclic_magic_front at header byte offset 9 (right after the file magic), and an 8-bit field cyclic_magic_back at byte offset 127 (last byte of the header).  Whenever we write the header, we write the same value to both cyclic_magic_front and cyclic_magic_back and we increment this value each time we write the header.  So "new-then-old" corruption will always show as cyclic_magic_front != cyclic_magic_back.</li>
+  <li><a href="#restore_threat2b">Level 2b: "new-then-zero:"</a> Tkzrw can detect a "new-then-zero" corruption 100% of the time because the cyclic_magic_ values intentionally avoid value 0 (they cycle in [1,255]).  So "new-then-zero" corruption will always show as cyclic_magic_front==0 which means, again, cyclic_magic_front != cyclic_magic_back.  Note: Tkzrw versions before 1.0.6 could write 0 for cyclic_magic_* and that is why we stipulated <a href="#restore_hash">above</a> that your database file must be created by, or updated at least once by, Tkzrw version 1.0.6 or later.</li>
+  <li><a href="#restore_threat2c">Level 2c: "random:"</a> Tkzrw can detect a "random" corruption (where each byte is random with each byte value equally likely) probabilistically.  Tkzrw always sanity-checks the header fields where possible, which means random data has a low probability of checking out.  In order to have a false-positive where a random header appears valid, the 9 bytes of magic must be "TkrzwHDB\n" exactly (1/2^(9*8) chance), 8-bit cyclic_magic_* must be the same as each other (255/(255*255) chance), 8-bit offset_width must be between 3 and 6 (4/8 chance), 8-bit align_pow must be &lt;= 16 (17/256 chance), and 64-bit num_buckets must be between 1 and 1099511627689 ((1099511627689-1)/(2^64) chance), so far giving us a probability of 1/(6.09 * 10^32).  We could further reduce this upper bound by trying to characterize more checks that have to pass in the library for a false-positive to occur, but the upper bound is pretty good already and further checks are data-dependent.</li>
+  <li><a href="#restore_threat2c">Level 2d: "new-then-random:"</a> This is more difficult to detect than "random" because we don't know where the random bytes will start kicking in.  For a simple upper bound, we assume the worst case where cyclic_magic_back is the only value we can use to detect corruption, giving us a probability of 1/255 of a false positive.</li>
+  <li><a href="#restore_threat2e">Level 2e: "mosaic:"</a> This is the tricky one.  Since most header fields don't change on each write, it's fairly likely that a corrupt header of new+old+new+old+... would pass all the sanity-checks that helped us detect the "random" case.  cyclic_magic_* are a little helpful, but since each byte has a 50% chance of being new or old, there is a 1/2 chance of a false positive cyclic_magic_* check.  In order to cause damage, some bytes of fields that do change (file_size, num_records, eff_data_size) would have to take on their old value, but since not every byte of fields like file_size change on each committed transaction, this is fairly likely.  For now we provide a 1/2 upper bound on the probability of false positive, and although we could reduce the upper bound with more analysis of all the possible failure cases, it's never going to approach the small numbers of "random."  As discussed <a href="#restore_threat2e">above</a>, we are not sure any modern OS/drive combination is capable of producing this type of corruption and we assume it is extremely unlikely.</li>
+  </ul>
+  </li>
+
+</ul>
+</li>
+
+<li><b>CASE B.2:</b> There is no crash and fsync() #2 returns success.
+
+<ul>
+<li>Now we are in a wonderful state where the transaction has been fully committed.  All the data in the "new record section" is now incorporated into the database, the metadata header file_size value reflects it, and hash buckets are also valid.</li>
+<li>For completeleness, let's think about what might happen next...</li>
+<li><b>CASE B.2.1:</b> If we cleanly Close() the database file and then Open*() it again, Open*() will not find any errors, will see the new data, and will not need to rebuild anything.</li>
+<li><b>CASE B.2.2:</b> If we subsequently crash and then Open*() the file from a new instance of the app, Open*() will notice that the "closed"/"open" is still set to "open" and so it will RestoreDatabase(), but because the file is already perfect, RestoreDatabase() will leave the data unchanged and intact (though it will spend time rebuilding the database unnecessarily).</li>
+</ul></li>
+
+</ul></li>
+
+</ul>
+
+
+
+
+</article>
+</body>
+</html>

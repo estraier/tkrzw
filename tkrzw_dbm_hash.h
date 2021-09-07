@@ -222,7 +222,9 @@ class HashDBM final : public DBM {
     /** To do nothing. */
     RESTORE_NOOP = 3,
     /** Additional bit to not apply shortcuts. */
-    RESTORE_NO_SHORTCUTS = 0x10000,
+    RESTORE_NO_SHORTCUTS = 1 << 16,
+    /** Additional bit to do physical synchronization. */
+    RESTORE_WITH_HARDSYNC = 1 << 17,
   };
 
   /**

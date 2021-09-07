@@ -269,23 +269,25 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
     file_->Close();
     return status;
   }
+  const int32_t restore_mode = tuning_params.restore_mode & 0xffff;
+  const int32_t restore_options = tuning_params.restore_mode & 0xffff0000;
   const int64_t act_file_size = file_->GetSizeSimple();
   int64_t null_end_offset = 0;
   int64_t act_count = 0;
   int64_t act_eff_data_size = 0;
   auto_restored_ = false;
-  if (writable && !healthy_ && tuning_params.restore_mode != HashDBM::RESTORE_READ_ONLY) {
-    if (tuning_params.restore_mode == HashDBM::RESTORE_NOOP) {
+  if (writable && !healthy_ && restore_mode != HashDBM::RESTORE_READ_ONLY) {
+    if (restore_mode == HashDBM::RESTORE_NOOP) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
-    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
+    } else if (!(restore_options & HashDBM::RESTORE_NO_SHORTCUTS) &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ == act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS) {
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
-    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
-               tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+    } else if (!(restore_options & HashDBM::RESTORE_NO_SHORTCUTS) &&
+               restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_IN_PLACE) &&
                file_size_ <= act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS &&
@@ -304,8 +306,8 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       healthy_ = true;
       closure_flags_ |= CLOSURE_FLAG_CLOSE;
       auto_restored_ = true;
-    } else if (!(tuning_params.restore_mode & HashDBM::RESTORE_NO_SHORTCUTS) &&
-               tuning_params.restore_mode == HashDBM::RESTORE_DEFAULT &&
+    } else if (!(restore_options & HashDBM::RESTORE_NO_SHORTCUTS) &&
+               restore_mode == HashDBM::RESTORE_DEFAULT &&
                (static_flags_ & STATIC_FLAG_UPDATE_APPENDING) &&
                file_size_ <= act_file_size &&
                ValidateHashBucketsImpl() == Status::SUCCESS &&
@@ -327,24 +329,37 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       CloseImpl();
       file_->Close();
       const std::string tmp_path = path_ + ".tmp.restore";
-      const int64_t end_offset = tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
+      const int64_t end_offset = restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
       RemoveFile(tmp_path);
       status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);
         return status;
       }
+      if (0 && restore_options & HashDBM::RESTORE_WITH_HARDSYNC) {
+        status = SynchronizeFile(tmp_path);
+        if (status != Status::SUCCESS) {
+          RemoveFile(tmp_path);
+          return status;
+        }
+      }
       status = RenameFile(tmp_path, path_);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);
         return status;
       }
+      if (0 && restore_options & HashDBM::RESTORE_WITH_HARDSYNC) {
+        status = SynchronizeFile(path_);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+      }
       SetTuning(tuning_params);
-      status = CheckFileBeforeOpen(file_.get(), path, writable);
+      status = CheckFileBeforeOpen(file_.get(), path_, writable);
       if (status != Status::SUCCESS) {
         return status;
       }
-      status = file_->Open(norm_path, writable, options);
+      status = file_->Open(path_, writable, options);
       if (status != Status::SUCCESS) {
         return status;
       }

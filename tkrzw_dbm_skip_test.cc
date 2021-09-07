@@ -720,7 +720,8 @@ void SkipDBMTest::SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(2, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_DEFAULT;
+  tuning_params.restore_mode =
+      tkrzw::SkipDBM::RESTORE_DEFAULT | tkrzw::SkipDBM::RESTORE_WITH_HARDSYNC;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());

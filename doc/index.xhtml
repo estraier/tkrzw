@@ -118,10 +118,28 @@ function insert_slides() {
     logo.appendChild(slides);
   }
 }
+function check_links() {
+  let ids = {};
+  for (let link of document.querySelectorAll("*")) {
+    if (link.id) {
+      ids[link.id] = true;
+    }
+  }
+  let doc_url = document.location.href.replace(/#.*/, "") + "#";
+  for (let link of document.querySelectorAll("a")) {
+    if (link.href && link.href.startsWith(doc_url)) {
+      let target = link.href.substr(link.href.indexOf("#") + 1);
+      if (!ids[target]) {
+        console.warn(target + " is missing link");
+      }
+    }
+  }
+}
 window.onload = function(){
   insert_toc();
   modify_title();
   insert_slides();
+  check_links();
 }
 /*]]>*/</script>
 </head>
@@ -164,7 +182,7 @@ window.onload = function(){
 
 <p>Command line utilities are provided as well.  Thereby, you can create databases, set records, retrieve records, remove records, rebuild databases, and restore databases.  A tool to do performance tests is also bundled.</p>
 
-<p>If you want to share databases among multiple processes and programs on remote machines, use the database service of <a href="https://dbmx.net/tkrzw-rpc/">Tkrzw-RPC</a>.</p>
+<p>If you want to share a database among multiple processes or programs on remote machines, use the database service of <a href="https://dbmx.net/tkrzw-rpc/">Tkrzw-RPC</a>.</p>
 
 <h2 id="download">Download</h2>
 
@@ -178,7 +196,7 @@ window.onload = function(){
 <li><a href="http://dbmx.net/tkrzw/pkg-go/">Go source packages</a></li>
 </ul>
 
-<h2 id="api_documents">API Documents</h2>
+<h2 id="api_documents">Documents</h2>
 
 <p>The following are API documents for each language.</p>
 
@@ -189,6 +207,14 @@ window.onload = function(){
 <li><a href="http://dbmx.net/tkrzw/api-ruby/">Ruby API documents</a></li>
 <li><a href="http://dbmx.net/tkrzw/api-go/">Go API documents</a></li>
 </ul>
+
+<!--
+<p>The following are extra documents for the design and implementation.</p>
+
+<ul>
+<li><a href="durability.xhtml">Durability Discussion</a></li>
+</ul>
+-->
 
 <h2 id="installation">Installation</h2>
 
@@ -759,7 +785,7 @@ int main(int argc, char** argv) {
 
 <p>Durability is also pursued.  Updating operations support two modes: in-place and appending.  In the in-place mode, the region of an existing record in the file is re-written to modify the value of the record.  In the appending mode, the region in the file for an existing record is never re-written.  Instead, new data to overwrite the value is appended at the end of the file.  The new data is put at the top of the linked list for the record so that it is detected prior to the old one.  In both modes, even if the hash table is broken for some reason, the database is restored automatically to salvage record data.  In the in-place mode, the record being updated when brokage happens can be lost but the other records can be recovered.  In the appending mode, any record can never be lost unless the file system itself breaks.</p>
 
-<p>The hash table is static and not reorganized implicitly.  Thus, if load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
+<p>The hash table is static and not reorganized implicitly.  Thus, if the load factor of the hash table is high, the database should be rebuilt explicitly by the application.  Rebuilding the database is effective to resolve fragmentation which can happen in both the in-place mode and the appending mode.  Rebuilding the database doesn't block other database operations.  In other words, you can retrieve and update records while the database is being rebuilt.</p>
 
 <div class="dbstructure"><img src="hashdbm.svg"/></div>
 
@@ -923,7 +949,7 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>The file hash database as well as other database classes supports call-back functions to process the value of a record.  The operation is done while the record is locked so that the update looks done atomically.</p>
+<p>The file hash database, as well as other database classes, supports call-back functions to process the value of a record.  The operation is done while the record is locked so that the update looks done atomically.</p>
 
 <pre><code class="language-cpp"><![CDATA[#include "tkrzw_cmd_util.h"
 #include "tkrzw_dbm_hash.h"
@@ -1021,7 +1047,7 @@ int main(int argc, char** argv) {
 <dd>From the offset 127.  A 1-byte integer.</dd>
 </dl>
 
-<p>The magic data, the cyclic magic data and the package version data are used for identifying the kind of the file.  The two figures of cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
+<p>The magic data and the package version data are used for identifying the kind of the file.  The two figures of the cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
 
 <p>The static flags specifies flags which are not changed during lifetime of the database.  The first bit and the second bit represent the update mode.  0x1 means the in-place update mode.  0x2 means the appending update mode.  0x0 and 0x3 are invalid.  The third bit and the fourth bit represent the record CRC mode. 0x0 means no CRC.  0x1 means CRC-8.  0x2 means CRC-16.  0x3 means CRC-32.  The fifth bit, the sixth, and the seventh bit represent compression mode.  0x0 means no compression.  0x1 means ZLib.  0x2 means ZStd.  0x3 means LZ4.  0x4 means LZMA.</p>
 
@@ -1074,7 +1100,7 @@ int main(int argc, char** argv) {
 
 <p>With the default 4-byte offset width and small-sized (less than 128 bytes) keys and medium-sized (less than 16384 bytes) values, the footprint for each record is 1 + 4 + 1 + 2 + 1 = 9 bytes.  However, due to alignment, padding bytes can be added.  With the default 8-byte alignment, average padding size is about 4 bytes.</p>
 
-<p>The 16 bytes before the record section is the record header section.  It is composed of "TkrzwREC\n", a 1-byte integer for the static flags, a 1-byte integer for the offset width, and a 1-byte integer for the alignment power.  They would be used to recover records even if the main header was broken.</p>
+<p>The 16 bytes before the record section is the record header section.  It is composed of "TkrzwREC\n", a 1-byte integer for the static flags, a 1-byte integer for the offset width, and a 1-byte integer for the alignment power.  They would be used to recover records if the main header were broken.</p>
 
 <p>The 1008 bytes before the record header section is the free block pool section.  It contains pairs of an offset and a size of each free block.  The offset is a big-endian integer of the offset width.  The size is a big-endian integer of 4 bytes.  The maximum number of pairs is determined as 1008 / (W + 4).  Given the offset width 4, the maximum number is 126.</p>
 
@@ -1729,7 +1755,7 @@ int main(int argc, char** argv) {
 
 <p>Whereas thread safety and thread performance are the most important features of the on-memory hash database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 55% of std::map&lt;std::string, std::string&gt;.</p>
 
-<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
+<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they were std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
 <p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1TinyDBM.html">the API document</a>.</p>
 
@@ -1843,7 +1869,7 @@ int main(int argc, char** argv) {
 
 <p>Whereas thread safety and thread performance are the most important features of the on-memory tree database, memory efficiency is also remarkable.  Because the key and the value, and all metadata are serialized in a single sequence of bytes, memory footprint is minimum.  Typically, pure footprint except for the footprint from the memory allocator is 10 bytes.  Assuming the key and the value are 8-byte strings, actual memory usage is about 50% of std::map&lt;std::string, std::string&gt;.</p>
 
-<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
+<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they were std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
 <p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1BabyDBM.html">the API document</a>.</p>
 
@@ -1953,7 +1979,7 @@ int main(int argc, char** argv) {
 
 <p>The cache database is sharded internally so that mutex is done for each shard, in order to improve concurrent performance.  The actual concurrent performance of the cache database is almost the same as the normal on-memory hash database.  Whereas space efficiency of the cache database is worse than those of the on-memory hash database and the on-memory tree database, it is suitable as a cache system, thanks to the LRU deletion feature.</p>
 
-<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
+<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they were std::unordered_map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
 <p>For details of the API, see <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1CacheDBM.html">the API document</a>.</p>
 
@@ -1998,7 +2024,7 @@ int main(int argc, char** argv) {
 
 <p>Thread safety is assured in these implementations.  Reader-writer locking is applied to the whole database.  Therefore, multiple reader threads can access the same database without blocking whereas a writer thread blocks other threads.  Thread safety is the only benefit of these implementations over using bare std::unordered_map or std::map.</p>
 
-<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they are std::unordered_map and std::map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
+<p>You don't have to open or close on-memory databases to use them.  You can just set records and retrieve them as if they were std::unordered_map and std::map.  However, you can associate the database to a file by opening it with a file path.  Then, when you close the database, all records are saved in the file.  And, you can reuse the records by opening the database with the same file path.</p>
 
 <p>In contrast with the hash database, the tree database StdTreeDBM assures that all keys are ordered in alphabetical order.  The iterator supports the Jump method, which enables range searches including forward-matching search.</p>
 
@@ -2162,8 +2188,6 @@ dbm.OpenAdvanced("casket", true, File::OPEN_DEFAULT, params);
 <p>If the file path is "casket" and the number of shards is 4, "casket-00000-of-00004", "casket-00001-of-00004", "casket-00002-of-00004", and "casket-00003-of-00004" are created.  To open an existing database, specify the path without the suffix.  You can omit the "num_shards" parameter to open existing files.</p>
 
 <p>For details of the API, see the API document of <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyDBM.html">PolyDBM</a> and <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1ShardDBM.html">ShardDBM</a>.</p>
-
-<p>As explained in <a href="#tips_restore">ACID and Restoring Broken Databases</a>, currently ShardDBM only provides some of the durability guarantees of HashDBM, TreeDBM, or SkipDBM.</p>
 
 <h3 id="polydbm_example">Example Code</h3>
 
@@ -2352,7 +2376,7 @@ int main(int argc, char** argv) {
 
 <h3 id="index_example">Example Code</h3>
 
-<p>This code represents an advanced usage of HashDBM with FileIndex, which allows for find employees by the division ID.</p>
+<p>This code represents an advanced usage of HashDBM with FileIndex, which allows for finding employees by the division ID.</p>
 
 <pre><code class="language-cpp"><![CDATA[#include "tkrzw_cmd_util.h"
 #include "tkrzw_dbm_hash.h"
@@ -2512,7 +2536,7 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>Let's do the same thing as the above with StdIndex instead of FileIndex.  We scans the main database when the process starts in order to build the on-memory secondary index.</p>
+<p>Let's do the same thing as the above with StdIndex instead of FileIndex.  We scan the main database when the process starts in order to build the on-memory secondary index.</p>
 
 <pre><code class="language-cpp"><![CDATA[#include "tkrzw_cmd_util.h"
 #include "tkrzw_dbm_hash.h"
@@ -3086,16 +3110,16 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>Alignment is effective to mitigate fragmentation when the size of the value of records are changed frequently.  By default, the alignment is set 2^3 = 8 bytes so that every records begins at an offset which is a multiple of 8.  If the record size is not a multiple of 8, padding bytes are put at the end.  If the size of a record increases but the padding can contain the increment, the record don't have to be moved to another place.  If the record is moved, the original position region becomes a free block.  In the in-place update mode, the free block can be reused but it is not assured.  Having 8-byte alignment means that the expected size of padding is 4 bytes.  If the typical record size is 30 bytes or something, 4 bytes padding seems acceptable and effective.</p>
 
-<p>The position of each record is represented by a 4-byte integer by default.  It means that the maximum value is 4^32 = 4GiB.  Actually, the position is calculated as the value multiplied by the alignment.  So, the maximum size is 4GiB * 8 = 32GiB by default.  If the database size is about to exceed the limit, you should rebuild the database with an increased offset width.  Usually, 5-byte integer will do because it can represent up to 1TiB.  Usually, alignment is not used for the appending mode.  And, databases in the appending mode tend to be very large.  Therefore, you'll create a database in the appending mode like this.</p>
+<p>The position of each record is represented by a 4-byte integer by default.  It means that the maximum value is 4^32 = 4GiB.  Actually, the position is calculated as the value multiplied by the alignment.  So, the maximum size is 4GiB * 8 = 32GiB by default.  If the database size is about to exceed the limit, you should rebuild the database with an increased offset width.  Usually, 5-byte integer will do because it can represent up to 1TiB.  Alignment is not useful for the appending mode.  And, databases in the appending mode tend to be very large.  Therefore, you'll create a database in the appending mode like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --offset_width 5 --align_pow 0 --buckets 10m --append casket.tkh
 ]]></code></pre>
 
-<p>By default, I/O of the file hash database file is done via memory mapping.  Thus, if the size of the database file exceeds the capacity of the virtual memory, the process can crash with segmentation fault or be killed by OOM killer.  To avoid it, you can use the normal I/O system calls, by creating the database object with the specific file object.  See the tips on <a href="#tips_file_classes">File Classes</a> for details.  If the database file is much larger than the RAM on your machine, using direct I/O is the best practice.  See <a href="#tips_direct_io">Direct I/O</a> for details.  Compressing record data is useful to calibrate tradeoff of time efficiency and space efficiency.  See <a href="#tips_compression">Data Compression</a> for details.</p>
+<p>By default, I/O of the file hash database file is done via memory mapping.  Thus, if the size of the database file exceeds the capacity of the virtual memory, the process can crash with segmentation fault or be killed by the OOM killer.  To avoid it, you can use the normal I/O system calls, by creating the database object with the specific file object.  See the tips on <a href="#tips_file_classes">File Classes</a> for details.  If the database file is much larger than the RAM on your machine, using direct I/O is the best practice.  See <a href="#tips_direct_io">Direct I/O</a> for details.  Compressing record data is useful to calibrate tradeoff of time efficiency and space efficiency.  See <a href="#tips_compression">Data Compression</a> for details.</p>
 
 <h3 id="tips_hashdbm_update_modes">Update Modes of HashDBM and TreeDBM</h3>
 
-<p>You specify an update mode when creating or rebuilding a HashDBM or TreeDBM database by setting the TuningParameters.update_mode argument to OpenAdvanced() or RebuildAdvanced().  Update mode can be UPDATE_IN_PLACE (the default) or UPDATE_APPENDING.</p>
+<p>You specify an update mode when creating or rebuilding a HashDBM or TreeDBM database by setting the update_mode tuning parameter to the OpenAdvanced or RebuildAdvanced method.  The value can be UPDATE_IN_PLACE (the default) or UPDATE_APPENDING.</p>
 
 <h4 id="tips_hashdbm_update_modes_inplace">In-Place</h4>
 
@@ -3121,13 +3145,13 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>If a record is removed, the region for the record becomes a free block and it is reused later.</p>
 
-<p>Therefore, in the in-place mode, the size of the database doesn't increase rapidly if records are set or deleted often.  Even so, fragmentation can still gradually creep in, so you should rebuild the database occasionally.</p>
+<p>Therefore, in the in-place mode, the size of the database doesn't increase rapidly even if records are set or deleted often.  Even so, fragmentation can still gradually creep in, so you should rebuild the database occasionally.</p>
 
 <h4 id="tips_hashdbm_update_modes_appending">Appending</h4>
 
-<p>Meanwhile, in the appending mode, we never write to the existing region (the region of the file where records have already been stored).  There is no free block pool, and space for removed records is never reused.</p>
+<p>Meanwhile, in the appending mode, we never write to the existing region, which is the region of the file where records have already been stored.  There is no free block pool, and space for removed records is never reused.</p>
 
-<p>Let's say the value of record A is updated from "aaa" to "aa".  A new record region is appended at the end of the file (even though "aa" could fit in the old space):</p>
+<p>Let's say the value of record A is updated from "aaa" to "aa".  A new record region is appended at the end of the file even though "aa" could fit in the old space.</p>
 
 <pre>[xxx:A:aaa][xxx:B:bbb][xxx:A:aa]
 </pre>
@@ -3142,7 +3166,7 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 <pre>[xxx:A:aaa][xxx:B:bbb][xxx:A:aa][xxx:A:(removed)][xxx:C:c]
 </pre>
 
-<p>So in appending mode, each updating operation (add, set, remove) appends one record to the file.  These records are linked together in a chain from the most recent operation to the oldest operation.  Each bucket of the hash table points to the record for the most recent operation on any record whose key falls in that bucket.  For example, here is what it looks like when a given hash bucket has a chain of two records and we add one more new record:</p>
+<p>So in appending mode, each updating operation appends one record to the file.  These records are linked together in a chain from the most recent operation to the oldest operation.  Each bucket of the hash table points to the record for the most recent operation on any record whose key falls in that bucket.  For example, here is what it looks like when a given hash bucket has a chain of two records and we add one more new record:</p>
 
 <div class="dbstructure"><img src="appending.svg"/></div>
 
@@ -3150,13 +3174,11 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>Because one record gets appended for each updating operation, the size of the database file increases rapidly if you update a lot, even if you repeatedly update the same key.  Furthermore, after many update operations, the chain of records for a given hash bucket grows longer and longer, and so that potentially slows down most Tkrzw operations.</p>
 
-<p>So, it is very important to rebuild the database periodically to save space and restore good performance.  Fortunately, Trkzw lets you rebuild a live database (from a background thread, if you desire) while it is still in use.</p>
+<p>So, it is very important to rebuild the database periodically to save space and restore good performance. Tkrzw lets you rebuild a live database (from a background thread, if you desire) while it is still in use.</p>
 
-<p>By now you may be thinking that the appending mode is totally crazy.  But it has two major advantages over the in-place mode:</p>
+<p>By now you may be thinking that the appending mode is totally crazy.  But it has two major advantages over the in-place mode: durability and updating performance.  Because appending mode never modifies the existing area, the existing information is never lost.  This lets us provide stronger durability guarantees in case of an operating system crash or power failure.  See <a href="#tips_acid">ACID Transaction</a> for details.</p>
 
-<p><b>ACID:</b> Because appending mode never modifies the existing area, the existing information never breaks.  This lets us provide stronger ACID guarantees in case of an operating system crash or power failure.  For more information, see <a href="#tips_restore">ACID and Restoring Broken Databases</a>.</p>
-
-<p><b>Sequential Writes:</b> You might think that the in-place mode is faster and that the appending mode is slower.  However, it is not the case necessarily.  In the in-place mode, updated "dirty" pages of the I/O buffer scatter across the database file so that effectiveness of synchronizing the dirty pages with the device is low.  Meanwhile, in the appending mode, dirty pages occurs only at end of the file so that effectiveness of synchronizing the dirty pages with the device is high.  In other words, a database in the appending mode causes inefficient reading with random access but it causes efficient writing with sequential access.  Therefore, if rebuilding the database is done at a reasonable frequency, the appending mode can be faster than the in-place mode.  SSD devices are good at random reading but not good at random writing.  Especially if you build a huge database on an SSD storage, the appending mode is worth considering.</p>
+<p>You might think that the in-place mode is faster and that the appending mode is slower.  However, it is not the case necessarily.  In the in-place mode, updated "dirty" pages of the I/O buffer scatter across the database file so that effectiveness of synchronizing the dirty pages with the device is low.  Meanwhile, in the appending mode, dirty pages occur only at end of the file so that effectiveness of synchronizing the dirty pages with the device is high.  In other words, a database in the appending mode causes inefficient reading with random access but it causes efficient writing with sequential access.  Therefore, if rebuilding the database is done at a reasonable frequency, the appending mode can be faster than the in-place mode.  SSD devices are good at random reading but not good at random writing.  Especially if you build a huge database on an SSD storage, the appending mode is worth considering.</p>
 
 <h4 id="tips_hashdbm_update_modes_perf">Performance Comparison</h4>
 
@@ -3239,6 +3261,82 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <p>By the way, databases other than the file skip database don't support duplicated keys.  That's because duplicated keys deteriorate time and space efficiency.  If you have to handle duplicated keys, build a skip database first and merge duplicated records.  Then, you can convert it to another type of database.</p>
 
+<h3 id="tips_compression">Data Compression for HashDBM and TreeDBM</h3>
+
+<p>Data compression can be applied to the record value so that the size of the database file becomes smaller at the cost of processing time.  In general, using data compression decreases performance and throughput.  However, if the database file is large and I/O is the bottle neck, data compression sometimes increases performance and throughput because of lower amount of data transmission with the storage.</p>
+
+<p>You can integrate the following compression libraries when you build Tkrzw.</p>
+
+<ul>
+<li><strong>ZLib</strong> : Probably the most popular compression library, which is used in GZip.  It combines good compression ratio and good processing speed.</li>
+<li><strong>ZStd</strong> : Probably the most useful compression library.  As compression ratio is almost the same as ZLib, the processing speed is much faster.</li>
+<li><strong>LZ4</strong> : A very fast compression library.  Though compression ratio is worse than ZLib and ZStd, processing speed is much faster.</li>
+<li><strong>LZMA</strong> : A library known for the best compression.  Though compression ratio is better than ZLib and ZStd, the processing speed is much slower.</li>
+</ul>
+
+<p>If you tune the database to enable one of those algorithms, record data stored in the database is compressed.  When you retrieve the record, the data is decompressed automatically.  In HashDBM, compression is done for each record and only the record value is compressed.  Thus, compression is useful only if the record value is large.  In TreeDBM, compression is done for each page which includes multiple records.  Thus, compression is more useful in TreeDBM.</p>
+
+<p>Which algorithm is the best suited should be determined according to the data size, the data content, and the access pattern.  However, ZStd is the one you should try first.  If ZStd is not available on your platform, you use ZLib instead.  If you prefer faster speed, try LZ4.  If the database is almost read-only for archival usage, try LZMA.</p>
+
+<p>To check performance, let's write and read 1 million records in HashDBM and TreeDBM.  The key is a 8-byte numeric string like "00000001" and "00000002".  The value is a 100-byte semi-random alphabet strings like "ghajclengpa...".</p>
+
+<table>
+<tr>
+<th>class</th>
+<th>Hash-Set</th>
+<th>Hash-Get</th>
+<th>Hash Size</th>
+<th>Tree-Set</th>
+<th>Tree-Get</th>
+<th>Tree Size</th>
+</tr>
+<tr>
+<td>Raw</td>
+<td class="num">1,515,645 QPS</td>
+<td class="num">1,950,478 QPS</td>
+<td class="num">114.63 MB</td>
+<td class="num">1,399,361 QPS</td>
+<td class="num">1,658,892 QPS</td>
+<td class="num">106.49 MB</td>
+</tr>
+<tr>
+<td>ZLib</td>
+<td class="num">150,205 QPS</td>
+<td class="num">2,044,919 QPS</td>
+<td class="num">85.06 MB</td>
+<td class="num">350,346  QPS</td>
+<td class="num">1,126,326 QPS</td>
+<td class="num">10.20 MB</td>
+</tr>
+<tr>
+<td>ZStd</td>
+<td class="num">293,260 QPS</td>
+<td class="num">2,054,519 QPS</td>
+<td class="num">92.69 MB</td>
+<td class="num">1,040,141 QPS</td>
+<td class="num">1,159,513 QPS</td>
+<td class="num">12.12 MB</td>
+</tr>
+<tr>
+<td>LZ4</td>
+<td class="num">917,089 QPS</td>
+<td class="num">1,975,289 QPS</td>
+<td class="num">116.53 MB</td>
+<td class="num">1,309,562 QPS</td>
+<td class="num">1,392,015 QPS</td>
+<td class="num">16.29 MB</td>
+</tr>
+<tr>
+<td>LZMA</td>
+<td class="num">1,478 QPS</td>
+<td class="num">1,829,766 QPS</td>
+<td class="num">146.10 MB</td>
+<td class="num">31,802 QPS</td>
+<td class="num">795,360 QPS</td>
+<td class="num">11.28 MB</td>
+</tr>
+</table>
+
 <h3 id="tips_skipdbm_tune">Tuning SkipDBM</h3>
 
 <p>The file skip database uses a skip list based on sorted records.  Whereas its time efficiency is worse than that of the hash table, its space efficiency is better.  Typically, the footprint for each record is less than 5 bytes.  Usually, there's no need to modify the default tuning parameters.  If the size of the database can exceed 4GB, the offset width parameter should be set 5.  If the number of records is more than 1 billion, the maximum level parameter should be set 15 or more.  If the main usage of the database is for sequential access, the step unit can be 16 and the maximum level can be 8.</p>
@@ -3311,8 +3409,7 @@ dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToFirst);
 
 <p>In principle, the file skip database should be considered as a "static" database which is not updated after building it.  However, you can modify it with usual methods of DBM.  You can insert arbitrary records, which are put after existing records of the same keys.  Then, you can reduce them when calling the Synchronize method.  If you want to keep the latest value to overwrite the old value, you'll synchronize the database with ReduceToLast.  Assuming we use the above finished database, the following code keeps records of {"foo":"fifth"} and {"bar":"segundo"} only.</p>
 
-<pre><code class="language-cpp"><![CDATA[dbm.Unfinish();
-dbm.Set("foo", "fourth");
+<pre><code class="language-cpp"><![CDATA[dbm.Set("foo", "fourth");
 dbm.Set("foo", "fifth");
 dbm.Set("bar", "segundo");
 dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToLast);
@@ -3320,8 +3417,7 @@ dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToLast);
 
 <p>You can insert new data, but how do you remove the existing data?  It is implemented as insertion of a special value.  If you call the Remove method, a special value called REMOVING_VALUE is inserted.  When synchronizing the database, if the special value is detected, records of the same key before the special value are removed.  Then, the reducer is applied if any.  The following code removes records of "foo" but doesn't remove records of "bar".</p>
 
-<pre><code class="language-cpp"><![CDATA[dbm.Unfinish();
-dbm.Set("foo", "fourth");
+<pre><code class="language-cpp"><![CDATA[dbm.Set("foo", "fourth");
 dbm.Remove("foo");
 dbm.Remove("bar");
 dbm.Set("bar", "tercero");
@@ -3330,7 +3426,7 @@ dbm.SynchronizeAdvanced(false, nullptr, SkipDBM::ReduceToLast);
 
 <p>Note that synchronizing the database requires rebuilding the entire database even if only one record is modified.  Therefore, updating records should be done in a batch processing style, where you do every operation and then synchronize the database.  Note again that you cannot access new records until you call the Synchronize method.</p>
 
-<p>You can merge multiple skip database files after building them separately.  You can apply a reducer there.  If you have to aggregate a large amount of data, building partial results as separate database files and merge them afterward is a practical way.  You can do the same thing in C++ by calling the MergeSkipDatabase method.</p>
+<p>You can merge multiple skip database files after building them separately.  You can apply a reducer there.  If you have to aggregate a large amount of data, building partial results as separate database files and merge them afterward is a practical way.  You can do it in C++ by calling the MergeSkipDatabase method.  You can do the same thing by a command like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util merge --reducer last \
   merged.tks source1.tks source2.tks source3.tks
@@ -3385,11 +3481,52 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<h3 id="tips_lambda_processor">Record Processor with Lambda Function</h3>
+<h3 id="tips_process">DBM::Process</h3>
 
-<p>Processing a record atomically in an arbitrary manner is one of the nicest features of Tkrzw.  You can use the feature easily by writing a lambda function.  You call the Process method with a record key and a lambda function.  If the record exists, the lambda function is called with the key and the value of the existing record.  If the record doesn't exist, the lambda function is called with the specified key and the dummy value NOOP.  The lambda function returns the dummy value NOOP to keep the existing value as-is.  It can return the dummy value REMOVE to remove the record.  It can return an arbitrary string to set the new value.  The record is processed atomically by being locked during the operation.</p>
+<p>One of the nicest features of Tkrzw is the Process method, shared by all database classes, which lets your application read and modify a single record of the database in a way that is atomic to all other threads.  So it will never be possible for another thread to sneak in and change the record value between when your thread reads it and modifies it.  This is one example of Atomicity and Isolation in the ACID traits.</p>
 
-<p>The following function works as an access counter.  It takes an arbitrary ID string, increments the record value for it, saves the value as a decimal numeric string, and then returns the current access count.  Note that you shouldn't write "value == DBM::RecordProcessor::NOOP" to check the given value is equal to NOOP.  Whereas the uniqueness of NOOP comes from the address of the data region, comparison of the string_view objects is done by their character values.  Also note that the string object "new_value" must be put outside of the lambda function so that its life duration lasts until the Process method finishes.</p>
+<p>More specifically, when you call Process, you provide a key and a "writeable" boolean indicating whether or not you want to modify/add records with that key.  Multiple threads can all get read access (writeable==false) at the same time.  Only one thread can have write access (writeable==true), and while a thread has write access, it blocks all reader threads.  Most of the other DBM methods like Get, Set and Remove use Process under the covers, so they also acquire the appropriate read or write lock.</p>
+
+<p>Locking is based on keys, not records.  So when you acquire a read or write lock on a key, you prevent any other thread from modifying the record with that key or creating a new record with that key or removing a record with that key.  When you acquire a write lock on a key, you also gain the right to modify the record with that key or create a new record with that key or remove a record with that key.</p>
+
+<p>Different database classes implement key locking with different granularities.  For example, HashDBM internally has a bank of 256 locks and keys get grouped together and guarded with these locks, whereas StdHashDBM internally has a single lock for all keys in the database.  These internal differences will not affect the correctness of your application, but they may impact its performance.  See the individual section for each database type to learn more.</p>
+
+<p>Process takes a callback that Tkzrw calls with the record lock held so that you may perform the atomic operation.  For that callback you can pass eitehr an instance of a subclass of DBM::RecordProcessor or a lambda function.  A subclass of DBM::RecordProcessor overwrites ProcessFull and ProcessEmpty methods.</p>
+
+<ul>
+<li>If the database has an existing record for the key passed to Process, Tkzrw calls your ProcessFull(key, value) with the key and the existing value, and you can either:<ul>
+<li>return DBM::RecordProcessor::NOOP to make no change to the database, or</li>
+<li>return DBM::RecordProcessor::REMOVE to remove that record from the database, or</li>
+<li>return a new record value to modify that record in the database.</li>
+</ul></li>
+<li>If the database has no existing record for the key passed to Process, Tkzrw calls your ProcessEmpty(key), and you can either:<ul>
+<li>return DBM::RecordProcessor::NOOP or DBM::RecordProcessor::REMOVE to make no change to the database, or</li>
+<li>return a new record value to add that record to the database.</li>
+</ul></li>
+</ul>
+
+<p>The Process method can also take a lambda function, whose signature is like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[std::string_view func(std::string_view key, std::string_view value);
+]]></code></pre>
+
+<ul>
+<li>If the database has an existing record for the key passed to Process, Tkzrw calls your lambda with the key and the existing value, and you can either:<ul>
+<li>return DBM::RecordProcessor::NOOP to make no change to the database, or</li>
+<li>return DBM::RecordProcessor::REMOVE to remove that record from the database, or</li>
+<li>return a new record value to modify that record in the database.</li>
+</ul></li>
+<li>If the database has no existing record for the key passed to Process, Tkzrw calls your lambda with the key and a special value of string_view where value.data() == DBM::RecordProcessor::NOOP.data(), and you can either:<ul>
+<li>return DBM::RecordProcessor::NOOP or DBM::RecordProcessor::REMOVE to make no change to the database, or</li>
+<li>return a new record value to add that record to the database.</li>
+</ul></li>
+</ul>
+
+<p>When testing "value" passed to your callback against NOOP, make sure that you compare the pointers with the code "value.data() == DBM::RecordProcessor::NOOP.data()" rather than the incorrect code "value == DBM::RecordProcessor::NOOP", which would only compare the string values, or the incorrect code "&amp;value == &amp;NOOP", which would compare the object addresses.  The uniqueness of the special NOOP value comes from the value of its NOOP.data() pointer.  This applies to all callbacks for Process, ProcessMulti, and ProcessEach.</p>
+
+<p>When returning a new value from your callbacks including lambda ones, remember that you are returning a std::string_view, and so the memory to which the string_view.data() points must remain valid throughout Process.  This often means you must return a std::string_view that points to a member of your DBM::RecordProcessor subclass or a variable in a higher scope captured by reference in your lambda.</p>
+
+<p>The following example has a lambda callback that works as an access counter.  It takes an arbitrary ID string, increments the record value for it, saves the value as a decimal numeric string, and then returns the current access count.  Note the check of NOOP by data() pointer, and note how the returned string is declared outside the lambda so it lasts util Process finishes, as explained above.</p>
 
 <pre><code class="language-cpp"><![CDATA[int64_t CountUp(DBM* dbm, std::string id) {
   int64_t count = 0;
@@ -3408,7 +3545,19 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>The ProcessEach method to process every record at once can also take a lambda function.  First, the whole database is locked.  For preprocessing, the lambda function is called with the key and the value being NOOP.  Then, the lambda function is called for each record.  For postprocessing, the lambda function is called with the key and the value being NOOP.  Finally, the whole database is unlocked.</p>
+<p>If your callback needs to spend a substantial amount of time between when it reads the existing database value and when it calculates the correct return value (NOOP, REMOVE, new value), this forces you to potentially degrade the performance of other threads, because your callback runs while Tkzrw is holding a lock on that record (and possibly other records) in the database.  For many applications, there is a clever way around this dilemma called CompareExchange.</p>
+
+<h3 id="tips_processeach">DBM::ProcessEach</h3>
+
+<p>The ProcessEach method is a way to make bulk changes to the database atomically.  It works as the following procedures.</p>
+
+<ul>
+<li>locks the entire database so no other thread can read or write any record.</li>
+<li>calls your callback once with a special sentinel value, giving you a chance to do preprocessing.  For a DBM::RecordProcessor subclass, the sentinel is ProcessEmpty(key) with key.data() == DBM::RecordProcessor::NOOP.data().  For a lambda, the sentinel is func(key, value) with both key.data() == DBM::RecordProcessor::NOOP.data() and value.data() == DBM::RecordProcessor::NOOP.data().</li>
+<li>calls your callback once for every existing record in the database, just as with Process.  So you will either get ProcessFull() or lambda func(key,value) with non-NOOP key and value.</li>
+<li>calls your callback one more time with the special sentinel value again, giving you a chance to do postprocessing.</li>
+<li>unlocks the entire database.</li>
+</ul>
 
 <p>The following function multiplies the values of all records with a given factor.  If the value of a record is less than 1, the record is removed.</p>
 
@@ -3429,17 +3578,23 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>The Process method of the iterator class can also take a lambda function.  If you want to modify specific a record in an atomic manner by the record, you'll use DBM::Process.  If you want to modify every record in an atomic manner by the whole database, you'll use DBM::ProcessEach.  If you want to modify all or some records in an atomic manner by the record, you'll use DBM::Iterator::Process.</p>
+<p>The Iterator class of each DBM type also has the Process method, and it can also take a DBM::RecordProcessor or lambda function as explained above.  If you want to modify a specific record in an atomic manner, use DBM::Process.  If you want to modify some or all records, each in an atomic manner (but not atomically as a whole), use DBM::Iterator::Process.  If you want to access every records atomically and modify some of them, use DBM::ProcessEach.  If you need to modify multiple records as a batch/transaction in an atomic manner, use DBM::ProcessMulti, which is described below.</p>
 
-<h3 id="tips_multi_rec_tx">Multi-record Transaction</h3>
+<h3 id="tips_processmulti">DBM::ProcessMulti</h3>
 
-<p>Transactional operations on multiple records can be done with the ProcessMulti method.  It takes multiple record keys and multiple callback functions to operate the records.  As with the Process method, you use lambda functions as callback functions.  All records specified by the keys are locked while all callback functions are executed.  Thus, other threads don't observe transitional states of the transaction.</p>
+<p>Transactional operations on multiple records can be done with the ProcessMulti method.  It takes multiple record keys and multiple callback functions to operate the records.  As with the Process method, you use lambda functions as callback functions.  All records specified by the keys are locked while all callback functions are executed.  Thus, other threads don't observe transitional states of the transaction.  ProcessMulti works as the following procedures.</p>
 
-<p>Let's assume that you manage bank accounts on the hash database.  You transfer 1000 from account A to account B.  This transaction is composed of these operations.</p>
+<ul>
+<li>It acquires read or write locks on all of your specified keys in the database in exactly the same way we described above for Process.  So this prevents other threads from modifying, adding, or removing any records with those keys.  If writeable==true, you have the right to modify, add, or remove records with those keys yourself.</li>
+<li>Then it calls your callbacks in sequence, one per key.</li>
+<li>Then releases the locks on all the records at once, so other threads will see all the records change state atomically rather than seeing any intermediate states of records.</li>
+</ul>
+
+<p>Let's assume that you manage bank accounts using a file hash database.  You transfer 1000 from account A to account B.  This transaction is composed of these operations.</p>
 
 <ol>
 <li>Confirm that the account B exists.</li>
-<li>Evaluate the balance of account A and confirm it not less than 1000.</li>
+<li>Evaluate the balance of account A and confirm it is not less than 1000.</li>
 <li>Decrease the balance of account A by 1000.</li>
 <li>Increase the balance of account B by 1000.</li>
 </ol>
@@ -3507,7 +3662,23 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>If your transaction takes time for user's interaction or access to external resources, you shouldn't keep the lock during the operations.  In such long transaction cases, you should use the CompareExchangeMulti method.  It is a wrapper of ProcessMulti to update the record values only if the specified conditions are satisfied.  You check the current balances of the accounts and calculate the desired balances after the transaction.  You set the conditions that the balances are not changed since you check the balances.  CompareExchangeMulti fails if the conditions are not met.  You repeat the transaction until it succeeds.</p>
+<p>If your callbacks need to spend a substantial amount of time between when they read the existing database values and when they calculate the correct return values, this forces you to potentially degrade the performance of other threads, because your callbacks run while Tkzrw is holding locks on one or more records in the database.  For many applications, there is a clever way around this dilemma called CompareExchangeMulti.</p>
+
+<h3 id="tips_compareexchange">DBM::CompareExchange and DBM::CompareExchangeMulti</h3>
+
+<p>Callbacks of the Process or ProcessMulti method shouldn't spend much time because they hold locks of the target records and prevent any other threads from making progress.  However, doing the same thing with separate method calls is not acceptable because another thread may simultaneously change the values that you are processing.  To get out of this dilemma, you can often use the extremely clever CompareExchange and CompareExchangeMulti methods.</p>
+
+<p>The key insight is that, for many applications, if you read the value of a record, do some lengthy processing of that record, and then at the moment you write the result, you find that someone else has modified the value of the original record, you can simply re-run the lengthy process again with the new value, or (for some applications) just forget about running the lengthy process because it is no longer needed.  You only actually need atomic behavior at the very last step, where you are deciding to commit your processed data or not based on whether or not the value has changed since the beginning of the process.</p>
+
+<p>CompareExchange and CompareExchangeMulti are wrappers around Process and ProcessMulti which help you accomplish this.  You do the following procedures.</p>
+
+<ul>
+<li>first read the value of the records you want (using Get(); no special locking needed at this stage)</li>
+<li>then process the value (the lengthy part)</li>
+<li>then call CompareExchange or CompareExchangeMulti, passing in the old record value(s) that you worked on, and the new record value(s) that you computed.  CompareExchange and CompareExchangeMulti atomically check that the record(s) still have the same old value(s), and if so they set your new value(s) and return success.  If not (if the value(s) changed while you were processing), CompareExchange and CompareExchangeMulti fail so you can try again.</li>
+</ul>
+
+<p>In this example, you read the current balances of the accounts, calculate the desired balances after the transaction, and then call CompareExchangeMulti so that it only succeeds if the balances have not changed.  You repeat the transaction until it succeeds.</p>
 
 <pre><code class="language-cpp"><![CDATA[Status TransferByCompareExchange(
     DBM* dbm, std::string_view src_key, std::string_view dest_key, int64_t amount) {
@@ -3515,7 +3686,7 @@ if (dbm.Get(key, &value).IsOK()) {
   constexpr int32_t max_tries = 100;
   for (int32_t num_tries = 0; num_tries < max_tries; num_tries++) {
 
-    // Gets balance of the source account.
+    // Gets the balance of the source account.
     std::string src_value;
     Status status = dbm->Get(src_key, &src_value);
     if (!status.IsOK()) {
@@ -3526,7 +3697,7 @@ if (dbm.Get(key, &value).IsOK()) {
       return Status(Status::INFEASIBLE_ERROR, "insufficient balance");
     }
 
-    // Gets balance of the destination account.
+    // Gets the balance of the destination account.
     std::string dest_value;
     status = dbm->Get(dest_key, &dest_value);
     if (!status.IsOK()) {
@@ -3538,7 +3709,7 @@ if (dbm.Get(key, &value).IsOK()) {
     const std::string src_new_value = ToString(src_balance - amount);
     const std::string dest_new_value = ToString(dest_balance + amount);
     
-    // Finish transaction atomically if the balances are not modified.
+    // Finish the transaction atomically if the balances are not modified.
     const std::vector<std::pair<std::string_view, std::string_view>> expected =
         {{src_key, src_value}, {dest_key, dest_value}};
     const std::vector<std::pair<std::string_view, std::string_view>> desired =
@@ -3556,13 +3727,249 @@ if (dbm.Get(key, &value).IsOK()) {
 }
 ]]></code></pre>
 
-<p>ProcessMulti and CompareExchangeMulti assure Atomicity and Isolation of the ACID properties of transaction.  Specifically, they assure that other threads reading the same database will either observe no changes to any of the records, or they will observe the complete set of changes to all of the records involved in the transaction, regardless of the relative timing of all threads in the process.  The business logic that you write inside your callbacks for ProcessMulti and CompareExchangeMulti assures the Consistency of the transaction, another important aspect of ACID.</p>
+<h3 id="tips_restore">Restoring Broken Databases</h3>
 
-<p>The final important aspect of ACID is Durability against crashes, power outages, etc.  HashDBM, TreeDBM, and SkipDBM each provide a specific form of durability as long as you configure and use the database correctly.  For more details about how this works and exactly what durability Tkrzw provides, see <a href="#tips_restore">ACID and Restoring Broken Databases</a>.</p>
+<p>An opened database should be closed properly.  Otherwise, the database file might be broken.  When a database is opened, a field in the metadata section is marked as "opened".  When the database is closed, the field is marked as "closed".  If the process opening a database crashes without closing the database, the field is still marked as "opened".  When the database file is opened the next time, the library detects the past incident and the database is considered "unhealthy".</p>
 
-<p>Tkrzw doesn't have an explicit Rollback() operation to cancel a set of previously requested updating operations.  Once you call Set(), Remove(), or once your Process() record processor callback returns a new value or REMOVE, the operation is set in stone.  Usually, checking the precondition in ProcessMulti or before CompareExchangeMulti makes rollback unnecessary.  If you want rollback features, you have to record "undo" transaction logs in another database and apply them explicitly by yourself.</p>
+<p>By default, an unhealthy database is restored automatically when you open the database.  The whole database file is scanned and as many records as possible are salvaged.  This behavior can be changed by setting the restore_mode tuning parameter.  The default value is RESTORE_DEFAULT, which causes the best-effort restore.  If it is RESTORE_SYNC, the database is restored to the state at the time when the Synchronized method was called last time.  If it is RESTORE_READ_ONLY, no restore operations are done and the database becomes read-only to avoid further inconsistency.  If it is RESTORE_NOOP, the database is treated healthy without any restore operation.</p>
 
-<p>HashDBM and TreeDBM do, however, support an interesting type of rollback called <a href="#tips_restore_snapshot">snapshot reproduction</a> that you can apply when rebuilding a database file.  For more information, see <a href="#tips_restore">ACID and Restoring Broken Databases</a>.</p>
+<p>You can add optional settings to RESTORE_DEFAULT or RESTORE_SYNC by bit-or operation, like RESTORE_SYNC | RESTORE_NO_SHORTCUTS.  By default, the following shortcuts are checked and applied before doing the full-fledged restoration. The RESTORE_NO_SHORTCUTS option suppresses them.</p>
+
+<dl>
+<dt>#1 : If the following condition is satisfied, the database is considered healthy and restoration is skipped.</dt>
+<dd>The update mode is the appending mode.</dd>
+<dd>The actual file size is the same as the metadata's file size.</dd>
+<dd>The validation check of the bucket section passes.</dd>
+<dt>#2 : If the following condition is satisfied, the database is considered restored without doing actual restoration.</dt>
+<dd>The update mode is the in-place mode.</dd>
+<dd>The actual file size is equal to or larger than the metadata's file size.</dd>
+<dd>The validation check of the bucket section passes.</dd>
+<dd>The validation check of the entire record section passes.</dd>
+<dt>#3 : If the following condition is satisfied, the database is considered restored without doing actual restoration.</dt>
+<dd>The update mode is the appending mode.</dd>
+<dd>The actual file size is equal to or larger than the metadata's file size.</dd>
+<dd>The validation check of the bucket section passes.</dd>
+<dd>The validation check of the record section after the metadata's file size passes.</dd>
+</dl>
+
+<p>If the database is in the appending update mode and you call the Synchronize method periodically, it is likely that the third shortcut is applied.  And, it finishes very quickly.  That's another reason why the appending mode is suitable for online services.</p>
+
+<p>Another option is RESTORE_WITH_HARDSYNC, which synchronizes temporary data during the restoration operation.  You set the option if you are concerned about another system crash during the restoration operation.</p>
+
+<p>You can check whether a database is healthy or not by a command like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util inspect casket.tkh 
+Inspection:
+  healthy=false
+  num_records=0
+  file_size=8396800
+  mod_time=1586714806497266
+  ...
+File Size: 8396800
+Number of Records: 0
+Healthy: false
+Should be Rebuilt: true
+]]></code></pre>
+
+<p>"num_records", "file_size", and "mod_time" represent information when the database was closed successfully (or the Synchronize method is called) the last time.  So, even if you add many records before the last crash, the metadata doesn't reflect them.  The restore operation recompute the metadata from salvaged records.</p>
+
+<p>In contrast to the default API setting, the command line tool opens the database file in the RESTORE_READ_ONLY mode, the file is not restored implicitly.  If you want to do the restore operation explicitly, you'll run a command like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh
+]]></code></pre>
+
+<p>If you want to set tuning parameters to the new restored database, you can prepare the new database with the tuning parameters and set it as the destination.  This operation can be done even for a healthy database to rebuild it.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --buckets 10m casket-restored.tkh
+$ tkrzw_dbm_util restore casket.tkh casket-restored.tkh
+]]></code></pre>
+
+<p>The same thing can be done in C++.  HashDBM, TreeDBM, and SkipDBM have the RestoreDatabase method.  PolyDBM and ShardDBM also privides wrapper functions.</p>
+
+<pre><code class="language-cpp"><![CDATA[HashDBM::RestoreDatabase("casket.tkh", "casket-restored.tkh", -1);
+]]></code></pre>
+
+<p>To restore sharded database files like (casket.tkh-00000-of-00002 and casket.tkh-00001-of-00002), you'll run a command like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore --dbm shard --class hash casket.tkh
+]]></code></pre>
+
+<p>HashDBM and TreeDBM support the appending update mode.  Databases in the appending mode can utilize an interesting feature called snapshot reproduction.  As all updating operations are recorded in the database, you can consider the database as a list of REDO logs.  You can replay them until a certain moment.  And, the moment is represented as the then size of the database file.  Given that you know the file size at a moment by calling the GetFileSize method, you can restore the database to the state at the moment.</p>
+
+<pre><code class="language-cpp"><![CDATA[dbm.Open("casket.tkh", true);
+...  // Do some updates.
+const int64_t file_size = GetFileSizeSimple();
+...  // Do some updates.
+dbm.Close();
+
+RestoreDatabase("casket.tkh", "casket-restored.tkh", file_size);
+]]></code></pre>
+
+<p>You'll check the behavior by commands like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --append casket.tkh  # Appending mode.
+$ tkrzw_dbm_util set casket.tkh one first
+$ tkrzw_dbm_util set casket.tkh two second
+$ ls -l casket.tkh  # Get the size when there are two records.
+-rw-r--r-- 1 mikio mikio 4198440 Feb 11 18:46 casket.tkh
+$ tkrzw_dbm_util set casket.tkh three third
+$ tkrzw_dbm_util list casket.tkh  # The original database has three.
+three  third
+two    second
+one    first
+$ tkrzw_dbm_util restore --end_offset 4198440 casket.tkh casket-restore.tkh
+$ tkrzw_dbm_util list casket-restore.tkh  # The restored database has two.
+two    second
+one    first
+]]></code></pre>
+
+<p>If the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time.  If the value of --end_offset is -1, as many records as possible are salvaged.</p>
+
+<h3 id="tips_acid">ACID Transaction</h3>
+
+<p>In the context of database, transaction is a concept of executing one or more database operations in a meaningful and reliable manner.  We expect tansactions have <a href="https://en.wikipedia.org/wiki/ACID">ACID</a> traits.  Tkrzw's transactional features are designed to achieve the ACID traits.  We should consider transactions in two aspects: transactions across threads and transactions across crashes.</p>
+
+<p><a href="#tips_process">Process</a>, <a href="#tips_processeach">ProcessMulti</a>, <a href="#tips_processmulti">ProcessMulti</a>, <a href="#tips_compareexchange">CompareExchange, and CompareExchangeMulti</a> assure Atomicity and Isolation.  Specifically, they assure that other threads reading the same database will either observe no changes to any of the records, or they will observe the complete set of changes to all of the records involved in the transaction, regardless of the relative timing of all threads in the process.  The business logic that you write inside your callbacks for those methods assure the Consistency of the transaction, another important aspect of ACID.</p>
+
+<p>File database implementations provide Durability across crashes as well as the other ACI traits.  If the application or system crashes when it is in the middle of a transaction, the database will rollback cleanly to the state before the transaction on the next Open.  Durability of a translaction is guaranteed only when the next Synchronize or Close method finishes successfully.  In this meaning, on-memory databases associated with files also provide the same level of durability.</p>
+
+<p>Unlike some other databases, Tkrzw doesn't have an explicit rollback operation to cancel a set of previously requested updating operations.  Once you call Set, Remove, or once your callback of the Process returns a new value or REMOVE, there is no way to take the operation back.  Usually, checking the precondition in ProcessMulti or before CompareExchangeMulti makes rollback unnecessary.  If you want rollback features, you have to record "undo" transaction logs in another database and apply them explicitly by yourself.  If the database is HashDBM or TreeDBM and it is in the appending update mode, you can use the <a href="#tips_restore">snapshot reproduction</a> feature that lets you rollback your database to a specific point in its transaction history.</p>
+
+<p>The Synchronize method is done within an exclusive lock against other threads.  Thus, atomicity of transactional operations of multiple records are protected as long as you use ProcessMulti or CompareExchangeMulti.</p>
+
+<p>There is a lot of misunderstanding about durability because "durability" is not a single yes-or-no, or even single-valued, concept.  Different "durability" configurations of hardware and software can offer you different guarantees, or probabilities, that your data will not be damaged in specific specified threat situations.  We consider the following situations as typical threads.  The later items are more severe and succeed all risks of the upper items.</p>
+
+<dl>
+<dt>The process finishes without closing the database.</dt>
+<dd>The metadata is not written into the file.</dd>
+<dd>Record data cached in the process is not written into the file.</dd>
+<dt>The process crashes suddenly.</dt>
+<dd>Multiple write operations for one record updating can stop in the middle.</dd>
+<dd>One write operation can stop in the middle.</dd>
+<dt>The operating system crashes suddenly.</dt>
+<dd>A part of dirty pages is not written into the device.</dd>
+<dd>Inconsistent data blocks can be written into the device.</dd>
+<dt>The hardware breaks down.</dt>
+<dd>Anything unpredicable can happen.</dd>
+<dd>The entire file can be lost.</dd>
+</dl>
+
+<p>You should consider data replication service or distributed computing to deal with hardware brokage, which is not in the scope of Tkrzw's features.  Tkrzw provides features for ACID traits across crashes of the operating system and the above.<!--  See <a href="durability.xhtml">Durability Discussiona</a> for more information.--></p>
+
+<p>There is often a tradeoff between performance (CPU, memory, disk space) and durability.  For example, by adding synchronization points by the Synchronize method at strategic points, we can often gain certain durability benefits, but at some performance cost.  Or by appending new changes to the end of the file by the appending update mode of HashDBM/TreeDBM, we can gain certain durability benefits, but at the cost of extra disk space usage and fragmentation.  In its default configuration, Tkzrw always favors performance.  But Tkrzw offers a host of options to trade off durability for performance depending on your needs.</p>
+
+<h3 id="tips_durability_settings">Settings for Higher Durability</h3>
+
+<p>HashDBM and TreeDBM give you higher durability with the following settings.  Each has benefits for durability at the cost of performance.</p>
+
+<dl>
+<dt>Open the database in the appending mode by setting the TuningParameters.update_mode to OpenAdvanced to UPDATE_APPENDING.</dt>
+<dd>The file size of the database in the appending update mode grows by each update operations.  Thus, you call the Rebuild method periodically to keep time and space efficiency.</dd>
+<dt>Open the database with the TuningParameters.restore_mode to OpenAdvanced to RESTORE_SYNC.</dt>
+<dd>This restores unhealthy databases to the state at the last time when Synchronize succeeds.  Adding RESTORE_NO_SHORTCUTS reduces the risk of possible missing links in case that null codes are written unexpectedly.  Adding RESTORE_WITH_HARDSYNC to the restore mode gives you more safety against another crash during the restoration operation.</dd>
+<dt>Call the Synchronize method after the transaction which you must consider completed/consistent.</dt>
+<dd>The "hard" flag should be true to tolarate system crashes.  If it is false, it can toralate only process crashes.  If hard=true is more costly since it writes all cached data to disk and waits for confirmation from the hardware.</dd>
+</dl>
+
+<p>In addition, if you are concerned that the storage device could taint the existing region on the same disk block when you append data, you should set the TuningParameters.align_pow to OpenAdvanced to a value for the disk block size.  Typically, it's from 9 (meaning 2^9 = 512 bytes) to 14 (meaning 2^14 = 16384).  However, it means that the minimum record size becomes 512 or 16384, whereby the space efficiency can be unpractically low.</p>
+
+<p>SkipDBM gives you higher durability with the following settings.  Each has benefits for durability at the cost of performance.  The same thing can be said to the other on-memory databases associated with files.</p>
+
+<dl>
+<dt>Call the Synchronize method after the transaction which you must consider completed/consistent.</dt>
+<dd>The "hard" flag should be true to tolarate system crashes.  If it is false, it can toralate only process crashes.  If hard=true is more costly since it writes all cached data to disk and waits for confirmation from the hardware.</dd>
+</dl>
+
+<p>The Synchronize method of SkipDBM and on-memory databases makes a new database file as a temporary file.  Then, the old database file is replaced with the temporary file atomically.  Thus, the database never breaks and no record is ever lost.  Even so, SkipDBM has restore features just in case that the file is currupted for unexpected reasons.  RESTORE_DEFAULT and RESTORE_SYNC are equivalent for SkipDBM.</p>
+
+<p>If you use ShardDBM for sharding databases, ACID traits across crashes are not guaranteed regardless of the inner database classes.  That's because the Synchronize method is called one by one for each inner databases without the global locking.  It can end up with a partial success of Synchronize.</p>
+
+<p>The above settings can realize the durability that most ACID-supporting databases provide, although some important details vary between databases.  Even if you do not configure Tkrzw into the ACID settings, you can still call Process, ProcessMulti, etc. to get the benefits of Atomicity and Isolation between threads in your callback.  But if you want ACID transactions, where you can modify two or more records atomically even in the presence of crashes, you must use the ACID settings.  Even applications which don't require ACID traits may still want to choose the ACID setting, because it offers stronger durability benefits against various forms of disk corruption.</p>
+
+<p>Some applications might want ACID transactions or other benefits of the ACID settings, but cannot accept the performance penalty of calling Synchronize.  Such applications can still get some partial protection by opening the database with the default restore mode.  With RESTORE_DEFAULT, Tkrzw will make a best-effort attempt to recover as many records as possible after a crash.  There is no guarantee about which records, or even how many records, can be recovered.  However, you can often recover many records beyond the last Synchronize, which might be a better trade-off depending on the application.  Unlike the ACID settings, this method works even with a ShardDBM database.  Such applications should also consider using UPDATE_APPENDING, which offers some protection against disk corruption.</p>
+
+<h3 id="tips_detecting_corruption">Detecting Corruption</h3>
+
+<p>Regardless of whether you choose The ACID settings or not, HashDBM and TreeDBM provide partial protection against corruption to record data in the file in the form of checksums on each record.  The checksums allow Tkrzw and your application to detect database corruption with a probability that you can tune:</p>
+
+<ul>
+<li>By default, you get a 6-bit checksum on each record, which can detect errors at a rate of 98.3%</li>
+<li>You can pass RECORD_CRC_8 as the TuningParameters.record_crc_mode to OpenAdvanced to add 8 more bits of CRC-8 checksum stored with each record, raising the error detection rate to 1 - 1/ (61 * 256) = 99.993%</li>
+<li>You can pass RECORD_CRC_16 as the TuningParameters.record_crc_mode to OpenAdvanced to add 16 more bits of CRC-16 checksum stored with each record, raising the error detection rate to 1 - 1 / (61 * 65536) = 99.999975%</li>
+<li>You can pass RECORD_CRC_32 as the TuningParameters.record_crc_mode to OpenAdvanced() to add 32 more bits of CRC-32 checksum stored with each record, raising the error detection rate to 1 - 1 / (61 * 4294967296) = 99.9999999996%</li>
+</ul>
+
+<p>CRCs are better than checksums in that they detect one contiguous error sequence within the width of CRC at the 100% rate.  Typically RECORD_CRC_8 or RECORD_CRC_16 are enough for situations where power failures and hardware failures are not common.</p>
+
+<p>The checksum and CRC are not checked in normal database operation like Get and Set.  They are checked when the database is restored by the auto restore feature or an explicit call of the RestoreDatabase function.  Consistency of metadata is checked for each record access.  If you want to validate all records using the checksum and CRC, call the ValidateRecords method explicitly.</p>
+
+<p>Tkrzw can also detect corruption in the file header containing the metadata of the database.  If corruption of the file header is detected, the backup metadata is read from the record header section.  If Tkzrw can restore some or all of your data, the Open method returns a success status and the IsAutoRestored method returns true.  If your database is too corrupted to be read at all, the Open method returns an error status.</p>
+
+<p>In all cases, any form of corruption to the database file shouldn't make Tkrzw crash your process.  Tkrzw will either detect the corruption and return an error as described above, or it will fail to detect the corruption and return success status.  Some forms of corruption that Tkzrw cannot detect may cause you to lose data.  For example, if a rogue process modifies a certain header field in a certain way, some of your records can disappear on the next Open, but your process will not crash.</p>
+
+<h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
+
+<p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFileData and Export.</p>
+
+<p>The CopyFileData method synchronizes the updated content to the database file and copy the whole data to another file.  As copying is done while the content of the database is synchronized and frozen, the copied file is considered as a snapshot of the database at a certain moment.  And, the copying operation is done by the fastest way on the system.  If the file system is BtrFS or XFS on Linux, reflink (copy-on-write) is used and the copying operation is done at a split second.  Otherwise, on Linux, the sendfile system call is used.</p>
+
+<pre><code class="language-cpp"><![CDATA[dbm.CopyFileData("casket-backup-20200515.tkh");
+]]></code></pre>
+
+<p>The downside of the CopyFileData method is that other threads trying to update the database are blocked during the copying operation, which can take several seconds or minutes depending on the file size.  If it is not acceptable, use the Export method, which accesses each and every records and adds them to another database.  As other threads updating the database are not blocked during the iteration, atomicity as the database is not assured.  Atomicity of each record is assured.</p>
+
+<pre><code class="language-cpp"><![CDATA[HashDBM backup_dbm;
+backup_dbm.Open("casket-backup-20200515.tkh", true);
+dbm.Export(&backup_dbm);
+backup_dbm.Close();
+]]></code></pre>
+
+<p>Some file systems provides a feature to make a snapshot of a file.  The Synchronize method can call a callback function while the database is synchronized.  Therefore, if the callback function uses the snapshot feature, you can make an atomic snapshot at a moment without making other threads wait.</p>
+
+<pre><code class="language-cpp"><![CDATA[class Snapshooter : public DBM::FileProcessor {
+ public:
+  explicit Snapshooter(const std::string& snapshot_path) : snapshot_path_(snapshot_path) {}
+  void Process(const std::string& path) override {
+    SomehowMakeSnapShot(path, snapshot_path_);
+  }
+ private:
+  std::string snapshot_path_;
+} snapshooter("casket-backup-20200515.tkh");
+dbm.Synchronize(false, &snapshooter);
+]]></code></pre>
+
+<h3 id="tips_migration">Data Migration</h3>
+
+<p>A simple format called FlatRecord is provided as a vehicle of data migration.  Flat records are also used to save records of on-memory databases in a file.  A binary file of FlatRecord contains a sequence of records.  Each record represents a sequence of bytes, in the following format.</p>
+
+<dl>
+<dt>The magic data</dt>
+<dd>1 byte integer.</dd>
+<dt>The data size</dt>
+<dd>A byte delta encoded integer.</dd>
+<dt>The data</dt>
+<dd>Arbitrary string data.</dd>
+</dl>
+
+<p>The magic data is 0xFF and helps us detect data corruption.  The data size is represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16383 takes 2 bytes. A value between 16384 and 2097151 takes 3 bytes.  A key-value pair is represented by two records in sequence.  To represent a key-value database, keys and values of records appear alternately.</p>
+
+<p>You can export all records of an existing database into a flat record file, by a command like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export casket.tkh external.flat
+]]></code></pre>
+
+<p>If all keys and values are plain text, exporting them as TSV is a feasible option.  You can do it like this.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export --tsv casket.tkh external.tsv
+]]></code></pre>
+
+<p>Records in exported data files can be imported into a database, by commands like these.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util import casket.tkh external.flat
+$ tkrzw_dbm_util import --tsv casket.tkh external.tsv
+]]></code></pre>
+
+<p>Whereas data of flat records can include any kind of binary data or text data, TSV data cannot include tab, linefeed or binary data.  If you want to escape output data in C-style for exporting and unescape input data for importing, add the "--escape" flag.</p>
 
 <h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
 
@@ -3647,6 +4054,206 @@ void DumpBuffer(BabyDBM* buffer, int32_t file_id) {
   dbm.Close().OrDie();
 }
 ]]></code></pre>
+
+<h3 id="tips_util_funcs">Utility Functions</h3>
+
+<p>Utility functions are provided to complement functionality of the DBM interface.  They are defined in "tkrzw_dbm_common_impl.h".  Especially, these are useful.</p>
+
+<ul>
+<li><code>SearchDBM</code> : Searches a database and gets keys which match a pattern.</li>
+<li><code>SearchDBMForwardMatch</code> : Searches a database and gets keys which begin with a pattern.</li>
+<li><code>SearchDBMRegex</code> : Searches a database and gets keys which match a regular expression.</li>
+<li><code>SearchDBMEditDistance</code> : Searches a database and gets keys whose edit distance with a pattern is the least.</li>
+</ul>
+
+<p>Scanning the whole database is sometimes costly.  If the database is not updated frequently, exporting keys into a text file and scanning it is more efficient.  The ExportDBMKeysAsLines function is provided for the purpose.  And, the functions SearchTextFile, SearchTextFileRegex, and SearchTextFileEditDistance are available for such text files.</p>
+
+<h3 id="tips_multitasking">Multitasking</h3>
+
+<p>Databases of Tkrzw are designed to be shared among multiple threads.  However, they are not designed to be shared among multiple processes.  When one process opens a database file as a writer, an exclusive lock is applied to the file so that other processes trying to open the same database file are blocked until the database is closed.  When one process opens a database file as a reader, a shared lock is applied to the file so that other reader processes can open the same database but other writer processes are blocked until the database is closed.  Thereby, consistency of the state of the database and atomicity of updating operations are assured in the multi-processing environment.</p>
+
+<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.  If the throughput requirement or the latency requirement is more than a threshold, you should write a multi-thread application program to serve the database.</p>
+
+<h3 id="tips_file_classes">File Classes</h3>
+
+<p>The file databases are based on abstract file storage interface so that you can build a database on any kind of file systems.  Several concrete implementations on C++ API and POSIX API are bundled.  MemoryMapParallelFile is used for all databases by default.</p>
+
+<ul>
+<li><strong>StdFile</strong> : Based on "fstream" of the standard C++ API.  Access to the data is guarded by mutex and update looks atomic.</li>
+<li><strong>MemoryMapParallelFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is not guarded by mutex.</li>
+<li><strong>MemoryMapAtomicFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is guarded by mutex and update looks atomic.</li>
+<li><strong>PositionalParallelFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is not guarded by mutex.</li>
+<li><strong>PositionalAtomicFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is guarded by mutex and update looks atomic.</li>
+</ul>
+
+<p>Consistency of the data as a database is guaranteed by the database classes.  So, atomicity of update is not required to the file class.  Therefore, there's no need to use MemoryMapAtomicFile and PositionalAtomicFile for purposes other than performance test.</p>
+
+<p>Because the MemoryMapParallelFile uses memory mapping, efficiency of I/O is the best.  However, the file size cannot exceed the size of the virtual memory.  If the file size is larger, the PositionalParallelFile should be used.</p>
+
+<p>To check performance, let's write 10 million records each of which is 100 bytes with one thread.  The file size is 954MB.</p>
+
+<table>
+<tr>
+<th>class</th>
+<th>Sequential Write</th>
+<th>Sequential Read</th>
+<th>Random Write</th>
+<th>Random Read</th>
+</tr>
+<tr>
+<td>StdFile</td>
+<td class="num">432,839 QPS</td>
+<td class="num">719,570 QPS</td>
+<td class="num">461,922 QPS</td>
+<td class="num">613,791 QPS</td>
+</tr>
+<tr>
+<td>MemoryMapParallelFile</td>
+<td class="num">7,581,742 QPS</td>
+<td class="num">12,014,696 QPS</td>
+<td class="num">4,563,364 QPS</td>
+<td class="num">4,838,227 QPS</td>
+</tr>
+<tr>
+<td>MemoryMapAtomicFile</td>
+<td class="num">7,858,269 QPS</td>
+<td class="num">12,794,807 QPS</td>
+<td class="num">4,480,116 QPS</td>
+<td class="num">4,905,746 QPS</td>
+</tr>
+<tr>
+<td>PositionalParallelFile</td>
+<td class="num">950,962 QPS</td>
+<td class="num">1,351,362 QPS</td>
+<td class="num">739,976 QPS</td>
+<td class="num">1,018,328 QPS</td>
+</tr>
+<tr>
+<td>PositionalAtomicFile</td>
+<td class="num">950,187 QPS</td>
+<td class="num">1,331,649 QPS</td>
+<td class="num">735,836 QPS</td>
+<td class="num">993,415 QPS</td>
+</tr>
+</table>
+
+<p>Do the same things with 10 threads.  Each thread writes 1 million records and reads them.</p>
+
+<table>
+<tr>
+<th>class</th>
+<th>Sequential Write</th>
+<th>Sequential Read</th>
+<th>Random Write</th>
+<th>Random Read</th>
+</tr>
+<tr>
+<td>StdFile</td>
+<td class="num">106,545 QPS</td>
+<td class="num">132,158 QPS</td>
+<td class="num">106,669 QPS</td>
+<td class="num">120,760 QPS</td>
+</tr>
+<tr>
+<td>MemoryMapParallelFile</td>
+<td class="num">7,698,532 QPS</td>
+<td class="num">10,020,994 QPS</td>
+<td class="num">7,643,432 QPS</td>
+<td class="num">9,144,095 QPS</td>
+</tr>
+<tr>
+<td>MemoryMapAtomicFile</td>
+<td class="num">2,378,891 QPS</td>
+<td class="num">10,230,659 QPS</td>
+<td class="num">1,427,267 QPS</td>
+<td class="num">9,538,727 QPS</td>
+</tr>
+<tr>
+<td>PositionalParallelFile</td>
+<td class="num">1,084,185 QPS</td>
+<td class="num">5,610,970 QPS</td>
+<td class="num">770,063 QPS</td>
+<td class="num">5,360,002 QPS</td>
+</tr>
+<tr>
+<td>PositionalAtomicFile</td>
+<td class="num">182,761 QPS</td>
+<td class="num">5,434,638 QPS</td>
+<td class="num">136,015 QPS</td>
+<td class="num">5,011,813 QPS</td>
+</tr>
+</table>
+
+<p>For the command line, the "--file" option must be set always if you use a file class except for MemoryMapParallelFile.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --file pos-para casket.tkh
+$ tkrzw_dbm_util set --file pos-para casket.tkh Japan Tokyo
+$ tkrzw_dbm_util get --file pos-para casket.tkh Japan
+]]></code></pre>
+
+<p>In C++, a File object is given to the constructor of the HashDBM class.  The same thing can be done with all DBM classes.</p>
+
+<pre><code class="language-cpp"><![CDATA[HashDBM dbm(std::make_unique<PositionalParallelFile>());
+dbm.Open("casket.tkh", true);
+]]></code></pre>
+
+<p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.  Like the polymorphic database class (PolyDBM), the polymorphic file class (PolyFile) is provided.  It is useful to handle files of different implementation with the same interface.  See <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyFile.html">the API document</a> for details.</p>
+
+<h3 id="tips_direct_io">Direct I/O</h3>
+
+<p>Linux and Windows support direct I/O, whereby input and output from/to the storage device are done without using the cache of the underlying file system.  Direct I/O is enabled by non-standard features depending on the OS (O_DIRECT of open flags on Linux, F_NOCACHE of fcntl commands on Mac OS X, and FILE_FLAG_NO_BUFFERING of CreateFile flags on Windows).  If direct I/O is enabled, I/O operations with the file must be in the block I/O style, where every data sequence is aligned by at least 512-byte block.  Let's say, you want to update just one byte of a file, you must read one block of 512 bytes from the device to a buffer.  Then, you update the one byte and write back the buffer to the device.</p>
+
+<p>Usually, such cumbersome jobs are done by the file system, which uses so-called "page cache" mechanism.  Multiple operations against the same page of 4096 bytes are reflected on a cached buffer, which is written back to the storage device periodically.  Using page cache is effective to improve performance in most cases.  However, page cache uses memory.  If your file is larger than the available memory size and there's no locality in your access pattern, the cache hit rate is low, which just wastes memory space and CPU time.  In that case, using direct I/O to suppress page caching is useful.  Though each operation of direct I/O is much slower than cached I/O in normal situations, it is the best practice for managing huge databases.</p>
+
+<p>You should consider using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
+
+<p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile.  You call SetAccessStrategy method to set the block size 512 and enable ACCESS_DIRECT option.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
+HashDBM dbm(std::move(file));
+
+HashDBM::TuningParameters tuning_params;
+tuning_params.align_pow = 9;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
+
+<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is reasonable.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  Moreover, adding ACCESS_PADDING to ACCESS_DIRECT is necessary to make the file size aligned to the block size.  Adding ACCESS_PAGECACHE is optional but good for performance.  Therefore, you'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalAtomicFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT |
+   PositionalFile::ACCESS_PADDING | PositionalFile::ACCESS_PAGECACHE);
+HashDBM dbm(std::move(file));
+
+HashDBM::TuningParameters tuning_params;
+tuning_params.align_pow = 8;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
+
+<p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You should enable "cache_buckets" for performance.  Therefore, you'll write code like the following.</p>
+
+<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
+file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT | PositionalFile::ACCESS_PADDING);
+TreeDBM dbm(std::move(file));
+
+TreeDBM::TuningParameters tuning_params;
+tuning_params.cache_buckets = true;
+dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
+]]></code></pre>
+
+<p>You don't have to tune the block size 512 for tuning purposes.  If the underlying device driver accepts 512-byte alignment, it's OK.  Meanwhile, you should tune the "align_pow" for performance.  If you use TreeDBM, tuning "max_page_size" is also important.</p>
+
+<p>Whereas using direct I/O avoids tainting the file system cache, using a small page cache system in the process can improve performance of some cases.  In general, locality is low with a large database.  However, there's some locality in the following cases.</p>
+
+<ul>
+<li>You use the same query often or repeatedly regardless of the database type.  Then, exactly the same blocks are accessed.</li>
+<li>You add/update small records in HashDBM.  Then, the block at the end of the file is updated repeatedly.</li>
+<li>You use SkipDBM.  The same or adjacent blocks are read repeatedly at the last steps of a search operation.</li>
+</ul>
+
+<p>If you add PositionalFile::ACCESS_PAGECACHE to the access strategy options, the page cache system in process is enabled.  It manages "pages" on memory.  Each page is associated with one or multiple blocks of the file.  The last 256 pages which have been accessed recently are kept on memory.  Reading data from cached blocks causes no operation of the storage device.  Writing data to cached blocks marks them as "dirty", which are written back when being removed from the cache.  If you use direct I/O on HashDBM and SkipDBM, enabling the page cache in process is usually beneficial.  If you use TreeDBM, you shouldn't enable the page cache in process because B+ tree nodes work as a cache system.</p>
 
 <h3 id="tips_index_performance">Performance of ShardDBM</h3>
 
@@ -3870,433 +4477,6 @@ $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard -
 </table>
 
 <p>In these settings, using FileIndex slows down significantly.  If you need more throughput than 61K QPS, you should use on-memory indices.  If parallelism of updating operations is important, using MemIndex is the best.  Otherwise, using StdIndex is recommended.  Using integer type as much as possible is a good idea.</p>
-
-<h3 id="tips_restore">ACID and Restoring Broken Databases</h3>
-
-<p>The <a href="https://en.wikipedia.org/wiki/ACID">ACID</a> acronym sums up a set of properties of database transactions that are critical to many applications.</p>
-
-<p>As explained in <a href="#overview">Overview</a> and <a href="#tips_multi_rec_tx">Multi-record Transaction</a>, Tkrzw's Process(), ProcessMulti() and CompareExchangeMulti() features provide you with Atomicity and Isolation by allowing a thread to do modifying operations on one or more records in a way that is atomic to other threads that are trying to read or write the same records.  Your application's business logic inside your record processor callback function provides Consistency by making sure the database is always in a valid state (for example, money leaving one account atomically arrives in another account) from the perspective of any reader or writer thread.</p>
-
-<p>The final important aspect of ACID is Durability against crashes, power outages, etc.  Durability is relevant for file-based databases HashDBM, TreeDBM, and SkipDBM.  Below we will explain what Durability features Tkrzw offers for each database type and how to use them.</p>
-
-<h4 id="tips_restore_threat">Threat Model: What Can Go Wrong</h4>
-
-<p>There is a lot of misunderstanding about Durability because "Durability" is not a single concept.  First, we will clearly define some threats, then explain how, and to what degree, Tkrzw helps your application eliminate or mitigate those threats.</p>
-
-<ul>
-<li><b>Level 1: Crashes Between Writes:</b>  It is possible that one or more threads or your whole process might:
-<ul>
-<li>crash due to a software or hardware problem</li>
-<li>be terminated (e.g. by a signal or Task Manager or due to low memory or power failure)</li>
-<li>be suspended indefinitely</li>
-</ul>
-which we will abbreviate as just "crash."  That crash can happen at any point in your code or in the code of Tkrzw, including at sensitive spots where the code needs to write to the database in multiple places atomically.  A Level 1 threat is defined as the case where, due to the crash, a write to a given location in the database completely fails to happen at all (as opposed to only partially happening, or happening with different data from what Tkrzw wrote).  For example, we might want to write to the database to subtract money from one customer account and write to the database again to add money to another customer account atomically, but due to the crash, only the first write happens, leaving the database in an inconsistent state where both accounts have the same money.</li>
-<li><b>Level 2: Partial Writes:</b> If your computer experiences a power failure or other hardware problem, it is possible that a block of data that Tkrzw has attempted to write to your database file will only partially be written.  For example, as it is losing power, the disk may write the first few bytes of a block but then corrupt the rest of the block with random data.  This issue can happen even if Tkrzw is writing just one byte, since typically a disk only allows reads and writes in units of a block (say, 512 bytes or 16k bytes at a time).  This threat is much more rare than Level 1 (especially with modern drives) but it can happen.</li>
-<li><b>Level 3: Bit Rot:</b> Although every computer system is designed with mechanisms for error detection and correction, none are perfect.  It is possible that the data in your database file will become corrupt even if there is no crash, and even if nobody has recently attempted to write to it.  This threat is much more rare than Level 2 but it can happen, especially with large datasets.</li>
-</ul>
-
-<p>Each of the threats above could potentially leave the database in a corrupted state.  And even if the database is consistent at the low-level from Tkrzw's point of view, the database could still be in an inconsistent state as far as your application's business logic is concerned (e.g. money still in two accounts instead of one account after a transfer).</p>
-
-<p>In general it is never possible to completely protect against Level 2 or 3 threats, but using checksums and other tricks it is possible to greatly reduce the likelihood of failing to detect data corruption.  In contrast, it is possible to completely protect against Level 1 threats if you use Tkrzw correctly, as explained below.</p>
-
-<h4 id="tips_restore_hash">HashDBM and TreeDBM</h4>
-
-<p>HashDBM and TreeDBM provide partial protection against Level 2 and Level 3 threats in the form of checksums on each record.  The checksums allow Tkrzw and your application to detect database corruption if it occurs:</p>
-
-<ul>
-<li>By default, you get a 6-bit checksum on each record, which can detect single-bit errors at a rate of 98.3%</li>
-<li>You can pass RECORD_CRC_8 as the TuningParameters.record_crc_mode argument to OpenAdvanced() to add 8 more bits of CRC-8 checksum stored with each record, raising the single-bit error detection rate to 1 - 1/ (61 * 256) = 99.993%</li>
-<li>You can pass RECORD_CRC_16 as the TuningParameters.record_crc_mode argument to OpenAdvanced() to add 16 more bits of CRC-16 checksum stored with each record, raising the single-bit error detection rate to  1 - 1 / (61 * 65536) = 99.999975%</li>
-<li>You can pass RECORD_CRC_32 as the TuningParameters.record_crc_mode argument to OpenAdvanced() to add 32 more bits of CRC-32 checksum stored with each record, raising the single-bit error detection rate to   1 - 1 / (61 * 4294967296) = 99.9999999996%</li>
-</ul>
-
-<p>Typically RECORD_CRC_8 or RECORD_CRC_16 are enough for situations where power failures and hardware failures are not common.</p>
-
-<p>The checksums described above improve error detection when your record's key or value data becomes corrupted.  A HashDBM or TreeDBM file also has additional internal consistency checks that help detect corruption in the database metadata itself.</p>
-
-<p>When Tkrzw detects corruption in an already-open database, it will return error Status from the current operation.  When Tkrzw detects corruption while opening a database, even if that corruption is in file metadata, Tkrzw is often still able to automatically recover most of the file data, as explained below.</p>
-
-<p>HashDBM and TreeDBM's UPDATE_APPENDING mode (see <a href="#tips_hashdbm_update_modes">Update Modes of HashDBM and TreeDBM</a>) provides partial protection that is specifically aimed to mitigate Level 2 threats.  Because a database in UPDATE_APPENDING mode only ever writes to the end of the record area of the database, this means that partial writes while modifying the database can never corrupt existing record data.  This is extremely useful in combination with the Level 1 protections described below.  In order to fully take advantage of this protection, it's important to set the TuningParameters.align_pow argument to OpenAdvanced() to a value at least as big as the disk block size, so that newly written records are on a different block from existing records (we recommend at least 9, which means 2^9 = 512 bytes).  Note that even with UPDATE_APPENDING and proper alignment, Tkrzw is still vulnerable to a Level 2 partial write that affects just-written data, as well as the header and other metadata of the file, so UPDATE_APPENDING greatly reduces but does not completely eliminate Level 2 threats.</p>
-
-<p>HashDBM and TreeDBM provide complete protection against Level 1 threats if, and only if, you do all of the following:</p>
-
-<ul>
-<li>Open the database in appending mode (set the TuningParameters.update_mode argument to OpenAdvanced() to UPDATE_APPENDING).  See <a href="#tips_hashdbm_update_modes">Update Modes of HashDBM and TreeDBM</a>.</li>
-<li>Call the Synchronize() method with hard==true at various points in your application where the database is in a completely consistent state (i.e. a state that would be OK to return to after a crash).  Note Synchronize() may be costly since it writes all cached data to disk and waits for confirmation from the hardware.</li>
-<li>Open the database with the TuningParameters.restore_mode argument to OpenAdvanced() set to RESTORE_SYNC.  In the event of a crash, your database will reliably return to the last Synchronize() state (and any changes you made after that Synchronize() will be lost).</li>
-<li>Use a single HashDBM/TreeDBM database file, as opposed to sharding with ShardDBM.  Currently, ShardDBM doesn't assure ACID traits among shards.</li>
-</ul>
-
-<p>This magical combination of settings combines to solves Level 1 threats because:</p>
-
-<ul>
-<li>UPDATE_APPENDING guarantees that no modification done to the database (no add, set, or remove record added during the Transaction) ever overwrites older database state (older, existing add, set, or remove records that were in the database before the Transaction).  This makes it possible to rollback on a crash.</li>
-<li>When the application wants to commit a Transaction, it calls Synchronize().   Synchronize() first flushes out all the non-metadata parts of the file (cached records, hash buckets, etc.) to the hardware, then waits for the hardware to report that the data is completely written, and then Synchronize() updates the file metadata&#8212;in particular, the file_size value in the header.  That critical write of the file_size value will either:
-<ul>
-<li>complete, meaning the Transaction is now committed and will be visible to the next process that Open*()s the database, or</li>
-<li>fail to complete (e.g. due to crash), meaning the Transaction has been rolled back because anyone who Open*()s the database will see the old file_size value and only access data from before the Transaction began (the data from the previous Synchronize(), or an empty database if this was the first transaction).</li>
-</ul></li>
-<li>RESTORE_SYNC forces Open*() to only consider data in the file up to the file_size value from the header, rather than using the actual filesystem size of the file.  The file_size value in the header will reliably reflect whether the Transaction completed or not.</li>
-<li>The metadata section can also be broken.  The cycric metadata is used to detect such cases.  By the way, Synchronize() calls the sync() system call twice in sequence: for the record section and for the metadata section.  If the system crashes while writing the record section, the metadata section is not broken.  If the system crashes while writing the metadata, the record section is not broken.  In either case, all records which had been written when Synchronize() succeeded last time can be recovered by the RESTORE_SYNC mode.  This assures ACID traits against Level 1 and 2 threats.  If Level 3 thread corrupts the metadata in a way either the file_size metadata and the cycric metadata cannot detect it, ACID traits are not assured.</li>
-</ul>
-
-<p>Some applications are not vulnerable to Level 1 threats because they never need to write to multiple records atomically.  Or, they might be vulnerable to Level 1 threats, but cannot accept the performance penalty of calling Synchronize() as explained above.  Such applications can still get some partial protection by opening the database with the default restore mode (which you get by just calling Open() or by passing TuningParameters.restore_mode==RESTORE_DEFAULT to OpenAdvanced()).  With RESTORE_DEFAULT, Tkrzw will make a best-effort attempt to recover as many records as possible after a crash.  There is no guarantee about how many records can be recovered, but you can often recover many records beyond the last Synchronize(), which might be a better trade-off depending on the application.  This method works even with a ShardDBM database of HashDBM/TreeDBM databases.  Such an application should also consider using UPDATE_APPENDING, which offers some protection against Level 2 threats as explained above, and has possible performance advantages described in <a href="#tips_hashdbm_update_modes">Update Modes of HashDBM and TreeDBM</a>.</p>
-
-<h4 id="tips_restore_skip">SkipDBM</h4>
-
-<p>As explained <a href="#skipdbm_overview">above</a>, any batch of changes that you make to a SkipDBM database become visible to readers (including yourself) only after calling the Synchronize() method to rebuild the database file.  A SkipDBM database file never gets corrupted even if the process crashes during the Synchronize() method, because the Synchronize() method first builds a temporary file and then replaces the existing database file atomically with the rename() system call.  So, SkipDBM offers complete protection from Level 1 threats by its very design.  One "transaction" is one completed rebuild+rename.  RESTORE_DEFAULT and RESTORE_SYNC are equivalent for SkipDBM.</p>
-
-<p>Currently, SkipDBM does not offer the same protection from Level 1 threats when you create a ShardDBM database of SkipDBM databases.</p>
-
-<p>SkipDBM does not use checksums on database data, as HashDBM/TreeDBM do, to reduce the risk of failing to detect Level 2 and 3 threats.</p>
-
-<p>SkipDBM is vastly less vulnerable to Level 2 threats than HashDBM/TreeDBM, because the Level 2 partial write symptom only occurs when the computer is losing power, so it's nearly impossible for SkipDBM to get to the rename() operation with a database file that has been damaged by a partial write.</p>
-
-<p>When you open a SkipDBM file, Tkrzw will check for corruption by comparing the file metadata for internal consistency and consistency with the actual file length.  If any problem is found, Tkrzw will make a best-effort attempt to recover as much of the database as possible.</p>
-
-<p>As explained below, a Tkrzw database has a "closed" flag to detect if the database is "unhealthy" because the application failed to close a database file, but Tkrzw ignores this flag for SkipDBM since all changes are protected by an atomic rename() operation.</p>
-
-<h4 id="tips_restore_how">How Broken Databases Are Detected</h4>
-
-<p>An opened database should be closed properly.  Otherwise, the database file might be broken.  When a database is opened, a field in the metadata section is marked as "opened".  When the database is closed, the field is marked as "closed".  If the process opening a database crashes without closing the database, the field is still marked as "opened".  When the database file is opened the next time, the library detects the past incident and the database is considered "unhealthy".</p>
-
-<p>By default (RESTORE_DEFAULT), an unhealthy database is restored automatically when you open the database.  The whole database file is scanned and as many records as possible are salvaged.  This behavior can be changed by setting the restore_mode tuning parameter.  If it is RESTORE_SYNC, the database is restored to the state at the time when the Synchronized method was called last time, offering protection against Level 1 threats for certain DBM types as explained above.  If it is RESTORE_READ_ONLY, no restore operations are done and the database becomes read-only to avoid further inconsistency.  If it is RESTORE_NOOP, the database is treated healthy without any restore operation.</p>
-
-<p>You can check whether a database is healthy or not by a command like this.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util inspect casket.tkh 
-Inspection:
-  healthy=false
-  num_records=0
-  file_size=8396800
-  mod_time=1586714806497266
-  ...
-File Size: 8396800
-Number of Records: 0
-Should be Rebuilt: true
-]]></code></pre>
-
-<p>"num_records", "file_size", and "mod_time" represent information when the database was closed successfully (or the Synchronize method is called) the last time.  So, even if you add many records before the last crash, the metadata doesn't reflect them.  However, written record data can be salvaged by restoring the database.</p>
-
-<p>In contrast to the default API setting, the command line tool doesn't restore the database implicitly.  If you want to do the restore operation explicitly, you'll run a command like this.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore casket.tkh
-]]></code></pre>
-
-<p>If you want to set tuning parameters to the new restored database, you can prepare the new database with the tuning parameters and set it as the destination.  This operation can be done even for a healthy database to rebuild it.</p>
-
-<p>The same thing can be done in C++.  HashDBM, TreeDBM, and SkipDBM have the RestoreDatabase method.  PolyDBM and ShardDBM also provides wrapper functions.</p>
-
-<pre><code class="language-cpp"><![CDATA[HashDBM::RestoreDatabase("casket.tkh", "casket-restored.tkh", -1);
-]]></code></pre>
-
-<p>To restore sharded database files like (casket.tkh-00000-of-00002 and casket.tkh-00001-of-00002), you'll run a command like this.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util restore --dbm shard --class hash casket.tkh
-]]></code></pre>
-
-<h4 id="tips_restore_snapshot">Snapshot Reproduction</h4>
-
-<p>HashDBM and TreeDBM databases in appending mode (with the TuningParameters.update_mode argument to OpenAdvanced() set to UPDATE_APPENDING) can utilize an interesting feature called snapshot reproduction.  As all updating operations are recorded in the database, you can consider the database as a list of REDO logs.  You can replay them until a certain moment.  Since the database only grows, the exact state of the database at that moment is entirely captured by the the filesystem size of the database file at that moment.  Given that you know the file size at a moment by calling the GetFileSize() method, you can later restore the database to the state at the moment.  You can try out the behavior using commands like this:</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --append casket.tkh  # Appending mode.
-$ tkrzw_dbm_util set casket.tkh one first
-$ tkrzw_dbm_util set casket.tkh two second
-$ ls -l casket.tkh  # Get the size when there are two records.
--rw-r--r-- 1 mikio mikio 4198440 Feb 11 18:46 casket.tkh
-$ tkrzw_dbm_util set casket.tkh three third
-$ tkrzw_dbm_util list casket.tkh  # The original database has three.
-three  third
-two    second
-one    first
-$ tkrzw_dbm_util restore --end_offset 4198440 casket.tkh casket-restore.tkh
-$ tkrzw_dbm_util list casket-restore.tkh  # The restored database has two.
-two    second
-one    first
-]]></code></pre>
-
-<p>By the way, if the value of --end_offset is 0, the database is restored to the state at the time when the Synchronized method was called the last time (RESTORE_SYNC).  If the value of --end_offset is -1, as many records as possible are salvaged (RESTORE_DEFAULT).</p>
-
-<h3 id="tips_compression">Data Compression</h3>
-
-<p>Data compression can be applied to the record value so that the size of the database file becomes smaller at the cost of processing time.  In general, using data compression decreases performance and throughput.  However, if the database file is large and I/O is the bottle neck, data compression sometimes increases performance and throughput because of lower amount of data transmission with the storage.</p>
-
-<p>You can integrate the following compression libraries when you build Tkrzw.</p>
-
-<ul>
-<li><strong>ZLib</strong> : Probably the most popular compression library, which is used in GZip.  It combines good compression ratio and good processing speed.</li>
-<li><strong>ZStd</strong> : Probably the most useful compression library.  As compression ratio is almost the same as ZLib, the processing speed is much faster.</li>
-<li><strong>LZ4</strong> : A very fast compression library.  Though compression ratio is worse than ZLib and ZStd, processing speed is much faster.</li>
-<li><strong>LZMA</strong> : A library known for the best compression.  Though compression ratio is better than ZLib and ZStd, the processing speed is much slower.</li>
-</ul>
-
-<p>If you tune the database to enable one of those algorithms, record data stored in the database is compressed.  When you retrieve the record, the data is decompressed automatically.  In HashDBM, compression is done for each record and only the record value is compressed.  Thus, compression is useful only if the record value is large.  In TreeDBM, compression is done for each page which includes multiple records.  Thus, compression is more useful in TreeDBM.</p>
-
-<p>Which algorithm is the best suited should be determined according to the data size, the data content, and the access pattern.  However, ZStd is the one you should try first.  If ZStd is not available on your platform, you use ZLib instead.  If you prefer faster speed, try LZ4.  If the database is almost read-only for archival usage, try LZMA.</p>
-
-<h3 id="tips_hashdbm_backup">Making Backup Data Online</h3>
-
-<p>Let's say, your service runs 24 hours a day and any downtime is not allowed.  Then, you have to make backup data of the database online without halting the service.  There are two methods to do so: CopyFileData and Export.</p>
-
-<p>The CopyFileData method synchronizes the updated content to the database file and copy the whole data to another file.  As copying is done while the content of the database is synchronized and frozen, the copied file is considered as a snapshot of the database at a certain moment.  And, the copying operation is done by the fastest way on the system.  If the file system is BtrFS or XFS on Linux, reflink (copy-on-write) is used and the copying operation is done at a split second.  Otherwise, on Linux, the sendfile system call is used.</p>
-
-<pre><code class="language-cpp"><![CDATA[dbm.CopyFileData("casket-backup-20200515.tkh");
-]]></code></pre>
-
-<p>The downside of the CopyFileData method is that other threads trying to update the database are blocked during the copying operation, which can take several seconds or minutes depending on the file size.  If it is not acceptable, use the Export method, which accesses each and every records and adds them to another database.  As other threads updating the database are not blocked during the iteration, atomicity as the database is not assured.  Atomicity of each record is assured.</p>
-
-<pre><code class="language-cpp"><![CDATA[HashDBM backup_dbm;
-backup_dbm.Open("casket-backup-20200515.tkh", true);
-dbm.Export(&backup_dbm);
-backup_dbm.Close();
-]]></code></pre>
-
-<p>Some file systems provides a feature to make a snapshot of a file.  The Synchronize method can call a callback function while the database is synchronized.  Therefore, if the callback function uses the snapshot feature, you can make an atomic snapshot at a moment without making other threads wait.</p>
-
-<pre><code class="language-cpp"><![CDATA[class Snapshooter : public DBM::FileProcessor {
- public:
-  explicit Snapshooter(const std::string& snapshot_path) : snapshot_path_(snapshot_path) {}
-  void Process(const std::string& path) override {
-    SomehowMakeSnapShot(path, snapshot_path_);
-  }
- private:
-  std::string snapshot_path_;
-} snapshooter("casket-backup-20200515.tkh");
-dbm.Synchronize(false, &snapshooter);
-]]></code></pre>
-
-<h3 id="tips_migration">Data Migration</h3>
-
-<p>A simple format called FlatRecord is provided as a vehicle of data migration.  Flat records are also used to save records of on-memory databases in a file.  A binary file of FlatRecord contains a sequence of records.  Each record represents a sequence of bytes, in the following format.</p>
-
-<dl>
-<dt>The magic data</dt>
-<dd>1 byte integer.</dd>
-<dt>The data size</dt>
-<dd>A byte delta encoded integer.</dd>
-<dt>The data</dt>
-<dd>Arbitrary string data.</dd>
-</dl>
-
-<p>The magic data is 0xFF and helps us detect data corruption.  The data size is represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16383 takes 2 bytes. A value between 16384 and 2097151 takes 3 bytes.  A key-value pair is represented by two records in sequence.  To represent a key-value database, keys and values of records appear alternately.</p>
-
-<p>You can export all records of an existing database into a flat record file, by a command like this.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export casket.tkh external.flat
-]]></code></pre>
-
-<p>If all keys and values are plain text, exporting them as TSV is a feasible option.  You can do it like this.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export --tsv casket.tkh external.tsv
-]]></code></pre>
-
-<p>Records in exported data files can be imported into a database, by commands like these.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util import casket.tkh external.flat
-$ tkrzw_dbm_util import --tsv casket.tkh external.tsv
-]]></code></pre>
-
-<p>Whereas data of flat records can include any kind of binary data or text data, TSV data cannot include tab, linefeed or binary data.  If you want to escape output data in C-style for exporting and unescape input data for importing, add the "--escape" flag.</p>
-
-<h3 id="tips_util_funcs">Utility Functions</h3>
-
-<p>Utility functions are provided to complement functionality of the DBM interface.  They are defined in "tkrzw_dbm_common_impl.h".  Especially, these are useful.</p>
-
-<ul>
-<li><code>SearchDBM</code> : Searches a database and gets keys which match a pattern.</li>
-<li><code>SearchDBMForwardMatch</code> : Searches a database and gets keys which begin with a pattern.</li>
-<li><code>SearchDBMRegex</code> : Searches a database and gets keys which match a regular expression.</li>
-<li><code>SearchDBMEditDistance</code> : Searches a database and gets keys whose edit distance with a pattern is the least.</li>
-</ul>
-
-<p>Scanning the whole database is sometimes costly.  If the database is not updated frequently, exporting keys into a text file and scanning it is more efficient.  The ExportDBMKeysAsLines function is provided for the purpose.  And, the functions SearchTextFile, SearchTextFileRegex, and SearchTextFileEditDistance are available for such text files.</p>
-
-<h3 id="tips_multitasking">Multitasking</h3>
-
-<p>Databases of Tkrzw are designed to be shared among multiple threads.  However, they are not designed to be shared among multiple processes.  When one process opens a database file as a writer, an exclusive lock is applied to the file so that other processes trying to open the same database file are blocked until the database is closed.  When one process opens a database file as a reader, a shared lock is applied to the file so that other reader processes can open the same database but other writer processes are blocked until the database is closed.  Thereby, consistency of the state of the database and atomicity of updating operations are assured in the multi-processing environment.</p>
-
-<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.  If the throughput requirement or the latency requirement is more than a threshold, you should write a multi-thread application program to serve the database.</p>
-
-<h3 id="tips_file_classes">File Classes</h3>
-
-<p>The file databases are based on abstract file storage interface so that you can build a database on any kind of file systems.  Several concrete implementations on C++ API and POSIX API are bundled.  MemoryMapParallelFile is used for all databases by default.</p>
-
-<ul>
-<li><strong>StdFile</strong> : Based on "fstream" of the standard C++ API.  Access to the data is guarded by mutex and update looks atomic.</li>
-<li><strong>MemoryMapParallelFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is not guarded by mutex.</li>
-<li><strong>MemoryMapAtomicFile</strong> : Based on memory mapping I/O by "mmap".  Access to the data is guarded by mutex and update looks atomic.</li>
-<li><strong>PositionalParallelFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is not guarded by mutex.</li>
-<li><strong>PositionalAtomicFile</strong> : Based on positional I/O by "pread" and "pwrite".  Access to the data is guarded by mutex and update looks atomic.</li>
-</ul>
-
-<p>Consistency of the data as a database is guaranteed by the database classes.  So, atomicity of update is not required to the file class.  Therefore, there's no need to use MemoryMapAtomicFile and PositionalAtomicFile for purposes other than performance test.</p>
-
-<p>Because the MemoryMapParallelFile uses memory mapping, efficiency of I/O is the best.  However, the file size cannot exceed the size of the virtual memory.  If the file size is larger, the PositionalParallelFile should be used.</p>
-
-<p>To check performance, let's write 10 million records each of which is 100 bytes with one thread.  The file size is 954MB.</p>
-
-<table>
-<tr>
-<th>class</th>
-<th>Sequential Write</th>
-<th>Sequential Read</th>
-<th>Random Write</th>
-<th>Random Read</th>
-</tr>
-<tr>
-<td>StdFile</td>
-<td class="num">432,839 QPS</td>
-<td class="num">719,570 QPS</td>
-<td class="num">461,922 QPS</td>
-<td class="num">613,791 QPS</td>
-</tr>
-<tr>
-<td>MemoryMapParallelFile</td>
-<td class="num">7,581,742 QPS</td>
-<td class="num">12,014,696 QPS</td>
-<td class="num">4,563,364 QPS</td>
-<td class="num">4,838,227 QPS</td>
-</tr>
-<tr>
-<td>MemoryMapAtomicFile</td>
-<td class="num">7,858,269 QPS</td>
-<td class="num">12,794,807 QPS</td>
-<td class="num">4,480,116 QPS</td>
-<td class="num">4,905,746 QPS</td>
-</tr>
-<tr>
-<td>PositionalParallelFile</td>
-<td class="num">950,962 QPS</td>
-<td class="num">1,351,362 QPS</td>
-<td class="num">739,976 QPS</td>
-<td class="num">1,018,328 QPS</td>
-</tr>
-<tr>
-<td>PositionalAtomicFile</td>
-<td class="num">950,187 QPS</td>
-<td class="num">1,331,649 QPS</td>
-<td class="num">735,836 QPS</td>
-<td class="num">993,415 QPS</td>
-</tr>
-</table>
-
-<p>Do the same things with 10 threads.  Each thread writes 1 million records and reads them.</p>
-
-<table>
-<tr>
-<th>class</th>
-<th>Sequential Write</th>
-<th>Sequential Read</th>
-<th>Random Write</th>
-<th>Random Read</th>
-</tr>
-<tr>
-<td>StdFile</td>
-<td class="num">106,545 QPS</td>
-<td class="num">132,158 QPS</td>
-<td class="num">106,669 QPS</td>
-<td class="num">120,760 QPS</td>
-</tr>
-<tr>
-<td>MemoryMapParallelFile</td>
-<td class="num">7,698,532 QPS</td>
-<td class="num">10,020,994 QPS</td>
-<td class="num">7,643,432 QPS</td>
-<td class="num">9,144,095 QPS</td>
-</tr>
-<tr>
-<td>MemoryMapAtomicFile</td>
-<td class="num">2,378,891 QPS</td>
-<td class="num">10,230,659 QPS</td>
-<td class="num">1,427,267 QPS</td>
-<td class="num">9,538,727 QPS</td>
-</tr>
-<tr>
-<td>PositionalParallelFile</td>
-<td class="num">1,084,185 QPS</td>
-<td class="num">5,610,970 QPS</td>
-<td class="num">770,063 QPS</td>
-<td class="num">5,360,002 QPS</td>
-</tr>
-<tr>
-<td>PositionalAtomicFile</td>
-<td class="num">182,761 QPS</td>
-<td class="num">5,434,638 QPS</td>
-<td class="num">136,015 QPS</td>
-<td class="num">5,011,813 QPS</td>
-</tr>
-</table>
-
-<p>For the command line, the "--file" option must be set always if you use a file class except for MemoryMapParallelFile.</p>
-
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --file pos-para casket.tkh
-$ tkrzw_dbm_util set --file pos-para casket.tkh Japan Tokyo
-$ tkrzw_dbm_util get --file pos-para casket.tkh Japan
-]]></code></pre>
-
-<p>In C++, a File object is given to the constructor of the HashDBM class.  The same thing can be done with all DBM classes.</p>
-
-<pre><code class="language-cpp"><![CDATA[HashDBM dbm(std::make_unique<PositionalParallelFile>());
-dbm.Open("casket.tkh", true);
-]]></code></pre>
-
-<p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.  Like the polymorphic database class (PolyDBM), the polymorphic file class (PolyFile) is provided.  It is useful to handle files of different implementation with the same interface.  See <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyFile.html">the API document</a> for details.</p>
-
-<h3 id="tips_direct_io">Direct I/O</h3>
-
-<p>Linux and Windows support direct I/O, whereby input and output from/to the storage device are done without using the cache of the underlying file system.  Direct I/O is enabled by non-standard features depending on the OS (O_DIRECT of open flags on Linux, F_NOCACHE of fcntl commands on Mac OS X, and FILE_FLAG_NO_BUFFERING of CreateFile flags on Windows).  If direct I/O is enabled, I/O operations with the file must be in the block I/O style, where every data sequence is aligned by at least 512-byte block.  Let's say, you want to update just one byte of a file, you must read one block of 512 bytes from the device to a buffer.  Then, you update the one byte and write back the buffer to the device.</p>
-
-<p>Usually, such cumbersome jobs are done by the file system, which uses so-called "page cache" mechanism.  Multiple operations against the same page of 4096 bytes are reflected on a cached buffer, which is written back to the storage device periodically.  Using page cache is effective to improve performance in most cases.  However, page cache uses memory.  If your file is larger than the available memory size and there's no locality in your access pattern, the cache hit rate is low, which just wastes memory space and CPU time.  In that case, using direct I/O to suppress page caching is useful.  Though each operation of direct I/O is much slower than cached I/O in normal situations, it is the best practice for managing huge databases.</p>
-
-<p>You should consider using direct I/O if the size of the database is more than the available RAM or the typical I/O pattern is larger than 512 bytes.  With HashDBM, the logical record size directly determines the I/O pattern.  So, the record size is large like 2KB or 10KB, using direct I/O is practical.  With TreeDBM, multiple records are organized in a page of B+ tree and the I/O pattern is implicitly adjusted to 4KB or more.  So, TreeDBM is often suitable for direct I/O.</p>
-
-<p>The file classes PositionalParallelFile and PositionalAtomicFile support direct I/O.  Usually, you use PositionalParallelFile.  You call SetAccessStrategy method to set the block size 512 and enable ACCESS_DIRECT option.  Moreover, both HashDBM and TreeDBM have the "align_pow" which set the alignment by the power of 2.  You should set it at least 9, which means 2^9 = 512.  You should also set the "cache_buckets" flag to improve performance of the hash table.  Therefore, you'll write code like the following.</p>
-
-<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
-file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT);
-HashDBM dbm(std::move(file));
-
-HashDBM::TuningParameters tuning_params;
-tuning_params.align_pow = 9;
-tuning_params.cache_buckets = true;
-dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
-]]></code></pre>
-
-<p>As long as the block size is 512 or its multiple, it works.  The best block size is determined by the typical record size and the physical block size of the device.  While the alignment size has no hard restriction, the best alignment size should be determined by the typical record size.  For HashDBM, 9 is good for most cases.  If the typical record size is less than 256, setting 8 or less is reasonable.  However, if the alignment is less than the block size and you use multiple threads, you must use PositionalAtomicFile because the file access across the block border is not thread-safe.  Moreover, adding ACCESS_PADDING to ACCESS_DIRECT is necessary to make the file size aligned to the block size.  Adding ACCESS_PAGECACHE is optional but good for performance.  Therefore, you'll write code like the following.</p>
-
-<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalAtomicFile>();
-file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT |
-   PositionalFile::ACCESS_PADDING | PositionalFile::ACCESS_PAGECACHE);
-HashDBM dbm(std::move(file));
-
-HashDBM::TuningParameters tuning_params;
-tuning_params.align_pow = 8;
-tuning_params.cache_buckets = true;
-dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
-]]></code></pre>
-
-<p>For TreeDBM, the default value setting is usually suitable for direct I/O too.  By default, each page data of B+ tree is stored with alignment of 1024 bytes while the data size of each page is tuned to be between 4096 and 8192.  You should enable "cache_buckets" for performance.  Therefore, you'll write code like the following.</p>
-
-<pre><code class="language-cpp"><![CDATA[auto file = std::make_unique<PositionalParallelFile>();
-file->SetAccessStrategy(512, PositionalFile::ACCESS_DIRECT | PositionalFile::ACCESS_PADDING);
-TreeDBM dbm(std::move(file));
-
-TreeDBM::TuningParameters tuning_params;
-tuning_params.cache_buckets = true;
-dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
-]]></code></pre>
-
-<p>You don't have to tune the block size 512 for tuning purposes.  If the underlying device driver accepts 512-byte alignment, it's OK.  Meanwhile, you should tune the "align_pow" for performance.  If you use TreeDBM, tuning "max_page_size" is also important.</p>
-
-<p>Whereas using direct I/O avoids tainting the file system cache, using a small page cache system in the process can improve performance of some cases.  In general, locality is low with a large database.  However, there's some locality in the following cases.</p>
-
-<ul>
-<li>You use the same query often or repeatedly regardless of the database type.  Then, exactly the same blocks are accessed.</li>
-<li>You add/update small records in HashDBM.  Then, the block at the end of the file is updated repeatedly.</li>
-<li>You use SkipDBM.  The same or adjacent blocks are read repeatedly at the last steps of a search operation.</li>
-</ul>
-
-<p>If you add PositionalFile::ACCESS_PAGECACHE to the access strategy options, the page cache system in process is enabled.  It manages "pages" on memory.  Each page is associated with one or multiple blocks of the file.  The last 256 pages which have been accessed recently are kept on memory.  Reading data from cached blocks causes no operation of the storage device.  Writing data to cached blocks marks them as "dirty", which are written back when being removed from the cache.  If you use direct I/O on HashDBM and SkipDBM, enabling the page cache in process is usually beneficial.  If you use TreeDBM, you shouldn't enable the page cache in process because B+ tree nodes work as a cache system.</p>
 
 <h3 id="tips_dbm_performance_tests">DBM Performance Tests</h3>
 

@@ -1493,7 +1493,8 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         EXPECT_EQ(0, dbm->CountSimple());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Set("three", "third"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
-        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+        tuning_params.restore_mode =
+            tkrzw::HashDBM::RESTORE_DEFAULT | tkrzw::HashDBM::RESTORE_WITH_HARDSYNC;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_TRUE(dbm->IsHealthy());
@@ -1513,7 +1514,8 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_SYNC;
+        tuning_params.restore_mode =
+            tkrzw::HashDBM::RESTORE_SYNC | tkrzw::HashDBM::RESTORE_WITH_HARDSYNC;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_TRUE(dbm->IsHealthy());
@@ -1536,7 +1538,8 @@ void HashDBMTest::HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm) {
         file = dbm->GetInternalFile();
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
         EXPECT_EQ(tkrzw::Status::PRECONDITION_ERROR, dbm->Close());
-        tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_DEFAULT;
+        tuning_params.restore_mode =
+            tkrzw::HashDBM::RESTORE_DEFAULT | tkrzw::HashDBM::RESTORE_WITH_HARDSYNC;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
         EXPECT_TRUE(dbm->IsHealthy());

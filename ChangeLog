@@ -3,7 +3,7 @@
 	- Release: 1.0.8
 	- Library version: 1.51.0
 
-	- Add RESTORE_NO_SHORTCUTS to the restore options.
+	- Add RESTORE_NO_SHORTCUTS and RESTORE_WITH_HARDSYNC to the restore options.
 
 2021-08-31  Mikio Hirabayashi  <hirarin@gmail.com>
 

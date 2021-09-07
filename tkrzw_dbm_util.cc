@@ -670,6 +670,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
     }
     PrintF("Actual File Size: %lld\n", dbm->GetFileSizeSimple());
     PrintF("Number of Records: %lld\n", dbm->CountSimple());
+    PrintF("Healthy: %s\n", dbm->IsHealthy() ? "true" : "false");
     PrintF("Should be Rebuilt: %s\n", dbm->ShouldBeRebuiltSimple() ? "true" : "false");
   } else {
     for (const auto& meta : dbm->Inspect()) {

@@ -202,6 +202,7 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   tuning_params->align_pow = StrToIntMetric(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToIntMetric(SearchMap(*params, "num_buckets", "-1"));
   bool restore_no_shortcut = false;
+  bool restore_with_hardsync = false;
   for (const auto& expr : StrSplit(SearchMap(*params, "restore_mode", ""), ':')) {
     const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
     if (norm_expr == "restore_sync" || norm_expr == "sync") {
@@ -216,9 +217,15 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
     if (norm_expr == "restore_no_shortcuts" || norm_expr == "no_shortcuts") {
       restore_no_shortcut = true;
     }
+    if (norm_expr == "restore_with_hardsync" || norm_expr == "with_hardsync") {
+      restore_with_hardsync = true;
+    }
   }
   if (restore_no_shortcut) {
     tuning_params->restore_mode |= HashDBM::RESTORE_NO_SHORTCUTS;
+  }
+  if (restore_with_hardsync) {
+    tuning_params->restore_mode |= HashDBM::RESTORE_WITH_HARDSYNC;
   }
   tuning_params->fbp_capacity = StrToIntMetric(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToIntMetric(SearchMap(*params, "min_read_size", "-1"));
@@ -257,6 +264,7 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   tuning_params->step_unit = StrToIntMetric(SearchMap(*params, "step_unit", "-1"));
   tuning_params->max_level = StrToIntMetric(SearchMap(*params, "max_level", "-1"));
   bool restore_no_shortcut = false;
+  bool restore_with_hardsync = false;
   for (const auto& expr : StrSplit(SearchMap(*params, "restore_mode", ""), ':')) {
     const std::string norm_expr = StrLowerCase(StrStripSpace(expr));
     if (norm_expr == "restore_sync" || norm_expr == "sync") {
@@ -271,9 +279,15 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
     if (norm_expr == "restore_no_shortcuts" || norm_expr == "no_shortcuts") {
       restore_no_shortcut = true;
     }
+    if (norm_expr == "restore_with_hardsync" || norm_expr == "with_hardsync") {
+      restore_with_hardsync = true;
+    }
   }
   if (restore_no_shortcut) {
     tuning_params->restore_mode |= SkipDBM::RESTORE_NO_SHORTCUTS;
+  }
+  if (restore_with_hardsync) {
+    tuning_params->restore_mode |= SkipDBM::RESTORE_WITH_HARDSYNC;
   }
   tuning_params->sort_mem_size = StrToIntMetric(SearchMap(*params, "sort_mem_size", "-1"));
   tuning_params->insert_in_order = StrToBool(SearchMap(*params, "insert_in_order", "false"));
