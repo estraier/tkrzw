@@ -683,7 +683,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     volatile constexpr uint32_t value_extra = 2039U;
     char* value_buf = new char[value_size + value_extra];
     for (int32_t i = 0; i < static_cast<int32_t>(value_size + value_extra); i++) {
-      value_buf[i] = 'a' + (id + i) % (i % 2 ? 26 : 8);
+      value_buf[i] = 'a' + (id + i) % (i % 2 ? 26 : 9);
     }
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {

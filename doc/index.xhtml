@@ -3279,7 +3279,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <p>Which algorithm is the best suited should be determined according to the data size, the data content, and the access pattern.  However, ZStd is the one you should try first.  If ZStd is not available on your platform, you use ZLib instead.  If you prefer faster speed, try LZ4.  If the database is almost read-only for archival usage, try LZMA.</p>
 
-<p>To check performance, let's write and read 1 million records in HashDBM and TreeDBM.  The key is a 8-byte numeric string like "00000001" and "00000002".  The value is a 100-byte semi-random alphabet strings like "ghajclengpa...".</p>
+<p>To check performance, let's write and read 1 million records in HashDBM and TreeDBM.  The key is a 8-byte numeric string like "00000001" and "00000002".  The value is a 100-byte semi-random alphabet strings like "cvexgzibb...".</p>
 
 <table>
 <tr>
@@ -3304,37 +3304,37 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <td>ZLib</td>
 <td class="num">150,205 QPS</td>
 <td class="num">2,044,919 QPS</td>
-<td class="num">85.06 MB</td>
+<td class="num">89.03 MB</td>
 <td class="num">350,346  QPS</td>
 <td class="num">1,126,326 QPS</td>
-<td class="num">10.23 MB</td>
+<td class="num">12.72 MB</td>
 </tr>
 <tr>
 <td>ZStd</td>
 <td class="num">293,260 QPS</td>
 <td class="num">2,054,519 QPS</td>
-<td class="num">92.69 MB</td>
+<td class="num">97.44 MB</td>
 <td class="num">1,040,141 QPS</td>
 <td class="num">1,159,513 QPS</td>
-<td class="num">12.22 MB</td>
+<td class="num">14.84 MB</td>
 </tr>
 <tr>
 <td>LZ4</td>
 <td class="num">917,089 QPS</td>
 <td class="num">1,975,289 QPS</td>
-<td class="num">116.53 MB</td>
+<td class="num">115.81 MB</td>
 <td class="num">1,309,562 QPS</td>
 <td class="num">1,392,015 QPS</td>
-<td class="num">16.43 MB</td>
+<td class="num">20.30 MB</td>
 </tr>
 <tr>
 <td>LZMA</td>
 <td class="num">1,478 QPS</td>
 <td class="num">1,829,766 QPS</td>
-<td class="num">146.10 MB</td>
+<td class="num">149.90 MB</td>
 <td class="num">31,802 QPS</td>
 <td class="num">795,360 QPS</td>
-<td class="num">11.32 MB</td>
+<td class="num">13.58 MB</td>
 </tr>
 </table>
 
