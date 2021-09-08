@@ -2870,8 +2870,9 @@ int main(int argc, char** argv) {
 <dt>Options for the list subcommand:</dt>
 <dd><code>--move <var>type</var></code> : Type of movement: first, jump, jumplower, jumplowerinc, jumpupper, jumpupperinc. (default: first)</dd>
 <dd><code>--jump_key <var>str</var></code> : Specifies the jump key. (default: empty string)</dd>
-<dd><code>--items <var>num</var></code> : The number of items to print.</dd>
+<dd><code>--items <var>num</var></code> : The number of items to print (default: 10).</dd>
 <dd><code>--escape</code> : C-style escape is applied to the TSV data.</dd>
+<dd><code>--keys</code> : Prints keys only.</dd>
 <dt>Options for the rebuild subcommand:</dt>
 <dd><code>--restore</code> : Skips broken records to restore a broken database.</dd>
 <dt>Options for the merge subcommand:</dt>
@@ -3837,24 +3838,24 @@ one    first
 
 <p>The Synchronize method is done within an exclusive lock against other threads.  Thus, atomicity of transactional operations of multiple records are protected as long as you use ProcessMulti or CompareExchangeMulti.</p>
 
-<p>There is a lot of misunderstanding about durability because "durability" is not a single yes-or-no, or even single-valued, concept.  Different "durability" configurations of hardware and software can offer you different guarantees, or probabilities, that your data will not be damaged in specific specified threat situations.  We consider the following situations as typical threads.  The later items are more severe and succeed all risks of the upper items.</p>
+<p>There is a lot of misunderstanding about durability because "durability" is not a single yes-or-no, or even single-valued, concept.  Different "durability" configurations of hardware and software can offer you different guarantees, or probabilities, that your data will not be damaged in specific specified threat situations.  We consider the following situations as typical threads.  The lower items are more severe and succeed all risks of the upper items.</p>
 
 <dl>
-<dt>The process finishes without closing the database.</dt>
+<dt>#1 : The process finishes without closing the database.</dt>
 <dd>The metadata is not written into the file.</dd>
 <dd>Record data cached in the process is not written into the file.</dd>
-<dt>The process crashes suddenly.</dt>
+<dt>#2 : The process crashes suddenly.</dt>
 <dd>Multiple write operations for one record updating can stop in the middle.</dd>
 <dd>One write operation can stop in the middle.</dd>
-<dt>The operating system crashes suddenly.</dt>
+<dt>#3 : The operating system crashes suddenly.</dt>
 <dd>A part of dirty pages is not written into the device.</dd>
 <dd>Inconsistent data blocks can be written into the device.</dd>
-<dt>The hardware breaks down.</dt>
+<dt>#4 : The hardware breaks down.</dt>
 <dd>Anything unpredicable can happen.</dd>
 <dd>The entire file can be lost.</dd>
 </dl>
 
-<p>You should consider data replication service or distributed computing to deal with hardware brokage, which is not in the scope of Tkrzw's features.  Tkrzw provides features for ACID traits across crashes of the operating system and the above.<!--  See <a href="durability.xhtml">Durability Discussiona</a> for more information.--></p>
+<p>To deal with hardware brokage (#4), you should consider data replication service or distributed computing, which are not in the scope of Tkrzw's features.  Tkrzw provides features for ACID traits across crashes of the operating system (#3) and the upper.<!--  See <a href="durability.xhtml">Durability Discussiona</a> for more information.--></p>
 
 <p>There is often a tradeoff between performance (CPU, memory, disk space) and durability.  For example, by adding synchronization points by the Synchronize method at strategic points, we can often gain certain durability benefits, but at some performance cost.  Or by appending new changes to the end of the file by the appending update mode of HashDBM/TreeDBM, we can gain certain durability benefits, but at the cost of extra disk space usage and fragmentation.  In its default configuration, Tkzrw always favors performance.  But Tkrzw offers a host of options to trade off durability for performance depending on your needs.</p>
 
@@ -3890,7 +3891,7 @@ one    first
 
 <h3 id="tips_detecting_corruption">Detecting Corruption</h3>
 
-<p>Regardless of whether you choose The ACID settings or not, HashDBM and TreeDBM provide partial protection against corruption to record data in the file in the form of checksums on each record.  The checksums allow Tkrzw and your application to detect database corruption with a probability that you can tune:</p>
+<p>Regardless of whether you choose the ACID settings or not, HashDBM and TreeDBM provide partial protection against corruption to record data in the file in the form of checksums on each record.  The checksums allow Tkrzw and your application to detect database corruption with a probability that you can tune:</p>
 
 <ul>
 <li>By default, you get a 6-bit checksum on each record, which can detect errors at a rate of 98.3%</li>

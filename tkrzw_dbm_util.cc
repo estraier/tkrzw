@@ -82,8 +82,9 @@ static void PrintUsageAndDie() {
   P("  --move type : Type of movement:"
     " first, jump, jumplower, jumplowerinc, jumpupper, jumpupperinc. (default: first)\n");
   P("  --jump_key str : Specifies the jump key. (default: empty string)\n");
-  P("  --items num : The number of items to print.\n");
+  P("  --items num : The number of items to print. (default: 10)\n");
   P("  --escape : C-style escape is applied to the TSV data.\n");
+  P("  --keys : Prints keys only.\n");
   P("\n");
   P("Options for the rebuild subcommand:\n");
   P("  --restore : Skips broken records to restore a broken database.\n");
@@ -1028,7 +1029,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--move", 1}, {"--jump_key", 1}, {"--items", 1}, {"--escape", 0},
+    {"--move", 1}, {"--jump_key", 1}, {"--items", 1}, {"--escape", 0}, {"--keys", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1050,8 +1051,9 @@ static int32_t ProcessList(int32_t argc, const char** args) {
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const std::string jump_key = GetStringArgument(cmd_args, "--jump_key", 0, "");
   const std::string move_type = GetStringArgument(cmd_args, "--move", 0, "first");
-  const int64_t num_items = GetIntegerArgument(cmd_args, "--items", 0, INT64MAX);
+  const int64_t num_items = GetIntegerArgument(cmd_args, "--items", 0, 10);
   const bool with_escape = CheckMap(cmd_args, "--escape");
+  const bool keys_only = CheckMap(cmd_args, "--keys");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -1128,7 +1130,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     }
     for (int64_t count = 0; ok && count < num_items; count++) {
       std::string key, value;
-      Status status = iter->Get(&key, &value);
+      Status status = iter->Get(&key, keys_only ? nullptr : &value);
       if (status != Status::SUCCESS) {
         if (status != Status::NOT_FOUND_ERROR) {
           EPrintL("Get failed: ", status);
@@ -1136,9 +1138,14 @@ static int32_t ProcessList(int32_t argc, const char** args) {
         }
         break;
       }
-      const std::string& esc_key = with_escape ? StrEscapeC(key) : StrTrimForTSV(key);
-      const std::string& esc_value = with_escape ? StrEscapeC(value) : StrTrimForTSV(value, true);
-      PrintL(esc_key, "\t", esc_value);
+      if (keys_only) {
+        const std::string& esc_key = with_escape ? StrEscapeC(key) : StrTrimForTSV(key);
+        PrintL(esc_key);
+      } else {
+        const std::string& esc_key = with_escape ? StrEscapeC(key) : StrTrimForTSV(key);
+        const std::string& esc_value = with_escape ? StrEscapeC(value) : StrTrimForTSV(value, true);
+        PrintL(esc_key, "\t", esc_value);
+      }
       if (forward) {
         status = iter->Next();
       } else {
