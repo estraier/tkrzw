@@ -680,7 +680,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     std::uniform_int_distribution<int32_t> key_num_dist(0, num_iterations * num_threads - 1);
     std::uniform_int_distribution<int32_t> value_size_dist(0, value_size);
     char key_buf[32];
-    volatile constexpr uint32_t value_extra = 2039U;
+    constexpr uint32_t value_extra = 2039U;
     char* value_buf = new char[value_size + value_extra];
     for (int32_t i = 0; i < static_cast<int32_t>(value_size + value_extra); i++) {
       value_buf[i] = 'a' + (id + i) % (i % 2 ? 26 : 9);
@@ -691,7 +691,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       const std::string_view value(
-          value_buf + (uint32_t)static_cast<uint32_t>(i * (i + 1)) % value_extra,
+          value_buf + static_cast<uint32_t>(i) * (i + 1) % value_extra,
           is_random_value ? value_size_dist(misc_mt) : value_size);
       const Status status = dbm->Set(key, value);
       if (status != Status::SUCCESS) {
