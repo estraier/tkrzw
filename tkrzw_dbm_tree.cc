@@ -148,12 +148,14 @@ class TreeDBMImpl final {
   Status LoadLeafNode(int64_t id, bool promotion, std::shared_ptr<TreeLeafNode>* node);
   Status SaveLeafNode(TreeLeafNode* node);
   Status RemoveLeafNode(TreeLeafNode* node);
-  Status FlushLeafCache(bool empty);
+  Status FlushLeafCacheAll(bool empty);
+  Status FlushLeafCacheOne(bool empty, int32_t slot_index);
   void DiscardLeafCache();
   Status LoadInnerNode(int64_t id, bool promotion, std::shared_ptr<TreeInnerNode>* node);
   Status SaveInnerNode(TreeInnerNode* node);
   Status RemoveInnerNode(TreeInnerNode* node);
-  Status FlushInnerCache(bool empty);
+  Status FlushInnerCacheAll(bool empty);
+  Status FlushInnerCacheOne(bool empty, int32_t slot_index);
   void DiscardInnerCache();
   Status SearchTree(std::string_view key, std::shared_ptr<TreeLeafNode>* leaf_node);
   Status TraceTree(std::string_view key, int64_t leaf_node_id, int64_t* hist, int32_t* hist_size);
@@ -459,7 +461,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     first_id_ = leaf_node->id;
     last_id_ = leaf_node->id;
     tree_level_ = 1;
-    status = FlushLeafCache(false);
+    status = FlushLeafCacheAll(false);
     if (status != Status::SUCCESS) {
       hash_dbm_->Close();
       return status;
@@ -506,8 +508,8 @@ Status TreeDBMImpl::Close() {
   if (!reorg_ids_.IsEmpty()) {
     status |= ReorganizeTree();
   }
-  status |= FlushLeafCache(true);
-  status |= FlushInnerCache(true);
+  status |= FlushLeafCacheAll(true);
+  status |= FlushInnerCacheAll(true);
   if (writable_) {
     status |= SaveMetadata();
   }
@@ -749,23 +751,39 @@ Status TreeDBMImpl::Rebuild(
       return status;
     }
   }
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  if (!open_) {
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    const Status status = FlushLeafCacheOne(false, slot_index);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
   }
-  if (!writable_) {
-    return Status(Status::PRECONDITION_ERROR, "not writable database");
+  for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    const Status status = FlushInnerCacheOne(false, slot_index);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
   }
-  if (!healthy_) {
-    return Status(Status::PRECONDITION_ERROR, "not healthy database");
-  }
+  mutex_.lock();
   if (!rebuild_mutex_.try_lock()) {
+    mutex_.unlock();
     return Status(Status::SUCCESS);
   }
   Status status(Status::SUCCESS);
-  status |= FlushLeafCache(false);
-  status |= FlushInnerCache(false);
+  status |= FlushLeafCacheAll(false);
+  status |= FlushInnerCacheAll(false);
   status |= SaveMetadata();
+  mutex_.downgrade();
   const HashDBM::TuningParameters hash_params = tuning_params;
   if (tuning_params.max_page_size > 0) {
     max_page_size_ = tuning_params.max_page_size;
@@ -778,6 +796,7 @@ Status TreeDBMImpl::Rebuild(
   }
   status |= hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records, sync_hard);
   rebuild_mutex_.unlock();
+  mutex_.unlock_shared();
   return status;
 }
 
@@ -790,22 +809,36 @@ Status TreeDBMImpl::ShouldBeRebuilt(bool* tobe) {
 }
 
 Status TreeDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
+  for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    const Status status = FlushLeafCacheOne(false, slot_index);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    const Status status = FlushInnerCacheOne(false, slot_index);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
-  if (!open_) {
-    return Status(Status::PRECONDITION_ERROR, "not opened database");
-  }
-  if (!writable_) {
-    return Status(Status::PRECONDITION_ERROR, "not writable database");
-  }
-  if (!healthy_) {
-    return Status(Status::PRECONDITION_ERROR, "not healthy database");
-  }
   Status status(Status::SUCCESS);
   if (!reorg_ids_.IsEmpty()) {
     status |= ReorganizeTree();
   }
-  status |= FlushLeafCache(false);
-  status |= FlushInnerCache(false);
+  status |= FlushLeafCacheAll(false);
+  status |= FlushInnerCacheAll(false);
   status |= SaveMetadata();
   status |= hash_dbm_->Synchronize(hard, proc);
   return status;
@@ -1219,33 +1252,39 @@ Status TreeDBMImpl::RemoveLeafNode(TreeLeafNode* node) {
   return status;
 }
 
-Status TreeDBMImpl::FlushLeafCache(bool empty) {
+Status TreeDBMImpl::FlushLeafCacheAll(bool empty) {
   Status status(Status::SUCCESS);
   for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
-    LeafSlot* slot = leaf_slots_ + slot_index;
-    std::lock_guard<SpinMutex> lock(slot->mutex);
-    std::vector<std::shared_ptr<TreeLeafNode>> deferred;
-    std::shared_ptr<TreeLeafNode> node;
-    while ((node = slot->cache->RemoveLRU()) != nullptr) {
-      if (node.use_count() > 1) {
-        if (empty) {
-          status |= SaveLeafNode(node.get());
-          status |= Status(Status::UNKNOWN_ERROR, "unexpected reference");
-        } else {
-          deferred.emplace_back(node);
-        }
-      } else {
+    status |= FlushLeafCacheOne(empty, slot_index);
+  }
+  return status;
+}
+
+Status TreeDBMImpl::FlushLeafCacheOne(bool empty, int32_t slot_index) {
+  Status status(Status::SUCCESS);
+  LeafSlot* slot = leaf_slots_ + slot_index;
+  std::lock_guard<SpinMutex> lock(slot->mutex);
+  std::vector<std::shared_ptr<TreeLeafNode>> deferred;
+  std::shared_ptr<TreeLeafNode> node;
+  while ((node = slot->cache->RemoveLRU()) != nullptr) {
+    if (node.use_count() > 1) {
+      if (empty) {
         status |= SaveLeafNode(node.get());
+        status |= Status(Status::UNKNOWN_ERROR, "unexpected reference");
+      } else {
+        deferred.emplace_back(node);
       }
-    }
-    while (!deferred.empty()) {
-      auto node = deferred.back();
-      deferred.pop_back();
-      std::this_thread::yield();
+    } else {
       status |= SaveLeafNode(node.get());
-      if (node.use_count() > 1) {
-        slot->cache->GiveBack(node->id, std::move(node));
-      }
+    }
+  }
+  while (!deferred.empty()) {
+    auto node = deferred.back();
+    deferred.pop_back();
+    std::this_thread::yield();
+    status |= SaveLeafNode(node.get());
+    if (node.use_count() > 1) {
+      slot->cache->GiveBack(node->id, std::move(node));
     }
   }
   return status;
@@ -1355,33 +1394,39 @@ Status TreeDBMImpl::RemoveInnerNode(TreeInnerNode* node) {
   return status;
 }
 
-Status TreeDBMImpl::FlushInnerCache(bool empty) {
+Status TreeDBMImpl::FlushInnerCacheAll(bool empty) {
   Status status(Status::SUCCESS);
   for (int32_t slot_index = NUM_PAGE_SLOTS - 1; slot_index >= 0; slot_index--) {
-    InnerSlot* slot = inner_slots_ + slot_index;
-    std::lock_guard<SpinMutex> lock(slot->mutex);
-    std::vector<std::shared_ptr<TreeInnerNode>> deferred;
-    std::shared_ptr<TreeInnerNode> node;
-    while ((node = slot->cache->RemoveLRU()) != nullptr) {
-      if (node.use_count() > 1) {
-        if (empty) {
-          status |= SaveInnerNode(node.get());
-          status |= Status(Status::UNKNOWN_ERROR, "unexpected reference");
-        } else {
-          deferred.emplace_back(node);
-        }
-      } else {
+    status |= FlushInnerCacheOne(empty, slot_index);
+  }
+  return status;
+}
+
+Status TreeDBMImpl::FlushInnerCacheOne(bool empty, int32_t slot_index) {
+  Status status(Status::SUCCESS);
+  InnerSlot* slot = inner_slots_ + slot_index;
+  std::lock_guard<SpinMutex> lock(slot->mutex);
+  std::vector<std::shared_ptr<TreeInnerNode>> deferred;
+  std::shared_ptr<TreeInnerNode> node;
+  while ((node = slot->cache->RemoveLRU()) != nullptr) {
+    if (node.use_count() > 1) {
+      if (empty) {
         status |= SaveInnerNode(node.get());
+        status |= Status(Status::UNKNOWN_ERROR, "unexpected reference");
+      } else {
+        deferred.emplace_back(node);
       }
-    }
-    while (!deferred.empty()) {
-      auto node = deferred.back();
-      deferred.pop_back();
-      std::this_thread::yield();
+    } else {
       status |= SaveInnerNode(node.get());
-      if (node.use_count() > 1) {
-        slot->cache->GiveBack(node->id, std::move(node));
-      }
+    }
+  }
+  while (!deferred.empty()) {
+    auto node = deferred.back();
+    deferred.pop_back();
+    std::this_thread::yield();
+    status |= SaveInnerNode(node.get());
+    if (node.use_count() > 1) {
+      slot->cache->GiveBack(node->id, std::move(node));
     }
   }
   return status;
