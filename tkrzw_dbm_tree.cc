@@ -774,16 +774,23 @@ Status TreeDBMImpl::Rebuild(
       return status;
     }
   }
-  mutex_.lock();
-  if (!rebuild_mutex_.try_lock()) {
-    mutex_.unlock();
-    return Status(Status::SUCCESS);
-  }
   Status status(Status::SUCCESS);
-  status |= FlushLeafCacheAll(false);
-  status |= FlushInnerCacheAll(false);
-  status |= SaveMetadata();
-  mutex_.downgrade();
+  {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    if (rebuild_mutex_.try_lock()) {
+      rebuild_mutex_.unlock();
+    } else {
+      return Status(Status::SUCCESS);
+    }
+    status |= FlushLeafCacheAll(false);
+    status |= FlushInnerCacheAll(false);
+    status |= SaveMetadata();
+  }
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  std::lock_guard<SpinMutex> rebulid_lock(rebuild_mutex_);
   const HashDBM::TuningParameters hash_params = tuning_params;
   if (tuning_params.max_page_size > 0) {
     max_page_size_ = tuning_params.max_page_size;
@@ -794,9 +801,7 @@ Status TreeDBMImpl::Rebuild(
   if (tuning_params.max_cached_pages > 0) {
     max_cached_pages_ = tuning_params.max_cached_pages;
   }
-  status |= hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records, sync_hard);
-  rebuild_mutex_.unlock();
-  mutex_.unlock_shared();
+  status = hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records, sync_hard);
   return status;
 }
 
