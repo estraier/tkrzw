@@ -789,7 +789,6 @@ Status TreeDBMImpl::Rebuild(
   if (status != Status::SUCCESS) {
     return status;
   }
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
   std::lock_guard<SpinMutex> rebulid_lock(rebuild_mutex_);
   const HashDBM::TuningParameters hash_params = tuning_params;
   if (tuning_params.max_page_size > 0) {
