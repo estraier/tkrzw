@@ -200,7 +200,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
           }
         }
       }
-      if (with_rebuild && op_dist(mt) % (num_iterations / num_threads + 1) == 0 &&
+      if (with_rebuild && op_dist(mt) % (num_iterations / 100 /*hoge*/ + 1) == 0 &&
           id == master_id.load()) {
         if (async == nullptr) {
           const Status status = dbm.Rebuild();
@@ -255,6 +255,31 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
   PrintF("Building done: elapsed_time=%.6f num_records=%lld qps=%.0f mem=%lld\n",
          elapsed_time, num_records, num_iterations * num_threads / elapsed_time,
          mem_usage);
+  int64_t act_count = 0;
+  auto iter = dbm.MakeIterator();
+  if (iter->First() != Status::SUCCESS) {
+    EPrintL("First failed: ", status);
+    has_error = true;
+  }
+  while (true) {
+    status = iter->Get();
+    if (status != Status::SUCCESS) {
+      if (status != Status::NOT_FOUND_ERROR) {
+        EPrintL("Get failed: ", status);
+        has_error = true;
+      }
+      break;
+    }
+    act_count++;
+    if (iter->Next() != Status::SUCCESS) {
+      EPrintL("Next failed: ", status);
+      has_error = true;
+    }
+  }
+  if (num_records != act_count) {
+    PrintL("Inconsistent count: meta=", num_records, " vs actual=", act_count);
+    has_error = true;
+  }
   status = dbm.Close();
   if (status != tkrzw::Status::SUCCESS) {
     EPrintL("Close failed: ", status);
@@ -330,7 +355,7 @@ static int32_t ProcessCheck(int32_t argc, const char** args) {
   if (restored_dbm.IsOpen()) {
     const int64_t restored_num_records = restored_dbm.CountSimple();
     if (restored_num_records != num_records) {
-      PrintL("Inconsistent count: ", num_records, " vs ", restored_num_records);
+      PrintL("Inconsistent count: original=", num_records, " vs restored=", restored_num_records);
       has_error = true;
     }
   }

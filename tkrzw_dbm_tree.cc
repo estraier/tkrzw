@@ -196,6 +196,7 @@ class TreeDBMImpl final {
   std::unique_ptr<HashDBM> hash_dbm_;
   std::atomic_uint32_t proc_clock_;
   SpinSharedMutex mutex_;
+  SpinMutex rebuild_mutex_;
 };
 
 class TreeDBMIteratorImpl final {
@@ -367,7 +368,7 @@ TreeDBMImpl::TreeDBMImpl(std::unique_ptr<File> file)
       key_comparator_(nullptr), record_comp_(nullptr), link_comp_(nullptr),
       mini_opaque_(), reorg_ids_(),
       hash_dbm_(new HashDBM(std::move(file))), proc_clock_(0),
-      mutex_() {}
+      mutex_(), rebuild_mutex_() {}
 
 TreeDBMImpl::~TreeDBMImpl() {
   if (open_) {
@@ -758,6 +759,9 @@ Status TreeDBMImpl::Rebuild(
   if (!healthy_) {
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
+  if (!rebuild_mutex_.try_lock()) {
+    return Status(Status::SUCCESS);
+  }
   Status status(Status::SUCCESS);
   status |= FlushLeafCache(false);
   status |= FlushInnerCache(false);
@@ -773,6 +777,7 @@ Status TreeDBMImpl::Rebuild(
     max_cached_pages_ = tuning_params.max_cached_pages;
   }
   status |= hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records, sync_hard);
+  rebuild_mutex_.unlock();
   return status;
 }
 
