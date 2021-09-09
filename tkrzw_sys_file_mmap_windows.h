@@ -511,7 +511,7 @@ Status MemoryMapParallelFile::DisablePathOperations() {
 MemoryMapParallelFile::Zone::Zone(
     MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size,
     Status* status)
-    : file_(nullptr), off_(-1), size_(0), writable_(writable) {
+    : file_(nullptr), off_(-1), size_(0) {
   if (file->file_handle_ == nullptr) {
     status->Set(Status::PRECONDITION_ERROR, "not opened file");
     return;

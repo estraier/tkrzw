@@ -108,8 +108,6 @@ class MemoryMapParallelFile final : public MemoryMapFile {
     int64_t off_;
     /** The size of the region. */
     size_t size_;
-    /** Whether the zone is writable. */
-    bool writable_;
   };
 
   /**
