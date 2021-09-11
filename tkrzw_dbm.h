@@ -771,6 +771,46 @@ class DBM {
   };
 
   /**
+   * Interface of update logger.
+   */
+  class UpdateLogger {
+   public:
+    /**
+     * Destructor.
+     */
+    virtual ~UpdateLogger() = default;
+
+    /**
+     * Writes a log for adding a new record.
+     * @param key The key of the record.
+     * @param value The value of the record.
+     * @return The result status.
+     */
+    virtual Status WriteAdd(std::string_view key, std::string_view value) = 0;
+
+    /**
+     * Writes a log for modifying an existing record.
+     * @param key The key of the record.
+     * @param value The new value of the record.
+     * @return The result status.
+     */
+    virtual Status WriteSet(std::string_view key, std::string_view value) = 0;
+
+    /**
+     * Writes a log for removing an existing record.
+     * @param key The key of the record.
+     * @return The result status.
+     */
+    virtual Status WriteRemove(std::string_view key) = 0;
+
+    /**
+     * Writes a log for removing all records.
+     * @return The result status.
+     */
+    virtual Status WriteClear() = 0;
+  };
+
+  /**
    * Destructor.
    */
   virtual ~DBM() = default;
@@ -1404,6 +1444,13 @@ class DBM {
    * @return The new DBM object.
    */
   virtual std::unique_ptr<DBM> MakeDBM() const = 0;
+
+  /**
+   * Sets the logger to write all update operations.
+   * @param update_logger The pointer to the update logger object.  Ownership is not taken.
+   * If it is nullptr, no logger is used.
+   */
+  virtual void SetUpdateLogger(UpdateLogger* update_logger) = 0;
 
   /**
    * Gets the type information of the actual class.

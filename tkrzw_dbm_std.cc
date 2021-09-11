@@ -54,6 +54,7 @@ class StdDBMImpl {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
 
  private:
@@ -67,6 +68,7 @@ class StdDBMImpl {
   bool open_;
   bool writable_;
   std::string path_;
+  DBM::UpdateLogger* update_logger_;
   SpinSharedMutex mutex_;
 };
 
@@ -92,12 +94,14 @@ class StdDBMIteratorImpl {
 
 template <class STRMAP>
 StdDBMImpl<STRMAP>::StdDBMImpl(std::unique_ptr<File> file, int64_t num_buckets)
-    : file_(std::move(file)), open_(false), writable_(false), path_() {
+    : file_(std::move(file)), open_(false), writable_(false), path_(),
+      update_logger_(nullptr), mutex_() {
 }
 
 template <>
 StdDBMImpl<StringHashMap>::StdDBMImpl(std::unique_ptr<File> file, int64_t num_buckets)
-    : file_(std::move(file)), open_(false), writable_(false), path_() {
+    : file_(std::move(file)), open_(false), writable_(false), path_(),
+      update_logger_(nullptr), mutex_() {
   map_.rehash(num_buckets);
   map_.max_load_factor(FLOATMAX);
 }
@@ -164,12 +168,18 @@ Status StdDBMImpl<STRMAP>::Process(
       const std::string_view new_value = proc->ProcessEmpty(key);
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
           new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteAdd(key, new_value);
+        }
         map_.emplace(std::move(key_str), new_value);
       }
     } else {
       const std::string_view new_value = proc->ProcessFull(key, it->second);
       if (new_value.data() == DBM::RecordProcessor::NOOP.data()) {
       } else if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteRemove(key);
+        }
         for (auto* iterator : iterators_) {
           if (iterator->it_ == it) {
             ++iterator->it_;
@@ -177,6 +187,9 @@ Status StdDBMImpl<STRMAP>::Process(
         }
         map_.erase(it);
       } else {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteSet(key, new_value);
+        }
         it->second = new_value;
       }
     }
@@ -208,12 +221,18 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
         const std::string_view new_value = proc->ProcessEmpty(key);
         if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
             new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
+          if (update_logger_ != nullptr) {
+            update_logger_->WriteAdd(key, new_value);
+          }
           map_.emplace(std::move(key_str), new_value);
         }
       } else {
         const std::string_view new_value = proc->ProcessFull(key, it->second);
         if (new_value.data() == DBM::RecordProcessor::NOOP.data()) {
         } else if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+          if (update_logger_ != nullptr) {
+            update_logger_->WriteRemove(key);
+          }
           for (auto* iterator : iterators_) {
             if (iterator->it_ == it) {
               ++iterator->it_;
@@ -221,6 +240,9 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
           }
           map_.erase(it);
         } else {
+          if (update_logger_ != nullptr) {
+            update_logger_->WriteSet(key, new_value);
+          }
           it->second = new_value;
         }
       }
@@ -254,6 +276,9 @@ Status StdDBMImpl<STRMAP>::ProcessEach(DBM::RecordProcessor* proc, bool writable
       if (new_value.data() == DBM::RecordProcessor::NOOP.data()) {
         ++it;
       } else if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteRemove(it->first);
+        }
         for (auto* iterator : iterators_) {
           if (iterator->it_ == it) {
             ++iterator->it_;
@@ -261,6 +286,9 @@ Status StdDBMImpl<STRMAP>::ProcessEach(DBM::RecordProcessor* proc, bool writable
         }
         it = map_.erase(it);
       } else {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteSet(it->first, new_value);
+        }
         it->second = new_value;
         ++it;
       }
@@ -310,6 +338,9 @@ Status StdDBMImpl<STRMAP>::GetFilePath(std::string* path) {
 template <class STRMAP>
 Status StdDBMImpl<STRMAP>::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
+  if (update_logger_ != nullptr) {
+    update_logger_->WriteClear();
+  }
   map_.clear();
   CancelIterators();
   return Status(Status::SUCCESS);
@@ -405,6 +436,11 @@ template <>
 std::unique_ptr<DBM> StdDBMImpl<StringHashMap>::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<StdHashDBM>(map_.bucket_count());
+}
+
+template <class STRMAP>
+void StdDBMImpl<STRMAP>::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  update_logger_ = update_logger;
 }
 
 template <class STRMAP>
@@ -631,6 +667,9 @@ Status StdDBMIteratorImpl<STRMAP>::Process(DBM::RecordProcessor* proc, bool writ
     const std::string_view new_value = proc->ProcessFull(it_->first, it_->second);
     if (new_value.data() == DBM::RecordProcessor::NOOP.data()) {
     } else if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+      if (dbm_->update_logger_ != nullptr) {
+        dbm_->update_logger_->WriteRemove(it_->first);
+      }
       for (auto* iterator : dbm_->iterators_) {
         if (iterator != this && iterator->it_ == it_) {
           ++iterator->it_;
@@ -638,6 +677,9 @@ Status StdDBMIteratorImpl<STRMAP>::Process(DBM::RecordProcessor* proc, bool writ
       }
       dbm_->map_.erase(it_++);
     } else {
+      if (dbm_->update_logger_ != nullptr) {
+        dbm_->update_logger_->WriteSet(it_->first, new_value);
+      }
       dbm_->map_.find(it_->first)->second = new_value;
     }
   } else {
@@ -757,6 +799,10 @@ std::unique_ptr<DBM::Iterator> StdHashDBM::MakeIterator() {
 
 std::unique_ptr<DBM> StdHashDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void StdHashDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* StdHashDBM::GetInternalFile() const {
@@ -905,6 +951,10 @@ std::unique_ptr<DBM::Iterator> StdTreeDBM::MakeIterator() {
 
 std::unique_ptr<DBM> StdTreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void StdTreeDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* StdTreeDBM::GetInternalFile() const {

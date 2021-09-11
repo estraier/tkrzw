@@ -520,6 +520,20 @@ std::unique_ptr<DBM> ShardDBM::MakeDBM() const {
   return std::make_unique<ShardDBM>();
 }
 
+void ShardDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  if (!open_) {
+    return;
+  }
+  for (const auto& dbm : dbms_) {
+
+    // TODO: Set up the special update logger wrapping it.
+    // Only the first dbm records Clear and Synchronize.
+
+
+    dbm->SetUpdateLogger(update_logger);
+  }
+}
+
 DBM* ShardDBM::GetInternalDBM() const {
   if (!open_) {
     return nullptr;

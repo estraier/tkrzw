@@ -130,6 +130,7 @@ class TreeDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
@@ -192,6 +193,7 @@ class TreeDBMImpl final {
   KeyComparator key_comparator_;
   TreeRecordComparator record_comp_;
   TreeLinkComparator link_comp_;
+  DBM::UpdateLogger* update_logger_;
   std::string mini_opaque_;
   AtomicSet<std::pair<int64_t, std::string>> reorg_ids_;
   IteratorList iterators_;
@@ -368,7 +370,7 @@ TreeDBMImpl::TreeDBMImpl(std::unique_ptr<File> file)
       max_branches_(TreeDBM::DEFAULT_MAX_BRANCHES),
       max_cached_pages_(TreeDBM::DEFAULT_MAX_CACHED_PAGES),
       key_comparator_(nullptr), record_comp_(nullptr), link_comp_(nullptr),
-      mini_opaque_(), reorg_ids_(),
+      update_logger_(nullptr), mini_opaque_(), reorg_ids_(),
       hash_dbm_(new HashDBM(std::move(file))), proc_clock_(0),
       mutex_(), rebuild_mutex_() {}
 
@@ -718,6 +720,12 @@ Status TreeDBMImpl::Clear() {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable database");
   }
+  if (update_logger_ != nullptr) {
+    const Status status = update_logger_->WriteClear();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
   for (auto* iterator : iterators_) {
     iterator->ClearPosition();
   }
@@ -938,6 +946,11 @@ bool TreeDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> TreeDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TreeDBM>(hash_dbm_->GetInternalFile()->MakeFile());
+}
+
+void TreeDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
 }
 
 File* TreeDBMImpl::GetInternalFile() {
@@ -1861,6 +1874,13 @@ void TreeDBMImpl::ProcessImpl(
     TreeRecord* rec = *it;
     const std::string_view new_value = proc->ProcessFull(rec->GetKey(), rec->GetValue());
     if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
+      if (update_logger_ != nullptr) {
+        if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+          update_logger_->WriteRemove(key);
+        } else {
+          update_logger_->WriteSet(key, new_value);
+        }
+      }
       const int32_t old_rec_size = rec->GetSerializedSize();
       const int32_t old_key_size = rec->key_size;
       const int32_t old_value_size = rec->value_size;
@@ -1898,6 +1918,9 @@ void TreeDBMImpl::ProcessImpl(
     if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
         new_value.data() != DBM::RecordProcessor::REMOVE.data() &&
         writable) {
+      if (update_logger_ != nullptr) {
+        update_logger_->WriteAdd(key, new_value);
+      }
       TreeRecord* new_rec = CreateTreeRecord(key, new_value);
       node->records.insert(it, new_rec);
       node->page_size += new_rec->GetSerializedSize();
@@ -2485,6 +2508,10 @@ std::unique_ptr<DBM::Iterator> TreeDBM::MakeIterator() {
 
 std::unique_ptr<DBM> TreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void TreeDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* TreeDBM::GetInternalFile() const {

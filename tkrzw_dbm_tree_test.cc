@@ -64,6 +64,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm);
   void TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm);
   void TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMUpdateLoggerTest(tkrzw::TreeDBM* dbm);
 };
 
 void TreeDBMTest::TreeDBMEmptyDatabaseTest(tkrzw::TreeDBM* dbm) {
@@ -1419,6 +1420,21 @@ void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
+void TreeDBMTest::TreeDBMUpdateLoggerTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::TreeDBM::TuningParameters tuning_params;
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 10;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  UpdateLoggerTest(dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(TreeDBMTest, EmptyDatabase) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMEmptyDatabaseTest(&dbm);
@@ -1536,6 +1552,11 @@ TEST_F(TreeDBMTest, DirectIO) {
       512, tkrzw::PositionalFile::ACCESS_DIRECT | tkrzw::PositionalFile::ACCESS_PADDING));
   tkrzw::TreeDBM dbm(std::move(file));
   TreeDBMDirectIOTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, UpdateLogger) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  TreeDBMUpdateLoggerTest(&dbm);
 }
 
 // END OF FILE

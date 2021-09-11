@@ -139,6 +139,7 @@ class BabyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
   KeyComparator GetKeyComparator();
 
@@ -176,6 +177,7 @@ class BabyDBMImpl final {
   BabyLeafNode* first_node_;
   BabyLeafNode* last_node_;
   AtomicSet<std::pair<BabyLeafNode*, std::string>> reorg_nodes_;
+  DBM::UpdateLogger* update_logger_;
   SpinSharedMutex mutex_;
 };
 
@@ -342,7 +344,7 @@ BabyDBMImpl::BabyDBMImpl(std::unique_ptr<File> file, KeyComparator key_comparato
       link_comp_(BabyLinkComparator(key_comparator)),
       num_records_(0), tree_level_(0),
       root_node_(nullptr), first_node_(nullptr), last_node_(nullptr),
-      reorg_nodes_(),
+      reorg_nodes_(), update_logger_(nullptr),
       mutex_() {
   InitializeNodes();
   num_records_.store(0);
@@ -521,6 +523,9 @@ Status BabyDBMImpl::GetFilePath(std::string* path) {
 
 Status BabyDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
+  if (update_logger_ != nullptr) {
+    update_logger_->WriteClear();
+  }
   for (auto* iterator : iterators_) {
     iterator->ClearPosition();
   }
@@ -571,6 +576,11 @@ bool BabyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> BabyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<BabyDBM>(file_->MakeFile());
+}
+
+void BabyDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
 }
 
 File* BabyDBMImpl::GetInternalFile() const {
@@ -995,6 +1005,13 @@ void BabyDBMImpl::ProcessImpl(
     BabyRecord* rec = *it;
     const std::string_view new_value = proc->ProcessFull(rec->GetKey(), rec->GetValue());
     if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
+      if (update_logger_ != nullptr) {
+        if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+          update_logger_->WriteRemove(key);
+        } else {
+          update_logger_->WriteSet(key, new_value);
+        }
+      }
       if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
         node->records.erase(it);
         if (CheckLeafNodeToMerge(node)) {
@@ -1011,6 +1028,9 @@ void BabyDBMImpl::ProcessImpl(
     if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
         new_value.data() != DBM::RecordProcessor::REMOVE.data() &&
         writable) {
+      if (update_logger_ != nullptr) {
+        update_logger_->WriteAdd(key, new_value);
+      }
       BabyRecord* new_rec = CreateBabyRecord(key, new_value);
       node->records.insert(it, new_rec);
       num_records_.fetch_add(1);
@@ -1030,7 +1050,13 @@ void BabyDBMImpl::AppendImpl(
   if (it != records.end() && !record_comp_(search_rec, *it)) {
     BabyRecord* rec = *it;
     *it = AppendBabyRecord(rec, value, delim);
+    if (update_logger_ != nullptr) {
+      update_logger_->WriteAdd(key, (*it)->GetValue());
+    }
   } else {
+    if (update_logger_ != nullptr) {
+      update_logger_->WriteAdd(key, value);
+    }
     BabyRecord* new_rec = CreateBabyRecord(key, value);
     node->records.insert(it, new_rec);
     num_records_.fetch_add(1);
@@ -1447,6 +1473,10 @@ std::unique_ptr<DBM::Iterator> BabyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> BabyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void BabyDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* BabyDBM::GetInternalFile() const {

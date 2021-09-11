@@ -68,6 +68,7 @@ class TinyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
 
  private:
@@ -90,6 +91,7 @@ class TinyDBMImpl final {
   std::atomic_int64_t num_records_;
   int64_t num_buckets_;
   char** buckets_;
+  DBM::UpdateLogger* update_logger_;
   SpinSharedMutex mutex_;
   HashMutex<SpinSharedMutex> record_mutex_;
 };
@@ -198,7 +200,7 @@ void TinyRecord::Deserialize(const char* ptr) {
 
 TinyDBMImpl::TinyDBMImpl(std::unique_ptr<File> file, int64_t num_buckets)
     : iterators_(), file_(std::move(file)), open_(false), writable_(false), path_(),
-      num_records_(0), num_buckets_(0), buckets_(nullptr),
+      num_records_(0), num_buckets_(0), buckets_(nullptr), update_logger_(nullptr),
       mutex_(),
       record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash) {
   if (num_buckets > 0) {
@@ -357,6 +359,9 @@ Status TinyDBMImpl::GetFilePath(std::string* path) {
 
 Status TinyDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
+  if (update_logger_ != nullptr) {
+    update_logger_->WriteClear();
+  }
   ReleaseAllRecords();
   CancelIterators();
   xfree(buckets_);
@@ -437,6 +442,11 @@ bool TinyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> TinyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TinyDBM>(file_->MakeFile(), num_buckets_);
+}
+
+void TinyDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
 }
 
 File* TinyDBMImpl::GetInternalFile() const {
@@ -548,6 +558,13 @@ void TinyDBMImpl::ProcessImpl(
     if (key == rec_key) {
       std::string_view new_value = proc->ProcessFull(key, rec_value);
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
+        if (update_logger_ != nullptr) {
+          if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+            update_logger_->WriteRemove(key);
+          } else {
+            update_logger_->WriteSet(key, new_value);
+          }
+        }
         if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
           xfree(ptr);
           if (parent == nullptr) {
@@ -577,6 +594,9 @@ void TinyDBMImpl::ProcessImpl(
   const std::string_view new_value = proc->ProcessEmpty(key);
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
+    if (update_logger_ != nullptr) {
+      update_logger_->WriteAdd(key, new_value);
+    }
     rec.child = top;
     rec.key_ptr = key.data();
     rec.key_size = key.size();
@@ -599,6 +619,10 @@ void TinyDBMImpl::AppendImpl(
     const std::string_view rec_value(rec.value_ptr, rec.value_size);
     if (key == rec_key) {
       char* new_ptr = rec.ReserializeAppend(ptr, value, delim);
+      if (update_logger_ != nullptr) {
+        rec.Deserialize(new_ptr);
+        update_logger_->WriteSet(key, std::string_view(rec.value_ptr, rec.value_size));
+      }
       if (new_ptr != ptr) {
         if (parent == nullptr) {
           buckets_[bucket_index] = new_ptr;
@@ -610,6 +634,9 @@ void TinyDBMImpl::AppendImpl(
     }
     parent = ptr;
     ptr = rec.child;
+  }
+  if (update_logger_ != nullptr) {
+    update_logger_->WriteAdd(key, value);
   }
   rec.child = top;
   rec.key_ptr = key.data();
@@ -845,6 +872,10 @@ std::unique_ptr<DBM::Iterator> TinyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> TinyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void TinyDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* TinyDBM::GetInternalFile() const {

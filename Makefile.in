@@ -810,6 +810,7 @@ testrun :
 	$(RUNENV) ./tkrzw_file_mmap_test
 	$(RUNENV) ./tkrzw_file_pos_test
 	$(RUNENV) ./tkrzw_file_poly_test
+	$(RUNENV) ./tkrzw_dbm_ulog_test
 	$(RUNENV) ./tkrzw_dbm_common_impl_test
 	$(RUNENV) ./tkrzw_dbm_hash_impl_test
 	$(RUNENV) ./tkrzw_dbm_hash_test
@@ -957,6 +958,9 @@ tkrzw_file_pos_test : tkrzw_file_pos_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_file_poly_test : tkrzw_file_poly_test.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
+
+tkrzw_dbm_ulog_test : tkrzw_dbm_ulog_test.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CMDLDFLAGS) $(CMDLIBS) $(TESTLIBS) $(LIBS)
 
 tkrzw_dbm_common_impl_test : tkrzw_dbm_common_impl_test.o $(LIBRARYFILES)

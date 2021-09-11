@@ -390,7 +390,7 @@ int32_t StrSearchMemchr(std::string_view text, std::string_view pattern);
 int32_t StrSearchMemmem(std::string_view text, std::string_view pattern);
 
 /**
- * Searches a text for a pattern, by Knuth窶溺orris窶撤ratt algorithm.
+ * Searches a text for a pattern, by Knuth-Morris-Pratt algorithm.
  * @param text The text to search.
  * @param pattern The pattern to search for.
  * @return The index of the first matched position, or -1 if there's no matches.

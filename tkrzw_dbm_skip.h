@@ -176,7 +176,7 @@ class SkipDBM final : public DBM {
 
   /**
    * Enumeration for restore modes.
-   * @detail Currently, RESTORE_DEFAULT and RESTORE_SYNC has the same meaning, and
+   * @details Currently, RESTORE_DEFAULT and RESTORE_SYNC has the same meaning, and
    * RESTORE_NO_SHORTCUTS is ignored.
    */
   enum RestoreMode : int32_t {
@@ -555,6 +555,13 @@ class SkipDBM final : public DBM {
    * @return The new DBM object.
    */
   std::unique_ptr<DBM> MakeDBM() const override;
+
+  /**
+   * Sets the logger to write all update operations.
+   * @param update_logger The pointer to the update logger object.  Ownership is not taken.
+   * If it is nullptr, no logger is used.
+   */
+  void SetUpdateLogger(UpdateLogger* update_logger) override;
 
   /**
    * Gets the pointer to the internal file object.

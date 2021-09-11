@@ -119,4 +119,9 @@ TEST_F(TinyDBMTest, GetInternalFile) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST_F(TinyDBMTest, UpdateLogger) {
+  tkrzw::TinyDBM dbm(100);
+  UpdateLoggerTest(&dbm);
+}
+
 // END OF FILE

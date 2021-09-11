@@ -202,4 +202,9 @@ TEST_F(CacheDBMTest, GetInternalFile) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST_F(CacheDBMTest, UpdateLogger) {
+  tkrzw::CacheDBM dbm(1024);
+  UpdateLoggerTest(&dbm);
+}
+
 // END OF FILE

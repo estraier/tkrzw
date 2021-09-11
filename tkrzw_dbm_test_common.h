@@ -19,6 +19,8 @@
 #include "tkrzw_compress.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_common_impl.h"
+#include "tkrzw_dbm_std.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
@@ -42,6 +44,7 @@ class CommonDBMTest : public Test {
   void RecordMigrationTest(tkrzw::DBM* dbm, tkrzw::File* file);
   void BackIteratorTest(tkrzw::DBM* dbm);
   void IteratorBoundTest(tkrzw::DBM* dbm);
+  void UpdateLoggerTest(tkrzw::DBM* dbm);
 };
 
 inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
@@ -1375,6 +1378,145 @@ inline void CommonDBMTest::IteratorBoundTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("", iter->GetKey());
   EXPECT_EQ(tkrzw::Status::SUCCESS, iter->JumpUpper("9", false));
   EXPECT_EQ("", iter->GetKey());
+}
+
+inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
+  tkrzw::StdTreeDBM ulog_dbm;
+  tkrzw::DBMUpdateLoggerDBM ulog(&ulog_dbm);
+  dbm->SetUpdateLogger(&ulog);
+  for (int32_t i = 1; i < 10; i++) {
+    const std::string key = tkrzw::ToString(i);
+    const std::string value = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+    EXPECT_EQ(value, ulog_dbm.GetSimple(key));
+  }
+  const bool is_skip = dbm->CountSimple() == 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  for (int32_t i = 1; i < 10; i++) {
+    const std::string key = tkrzw::ToString(i);
+    const std::string value = tkrzw::ToString(i * 2);
+    if (i % 2 == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(key, value));
+      EXPECT_EQ(value, ulog_dbm.GetSimple(key));
+    } else {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key));
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, ulog_dbm.Get(key));
+    }
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
+  EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(0, ulog_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("one", "1", ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("zero", "0", ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  if (is_skip) {
+    EXPECT_EQ("first", dbm->GetSimple("one"));
+  } else {
+    EXPECT_EQ("first:1", dbm->GetSimple("one"));
+  }
+  EXPECT_EQ("first:1", ulog_dbm.GetSimple("one"));
+  EXPECT_EQ("0", dbm->GetSimple("zero"));
+  EXPECT_EQ("0", ulog_dbm.GetSimple("zero"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove("zero"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  auto iter = dbm->MakeIterator();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+  std::string key, value;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Get(&key, &value));
+  EXPECT_EQ("one", key);
+  if (is_skip) {
+    EXPECT_EQ("first", value);
+  } else {
+    EXPECT_EQ("first:1", value);
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Set("helloworld"));
+  if (is_skip) {
+    EXPECT_EQ("first", dbm->GetSimple("one"));
+  } else {
+    EXPECT_EQ("helloworld", dbm->GetSimple("one"));
+  }
+  EXPECT_EQ("helloworld", ulog_dbm.GetSimple("one"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Remove());
+  if (is_skip) {
+    EXPECT_EQ("first", dbm->GetSimple("one"));
+  } else {
+    EXPECT_EQ("", dbm->GetSimple("one"));
+  }
+  EXPECT_EQ("", ulog_dbm.GetSimple("one"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      "two", std::string_view(), "second"));
+  EXPECT_EQ("second", ulog_dbm.GetSimple("two"));
+  typedef std::vector<std::pair<std::string_view, std::string_view>> kv_list;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
+      kv_list({{"three", std::string_view()}, {"four", std::string_view()}}),
+      kv_list({{"three", "third"}, {"four", "fourth"}})));
+  EXPECT_EQ("third", ulog_dbm.GetSimple("three"));
+  EXPECT_EQ("fourth", ulog_dbm.GetSimple("four"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
+      kv_list({{"three", "third"}, {"four", "fourth"}}),
+      kv_list({{"three", std::string_view()}, {"four", std::string_view()}})));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ("", ulog_dbm.GetSimple("three"));
+  EXPECT_EQ("", ulog_dbm.GetSimple("four"));
+  EXPECT_EQ(1, dbm->CountSimple());
+  EXPECT_EQ(1, ulog_dbm.CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
+  EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(0, ulog_dbm.CountSimple());
+  class DoubleProc : public tkrzw::DBM::RecordProcessor {
+   public:
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      new_value_ = std::string(value) + std::string(value);
+      std::cout << "PROC:" << key << ":" << new_value_ << std::endl;
+      return new_value_;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      new_value_ = std::string(key);
+      return new_value_;
+    }
+   private:
+    std::string new_value_;
+  };
+  DoubleProc double_proc;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Process("zero", &double_proc, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ("zero", dbm->GetSimple("zero"));
+  EXPECT_EQ("zero", ulog_dbm.GetSimple("zero"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessEach(&double_proc, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  if (is_skip) {
+    EXPECT_EQ("zero", dbm->GetSimple("zero"));
+  } else  {
+    EXPECT_EQ("zerozero", dbm->GetSimple("zero"));
+  }
+  EXPECT_EQ("zerozero", ulog_dbm.GetSimple("zero"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti({{"zero", &double_proc}}, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessMulti({{"one", &double_proc}}, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  if (is_skip) {
+    EXPECT_EQ("zero", dbm->GetSimple("zero"));
+    EXPECT_EQ("zerozero", ulog_dbm.GetSimple("zero"));
+  } else  {
+    EXPECT_EQ("zerozerozerozero", dbm->GetSimple("zero"));
+    EXPECT_EQ("zerozerozerozero", ulog_dbm.GetSimple("zero"));
+  }
+  EXPECT_EQ("one", dbm->GetSimple("one"));
+  EXPECT_EQ("one", ulog_dbm.GetSimple("one"));
+  class RemoveProc : public tkrzw::DBM::RecordProcessor {
+   public:
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      return REMOVE;
+    }
+  };
+  RemoveProc remove_proc;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessEach(&remove_proc, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(0, ulog_dbm.CountSimple());
 }
 
 // END OF FILE

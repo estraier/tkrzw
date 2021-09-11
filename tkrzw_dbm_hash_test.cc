@@ -62,6 +62,7 @@ class HashDBMTest : public CommonDBMTest {
   void HashDBMAutoRestoreTest(tkrzw::HashDBM* dbm);
   void HashDBMCorruptionTest(tkrzw::HashDBM* dbm);
   void HashDBMDirectIOTest(tkrzw::HashDBM* dbm);
+  void HashDBMUpdateLoggerTest(tkrzw::HashDBM* dbm);
 };
 
 void HashDBMTest::HashDBMEmptyDatabaseTest(tkrzw::HashDBM* dbm) {
@@ -1874,6 +1875,21 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
+void HashDBMTest::HashDBMUpdateLoggerTest(tkrzw::HashDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::HashDBM::TuningParameters tuning_params;
+  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+  tuning_params.offset_width = 4;
+  tuning_params.align_pow = 0;
+  tuning_params.num_buckets = 10;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  UpdateLoggerTest(dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(HashDBMTest, EmptyDatabase) {
   tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   HashDBMEmptyDatabaseTest(&dbm);
@@ -1986,6 +2002,11 @@ TEST_F(HashDBMTest, DirectIO) {
       512, tkrzw::PositionalFile::ACCESS_DIRECT | tkrzw::PositionalFile::ACCESS_PADDING));
   tkrzw::HashDBM dbm(std::move(file));
   HashDBMDirectIOTest(&dbm);
+}
+
+TEST_F(HashDBMTest, UpdateLogger) {
+  tkrzw::HashDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  HashDBMUpdateLoggerTest(&dbm);
 }
 
 // END OF FILE

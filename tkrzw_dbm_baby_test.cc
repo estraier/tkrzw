@@ -252,4 +252,9 @@ TEST_F(BabyDBMTest, GetInternalFile) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST_F(BabyDBMTest, UpdateLogger) {
+  tkrzw::BabyDBM dbm;
+  UpdateLoggerTest(&dbm);
+}
+
 // END OF FILE

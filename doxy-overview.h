@@ -91,6 +91,7 @@ namespace tkrzw {}
  * @file tkrzw_file_pos.h File implementations by positional access.
  * @file tkrzw_file_poly.h Polymorphic file adapter.
  * @file tkrzw_dbm.h Database manager interface.
+ * @file tkrzw_dbm_ulog.h DBM update logger implementations.
  * @file tkrzw_dbm_common_impl.h Common implementation components for database managers.
  * @file tkrzw_dbm_hash_impl.h Implementation components for the hash database manager.
  * @file tkrzw_dbm_hash.h File database manager implementation based on hash table.

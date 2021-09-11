@@ -1132,7 +1132,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
         }
       }
       if (time_sleep > 0) {
-        tkrzw::Sleep(time_sleep);
+        tkrzw::SleepThread(time_sleep);
       }
       if (id == 0 && (i + 1) % dot_mod == 0) {
         PutChar('.');

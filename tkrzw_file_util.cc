@@ -162,6 +162,9 @@ std::string PathToDirectoryName(const std::string& path) {
   if (pos == std::string::npos) {
     return CURRENT_DIR_NAME;
   }
+  if (pos == 0) {
+    return DIR_SEP_STR;
+  }
   return tmp_path.substr(0, pos);
 }
 

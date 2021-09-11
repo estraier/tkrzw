@@ -51,6 +51,7 @@ class SkipDBMTest : public CommonDBMTest {
   void SkipDBMAutoRestoreTest(tkrzw::SkipDBM* dbm);
   void SkipDBMMergeTest(tkrzw::SkipDBM* dbm);
   void SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm);
+  void SkipDBMUpdateLoggerTest(tkrzw::SkipDBM* dbm);
 };
 
 void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
@@ -867,6 +868,19 @@ void SkipDBMTest::SkipDBMDirectIOTest(tkrzw::SkipDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
+void SkipDBMTest::SkipDBMUpdateLoggerTest(tkrzw::SkipDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::SkipDBM::TuningParameters tuning_params;
+  tuning_params.step_unit = 2;
+  tuning_params.max_level = 5;
+  tuning_params.restore_mode = tkrzw::SkipDBM::RESTORE_READ_ONLY;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  UpdateLoggerTest(dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 TEST_F(SkipDBMTest, EmptyDatabase) {
   tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   SkipDBMEmptyDatabaseTest(&dbm);
@@ -928,6 +942,11 @@ TEST_F(SkipDBMTest, DirectIO) {
             file->SetAccessStrategy(512, tkrzw::PositionalFile::ACCESS_DIRECT));
   tkrzw::SkipDBM dbm(std::move(file));
   SkipDBMDirectIOTest(&dbm);
+}
+
+TEST_F(SkipDBMTest, UpdateLogger) {
+  tkrzw::SkipDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  SkipDBMUpdateLoggerTest(&dbm);
 }
 
 // END OF FILE

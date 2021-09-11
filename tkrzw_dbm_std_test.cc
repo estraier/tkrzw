@@ -124,6 +124,11 @@ TEST_F(StdHashDBMTest, GetInternalFile) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST_F(StdHashDBMTest, UpdateLogger) {
+  tkrzw::StdHashDBM dbm(100);
+  UpdateLoggerTest(&dbm);
+}
+
 class StdTreeDBMTest : public CommonDBMTest {};
 
 TEST_F(StdTreeDBMTest, File) {
@@ -221,6 +226,11 @@ TEST_F(StdTreeDBMTest, GetInternalFile) {
   EXPECT_GT(file_size, 0);
   EXPECT_EQ(dbm.GetFileSizeSimple(), file_size);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
+TEST_F(StdTreeDBMTest, UpdateLogger) {
+  tkrzw::StdTreeDBM dbm;
+  UpdateLoggerTest(&dbm);
 }
 
 // END OF FILE

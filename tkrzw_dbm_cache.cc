@@ -30,6 +30,8 @@ namespace tkrzw {
 constexpr int32_t NUM_CACHE_SLOTS = 32;
 constexpr double MAX_LOAD_FACTOR = 1.2;
 
+class CacheDBMImpl;
+
 struct CacheRecord final {
   char* child;
   char* prev;
@@ -52,7 +54,7 @@ struct CacheRecord final {
 class CacheSlot final {
  public:
   CacheSlot();
-  void Init(int64_t cap_rec_num, int64_t cap_mem_size);
+  void Init(CacheDBMImpl* dbm, int64_t cap_rec_num, int64_t cap_mem_size);
   void CleanUp();
   void Lock();
   void Unlock();
@@ -70,6 +72,7 @@ class CacheSlot final {
   std::vector<std::string> GetKeys();
 
  private:
+  CacheDBMImpl* dbm_;
   char** buckets_;
   char* first_;
   char* last_;
@@ -82,6 +85,7 @@ class CacheSlot final {
 };
 
 class CacheDBMImpl final {
+  friend class CacheSlot;
   friend class CacheDBMIteratorImpl;
   typedef std::list<CacheDBMIteratorImpl*> IteratorList;
  public:
@@ -104,6 +108,7 @@ class CacheDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
   int64_t GetEffectiveDataSize();
   int64_t GetMemoryUsage();
@@ -124,6 +129,7 @@ class CacheDBMImpl final {
   int64_t cap_rec_num_;
   int64_t cap_mem_size_;
   CacheSlot slots_[NUM_CACHE_SLOTS];
+  DBM::UpdateLogger* update_logger_;
   SpinSharedMutex mutex_;
 };
 
@@ -240,11 +246,12 @@ void CacheRecord::SetNext(char* ptr, const char* next) {
 }
 
 CacheSlot::CacheSlot() :
-    buckets_(nullptr), first_(nullptr), last_(nullptr),
+    dbm_(nullptr), buckets_(nullptr), first_(nullptr), last_(nullptr),
     cap_rec_num_(0), cap_mem_size_(0), num_buckets_(0), num_records_(0),
     eff_data_size_(0), mutex_() {}
 
-void CacheSlot::Init(int64_t cap_rec_num, int64_t cap_mem_size) {
+void CacheSlot::Init(CacheDBMImpl* dbm, int64_t cap_rec_num, int64_t cap_mem_size) {
+  dbm_ = dbm;
   cap_rec_num_ = cap_rec_num;
   cap_mem_size_ = cap_mem_size;
   num_buckets_ = GetHashBucketSize(std::min<int64_t>(cap_rec_num_ * MAX_LOAD_FACTOR, INT32MAX));
@@ -318,6 +325,13 @@ void CacheSlot::ProcessImpl(
       }
       std::string_view new_value = proc->ProcessFull(key, rec_value);
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
+        if (dbm_->update_logger_ != nullptr) {
+          if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+            dbm_->update_logger_->WriteRemove(key);
+          } else {
+            dbm_->update_logger_->WriteSet(key, new_value);
+          }
+        }
         if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
           xfree(ptr);
           if (parent == nullptr) {
@@ -364,6 +378,9 @@ void CacheSlot::ProcessImpl(
   const std::string_view new_value = proc->ProcessEmpty(key);
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
+    if (dbm_->update_logger_ != nullptr) {
+      dbm_->update_logger_->WriteAdd(key, new_value);
+    }
     rec.child = top;
     rec.prev = last_;
     rec.next = nullptr;
@@ -551,7 +568,7 @@ CacheDBMImpl::CacheDBMImpl(std::unique_ptr<File> file, int64_t cap_rec_num, int6
     : file_(std::move(file)), open_(false), writable_(false), path_(),
       cap_rec_num_(cap_rec_num > 0 ? cap_rec_num : CacheDBM::DEFAULT_CAP_REC_NUM),
       cap_mem_size_(cap_mem_size > 0 ? cap_mem_size : INT64MAX),
-      slots_(), mutex_() {
+      slots_(), update_logger_(nullptr), mutex_() {
   InitAllSlots();
 }
 
@@ -679,6 +696,9 @@ Status CacheDBMImpl::GetFilePath(std::string* path) {
 
 Status CacheDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
+  if (update_logger_ != nullptr) {
+    update_logger_->WriteClear();
+  }
   CleanUpAllSlots();
   CancelIterators();
   InitAllSlots();
@@ -756,6 +776,11 @@ std::unique_ptr<DBM> CacheDBMImpl::MakeDBM() {
   return std::make_unique<CacheDBM>(file_->MakeFile(), cap_rec_num_, cap_mem_size_);
 }
 
+void CacheDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
+}
+
 File* CacheDBMImpl::GetInternalFile() const {
   return file_.get();
 }
@@ -788,7 +813,7 @@ void CacheDBMImpl::InitAllSlots() {
   const int64_t slot_cap_rec_num = cap_rec_num_ / NUM_CACHE_SLOTS + 1;
   const int64_t slot_cap_mem_size = cap_mem_size_ / NUM_CACHE_SLOTS + 1;
   for (auto& slot : slots_) {
-    slot.Init(slot_cap_rec_num, slot_cap_mem_size);
+    slot.Init(this, slot_cap_rec_num, slot_cap_mem_size);
   }
 }
 
@@ -1051,6 +1076,10 @@ std::unique_ptr<DBM::Iterator> CacheDBM::MakeIterator() {
 
 std::unique_ptr<DBM> CacheDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void CacheDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* CacheDBM::GetInternalFile() const {

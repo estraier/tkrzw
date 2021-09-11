@@ -80,6 +80,8 @@ TEST(FileUtilTest, PathToBaseName) {
   EXPECT_EQ("c", tkrzw::PathToBaseName("a/b/c"));
   EXPECT_EQ("c", tkrzw::PathToBaseName("/a/b/c"));
   EXPECT_EQ("c", tkrzw::PathToBaseName("/a/b/c/"));
+  EXPECT_EQ("var", tkrzw::PathToBaseName("/var/"));
+  EXPECT_EQ("log", tkrzw::PathToBaseName("/var/log/"));
 }
 
 TEST(FileUtilTest, PathToDirectoryName) {
@@ -94,6 +96,8 @@ TEST(FileUtilTest, PathToDirectoryName) {
   EXPECT_EQ("a/b", tkrzw::PathToDirectoryName("a/b/c"));
   EXPECT_EQ("/a/b", tkrzw::PathToDirectoryName("/a/b/c"));
   EXPECT_EQ("/a/b", tkrzw::PathToDirectoryName("/a/b/c/"));
+  EXPECT_EQ("/", tkrzw::PathToDirectoryName("/var/"));
+  EXPECT_EQ("/var", tkrzw::PathToDirectoryName("/var/log/"));
 }
 
 TEST(FileUtilTest, PathToExtension) {

@@ -554,6 +554,13 @@ class PolyDBM final : public ParamDBM {
   std::unique_ptr<DBM> MakeDBM() const override;
 
   /**
+   * Sets the logger to write all update operations.
+   * @param update_logger The pointer to the update logger object.  Ownership is not taken.
+   * If it is nullptr, no logger is used.
+   */
+  void SetUpdateLogger(UpdateLogger* update_logger) override;
+
+  /**
    * Gets the pointer to the internal database object.
    * @return The pointer to the internal database object, or nullptr on failure.
    */

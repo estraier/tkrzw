@@ -30,9 +30,9 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
-TEST(ThreadUtilTest, Sleep) {
+TEST(ThreadUtilTest, SleepThread) {
   const double start_time = tkrzw::GetWallTime();
-  tkrzw::Sleep(0.001);
+  tkrzw::SleepThread(0.001);
   const double end_time = tkrzw::GetWallTime();
   EXPECT_GT(end_time, start_time);
 }

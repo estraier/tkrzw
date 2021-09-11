@@ -111,6 +111,7 @@ class HashDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
@@ -182,6 +183,7 @@ class HashDBMImpl final {
   int32_t static_flags_;
   int32_t crc_width_;
   std::unique_ptr<Compressor> compressor_;
+  DBM::UpdateLogger* update_logger_;
   int32_t offset_width_;
   int32_t align_pow_;
   int32_t closure_flags_;
@@ -225,7 +227,8 @@ class HashDBMIteratorImpl final {
 HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
     : open_(false), writable_(false), healthy_(false), auto_restored_(false), path_(),
       cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
-      static_flags_(STATIC_FLAG_NONE), crc_width_(0), compressor_(nullptr),
+      static_flags_(STATIC_FLAG_NONE), crc_width_(0),
+      compressor_(nullptr), update_logger_(nullptr),
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
       num_buckets_(HashDBM::DEFAULT_NUM_BUCKETS),
@@ -586,6 +589,12 @@ Status HashDBMImpl::Clear() {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable database");
   }
+  if (update_logger_ != nullptr) {
+    const Status status = update_logger_->WriteClear();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
   const uint32_t static_flags = static_flags_;
   const int32_t offset_width = offset_width_;
   const int32_t align_pow = align_pow_;
@@ -768,6 +777,11 @@ bool HashDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> HashDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<HashDBM>(file_->MakeFile());
+}
+
+void HashDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
 }
 
 File* HashDBMImpl::GetInternalFile() {
@@ -1387,6 +1401,16 @@ Status HashDBMImpl::ProcessImpl(
         return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
       }
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() && writable) {
+        if (update_logger_ != nullptr) {
+          if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+            status = update_logger_->WriteRemove(key);
+          } else {
+            status = update_logger_->WriteSet(key, new_value);
+          }
+          if (status != Status::SUCCESS) {
+            return status;
+          }
+        }
         const int64_t child_offset = rec.GetChildOffset();
         const int32_t old_rec_size = rec.GetWholeSize();
         int32_t new_rec_size = 0;
@@ -1501,6 +1525,12 @@ Status HashDBMImpl::ProcessImpl(
   }
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
+    if (update_logger_ != nullptr) {
+      status = update_logger_->WriteAdd(key, new_value);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
     rec.SetData(HashRecord::OP_ADD, 0, key.data(), key.size(),
                 new_value.data(), new_value.size(), top);
     int32_t new_rec_size = rec.GetWholeSize();
@@ -2419,6 +2449,10 @@ std::unique_ptr<DBM::Iterator> HashDBM::MakeIterator() {
 
 std::unique_ptr<DBM> HashDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void HashDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* HashDBM::GetInternalFile() const {

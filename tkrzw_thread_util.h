@@ -37,7 +37,7 @@ namespace tkrzw {
  * Sleeps the current thread.
  * @param sec The duration in seconds to sleep for.
  */
-void Sleep(double sec);
+void SleepThread(double sec);
 
 /**
  * Spin lock mutex.
@@ -805,7 +805,7 @@ class TaskQueue final {
   std::condition_variable cond_;
 };
 
-inline void Sleep(double sec) {
+inline void SleepThread(double sec) {
   std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(sec * 1000000)));
 }
 
@@ -1246,7 +1246,7 @@ inline void TaskQueue::Stop(double timeout) {
       }
     }
     cond_.notify_all();
-    Sleep(0.01);
+    SleepThread(0.01);
   }
   running_.store(false);
   cond_.notify_all();

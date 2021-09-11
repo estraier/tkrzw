@@ -96,6 +96,7 @@ class SkipDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
   double GetModificationTime();
@@ -152,6 +153,7 @@ class SkipDBMImpl final {
   std::unique_ptr<RecordSorter> record_sorter_;
   std::vector<int64_t> past_offsets_;
   std::unique_ptr<SkipRecordCache> cache_;
+  DBM::UpdateLogger* update_logger_;
   int64_t old_num_records_;
   int64_t old_eff_data_size_;
   SpinSharedMutex mutex_;
@@ -192,7 +194,7 @@ SkipDBMImpl::SkipDBMImpl(std::unique_ptr<File> file)
       file_(std::move(file)), sorted_file_(nullptr), record_index_(0),
       sort_mem_size_(SkipDBM::DEFAULT_SORT_MEM_SIZE), insert_in_order_(false),
       max_cached_records_(SkipDBM::DEFAULT_MAX_CACHED_RECORDS),
-      record_sorter_(nullptr), past_offsets_(),
+      record_sorter_(nullptr), past_offsets_(), cache_(nullptr), update_logger_(nullptr),
       old_num_records_(0), old_eff_data_size_(0),
       mutex_() {}
 
@@ -609,6 +611,12 @@ Status SkipDBMImpl::Clear() {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable database");
   }
+  if (update_logger_ != nullptr) {
+    const Status status = update_logger_->WriteClear();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
   if (updated_) {
     const Status status = FinishStorage(nullptr);
     if (status != Status::SUCCESS) {
@@ -865,6 +873,11 @@ bool SkipDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> SkipDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<SkipDBM>(file_->MakeFile());
+}
+
+void SkipDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
+  std::lock_guard<SpinSharedMutex> lock(mutex_);
+  update_logger_ = update_logger;
 }
 
 File* SkipDBMImpl::GetInternalFile() {
@@ -1315,6 +1328,17 @@ Status SkipDBMImpl::DiscardStorage() {
 
 Status SkipDBMImpl::UpdateRecord(std::string_view key, std::string_view new_value) {
   if (new_value.data() != DBM::RecordProcessor::NOOP.data()) {
+    if (update_logger_ != nullptr) {
+      Status status(Status::SUCCESS);
+      if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+        status = update_logger_->WriteRemove(key);
+      } else {
+        status = update_logger_->WriteAdd(key, new_value);
+      }
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
     if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
       new_value = SkipDBM::REMOVING_VALUE;
       removed_ = true;
@@ -1785,6 +1809,10 @@ std::unique_ptr<DBM::Iterator> SkipDBM::MakeIterator() {
 
 std::unique_ptr<DBM> SkipDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+void SkipDBM::SetUpdateLogger(UpdateLogger* update_logger) {
+  impl_->SetUpdateLogger(update_logger);
 }
 
 File* SkipDBM::GetInternalFile() const {
