@@ -101,7 +101,7 @@ class Logger {
     std::string msg;
     va_list ap;
     va_start(ap, format);
-    tkrzw::VSPrintF(&msg, format, ap);
+    VSPrintF(&msg, format, ap);
     va_end(ap);
     Log(level, msg);
   }

@@ -60,7 +60,7 @@ class SkipDBM final : public DBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::SkipDBM;
+    friend class SkipDBM;
    public:
     /**
      * Destructor.

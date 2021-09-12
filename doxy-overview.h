@@ -90,6 +90,7 @@ namespace tkrzw {}
  * @file tkrzw_file_mmap.h File implementations by memory mapping.
  * @file tkrzw_file_pos.h File implementations by positional access.
  * @file tkrzw_file_poly.h Polymorphic file adapter.
+ * @file tkrzw_message_queue.h Message queue on the file stream.
  * @file tkrzw_dbm.h Database manager interface.
  * @file tkrzw_dbm_ulog.h DBM update logger implementations.
  * @file tkrzw_dbm_common_impl.h Common implementation components for database managers.

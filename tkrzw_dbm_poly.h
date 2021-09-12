@@ -90,7 +90,7 @@ class PolyDBM final : public ParamDBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::PolyDBM;
+    friend class PolyDBM;
    public:
     /**
      * Destructor.

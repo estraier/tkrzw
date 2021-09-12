@@ -45,7 +45,7 @@ class FileIndex final {
    * Iterator for each record.
    */
   class Iterator {
-    friend class tkrzw::FileIndex;
+    friend class FileIndex;
    public:
     /**
      * Destructor.
@@ -248,7 +248,7 @@ class MemIndex final {
    * Iterator for each record.
    */
   class Iterator {
-    friend class tkrzw::MemIndex;
+    friend class MemIndex;
    public:
     /**
      * Destructor.
@@ -395,7 +395,7 @@ class StdIndex final {
    * Iterator for each record.
    */
   class Iterator {
-    friend class tkrzw::StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>;
+    friend class StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>;
    public:
     /**
      * Destructor.
@@ -546,7 +546,7 @@ class StdIndexStr final {
    * Iterator for each record.
    */
   class Iterator {
-    friend class tkrzw::StdIndexStr;
+    friend class StdIndexStr;
    public:
     /**
      * Destructor.

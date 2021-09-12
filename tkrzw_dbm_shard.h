@@ -48,7 +48,7 @@ class ShardDBM final : public ParamDBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::ShardDBM;
+    friend class ShardDBM;
    public:
     /**
      * Destructor.

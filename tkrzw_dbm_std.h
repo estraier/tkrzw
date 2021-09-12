@@ -48,7 +48,7 @@ class StdHashDBM final : public DBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::StdHashDBM;
+    friend class StdHashDBM;
    public:
     /**
      * Destructor.
@@ -354,7 +354,7 @@ class StdTreeDBM final : public DBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::StdTreeDBM;
+    friend class StdTreeDBM;
    public:
     /**
      * Destructor.

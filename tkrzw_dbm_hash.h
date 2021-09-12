@@ -59,7 +59,7 @@ class HashDBM final : public DBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::HashDBM;
+    friend class HashDBM;
    public:
     /**
      * Destructor.

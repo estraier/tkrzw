@@ -48,7 +48,7 @@ class CacheDBM final : public DBM {
    * cannot be shared by multiple threads.
    */
   class Iterator final : public DBM::Iterator {
-    friend class tkrzw::CacheDBM;
+    friend class CacheDBM;
    public:
     /**
      * Destructor.

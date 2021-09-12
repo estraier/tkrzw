@@ -37,8 +37,8 @@ int64_t StrToInt(std::string_view str, int64_t defval = 0);
  * @param str The decimal string, which can be trailed by a binary metric prefix.  "K", "M", "G",
  * "T", "P", and "E" are supported.  They are case-insensitive.
  * @param defval The default value to be returned on failure.
- * @return The converted integer.  If the integer overflows the domain, tkrzw::INT64MAX or
- * tkrzw::INT64_MIN is returned according to the sign.
+ * @return The converted integer.  If the integer overflows the domain, INT64MAX or INT64MIN is
+ * returned according to the sign.
  */
 int64_t StrToIntMetric(std::string_view str, int64_t defval = 0);
 
