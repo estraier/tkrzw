@@ -373,7 +373,7 @@ double ParseDateStr(std::string_view str) {
         }
       }
     }
-    return std::mktime(&uts) + frac + GetLocalTimeDifference() - td;
+    return MakeUniversalTime(uts) + frac - td;
   }
   if (len >= 4 && rp[3] == ',') {
     rp += 4;
@@ -489,9 +489,54 @@ double ParseDateStr(std::string_view str) {
         }
       }
     }
-    return std::mktime(&uts) + GetLocalTimeDifference() - td;
+    return MakeUniversalTime(uts) - td;
   }
   return std::nan("");
+}
+
+double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
+  if (td == INT32MIN) {
+    td = GetLocalTimeDifference();
+  }
+  char buf[16];
+  char* wp = buf;
+  for (int32_t c : str) {
+    if (static_cast<size_t>(wp - buf) >= sizeof(buf)) {
+      break;
+    }
+    if (c >= '0' && c <= '9') {
+      *wp++ = c;
+    }
+  }
+  const size_t len = wp - buf;
+  if (len < 4) {
+    return nan("");
+  }
+  struct std::tm uts;
+  std::memset(&uts, 0, sizeof(uts));
+  uts.tm_year = StrToInt(std::string_view(buf, 4)) - 1900;
+  uts.tm_mon = 0;
+  uts.tm_mday = 1;
+  uts.tm_hour = 0;
+  uts.tm_min = 0;
+  uts.tm_sec = 0;
+  uts.tm_isdst = 0;
+  if (len >= 6) {
+    uts.tm_mon = StrToInt(std::string_view(buf + 4, 2)) - 1;
+  }
+  if (len >= 8) {
+    uts.tm_mday = StrToInt(std::string_view(buf + 6, 2));
+  }
+  if (len >= 10) {
+    uts.tm_hour = StrToInt(std::string_view(buf + 8, 2));
+  }
+  if (len >= 12) {
+    uts.tm_min = StrToInt(std::string_view(buf + 10, 2));
+  }
+  if (len >= 14) {
+    uts.tm_sec = StrToInt(std::string_view(buf + 12, 2));
+  }
+  return MakeUniversalTime(uts) - td;
 }
 
 }  // namespace tkrzw

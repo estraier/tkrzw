@@ -194,4 +194,16 @@ TEST(ThreadUtilTest, ParseDateStr) {
   EXPECT_TRUE(std::isnan(tkrzw::ParseDateStr("Thu, 01 xyz 1970")));
 }
 
+TEST(ThreadUtilTest, ParseDateStrYYYYMMDD) {
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStrYYYYMMDD("")));
+  EXPECT_TRUE(std::isnan(tkrzw::ParseDateStrYYYYMMDD("197")));
+  EXPECT_EQ(0, tkrzw::ParseDateStrYYYYMMDD("  1970-01-01  ", 0));
+  EXPECT_EQ(0, tkrzw::ParseDateStrYYYYMMDD("19700101", 0));
+  EXPECT_EQ(3, tkrzw::ParseDateStrYYYYMMDD("1970-01-01 00:00:03", 0));
+  EXPECT_EQ(180, tkrzw::ParseDateStrYYYYMMDD("1970-01-01 00:03:00", 0));
+  EXPECT_EQ(10800, tkrzw::ParseDateStrYYYYMMDD("1970-01-01 03:00:00", 0));
+  EXPECT_EQ(0, tkrzw::ParseDateStrYYYYMMDD("1970-01-01 03:00:00", 10800));
+  EXPECT_EQ(256037435, tkrzw::ParseDateStrYYYYMMDD("19780211183035", 32400));
+}
+
 // END OF FILE

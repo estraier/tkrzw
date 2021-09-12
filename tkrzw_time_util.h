@@ -135,6 +135,16 @@ size_t FormatDateRFC1123(char* result, int64_t wtime = INT64MIN, int32_t td = IN
  */
 double ParseDateStr(std::string_view str);
 
+/**
+ * Parses a date string in "YYYYMMDD" to get the time value since the UNIX epoch.
+ * @param str the date string in "YYYYMMDD" or "YYMMDDhhmmss".  As characters except for numbers
+ * are ignored, "YYYY-MM-DD" etc are also supported.
+ * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
+ * specified.
+ * @return the time value of the date or NaN if the format is invalid.
+ */
+double ParseDateStrYYYYMMDD(std::string_view str, int32_t td = INT32MIN);
+
 }  // namespace tkrzw
 
 #endif  // _TKRZW_TIME_UTIL_H
