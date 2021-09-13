@@ -30,61 +30,54 @@ int main(int argc, char** argv) {
 }
 
 TEST(MessageQueueTest, Basic) {
-  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
-  const std::string prefix = tmp_dir.MakeUniquePath("casket-", "-ulog");
+  //tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  //const std::string prefix = tmp_dir.MakeUniquePath("casket-", "-mq");
 
-  //const std::string prefix = "casket-mq";
+  const std::string prefix = "casket-mq";
 
   tkrzw::MessageQueue mq;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, 10));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(0, "one"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(1, "two"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, std::string(50, 'x')));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(5, std::string(50, 'y')));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(12, "hop"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, tkrzw::MessageQueue::OPEN_TRUNCATE));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  int64_t file_id = 0;
+  int64_t timestamp = 0;
+  int64_t file_size = 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      "casket-mq.0000000000", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(0, file_id);
+  EXPECT_EQ(0, timestamp);
+  EXPECT_EQ(32, file_size);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "one"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "two"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(20, std::string(50, 'x')));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(30, "four"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 
-  std::vector<std::string> paths;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
-  EXPECT_EQ(3, paths.size());
-  bool has_first = false;
-  bool has_second = false;
-  bool has_third = false;
-  for (const auto& path : paths) {
-    if (tkrzw::StrEndsWith(path, "010")) {
-      has_first = true;
-    }
-    if (tkrzw::StrEndsWith(path, "010-00001")) {
-      has_second = true;
-    }
-    if (tkrzw::StrEndsWith(path, "012")) {
-      has_third = true;
-    }
-  }
-  EXPECT_TRUE(has_first);
-  EXPECT_TRUE(has_second);
-  EXPECT_TRUE(has_third);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      prefix + ".0000000000", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(0, file_id);
+  EXPECT_EQ(10, timestamp);
+  EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000000"), file_size);
 
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, 13));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(13, "step"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(14, std::string(50, 'z')));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(15, "jump"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      prefix + ".0000000001", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(1, file_id);
+  EXPECT_EQ(20, timestamp);
+  EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000001"), file_size);
 
 
-  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
-  EXPECT_EQ(4, paths.size());
-  bool has_fourth = false;
-  for (const auto& path : paths) {
-    if (tkrzw::StrEndsWith(path, "015")) {
-      has_fourth = true;
-    }
-  }
-  EXPECT_TRUE(has_fourth);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      prefix + ".0000000002", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(2, file_id);
+  EXPECT_EQ(30, timestamp);
+  EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000002"), file_size);
 
 
 
-  std::cout << "HELLO" << std::endl;
+
+
+
+
 }
 
 // END OF FILE
