@@ -5,6 +5,7 @@
 
 	- Add features.for update logging.
 	- File::IsOpen is added.
+	- Add the message queue class.
 
 2021-09-08  Mikio Hirabayashi  <hirarin@gmail.com>
 
