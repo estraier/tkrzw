@@ -145,6 +145,13 @@ Status PolyFile::DisablePathOperations() {
   return file_->DisablePathOperations();
 }
 
+bool PolyFile::IsOpen() const {
+  if (file_ == nullptr) {
+    return false;
+  }
+  return file_->IsOpen();
+}
+
 bool PolyFile::IsMemoryMapping() const {
   if (file_ == nullptr) {
     return false;

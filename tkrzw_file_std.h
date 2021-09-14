@@ -212,6 +212,12 @@ class StdFile final : public File {
   Status WriteInCriticalSection(int64_t off, const void* buf, size_t size);
 
   /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  bool IsOpen() const override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */

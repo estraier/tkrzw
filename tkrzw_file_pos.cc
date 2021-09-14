@@ -81,6 +81,7 @@ class PositionalParallelFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
+  bool IsOpen();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -511,6 +512,10 @@ Status PositionalParallelFileImpl::DisablePathOperations() {
   return Status(Status::SUCCESS);
 }
 
+bool PositionalParallelFileImpl::IsOpen() {
+  return fd_ >= 0;
+}
+
 int64_t PositionalParallelFileImpl::GetBlockSize() {
   return block_size_;
 }
@@ -731,6 +736,10 @@ Status PositionalParallelFile::DisablePathOperations() {
   return impl_->DisablePathOperations();
 }
 
+bool PositionalParallelFile::IsOpen() const {
+  return impl_->IsOpen();
+}
+
 int64_t PositionalParallelFile::GetBlockSize() const {
   return impl_->GetBlockSize();
 }
@@ -759,6 +768,7 @@ class PositionalAtomicFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
+  bool IsOpen();
   int64_t GetBlockSize();
   bool IsDirectIO();
 
@@ -1190,6 +1200,11 @@ Status PositionalAtomicFileImpl::DisablePathOperations() {
   return Status(Status::SUCCESS);
 }
 
+bool PositionalAtomicFileImpl::IsOpen() {
+  std::shared_lock<std::shared_mutex> lock(mutex_);
+  return fd_ >= 0;
+}
+
 int64_t PositionalAtomicFileImpl::GetBlockSize() {
   std::shared_lock<std::shared_mutex> lock(mutex_);
   return block_size_;
@@ -1405,6 +1420,10 @@ Status PositionalAtomicFile::Rename(const std::string& new_path) {
 
 Status PositionalAtomicFile::DisablePathOperations() {
   return impl_->DisablePathOperations();
+}
+
+bool PositionalAtomicFile::IsOpen() const {
+  return impl_->IsOpen();
 }
 
 int64_t PositionalAtomicFile::GetBlockSize() const {

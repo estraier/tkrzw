@@ -53,19 +53,17 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(30, "four"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 
+
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
       prefix + ".0000000000", &file_id, &timestamp, &file_size));
   EXPECT_EQ(0, file_id);
   EXPECT_EQ(10, timestamp);
   EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000000"), file_size);
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
       prefix + ".0000000001", &file_id, &timestamp, &file_size));
   EXPECT_EQ(1, file_id);
   EXPECT_EQ(20, timestamp);
   EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000001"), file_size);
-
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
       prefix + ".0000000002", &file_id, &timestamp, &file_size));
   EXPECT_EQ(2, file_id);
@@ -73,11 +71,14 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000002"), file_size);
 
 
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 0, tkrzw::MessageQueue::OPEN_READ_ONLY));
+  auto reader = mq.MakeReader(0);
 
 
 
 
 
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 
 // END OF FILE

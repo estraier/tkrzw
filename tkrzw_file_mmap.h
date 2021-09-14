@@ -288,6 +288,12 @@ class MemoryMapParallelFile final : public MemoryMapFile {
   Status DisablePathOperations() override;
 
   /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  bool IsOpen() const override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always true.  This is fast, but the file size cannot exceed the virtual memory.
    */
@@ -561,6 +567,12 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * @details This should be called if the file is overwritten by external operations.
    */
   Status DisablePathOperations() override;
+
+  /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  bool IsOpen() const override;
 
   /**
    * Checks whether operations are done by memory mapping.

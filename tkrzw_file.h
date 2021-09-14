@@ -251,6 +251,12 @@ class File {
   virtual Status DisablePathOperations() = 0;
 
   /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  virtual bool IsOpen() const = 0;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return True if operations are done by memory mapping, or false if not.
    */

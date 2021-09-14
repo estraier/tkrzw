@@ -45,6 +45,7 @@ class StdFileImpl final {
   int64_t Unlock();
   Status ReadInCriticalSection(int64_t off, void* buf, size_t size);
   Status WriteInCriticalSection(int64_t off, const void* buf, size_t size);
+  bool IsOpen();
 
  private:
   Status OpenImpl(const std::string& path, bool writable, int32_t options);
@@ -273,6 +274,11 @@ Status StdFileImpl::WriteInCriticalSection(int64_t off, const void* buf, size_t 
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   return WriteImpl(off, buf, size);
+}
+
+bool StdFileImpl::IsOpen() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return file_ != nullptr;
 }
 
 Status StdFileImpl::OpenImpl(const std::string& path, bool writable, int32_t options) {
@@ -526,6 +532,10 @@ Status StdFile::ReadInCriticalSection(int64_t off, void* buf, size_t size) {
 Status StdFile::WriteInCriticalSection(int64_t off, const void* buf, size_t size) {
   assert(off >= 0 && buf != nullptr && size <= MAX_MEMORY_SIZE);
   return impl_->WriteInCriticalSection(off, buf, size);
+}
+
+bool StdFile::IsOpen() const {
+  return impl_->IsOpen();
 }
 
 }  // namespace tkrzw

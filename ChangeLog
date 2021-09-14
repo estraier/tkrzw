@@ -4,6 +4,7 @@
 	- Library version: 1.53.0
 
 	- Add features.for update logging.
+	- File::IsOpen is added.
 
 2021-09-08  Mikio Hirabayashi  <hirarin@gmail.com>
 

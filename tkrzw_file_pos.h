@@ -254,6 +254,12 @@ class PositionalParallelFile final : public PositionalFile {
   Status DisablePathOperations() override;
 
   /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  bool IsOpen() const override;
+
+  /**
    * Checks whether operations are done by memory mapping.
    * @return Always false.  This is slow, but the file size can exceed the virtual memory.
    */
@@ -465,6 +471,12 @@ class PositionalAtomicFile final : public PositionalFile {
    * @details This should be called if the file is overwritten by external operations.
    */
   Status DisablePathOperations() override;
+
+  /**
+   * Checks whether the file is open.
+   * @return True if the file is open, or false if not.
+   */
+  bool IsOpen() const override;
 
   /**
    * Checks whether operations are done by memory mapping.

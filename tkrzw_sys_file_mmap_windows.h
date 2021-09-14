@@ -50,6 +50,7 @@ class MemoryMapParallelFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
+  bool IsOpen();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -348,6 +349,10 @@ Status MemoryMapParallelFileImpl::DisablePathOperations() {
   return Status(Status::SUCCESS);
 }
 
+bool MemoryMapParallelFileImpl::IsOpen() {
+  return file_handle_ != nullptr;
+}
+
 Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
@@ -508,6 +513,10 @@ Status MemoryMapParallelFile::DisablePathOperations() {
   return impl_->DisablePathOperations();
 }
 
+bool MemoryMapParallelFile::IsOpen() const {
+  return impl_->IsOpen();
+}
+
 MemoryMapParallelFile::Zone::Zone(
     MemoryMapParallelFileImpl* file, bool writable, int64_t off, size_t size,
     Status* status)
@@ -602,6 +611,7 @@ class MemoryMapAtomicFileImpl final {
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
+  bool IsOpen();
 
  private:
   Status AllocateSpace(int64_t min_size);
@@ -911,6 +921,11 @@ Status MemoryMapAtomicFileImpl::DisablePathOperations() {
   return Status(Status::SUCCESS);
 }
 
+bool MemoryMapAtomicFileImpl::IsOpen() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return file_handle_ != nullptr;
+}
+
 Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_) {
     return Status(Status::SUCCESS);
@@ -1065,6 +1080,10 @@ Status MemoryMapAtomicFile::Rename(const std::string& new_path) {
 
 Status MemoryMapAtomicFile::DisablePathOperations() {
   return impl_->DisablePathOperations();
+}
+
+bool MemoryMapAtomicFile::IsOpen() const {
+  return impl_->IsOpen();
 }
 
 MemoryMapAtomicFile::Zone::Zone(
