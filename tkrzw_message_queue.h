@@ -47,7 +47,8 @@ class MessageQueue final {
 
     /**
      * Reads a message from the queue.
-     * @param timeout The timeout to wait for in seconds.
+     * @param timeout The timeout to wait for in seconds.  Zero means no wait.  Negative means
+     * unlimited.
      * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
      * message.
      * @param message The pointer to a string object to store the msssage data.
@@ -147,12 +148,21 @@ class MessageQueue final {
    * Reads the metadata of a message file path.
    * @param path The path of the message file.
    * @param file_id The pointer to a variable to store the file ID.
-   * @param timestamp The pointer to a variable to store the timestamp in milliseconds.
+   * @param timestamp The pointer to a variable to store the timestamp in milliseconds.  The
+   * timestamp represents the newest record in the file.
    * @param file_size The pointer to a variable to store the file size.
    * @return The result status.
    */
   static Status ReadFileMetadata(
       const std::string& path, int64_t *file_id, int64_t* timestamp, int64_t* file_size);
+
+  /**
+   * Remove files whose newest message is older than a threshold.
+   * @param prefix The prefix for the file names.
+   * @param threshold The threshold timestamp in milliseconds.
+   * @return The result status.  Even if no files are matched, it returns success.
+   */
+  static Status RemoveOldFiles(const std::string& prefix, int64_t threshold);
 
  private:
   /** Pointer to the actual implementation. */

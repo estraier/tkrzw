@@ -805,6 +805,52 @@ class TaskQueue final {
   std::condition_variable cond_;
 };
 
+/**
+ * Wait counter for monitoring other threads.
+ */
+class WaitCounter {
+ public:
+  /**
+   * Constructor.
+   * @param initial The initial value of the counter.
+   */
+  explicit WaitCounter(int32_t initial = 0);
+
+  /**
+   * Adds a value to the counter.
+   * @param increment The incremental value.  Use a nagative for decrement.
+   */
+  void Add(int32_t increment = 1);
+
+  /**
+   * Gets the current value of the counter.
+   * @return The current value of the counter.
+   */
+  int32_t Get() const;
+
+  /**
+   * Decrements a value from the counter and notify if the result value is zero or less.
+   * @param decrement The decremental value.
+   */
+  void Done(int32_t decrement = 1);
+
+  /**
+   * Waits for the counter value to be zero or less.
+   * @param timeout The timeout in seconds to wait for.   Zero means no wait.  Negative means
+   * unlimited.
+   * @return True if successful or false on timeout.
+   */
+  bool Wait(double timeout = -1);
+
+ private:
+  /** The counter of events. */
+  std::atomic_int32_t count_;
+  /** The mutex to guard the counter. */
+  std::mutex mutex_;
+  /** The conditional variable to notify the change. */
+  std::condition_variable cond_;
+};
+
 inline void SleepThread(double sec) {
   std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(sec * 1000000)));
 }
@@ -1257,7 +1303,6 @@ inline void TaskQueue::Stop(double timeout) {
   num_tasks_.store(0);
 }
 
-
 inline void TaskQueue::Add(std::unique_ptr<Task> task) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -1273,6 +1318,40 @@ inline void TaskQueue::Add(TaskLambdaType task) {
 
 inline int32_t TaskQueue::GetSize() {
   return num_tasks_.load();
+}
+
+inline WaitCounter::WaitCounter(int32_t initial) : count_(initial) {}
+
+inline void WaitCounter::Add(int32_t increment) {
+  count_.fetch_add(increment);
+}
+
+inline int32_t WaitCounter::Get() const {
+  return count_;
+}
+
+inline void WaitCounter::Done(int32_t decrement) {
+  if (count_.fetch_sub(decrement) <= decrement) {
+    cond_.notify_all();
+  }
+}
+
+inline bool WaitCounter::Wait(double timeout) {
+  if (timeout == 0) {
+    return count_.load() <= 0;
+  }
+  if (timeout < 0) {
+    timeout = UINT32MAX;
+  }
+  const auto deadline = std::chrono::steady_clock::now() +
+      std::chrono::microseconds(static_cast<int64_t>(timeout * 1000000));
+  std::unique_lock<std::mutex> lock(mutex_);
+  while (count_.load() > 0) {
+    if (cond_.wait_until(lock, deadline) == std::cv_status::timeout) {
+      return count_.load() <= 0;
+    }
+  }
+  return true;
 }
 
 }  // namespace tkrzw

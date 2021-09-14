@@ -201,13 +201,13 @@ TkrzwStatus tkrzw_get_last_status();
 
 /**
  * Gets the status code of the last system operation.
- * @return the status code of the last system operation.
+ * @return The status code of the last system operation.
  */
 int32_t tkrzw_get_last_status_code();
 
 /**
  * Gets the status message of the last system operation.
- * @return the status message of the last system operation.
+ * @return The status message of the last system operation.
  * @details The region of the message string is available until the this function or
  * tkrzw_get_last_status function is called next time.
  */

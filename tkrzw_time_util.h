@@ -48,13 +48,13 @@ void GetUniversalCalendar(int64_t wtime, struct std::tm* cal);
 /**
  * Makes the UNIX time from a universal calendar.
  * @param cal the time struct of the universal calendar.
- * @return the UNIX time of the universal calendar
+ * @return The UNIX time of the universal calendar
  */
 int64_t MakeUniversalTime(struct std::tm& cal);
 
 /**
  * Gets the time difference of the local time zone.
- * @return the time difference of the local time zone in seconds, which is positive in the east
+ * @return The time difference of the local time zone in seconds, which is positive in the east
  * of the prime meridian and negative in the west.
  */
 int32_t GetLocalTimeDifference();
@@ -64,7 +64,7 @@ int32_t GetLocalTimeDifference();
  * @param year the year of the date.
  * @param mon the month of the date.
  * @param day the day of the date.
- * @return the day of week of the date.  0 means Sunday and 6 means Saturday.
+ * @return The day of week of the date.  0 means Sunday and 6 means Saturday.
  */
 int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day);
 
@@ -131,7 +131,7 @@ size_t FormatDateRFC1123(char* result, int64_t wtime = INT64MIN, int32_t td = IN
  * Parses a date string to get the time value since the UNIX epoch.
  * @param str the date string in decimal, hexadecimal, W3CDTF, or RFC 822 (1123).  Decimal can
  * be trailed by "s" for in seconds, "m" for in minutes, "h" for in hours, and "d" for in days.
- * @return the time value of the date or NaN if the format is invalid.
+ * @return The time value of the date or NaN if the format is invalid.
  */
 double ParseDateStr(std::string_view str);
 
@@ -141,7 +141,7 @@ double ParseDateStr(std::string_view str);
  * are ignored, "YYYY-MM-DD" etc are also supported.
  * @param td the time difference of the timze zone.  If it is INT32MIN, the local time zone is
  * specified.
- * @return the time value of the date or NaN if the format is invalid.
+ * @return The time value of the date or NaN if the format is invalid.
  */
 double ParseDateStrYYYYMMDD(std::string_view str, int32_t td = INT32MIN);
 

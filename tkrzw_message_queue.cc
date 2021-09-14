@@ -36,7 +36,6 @@ static constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 31;
 static constexpr size_t WRITE_BUFFER_SIZE = 10240;
 static constexpr uint32_t RECORD_MAGIC_DATA = 0xFF;
 
-
 class MessageQueueImpl final {
   friend class MessageQueueReaderImpl;
   typedef std::list<MessageQueueReaderImpl*> ReaderList;
@@ -55,15 +54,17 @@ class MessageQueueImpl final {
  private:
   std::string MakeFilePath(int64_t file_id);
   Status Synchronize();
+  void ReleaseFiles();
   Status WriteImpl(int64_t timestamp, std::string_view message);
 
   std::string prefix_;
   int64_t max_file_size_;
   bool sync_hard_;
   bool read_only_;
-  MemoryMapParallelFile last_file_;
+  std::map<int64_t, std::shared_ptr<File>> files_;
+  std::shared_ptr<File> last_file_;
+  int64_t last_file_id_;
   int32_t cyclic_magic_;
-  int64_t last_id_;
   int64_t timestamp_;
   ReaderList readers_;
   std::mutex mutex_;
@@ -78,23 +79,23 @@ class MessageQueueReaderImpl final {
   Status Read(double timeout, int64_t* timestamp, std::string* message);
 
  private:
-  Status OpenNextFile();
-  Status ReadNextMessage(int64_t* timestamp, std::string* message);
+  void ReleaseFile(int64_t file_id_);
+  Status ReadNextMessage(File* file, int64_t* timestamp, std::string* message);
 
   MessageQueueImpl* queue_;
   int64_t min_timestamp_;
-  std::unique_ptr<File> file_;
+  std::shared_ptr<File> file_;
   int64_t file_id_;
   int64_t file_offset_;
 };
 
 MessageQueueImpl::MessageQueueImpl()
     : prefix_(), max_file_size_(0), sync_hard_(false), read_only_(false),
-      last_file_(), cyclic_magic_(0), last_id_(0), timestamp_(0), readers_(),
-      mutex_(), cond_() {}
+      files_(), last_file_(nullptr), last_file_id_(0), cyclic_magic_(0), timestamp_(0),
+      readers_(), mutex_(), cond_() {}
 
 MessageQueueImpl::~MessageQueueImpl() {
-  if (last_file_.IsOpen()) {
+  if (!files_.empty()) {
     Close();
   }
   for (auto* reader : readers_) {
@@ -105,7 +106,7 @@ MessageQueueImpl::~MessageQueueImpl() {
 Status MessageQueueImpl::Open(
     const std::string& prefix, int64_t max_file_size, int32_t options) {
   std::lock_guard lock(mutex_);
-  if (last_file_.IsOpen()) {
+  if (!files_.empty()) {
     return Status(Status::PRECONDITION_ERROR, "opened message queue");
   }
   if ((options & MessageQueue::OPEN_TRUNCATE) && !(options & MessageQueue::OPEN_READ_ONLY)) {
@@ -126,52 +127,67 @@ Status MessageQueueImpl::Open(
   sync_hard_ = options & MessageQueue::OPEN_SYNC_HARD;
   read_only_ = options & MessageQueue::OPEN_READ_ONLY;
   if (file_paths.empty()) {
-    last_id_ = 0;
-  } else {
-    last_id_ = MessageQueue::GetFileID(file_paths.back());
-  }
-  const std::string last_path = MakeFilePath(last_id_);
-  status = last_file_.Open(last_path, !read_only_);
-  if (status != Status::SUCCESS) {
-    return status;
-  }
-  if (file_paths.empty()) {
+    if (read_only_) {
+      return Status(Status::NOT_FOUND_ERROR, "no matching file");
+    }
+    last_file_id_ = 0;
     cyclic_magic_ = 0;
     timestamp_ = 0;
+  } else {
+    last_file_id_ = MessageQueue::GetFileID(file_paths.back());
+  }
+  auto& last_file = files_[last_file_id_];
+  const std::string last_path = MakeFilePath(last_file_id_);
+  last_file = std::make_unique<MemoryMapParallelFile>();
+  status = last_file->Open(last_path, !read_only_);
+  if (status != Status::SUCCESS) {
+    files_.clear();
+    return status;
+  }
+  if (last_file->GetSizeSimple() == 0) {
     status = Synchronize();
     if (status != Status::SUCCESS) {
+      files_.clear();
       return status;
     }
   }
-  int64_t check_last_id = 0;
+  int64_t check_file_id = 0;
   int64_t check_file_size = 0;
-  status = LoadMetadata(&last_file_, &cyclic_magic_, &check_last_id, &timestamp_,
+  status = LoadMetadata(last_file.get(), &cyclic_magic_, &check_file_id, &timestamp_,
                         &check_file_size);
-  if (check_last_id != last_id_) {
+  if (check_file_id != last_file_id_) {
     status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file ID");
   }
   if (cyclic_magic_ < 0) {
     status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent cyclic magic data");
   }
-  if (check_file_size != last_file_.GetSizeSimple()) {
+  if (check_file_size != last_file->GetSizeSimple()) {
     status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file size");
   }
   if (status != Status::SUCCESS) {
     return status;
   }
+  last_file_ = last_file;
   return Status(Status::SUCCESS);
 }
 
 Status MessageQueueImpl::Close() {
   std::lock_guard lock(mutex_);
-  if (!last_file_.IsOpen()) {
+  if (files_.empty()) {
     return Status(Status::PRECONDITION_ERROR, "not opened message queue");
   }
   Status status(Status::SUCCESS);
   if (!read_only_) {
     status |= Synchronize();
   }
-  status |= last_file_.Close();
+  for (auto& file : files_) {
+    if (file.second->IsOpen()) {
+      status |= file.second->Close();
+    }
+  }
+  files_.clear();
+  last_file_ = nullptr;
+  cond_.notify_all();
   return status;
 }
 
@@ -183,7 +199,7 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
   }
   {
     std::lock_guard lock(mutex_);
-    if (!last_file_.IsOpen()) {
+    if (files_.empty()) {
       return Status(Status::PRECONDITION_ERROR, "not opened message queue");
     }
     const Status status = WriteImpl(timestamp, message);
@@ -238,25 +254,49 @@ std::string MessageQueueImpl::MakeFilePath(int64_t file_id) {
 }
 
 Status MessageQueueImpl::Synchronize() {
+  if (files_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "no file");
+  }
+  auto& last_file = files_.rbegin()->second;
   cyclic_magic_ = cyclic_magic_ % 255 + 1;
-  return SaveMetadata(&last_file_, cyclic_magic_, last_id_, timestamp_);
+  Status status = SaveMetadata(last_file.get(), cyclic_magic_, last_file_id_, timestamp_);
+  status |= last_file->Synchronize(sync_hard_);
+  return status;
+}
+
+void MessageQueueImpl::ReleaseFiles() {
+  for (auto it = files_.begin(); it != files_.end();) {
+    if (it->second.use_count() <= 1) {
+      it = files_.erase(it);
+    } else {
+      it++;
+    }
+  }
 }
 
 Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) {
   Status status(Status::SUCCESS);
-  if (last_file_.GetSizeSimple() >= max_file_size_) {
+  auto* last_file = files_.rbegin()->second.get();
+  if (last_file->GetSizeSimple() >= max_file_size_) {
     status = Synchronize();
-    status |= last_file_.Close();
+    if (files_.rbegin()->second.use_count() <= 1) {
+      status |= last_file->Close();
+    }
     if (status != Status::SUCCESS) {
       return status;
     }
-    last_id_++;
-    const std::string new_file_path = MakeFilePath(last_id_);
-    status = last_file_.Open(new_file_path, true, MessageQueue::OPEN_TRUNCATE);
+    ReleaseFiles();
+    last_file_id_++;
+    auto& last_file_sp = files_[last_file_id_];
+    last_file_sp = std::make_unique<MemoryMapParallelFile>();
+    last_file = last_file_sp.get();
+    const std::string new_file_path = MakeFilePath(last_file_id_);
+    status = last_file->Open(new_file_path, true, MessageQueue::OPEN_TRUNCATE);
     status |= Synchronize();
     if (status != Status::SUCCESS) {
       return status;
     }
+    last_file_ = last_file_sp;
   }
   timestamp_ = std::max(timestamp, timestamp_);
   const size_t est_size = 12 + message.size();
@@ -272,7 +312,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
   wp += message.size();
   const uint32_t checksum = HashChecksum8(write_buf, wp - write_buf) + 1;
   *(wp++) = checksum;
-  status = last_file_.Append(write_buf, est_size);
+  status = last_file->Append(write_buf, est_size);
   if (write_buf != stack) {
     xfree(write_buf);
   }
@@ -290,94 +330,139 @@ MessageQueueReaderImpl::~MessageQueueReaderImpl() {
   if (queue_ != nullptr) {
     std::lock_guard<std::mutex> lock(queue_->mutex_);
     queue_->readers_.remove(this);
+    queue_->ReleaseFiles();
   }
 }
 
 Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::string* message) {
-  std::lock_guard<std::mutex> lock(queue_->mutex_);
-
-
-
-  return Status(Status::SUCCESS);
-}
-
-/*
-Status MessageQueueReaderImpl::SetPosition() {
-  if (file_id_ < 0) {
-    std::vector<std::string> file_paths;
-    if (MessageQueue::FindFiles(quque_->prefix, &file_paths) == Status::SUCCESS) {
-      for (const auto& path : file_paths) {
-        RemoveFile(path);
+  while (true) {
+    std::unique_lock<std::mutex> lock(queue_->mutex_);
+    if (queue_->files_.empty()) {
+      file_ = nullptr;
+      if (file_id_ >= 0) {
+        ReleaseFile(file_id_);
       }
+      return Status(Status::CANCELED_ERROR);
     }
-    for (const auto& path : file_paths) {
-      int64_t file_id = 0;
-      int64_t timestamp = 0;
-      int64_t file_size = 0;
-      const Status status =
-          MessageQueue::ReadFileMetadata(path, &file_id, &timestamp, &file_size);
+    if (file_id_ < 0) {
+      std::vector<std::string> file_paths;
+      Status status = MessageQueue::FindFiles(queue_->prefix_, &file_paths);
       if (status != Status::SUCCESS) {
         return status;
       }
-      if (timestamp >= min_timestamp_) {
-        file_id_ = file_id;
+      for (const auto& path : file_paths) {
+        int64_t file_id = 0;
+        int64_t timestamp = 0;
+        int64_t file_size = 0;
+        status = MessageQueue::ReadFileMetadata(path, &file_id, &timestamp, &file_size);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+        if (timestamp >= min_timestamp_) {
+          file_id_ = file_id;
+          break;
+        }
+      }
+      if (file_id_ < 0) {
+        file_id_ = queue_->last_file_id_;
       }
     }
-    if (file_id_ < 0) {
-      file_id_ = queue_->last_id_;
+    if (file_ == nullptr) {
+      auto& file_sp = queue_->files_[file_id_];
+      if (file_sp == nullptr) {
+        file_sp = std::make_unique<MemoryMapParallelFile>();
+        const std::string file_path = queue_->MakeFilePath(file_id_);
+        Status status = file_sp->Open(file_path, false);
+        if (status != Status::SUCCESS) {
+          queue_->files_.erase(file_id_);
+          return status;
+        }
+      }
+      file_ = file_sp;
+      file_offset_ = METADATA_SIZE;
+    }
+    if (file_offset_ >= file_->GetSizeSimple()) {
+      if (file_id_ == queue_->last_file_id_) {
+        if (queue_->read_only_) {
+          file_ = nullptr;
+          ReleaseFile(file_id_);
+          return Status(Status::NOT_FOUND_ERROR);
+        }
+        if (timeout < 0) {
+          queue_->cond_.wait(lock);
+          continue;
+        }
+        if (timeout == 0) {
+          std::this_thread::yield();
+          if (file_offset_ >= file_->GetSizeSimple()) {
+            return Status(Status::INFEASIBLE_ERROR);
+          }
+          continue;
+        }
+        auto wait_rv = queue_->cond_.wait_for(
+            lock, std::chrono::microseconds(static_cast<int64_t>(timeout * 1000000)));
+        if (wait_rv == std::cv_status::timeout) {
+          return Status(Status::INFEASIBLE_ERROR);
+        }
+        continue;
+      } else {
+        file_ = nullptr;
+        ReleaseFile(file_id_);
+        file_id_++;
+        file_offset_ = 0;
+        continue;
+      }
+    }
+    const Status status = ReadNextMessage(file_.get(), timestamp, message);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (*timestamp >= min_timestamp_) {
+      break;
     }
   }
-  if (file_offset_ <= 0) {
-    if (
+  return Status(Status::SUCCESS);
+}
 
+void MessageQueueReaderImpl::ReleaseFile(int64_t file_id_) {
+  auto it = queue_->files_.find(file_id_);
+  if (it != queue_->files_.end() && it->second.use_count() <= 1) {
+    queue_->files_.erase(it);
+  }
+}
 
-  const std::string path = MessageQueueImpl::MakeFilePath(file_id_);
-  file_ = std::make_unique<PositionalParallelFile>();
-  const Status status = file_->Open(path, false);
+Status MessageQueueReaderImpl::ReadNextMessage(
+    File* file, int64_t* timestamp, std::string* message) {
+  char header[11];
+  Status status = file->Read(file_offset_, header, sizeof(header));
   if (status != Status::SUCCESS) {
-    file_.reset(nullptr);
     return status;
   }
-
-
-      if (file_id
-
-
-Status MessageQueue::ReadFileMetadata(
-    const std::string& path, int64_t *file_id, int64_t* timestamp, int64_t* file_size) {
-  assert(file_id != nullptr && timestamp != nullptr && file_size != nullptr);
-  PositionalParallelFile file;
-
-
-
-
-      EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::
-          "casket-mq.0000000000", &file_id, &timestamp, &file_size));
-
-
-
-    }
-
-
-Status MessageQueue::FindFiles(const std::string& prefix, std::vector<std::string>* paths) {
-
+  const char* rp = header;
+  if (*(uint8_t*)rp != RECORD_MAGIC_DATA) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid magic number");
   }
-
-
-  std::unique_ptr<File> file_;
-  int64_t file_id_;
-  int64_t file_offset_;
-
-
-}
-*/
-
-Status MessageQueueReaderImpl::OpenNextFile() {
-  return Status(Status::SUCCESS);
-}
-
-Status MessageQueueReaderImpl::ReadNextMessage(int64_t* timestamp, std::string* message) {
-  return Status(Status::SUCCESS);
+  rp++;
+  *timestamp = ReadFixNum(rp, 6);
+  rp += 6;
+  const uint32_t data_size = ReadFixNum(rp, 4);
+  if (data_size == UINT32MAX) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid data_size");
+  }
+  file_offset_ += sizeof(header);
+  if (*timestamp >= min_timestamp_) {
+    message->resize(data_size + 1);
+    status = file->Read(file_offset_, const_cast<char*>(message->data()), data_size + 1);
+    const uint32_t meta_checksum = *(uint8_t*)(message->data() + data_size);
+    message->resize(data_size);
+    const uint32_t act_checksum =
+      HashChecksum8Pair(header, sizeof(header), message->data(), message->size()) + 1;
+    if (meta_checksum != act_checksum) {
+      status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent checksum");
+    }
+  }
+  file_offset_ += data_size + 1;
+  return status;
 }
 
 MessageQueue::MessageQueue() {
@@ -454,6 +539,30 @@ Status MessageQueue::ReadFileMetadata(
   status |= MessageQueueImpl::LoadMetadata(&file, &cyclic_magic, file_id, timestamp, file_size);
   status |= file.Close();
   return status;
+}
+
+Status MessageQueue::RemoveOldFiles(const std::string& prefix, int64_t threshold) {
+  std::vector<std::string> file_paths;
+  Status status = FindFiles(prefix, &file_paths);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  for (const auto& path : file_paths) {
+    int64_t file_id = 0;
+    int64_t timestamp = 0;
+    int64_t file_size = 0;
+    status = ReadFileMetadata(path, &file_id, &timestamp, &file_size);;
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (timestamp < threshold) {
+      status = RemoveFile(path);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+  }
+  return Status(Status::SUCCESS);
 }
 
 MessageQueue::Reader::Reader(MessageQueueImpl* queue_impl, uint64_t min_timestamp) {

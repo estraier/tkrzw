@@ -797,14 +797,14 @@ class HashDBM final : public DBM {
   /**
    * Gets the record CRC width from the static flags.
    * @param static_flags The static flags.
-   * @return the record CRC width.
+   * @return The record CRC width.
    */
   static int32_t GetCRCWidthFromStaticFlags(int32_t static_flags);
 
   /**
    * Makes the compressor from the static flags.
    * @param static_flags The static flags.
-   * @return the compressor object or nullptr for no compression.
+   * @return The compressor object or nullptr for no compression.
    */
   static std::unique_ptr<Compressor> MakeCompressorFromStaticFlags(int32_t static_flags);
 

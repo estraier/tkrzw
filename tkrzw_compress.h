@@ -47,7 +47,7 @@ class Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -59,7 +59,7 @@ class Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -109,7 +109,7 @@ class DummyCompressor : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -121,7 +121,7 @@ class DummyCompressor : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -180,7 +180,7 @@ class ZLibCompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -192,7 +192,7 @@ class ZLibCompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -241,7 +241,7 @@ class ZStdCompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -253,7 +253,7 @@ class ZStdCompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -299,7 +299,7 @@ class LZ4Compressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -311,7 +311,7 @@ class LZ4Compressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -370,7 +370,7 @@ class LZMACompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
@@ -382,7 +382,7 @@ class LZMACompressor final : public Compressor {
    * @param size the size of the input buffer.
    * @param sp the pointer to the variable into which the size of the region of the return
    * value is assigned.
-   * @return the pointer to the result data, or nullptr on failure.
+   * @return The pointer to the result data, or nullptr on failure.
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */

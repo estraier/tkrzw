@@ -608,4 +608,37 @@ TEST(ThreadUtilTest, TaskQueueFuture) {
   EXPECT_EQ(num_tasks, count.load());
 }
 
+TEST(ThreadUtilTest, WaitCounter) {
+  tkrzw::WaitCounter wc1;
+  EXPECT_EQ(0, wc1.Get());
+  wc1.Add(2);
+  EXPECT_EQ(2, wc1.Get());
+  EXPECT_FALSE(wc1.Wait(0));
+  wc1.Done(2);
+  EXPECT_TRUE(wc1.Wait(-1));
+  EXPECT_TRUE(wc1.Wait(0));
+  EXPECT_TRUE(wc1.Wait(0.00001));
+  constexpr int32_t num_threads = 10;
+  constexpr int32_t num_loops = 10000;
+  tkrzw::WaitCounter wc2(num_threads);
+  std::atomic_int32_t count(0);
+  auto task = [&]() {
+                for (int32_t i = 0; i < num_loops; i++) {
+                  std::this_thread::yield();
+                  count.fetch_add(1);
+                }
+                wc2.Done();
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task));
+  }
+  wc2.Wait(3);
+  EXPECT_EQ(0, wc2.Get());
+  EXPECT_EQ(num_threads * num_loops, count.load());
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
 // END OF FILE

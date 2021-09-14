@@ -69,7 +69,7 @@ class PositionalFile : public File {
 
   /**
    * Gets the block size.
-   * @return the block size.
+   * @return The block size.
    */
   virtual int64_t GetBlockSize() const = 0;
 
@@ -277,7 +277,7 @@ class PositionalParallelFile final : public PositionalFile {
 
   /**
    * Gets the block size.
-   * @return the block size.
+   * @return The block size.
    */
   int64_t GetBlockSize() const override;
 
@@ -496,7 +496,7 @@ class PositionalAtomicFile final : public PositionalFile {
 
   /**
    * Gets the block size.
-   * @return the block size.
+   * @return The block size.
    */
   int64_t GetBlockSize() const override;
 

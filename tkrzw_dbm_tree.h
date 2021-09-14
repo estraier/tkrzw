@@ -501,7 +501,7 @@ class TreeDBM final : public DBM {
 
   /**
    * Gets the comparator of record keys.
-   * @return the key comparator function, or nullptr on failure.
+   * @return The key comparator function, or nullptr on failure.
    * @details Precondition: The database is opened.
    */
   KeyComparator GetKeyComparator() const;

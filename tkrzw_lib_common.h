@@ -259,7 +259,7 @@ inline typename MAP::value_type::second_type SearchMap(
 
 /**
  * Gets the current processs ID.
- * @return the current processs ID.
+ * @return The current processs ID.
  */
 int64_t GetProcessID();
 
