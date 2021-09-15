@@ -20,6 +20,7 @@
 #include "tkrzw_dbm_skip.h"
 #include "tkrzw_dbm_skip_impl.h"
 #include "tkrzw_dbm_test_common.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"

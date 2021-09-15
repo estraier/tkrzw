@@ -1471,7 +1471,6 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       new_value_ = std::string(value) + std::string(value);
-      std::cout << "PROC:" << key << ":" << new_value_ << std::endl;
       return new_value_;
     }
     std::string_view ProcessEmpty(std::string_view key) override {
@@ -1517,6 +1516,32 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(0, ulog_dbm.CountSimple());
+  tkrzw::DBMUpdateLoggerStrDeque ulog_sq(" ");
+  dbm->SetUpdateLogger(&ulog_sq);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("three", "3", ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("three", "3", ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove("two"));
+  EXPECT_EQ(6, ulog_sq.GetSize());
+  std::string text;
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("CLEAR", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("SET one first", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("SET two second", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("SET three 3", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  if (is_skip) {
+    EXPECT_EQ("SET three 3", text);
+  } else {
+    EXPECT_EQ("SET three 3:3", text);
+  }
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("REMOVE two", text);
 }
 
 // END OF FILE

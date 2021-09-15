@@ -20,6 +20,7 @@
 #include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_shard.h"
 #include "tkrzw_dbm_test_common.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
@@ -363,6 +364,30 @@ TEST_F(ShardDBMTest, ShardIteratorBound) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
         path, true, tkrzw::File::OPEN_TRUNCATE, shard_open_params));
     IteratorBoundTest(&dbm);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  }
+}
+
+TEST_F(ShardDBMTest, UpdateLogger) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  struct Config final {
+    std::string path;
+    std::map<std::string, std::string> open_params;
+  };
+  const std::vector<Config> configs = {
+    {"casket.hash", {{"num_buckets", "100"}}},
+    {"casket.tree", {{"max_page_size", "1"}, {"max_branches", "2"}}},
+    {"casket.tiny", {{"num_buckets", "100"}}},
+    {"casket.baby", {}},
+  };
+  for (const auto& config : configs) {
+    tkrzw::ShardDBM dbm;
+    const std::string path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    auto shard_open_params = config.open_params;
+    shard_open_params.emplace("num_shards", "4");
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, config.open_params));
+    UpdateLoggerTest(&dbm);
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   }
 }

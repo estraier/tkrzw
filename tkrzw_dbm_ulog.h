@@ -14,6 +14,7 @@
 #ifndef _TKRZW_DBM_ULOG_H
 #define _TKRZW_DBM_ULOG_H
 
+#include <deque>
 #include <string>
 #include <string_view>
 
@@ -21,8 +22,77 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_thread_util.h"
 
 namespace tkrzw {
+
+/**
+ * DBM update logger to store logs into a string deque.
+ */
+class DBMUpdateLoggerStrDeque final : public DBM::UpdateLogger {
+ public:
+  /**
+   * Constructor.
+   * @param delimiter The delimiter put between fields in a log.
+   */
+  explicit DBMUpdateLoggerStrDeque(const std::string& delim = "\t");
+
+  /**
+   * Writes a log for modifying an existing record or adding a new record.
+   * @param key The key of the record.
+   * @param value The new value of the record.
+   * @return The result status.
+   */
+  Status WriteSet(std::string_view key, std::string_view value) override;
+
+  /**
+   * Writes a log for removing an existing record.
+   * @param key The key of the record.
+   * @return The result status.
+   */
+  Status WriteRemove(std::string_view key) override;
+
+  /**
+   * Writes a log for removing all records.
+   * @return The result status.
+   */
+  Status WriteClear() override;
+
+  /**
+   * Gets the number of logs.
+   * @return The number of logs.
+   */
+  int64_t GetSize();
+
+  /**
+   * Gets the first log in the queue and removes it.
+   * @param text The pointer to a string object to store the result.  If it is nullptr,
+   * assignment is not done.
+   * @return True on success or false if there's no log in the queue.
+   */
+  bool PopFront(std::string* text);
+
+  /**
+   * Gets the last log in the queue and removes it.
+   * @param text The pointer to a string object to store the result.  If it is nullptr,
+   * assignment is not done.
+   * @return True on success or false if there's no log in the queue.
+   */
+  bool PopBack(std::string* text);
+
+  /**
+   * Removes all logs.
+   */
+  void Clear();
+
+ private:
+  /** The delimiter string. */
+  std::string delim_;
+  /** Log strings. */
+  std::deque<std::string> logs_;
+  /** Mutex to guard the logs. */
+  SpinMutex mutex_;
+};
 
 /**
  * DBM update logger to replicate updates in another DBM.
@@ -67,10 +137,23 @@ class DBMUpdateLoggerDBM final : public DBM::UpdateLogger {
 class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
  public:
   /**
+   * Default constructor.
+   */
+  DBMUpdateLoggerSecondShard() : ulog_(nullptr) {}
+
+  /**
    * Constructor.
    * @param logger The logger to do actual logging.
    */
-  explicit DBMUpdateLoggerSecondShard(DBM::UpdateLogger* logger) : logger_(logger) {}
+  explicit DBMUpdateLoggerSecondShard(DBM::UpdateLogger* ulog) : ulog_(ulog) {}
+
+  /**
+   * Set the update logger to do actual logging.
+   * @param logger The update logger to do actual logging.
+   */
+  void SetUpdateLogger(DBM::UpdateLogger* ulog) {
+    ulog_ = ulog;
+  }
 
   /**
    * Writes a log for modifying an existing record or adding a new record.
@@ -79,7 +162,7 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
    * @return The result status.
    */
   Status WriteSet(std::string_view key, std::string_view value) override {
-    return logger_->WriteSet(key, value);
+    return ulog_->WriteSet(key, value);
   }
 
   /**
@@ -88,7 +171,7 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
    * @return The result status.
    */
   Status WriteRemove(std::string_view key) override {
-    return logger_->WriteRemove(key);
+    return ulog_->WriteRemove(key);
   }
 
   /**
@@ -101,7 +184,7 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
   }
 
  public:
-  DBM::UpdateLogger* logger_;
+  DBM::UpdateLogger* ulog_;
 };
 
 }  // namespace tkrzw

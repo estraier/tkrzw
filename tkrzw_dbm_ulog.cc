@@ -23,6 +23,61 @@
 
 namespace tkrzw {
 
+
+DBMUpdateLoggerStrDeque::DBMUpdateLoggerStrDeque(const std::string& delim) : delim_(delim) {}
+
+Status DBMUpdateLoggerStrDeque::WriteSet(std::string_view key, std::string_view value) {
+  std::lock_guard lock(mutex_);
+  logs_.emplace_back(StrCat("SET", delim_, key, delim_, value));
+  return Status(Status::SUCCESS);
+}
+
+Status DBMUpdateLoggerStrDeque::WriteRemove(std::string_view key) {
+  std::lock_guard lock(mutex_);
+  logs_.emplace_back(StrCat("REMOVE", delim_, key));
+  return Status(Status::SUCCESS);
+}
+
+Status DBMUpdateLoggerStrDeque::WriteClear() {
+  std::lock_guard lock(mutex_);
+  logs_.emplace_back("CLEAR");
+  return Status(Status::SUCCESS);
+}
+
+int64_t DBMUpdateLoggerStrDeque::GetSize() {
+  std::lock_guard lock(mutex_);
+  return logs_.size();
+}
+
+bool DBMUpdateLoggerStrDeque::PopFront(std::string* text) {
+  std::lock_guard lock(mutex_);
+  if (logs_.empty()) {
+    return false;
+  }
+  if (text != nullptr) {
+    *text = logs_.front();
+  }
+  logs_.pop_front();
+  return true;
+}
+
+bool DBMUpdateLoggerStrDeque::PopBack(std::string* text) {
+  std::lock_guard lock(mutex_);
+  if (logs_.empty()) {
+    return false;
+  }
+  if (text != nullptr) {
+    *text = logs_.back();
+  }
+  logs_.pop_back();
+  return true;
+}
+
+void DBMUpdateLoggerStrDeque::Clear() {
+  std::lock_guard lock(mutex_);
+  logs_.clear();
+}
+
 DBMUpdateLoggerDBM::DBMUpdateLoggerDBM(DBM* dbm) : dbm_(dbm) {}
 
 Status DBMUpdateLoggerDBM::WriteSet(std::string_view key, std::string_view value) {

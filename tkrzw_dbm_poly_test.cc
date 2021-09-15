@@ -24,6 +24,7 @@
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_test_common.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
 
@@ -384,6 +385,28 @@ TEST_F(PolyDBMTest, PolyIteratorBound) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
         path, true, tkrzw::File::OPEN_TRUNCATE, config.open_params));
     IteratorBoundTest(&dbm);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  }
+}
+
+TEST_F(PolyDBMTest, UpdateLogger) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  struct Config final {
+    std::string path;
+    std::map<std::string, std::string> open_params;
+  };
+  const std::vector<Config> configs = {
+    {"casket.hash", {{"num_buckets", "100"}}},
+    {"casket.tree", {{"max_page_size", "1"}, {"max_branches", "2"}}},
+    {"casket.tiny", {{"num_buckets", "100"}}},
+    {"casket.baby", {}},
+  };
+  for (const auto& config : configs) {
+    tkrzw::PolyDBM dbm;
+    const std::string path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, config.open_params));
+    UpdateLoggerTest(&dbm);
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   }
 }

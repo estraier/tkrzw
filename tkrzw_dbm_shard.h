@@ -24,6 +24,7 @@
 #include <cinttypes>
 
 #include "tkrzw_dbm.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_key_comparators.h"
 #include "tkrzw_lib_common.h"
@@ -545,6 +546,8 @@ class ShardDBM final : public ParamDBM {
   bool open_;
   /** The stem name of the file paths of the internal databases. */
   std::string path_;
+  /** The logger for the second shard and later. */
+  DBMUpdateLoggerSecondShard ulog_second_;
 };
 
 }  // namespace tkrzw

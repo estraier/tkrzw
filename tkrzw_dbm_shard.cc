@@ -24,6 +24,7 @@
 #include "tkrzw_dbm_std.h"
 #include "tkrzw_dbm_tiny.h"
 #include "tkrzw_dbm_tree.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_pos.h"
@@ -34,7 +35,7 @@
 
 namespace tkrzw {
 
-ShardDBM::ShardDBM() : dbms_(), open_(false), path_() {}
+ShardDBM::ShardDBM() : dbms_(), open_(false), path_(), ulog_second_() {}
 
 ShardDBM::~ShardDBM() {
   if (open_) {
@@ -524,13 +525,15 @@ void ShardDBM::SetUpdateLogger(UpdateLogger* update_logger) {
   if (!open_) {
     return;
   }
+  ulog_second_.SetUpdateLogger(update_logger);
+  bool first = true;
   for (const auto& dbm : dbms_) {
-
-    // TODO: Set up the special update logger wrapping it.
-    // Only the first dbm records Clear and Synchronize.
-
-
-    dbm->SetUpdateLogger(update_logger);
+    if (first) {
+      dbm->SetUpdateLogger(update_logger);
+      first = false;
+    } else {
+      dbm->SetUpdateLogger(&ulog_second_);
+    }
   }
 }
 
