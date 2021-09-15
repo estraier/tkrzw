@@ -22,6 +22,7 @@
 
 #include <cinttypes>
 
+#include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
 
 namespace tkrzw {
@@ -174,6 +175,21 @@ class MessageQueue final {
    * @return The result status.  Even if no files are matched, it returns success.
    */
   static Status RemoveOldFiles(const std::string& prefix, int64_t threshold);
+
+  /**
+   * Reads the next message from a file.
+   * @param file The file object to read from.
+   * @param file_offset The pointer to the variable containing the offset to read and to store
+   * the offset of the next record.  If the initial value can be zero to read the first record.
+   * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
+   * message.
+   * @param min_timestamp The minimum timestamp in milliseconds to fill the message data.
+   * @param message The pointer to a string object to store the msssage data.
+   * @return The result status.
+   */
+  static Status ReadNextMessage(
+      File* file, int64_t* file_offset, int64_t* timestamp, std::string* message,
+      int64_t min_timestamp = 0);
 
  private:
   /** Pointer to the actual implementation. */

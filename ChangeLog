@@ -3,7 +3,7 @@
 	- Release: 1.0.10
 	- Library version: 1.53.0
 
-	- Add features.for update logging.
+	- Add features for update logging.
 	- File::IsOpen is added.
 	- Add the message queue class.
 

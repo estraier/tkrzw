@@ -262,4 +262,40 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
   th1.join();
 }
 
+TEST(DBMUpdateLoggerTest, ApplyUpdateLogFromFiles) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string prefix = tmp_dir.MakeUniquePath("casket-", "-mq");
+  constexpr int32_t num_iterations = 10000;
+  tkrzw::MessageQueue mq;
+  tkrzw::DBMUpdateLoggerMQ ulog(&mq, 44444, 888);
+  tkrzw::StdTreeDBM src_dbm, dest_dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            mq.Open(prefix, 100000, tkrzw::MessageQueue::OPEN_TRUNCATE));
+  src_dbm.SetUpdateLogger(&ulog);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set("hello", "world"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Append("hello", "world"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Clear());
+  for (int32_t i = 1; i <= num_iterations; i++) {
+    const std::string key = tkrzw::ToString(i);
+    const std::string value = tkrzw::ToString(i * i);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set(key, value));
+    if (i % 2 == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Remove(key));
+    }
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
+      &dest_dbm, prefix, 0, 44444, 888));
+  EXPECT_EQ(src_dbm.CountSimple(), dest_dbm.CountSimple());
+  for (int32_t i = 1; i <= num_iterations; i++) {
+    const std::string key = tkrzw::ToString(i);
+    const std::string value = tkrzw::ToString(i * i);
+    if (i % 2 == 0) {
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dest_dbm.Get(key));
+    } else {
+      EXPECT_EQ(value, dest_dbm.GetSimple(key));
+    }
+  }
+}
+
 // END OF FILE

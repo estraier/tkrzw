@@ -243,6 +243,9 @@ check-hashdbm-util :
 	tkrzw_dbm_util.exe create --dbm hash --record_crc 8 --buckets 10 casket-3.tkh
 	tkrzw_dbm_util.exe import --dbm hash --tsv casket-3.tkh casket.tsv
 	tkrzw_dbm_util.exe get --dbm hash casket-3.tkh three
+	tkrzw_dbm_util.exe export --dbm hash --ulog 123 casket.tkh casket-ulog
+	tkrzw_dbm_util.exe import --dbm hash --ulog 123 casket-4.tkh casket-ulog
+	tkrzw_dbm_util.exe get --dbm hash casket-4.tkh three
 	tkrzw_dbm_util.exe rebuild --dbm hash casket.tkh
 	tkrzw_dbm_util.exe inspect --dbm hash --validate casket.tkh
 	tkrzw_dbm_util.exe restore --dbm hash casket.tkh casket-new.tkh
@@ -341,6 +344,9 @@ check-treedbm-util :
 	tkrzw_dbm_util.exe create --dbm tree --buckets 10 casket-3.tkt
 	tkrzw_dbm_util.exe import --dbm tree --tsv casket-3.tkt casket.tsv
 	tkrzw_dbm_util.exe get --dbm tree casket-3.tkt three
+	tkrzw_dbm_util.exe export --dbm tree --ulog 123 casket.tkt casket-ulog
+	tkrzw_dbm_util.exe import --dbm tree --ulog 123 casket-4.tkt casket-ulog
+	tkrzw_dbm_util.exe get --dbm tree casket-4.tkt three
 	tkrzw_dbm_util.exe rebuild --dbm tree casket.tkt
 	tkrzw_dbm_util.exe inspect --dbm tree --validate casket.tkt
 	tkrzw_dbm_util.exe restore --dbm tree casket.tkt casket-new.tkt

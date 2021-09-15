@@ -2885,6 +2885,7 @@ int main(int argc, char** argv) {
 <dd><code>--tsv</code> : The record file is in TSV format instead of flat record.</dd>
 <dd><code>--escape</code> : C-style escape/unescape is applied to the TSV data.</dd>
 <dd><code>--keys</code> : Exports keys only.</dd>
+<dd><code>--ulog <var>num</var></code> : Uses update logs based on the timestamp.</dd>
 <dt>Tuning options for HashDBM:</dt>
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
@@ -2976,6 +2977,7 @@ applet  A small application.
 <dd><code>--sync_io</code> : Enables the synchronous I/O option of the positional access file.</dd>
 <dd><code>--padding</code> : Enables padding at the end of the file.</dd>
 <dd><code>--pagecache</code> : Enables the mini page cache in the process.</dd>
+<dd><code>--ulog <var>str</var></code> : Sets the prefix of update log files.</dd>
 <dt>Options for the sequence subcommand:</dt>
 <dd><code>--random_key</code> : Uses random keys rather than sequential ones.</dd>
 <dd><code>--random_value</code> : Uses random length values rather than fixed ones.</dd>

@@ -104,6 +104,7 @@ static void PrintUsageAndDie() {
   P("  --tsv : The record file is in TSV format instead of flat record.\n");
   P("  --escape : C-style escape/unescape is applied to the TSV data.\n");
   P("  --keys : Exports keys only.\n");
+  P("  --ulog num : Uses update logs based on the timestamp.\n");
   P("\n");
   P("Tuning options for HashDBM:\n");
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
@@ -1600,7 +1601,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--tsv", 0}, {"--escape", 0}, {"--keys", 0},
+    {"--tsv", 0}, {"--escape", 0}, {"--keys", 0}, {"--ulog", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1624,6 +1625,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const bool keys_only = CheckMap(cmd_args, "--keys");
+  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
   if (file_path.empty()) {
     Die("The DBM file path must be specified");
   }
@@ -1633,15 +1635,18 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   if (file_path == rec_file_path) {
     Die("The DBM file and the record file must be different");
   }
-  std::unique_ptr<File> rec_file = MakeFileOrDie(file_impl, 0, 0);
-  Status status = rec_file->Open(rec_file_path, true);
-  if (status != Status::SUCCESS) {
-    EPrintL("Open failed: ", status);
-    return 1;
-  }
-  if (rec_file->GetSizeSimple() > 0) {
-    EPrintL("The record file is not empty");
-    return 1;
+  std::unique_ptr<File> rec_file;
+  if (ulog_ts < 0) {
+    rec_file = MakeFileOrDie(file_impl, 0, 0);
+    Status status = rec_file->Open(rec_file_path, true);
+    if (status != Status::SUCCESS) {
+      EPrintL("Open failed: ", status);
+      return 1;
+    }
+    if (rec_file->GetSizeSimple() > 0) {
+      EPrintL("The record file is not empty");
+      return 1;
+    }
   }
   std::unique_ptr<DBM> dbm = MakeDBMOrDie(
       dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
@@ -1654,15 +1659,36 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = true;
-  if (is_tsv) {
+  if (ulog_ts >= 0) {
+    tkrzw::MessageQueue mq;
+    Status status = mq.Open(rec_file_path, 1LL << 30);
+    if (status != Status::SUCCESS) {
+      EPrintL("Open failed: ", status);
+      ok = false;
+    }
+    DBMUpdateLoggerMQ ulog(&mq, 0, 0, ulog_ts);
+    auto writer =
+        [&](std::string_view key, std::string_view value) -> std::string_view {
+          if (key.data() != DBM::RecordProcessor::NOOP.data()) {
+            ulog.WriteSet(key, value);
+          }
+          return DBM::RecordProcessor::NOOP;
+        };
+    status = dbm->ProcessEach(writer, false);
+    status = mq.Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("Close failed: ", status);
+      ok = false;
+    }
+  } else if (is_tsv) {
     if (keys_only) {
-      status = tkrzw::ExportDBMKeysAsLines(dbm.get(), rec_file.get());
+      const Status status = tkrzw::ExportDBMKeysAsLines(dbm.get(), rec_file.get());
       if (status != Status::SUCCESS) {
         EPrintL("ExportDBMKeysAsLines failed: ", status);
         ok = false;
       }
     } else {
-      status = tkrzw::ExportDBMToTSV(dbm.get(), rec_file.get(), with_escape);
+      const Status status = tkrzw::ExportDBMToTSV(dbm.get(), rec_file.get(), with_escape);
       if (status != Status::SUCCESS) {
         EPrintL("ExportDBMToTSV failed: ", status);
         ok = false;
@@ -1670,13 +1696,13 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     }
   } else {
     if (keys_only) {
-      status = tkrzw::ExportDBMKeysToFlatRecords(dbm.get(), rec_file.get());
+      const Status status = tkrzw::ExportDBMKeysToFlatRecords(dbm.get(), rec_file.get());
       if (status != Status::SUCCESS) {
         EPrintL("ExportDBMKeysToFlatRecords failed: ", status);
         ok = false;
       }
     } else {
-      status = tkrzw::ExportDBMToFlatRecords(dbm.get(), rec_file.get());
+      const Status status = tkrzw::ExportDBMToFlatRecords(dbm.get(), rec_file.get());
       if (status != Status::SUCCESS) {
         EPrintL("ExportDBMToFlatRecords failed: ", status);
         ok = false;
@@ -1686,10 +1712,12 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   if (!CloseDBM(dbm.get())) {
     return 1;
   }
-  status = rec_file->Close();
-  if (status != Status::SUCCESS) {
-    EPrintL("Close failed: ", status);
-    return 1;
+  if (rec_file != nullptr) {
+    const Status status = rec_file->Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("Close failed: ", status);
+      return 1;
+    }
   }
   return ok ? 0 : 1;
 }
@@ -1703,7 +1731,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--params", 1},
-    {"--tsv", 0}, {"--escape", 0},
+    {"--tsv", 0}, {"--escape", 0}, {"--ulog", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1729,6 +1757,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
+  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
   if (file_path.empty()) {
     Die("The DBM file path must be specified");
   }
@@ -1738,11 +1767,14 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   if (file_path == rec_file_path) {
     Die("The DBM file and the record file must be different");
   }
-  std::unique_ptr<File> rec_file = MakeFileOrDie(file_impl, 0, 0);
-  Status status = rec_file->Open(rec_file_path, false);
-  if (status != Status::SUCCESS) {
-    EPrintL("Open failed: ", status);
-    return 1;
+  std::unique_ptr<File> rec_file;
+  if (ulog_ts < 0) {
+    rec_file = MakeFileOrDie(file_impl, 0, 0);
+    const Status status = rec_file->Open(rec_file_path, false);
+    if (status != Status::SUCCESS) {
+      EPrintL("Open failed: ", status);
+      return 1;
+    }
   }
   std::unique_ptr<DBM> dbm = MakeDBMOrDie(
       dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
@@ -1755,14 +1787,21 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = true;
-  if (is_tsv) {
-    status = tkrzw::ImportDBMFromTSV(dbm.get(), rec_file.get(), with_escape);
+  if (ulog_ts >= 0) {
+    const Status status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
+        dbm.get(), rec_file_path, ulog_ts,0, 0);
+    if (status != Status::SUCCESS) {
+      EPrintL("ApplyUpdateLogFromFiles failed: ", status);
+      ok = false;
+    }
+  } else if (is_tsv) {
+    const Status  status = tkrzw::ImportDBMFromTSV(dbm.get(), rec_file.get(), with_escape);
     if (status != Status::SUCCESS) {
       EPrintL("ImportDBMFromTSV failed: ", status);
       ok = false;
     }
   } else {
-    status = tkrzw::ImportDBMFromFlatRecords(dbm.get(), rec_file.get());
+    const Status status = tkrzw::ImportDBMFromFlatRecords(dbm.get(), rec_file.get());
     if (status != Status::SUCCESS) {
       EPrintL("ExportDBMToFlatRecords failed: ", status);
       ok = false;
@@ -1771,10 +1810,12 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   if (!CloseDBM(dbm.get())) {
     return 1;
   }
-  status = rec_file->Close();
-  if (status != Status::SUCCESS) {
-    EPrintL("Close failed: ", status);
-    return 1;
+  if (rec_file != nullptr) {
+    const Status status = rec_file->Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("Close failed: ", status);
+      return 1;
+    }
   }
   return ok ? 0 : 1;
 }

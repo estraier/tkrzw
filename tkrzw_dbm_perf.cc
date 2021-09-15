@@ -54,6 +54,7 @@ static void PrintUsageAndDie() {
   P("  --sync_io : Enables the synchronous I/O option of the positional access file.\n");
   P("  --padding : Enables padding at the end of the file.\n");
   P("  --pagecache : Enables the mini page cache in the process.\n");
+  P("  --ulog str : Sets the prefix of update log files.\n");
   P("\n");
   P("Options for the sequence subcommand:\n");
   P("  --random_key : Uses random keys rather than sequential ones.\n");
@@ -595,7 +596,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
-    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1},
+    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -650,6 +651,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int64_t cap_rec_num = GetIntegerArgument(cmd_args, "--cap_rec_num", 0, -1);
   const int64_t cap_mem_size = GetIntegerArgument(cmd_args, "--cap_mem_size", 0, -1);
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  const std::string ulog_prefix = GetStringArgument(cmd_args, "--ulog", 0, "");
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
   }
@@ -670,6 +672,14 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
                    num_buckets, cap_rec_num, cap_mem_size);
+  std::unique_ptr<tkrzw::MessageQueue> mq;
+  std::unique_ptr<tkrzw::DBMUpdateLoggerMQ> ulog;
+  if (!ulog_prefix.empty()) {
+    mq = std::make_unique<tkrzw::MessageQueue>();
+    mq->Open(ulog_prefix, 1LL << 30).OrDie();
+    ulog = std::make_unique<tkrzw::DBMUpdateLoggerMQ>(mq.get(), 0, 0);
+    dbm->SetUpdateLogger(ulog.get());
+  }
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
@@ -899,13 +909,6 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     PrintL();
   }
-
-
-
-
-
-
-
   auto removing_task = [&](int32_t id) {
     const uint32_t mt_seed = random_seed >= 0 ? random_seed : std::random_device()();
     std::mt19937 key_mt(mt_seed + id);
@@ -984,6 +987,13 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
     PrintL();
   }
+  if (mq != nullptr) {
+    const Status status = mq->Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("MessageQueue::Close failed: ", status);
+      has_error = true;
+    }
+  }
   return has_error ? 1 : 0;
 }
 
@@ -1004,7 +1014,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
-    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1},
+    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1057,6 +1067,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int64_t cap_rec_num = GetIntegerArgument(cmd_args, "--cap_rec_num", 0, -1);
   const int64_t cap_mem_size = GetIntegerArgument(cmd_args, "--cap_mem_size", 0, -1);
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  const std::string ulog_prefix = GetStringArgument(cmd_args, "--ulog", 0, "");
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
   }
@@ -1071,6 +1082,14 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
                    num_buckets, cap_rec_num, cap_mem_size);
+  std::unique_ptr<tkrzw::MessageQueue> mq;
+  std::unique_ptr<tkrzw::DBMUpdateLoggerMQ> ulog;
+  if (!ulog_prefix.empty()) {
+    mq = std::make_unique<tkrzw::MessageQueue>();
+    mq->Open(ulog_prefix, 1LL << 30).OrDie();
+    ulog = std::make_unique<tkrzw::DBMUpdateLoggerMQ>(mq.get(), 0, 0);
+    dbm->SetUpdateLogger(ulog.get());
+  }  
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
@@ -1193,6 +1212,13 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   if (!TearDownDBM(dbm.get(), file_path, is_verbose)) {
     has_error = true;
   }
+  if (mq != nullptr) {
+    const Status status = mq->Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("MessageQueue::Close failed: ", status);
+      has_error = true;
+    }
+  }  
   PrintL();
   return has_error ? 1 : 0;
 }
@@ -1213,7 +1239,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
-    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1},
+    {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1265,6 +1291,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int64_t cap_rec_num = GetIntegerArgument(cmd_args, "--cap_rec_num", 0, -1);
   const int64_t cap_mem_size = GetIntegerArgument(cmd_args, "--cap_mem_size", 0, -1);
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  const std::string ulog_prefix = GetStringArgument(cmd_args, "--ulog", 0, "");
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
   }
@@ -1279,6 +1306,14 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
       MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
                    block_size, is_direct_io, is_sync_io, is_padding, is_pagecache,
                    num_buckets, cap_rec_num, cap_mem_size);
+  std::unique_ptr<tkrzw::MessageQueue> mq;
+  std::unique_ptr<tkrzw::DBMUpdateLoggerMQ> ulog;
+  if (!ulog_prefix.empty()) {
+    mq = std::make_unique<tkrzw::MessageQueue>();
+    mq->Open(ulog_prefix, 1LL << 30).OrDie();
+    ulog = std::make_unique<tkrzw::DBMUpdateLoggerMQ>(mq.get(), 0, 0);
+    dbm->SetUpdateLogger(ulog.get());
+  }
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
@@ -1498,6 +1533,13 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
          mem_usage);
   if (!TearDownDBM(dbm.get(), file_path, is_verbose)) {
     has_error = true;
+  }
+  if (mq != nullptr) {
+    const Status status = mq->Close();
+    if (status != Status::SUCCESS) {
+      EPrintL("MessageQueue::Close failed: ", status);
+      has_error = true;
+    }
   }
   PrintL();
   return has_error ? 1 : 0;

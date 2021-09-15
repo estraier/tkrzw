@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+#include "tkrzw_file_mmap.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_message_queue.h"
@@ -114,6 +115,18 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(41);
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, reader->Read(0, &timestamp, &message));
+  tkrzw::MemoryMapParallelFile file;
+  int64_t file_offset = 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000002", false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadNextMessage(
+      &file, &file_offset, &timestamp, &message));
+  EXPECT_EQ(30, timestamp);
+  EXPECT_EQ("four", message);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadNextMessage(
+      &file, &file_offset, &timestamp, &message));
+  EXPECT_EQ(40, timestamp);
+  EXPECT_EQ("five", message);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
   std::vector<std::string> paths;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::RemoveOldFiles(prefix, 10));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));

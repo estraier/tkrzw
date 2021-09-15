@@ -199,8 +199,10 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    * @param mq The message queue object to store update logs.  The ownership is not taken.
    * @param server_id The server ID of the process.
    * @param dbm_index The index of the DBM on the server.
+   * @param fixed_timestamp If not negative, the timestamp is fixed to the value.
    */
- explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index);
+ explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index,
+                            int64_t fixed_timestamp = -1);
 
   /**
    * Writes a log for modifying an existing record or adding a new record.
@@ -240,18 +242,17 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   /**
    * Applys the operations in the message queue files.
    * @param dbm The DBM object of the database.
+   * @param prefix The prefix for the message queue file names.
+   * @param min_timestamp The minimum timestamp in milliseconds of messages to read.
    * @param server_id The server ID to focus on.  If it is negative, every log is used.
    * Otherwise, if the server ID doesn't match, the log is ignored.
    * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
    * Otherwise, if the DBM index doesn't match, the log is ignored.
-   * @param message The update log message.
-   * @return The result status.  If the log is ignored due to the filter, INFEASIBLE_ERROR is
-   * returned.
+   * @return The result status.
    */
-  /*
   static Status ApplyUpdateLogFromFiles(
-      DBM* dbm, int32_t server_id, int32_t dbm_index, std::string_view message);
-  */
+      DBM* dbm, const std::string& prefix, double min_timestamp = 0,
+      int32_t server_id = -1, int32_t dbm_index = -1);
 
  private:
   /** The message queue. */
@@ -260,6 +261,8 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   int32_t server_id_;
   /** The index of the DBM on the server. */
   int32_t dbm_index_;
+  /** The fixed timestamp. */
+  int64_t fixed_timestamp_;
 };
 
 }  // namespace tkrzw

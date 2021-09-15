@@ -82,7 +82,6 @@ class MessageQueueReaderImpl final {
 
  private:
   void ReleaseFile(int64_t file_id_);
-  Status ReadNextMessage(File* file, int64_t* timestamp, std::string* message);
 
   MessageQueueImpl* queue_;
   int64_t min_timestamp_;
@@ -424,7 +423,8 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
         continue;
       }
     }
-    const Status status = ReadNextMessage(file_.get(), timestamp, message);
+    const Status status = MessageQueue::ReadNextMessage(
+        file_.get(), &file_offset_, timestamp, message, min_timestamp_);
     if (status != Status::SUCCESS) {
       return status;
     }
@@ -446,40 +446,6 @@ void MessageQueueReaderImpl::ReleaseFile(int64_t file_id_) {
   if (it != queue_->files_.end() && it->second.use_count() <= 1) {
     queue_->files_.erase(it);
   }
-}
-
-Status MessageQueueReaderImpl::ReadNextMessage(
-    File* file, int64_t* timestamp, std::string* message) {
-  char header[11];
-  Status status = file->Read(file_offset_, header, sizeof(header));
-  if (status != Status::SUCCESS) {
-    return status;
-  }
-  const char* rp = header;
-  if (*(uint8_t*)rp != RECORD_MAGIC_DATA) {
-    return Status(Status::BROKEN_DATA_ERROR, "invalid magic number");
-  }
-  rp++;
-  *timestamp = ReadFixNum(rp, 6);
-  rp += 6;
-  const uint32_t data_size = ReadFixNum(rp, 4);
-  if (data_size == UINT32MAX) {
-    return Status(Status::BROKEN_DATA_ERROR, "invalid data_size");
-  }
-  file_offset_ += sizeof(header);
-  if (*timestamp >= min_timestamp_) {
-    message->resize(data_size + 1);
-    status = file->Read(file_offset_, const_cast<char*>(message->data()), data_size + 1);
-    const uint32_t meta_checksum = *(uint8_t*)(message->data() + data_size);
-    message->resize(data_size);
-    const uint32_t act_checksum =
-      HashChecksum8Pair(header, sizeof(header), message->data(), message->size()) + 1;
-    if (meta_checksum != act_checksum) {
-      status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent checksum");
-    }
-  }
-  file_offset_ += data_size + 1;
-  return status;
 }
 
 MessageQueue::MessageQueue() {
@@ -584,6 +550,45 @@ Status MessageQueue::RemoveOldFiles(const std::string& prefix, int64_t threshold
     }
   }
   return Status(Status::SUCCESS);
+}
+
+Status MessageQueue::ReadNextMessage(
+    File* file, int64_t* file_offset, int64_t* timestamp, std::string* message,
+    int64_t min_timestamp) {
+  assert(file != nullptr && file_offset != nullptr && timestamp != nullptr && message != nullptr);
+  if (*file_offset <= METADATA_SIZE) {
+    *file_offset = METADATA_SIZE;
+  }
+  char header[11];
+  Status status = file->Read(*file_offset, header, sizeof(header));
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  const char* rp = header;
+  if (*(uint8_t*)rp != RECORD_MAGIC_DATA) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid magic number");
+  }
+  rp++;
+  *timestamp = ReadFixNum(rp, 6);
+  rp += 6;
+  const uint32_t data_size = ReadFixNum(rp, 4);
+  if (data_size == UINT32MAX) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid data_size");
+  }
+  *file_offset += sizeof(header);
+  if (*timestamp >= min_timestamp) {
+    message->resize(data_size + 1);
+    status = file->Read(*file_offset, const_cast<char*>(message->data()), data_size + 1);
+    const uint32_t meta_checksum = *(uint8_t*)(message->data() + data_size);
+    message->resize(data_size);
+    const uint32_t act_checksum =
+      HashChecksum8Pair(header, sizeof(header), message->data(), message->size()) + 1;
+    if (meta_checksum != act_checksum) {
+      status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent checksum");
+    }
+  }
+  *file_offset += data_size + 1;
+  return status;
 }
 
 MessageQueue::Reader::Reader(MessageQueueImpl* queue_impl, uint64_t min_timestamp) {

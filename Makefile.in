@@ -325,6 +325,9 @@ check-hashdbm-util :
 	$(RUNENV) ./tkrzw_dbm_util create --dbm hash --record_crc 8 --buckets 10 casket-3.tkh
 	$(RUNENV) ./tkrzw_dbm_util import --dbm hash --tsv casket-3.tkh casket.tsv
 	$(RUNENV) ./tkrzw_dbm_util get --dbm hash casket-3.tkh three
+	$(RUNENV) ./tkrzw_dbm_util export --dbm hash --ulog 123 casket.tkh casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util import --dbm hash --ulog 123 casket-4.tkh casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util get --dbm hash casket-4.tkh three
 	$(RUNENV) ./tkrzw_dbm_util rebuild --dbm hash casket.tkh
 	$(RUNENV) ./tkrzw_dbm_util inspect --dbm hash --validate casket.tkh
 	$(RUNENV) ./tkrzw_dbm_util restore --dbm hash casket.tkh casket-new.tkh
@@ -422,6 +425,9 @@ check-treedbm-util :
 	$(RUNENV) ./tkrzw_dbm_util create --dbm tree --buckets 10 casket-3.tkt
 	$(RUNENV) ./tkrzw_dbm_util import --dbm tree --tsv casket-3.tkt casket.tsv
 	$(RUNENV) ./tkrzw_dbm_util get --dbm tree casket-3.tkt three
+	$(RUNENV) ./tkrzw_dbm_util export --dbm tree --ulog 123 casket.tkt casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util import --dbm tree --ulog 123 casket-4.tkt casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util get --dbm tree casket-4.tkt three
 	$(RUNENV) ./tkrzw_dbm_util rebuild --dbm tree casket.tkt
 	$(RUNENV) ./tkrzw_dbm_util inspect --dbm tree --validate casket.tkt
 	$(RUNENV) ./tkrzw_dbm_util restore --dbm tree casket.tkt casket-new.tkt

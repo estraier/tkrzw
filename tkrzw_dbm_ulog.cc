@@ -15,9 +15,11 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_ulog.h"
+#include "tkrzw_file_mmap.h"
 #include "tkrzw_file_util.h"
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_message_queue.h"
 #include "tkrzw_str_util.h"
 #include "tkrzw_time_util.h"
 
@@ -100,11 +102,12 @@ Status DBMUpdateLoggerDBM::WriteClear() {
   return dbm_->Clear();
 }
 
-DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index)
-    : mq_(mq), server_id_(server_id), dbm_index_(dbm_index) {}
+DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
+    MessageQueue* mq, int32_t server_id, int32_t dbm_index, int64_t fixed_timestamp)
+    : mq_(mq), server_id_(server_id), dbm_index_(dbm_index), fixed_timestamp_(fixed_timestamp) {}
 
 Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value) {
-  const int64_t timestamp = GetWallTime() * 1000;
+  const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   const size_t est_size = 20 + key.size() + value.size();
   char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
@@ -126,7 +129,7 @@ Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value)
 }
 
 Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
-  const int64_t timestamp = GetWallTime() * 1000;
+  const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   const size_t est_size = 20 + key.size();
   char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
@@ -145,7 +148,7 @@ Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
 }
 
 Status DBMUpdateLoggerMQ::WriteClear() {
-  const int64_t timestamp = GetWallTime() * 1000;
+  const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   char* write_buf = stack;
   char* wp = write_buf;
@@ -245,6 +248,55 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLog(
       break;
   }
   return Status(Status::BROKEN_DATA_ERROR, "invalid opertion magic data");
+}
+
+Status DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
+      DBM* dbm, const std::string& prefix, double min_timestamp,
+      int32_t server_id, int32_t dbm_index) {
+  std::vector<std::string> paths;
+  Status status = tkrzw::MessageQueue::FindFiles(prefix, &paths);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  for (const auto& path : paths) {
+    int64_t file_id = 0;
+    int64_t timestamp = 0;
+    int64_t file_size = 0;
+    status = MessageQueue::ReadFileMetadata(path, &file_id, &timestamp, &file_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (timestamp < min_timestamp) {
+      continue;
+    }
+    tkrzw::MemoryMapParallelFile file;
+    status = file.Open(path, false);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    file_size = std::min(file_size, file.GetSizeSimple());
+    int64_t file_offset = 0;
+    std::string message;
+    while (file_offset < file_size) {
+      status = tkrzw::MessageQueue::ReadNextMessage(
+          &file, &file_offset, &timestamp, &message);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      if (timestamp < min_timestamp) {
+        continue;
+      }
+      status = ApplyUpdateLog(dbm, message, server_id, dbm_index);
+      if (status != Status::SUCCESS && status != Status::INFEASIBLE_ERROR) {
+        return status;
+      }
+    }
+    status = file.Close();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  return Status(Status::SUCCESS);
 }
 
 }  // namespace tkrzw
