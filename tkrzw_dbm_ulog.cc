@@ -23,6 +23,10 @@
 
 namespace tkrzw {
 
+static constexpr size_t WRITE_BUFFER_SIZE = 4096;
+static constexpr uint8_t OP_MAGIC_SET = 0xA1;
+static constexpr uint8_t OP_MAGIC_REMOVE = 0xA2;
+static constexpr uint8_t OP_MAGIC_CLEAR = 0xA3;
 
 DBMUpdateLoggerStrDeque::DBMUpdateLoggerStrDeque(const std::string& delim) : delim_(delim) {}
 
@@ -94,6 +98,153 @@ Status DBMUpdateLoggerDBM::WriteRemove(std::string_view key) {
 
 Status DBMUpdateLoggerDBM::WriteClear() {
   return dbm_->Clear();
+}
+
+DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index)
+    : mq_(mq), server_id_(server_id), dbm_index_(dbm_index) {}
+
+Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value) {
+  const int64_t timestamp = GetWallTime() * 1000;
+  char stack[WRITE_BUFFER_SIZE];
+  const size_t est_size = 20 + key.size() + value.size();
+  char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
+  char* wp = write_buf;
+  *(wp++) = OP_MAGIC_SET;
+  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, dbm_index_);
+  wp += WriteVarNum(wp, key.size());
+  wp += WriteVarNum(wp, value.size());
+  std::memcpy(wp, key.data(), key.size());
+  wp += key.size();
+  std::memcpy(wp, value.data(), value.size());
+  wp += value.size();
+  const Status status = mq_->Write(timestamp, std::string_view(write_buf, wp - write_buf));
+  if (write_buf != stack) {
+    xfree(write_buf);
+  }
+  return status;
+}
+
+Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
+  const int64_t timestamp = GetWallTime() * 1000;
+  char stack[WRITE_BUFFER_SIZE];
+  const size_t est_size = 20 + key.size();
+  char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
+  char* wp = write_buf;
+  *(wp++) = OP_MAGIC_REMOVE;
+  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, dbm_index_);
+  wp += WriteVarNum(wp, key.size());
+  std::memcpy(wp, key.data(), key.size());
+  wp += key.size();
+  const Status status = mq_->Write(timestamp, std::string_view(write_buf, wp - write_buf));
+  if (write_buf != stack) {
+    xfree(write_buf);
+  }
+  return status;
+}
+
+Status DBMUpdateLoggerMQ::WriteClear() {
+  const int64_t timestamp = GetWallTime() * 1000;
+  char stack[WRITE_BUFFER_SIZE];
+  char* write_buf = stack;
+  char* wp = write_buf;
+  *(wp++) = OP_MAGIC_CLEAR;
+  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, dbm_index_);
+  return mq_->Write(timestamp, std::string_view(write_buf, wp - write_buf));
+}
+
+Status DBMUpdateLoggerMQ::ApplyUpdateLog(
+    DBM* dbm, int32_t server_id, int32_t dbm_index, std::string_view message) {
+  assert(dbm != nullptr);
+  const char* rp = message.data();
+  int32_t record_size = message.size();
+  if (record_size < 3) {
+    return Status(Status::BROKEN_DATA_ERROR, "too short message");
+  }
+  const uint32_t magic = *(uint8_t*)rp;
+  rp++;
+  record_size--;
+  uint64_t num = 0;
+  int32_t step = ReadVarNum(rp, record_size, &num);
+  if (step < 1) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid server ID");
+  }
+  const int32_t rec_server_id = num;
+  rp += step;
+  record_size -= step;
+  if (record_size < 1) {
+    return Status(Status::BROKEN_DATA_ERROR, "no DBM index");
+  }
+  step = ReadVarNum(rp, record_size, &num);
+  if (step < 1) {
+    return Status(Status::BROKEN_DATA_ERROR, "invalid DBM index");
+  }
+  const int32_t rec_dbm_index = num;
+  rp += step;
+  record_size -= step;
+  if ((server_id >= 0 && server_id != rec_server_id) ||
+      (dbm_index >= 0 && dbm_index != rec_dbm_index)) {
+    return Status(Status::INFEASIBLE_ERROR);
+  }
+  switch (magic) {
+    case OP_MAGIC_SET: {
+      if (record_size < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "no key");
+      }
+      step = ReadVarNum(rp, record_size, &num);
+      if (step < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
+      }
+      const int32_t key_size = num;
+      rp += step;
+      record_size -= step;
+      if (record_size < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "no value");
+      }
+      step = ReadVarNum(rp, record_size, &num);
+      if (step < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "invalid value size");
+      }
+      const int32_t value_size = num;
+      rp += step;
+      record_size -= step;
+      if (key_size + value_size != record_size) {
+        return Status(Status::BROKEN_DATA_ERROR, "inconsistent data size");
+      }
+      const std::string_view key(rp, key_size);
+      const std::string_view value(rp + key_size, value_size);
+      return dbm->Set(key, value);
+    }
+    case OP_MAGIC_REMOVE: {
+      if (record_size < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "no key");
+      }
+      step = ReadVarNum(rp, record_size, &num);
+      if (step < 1) {
+        return Status(Status::BROKEN_DATA_ERROR, "invalid key size");
+      }
+      const int32_t key_size = num;
+      rp += step;
+      record_size -= step;
+      if (key_size != record_size) {
+        return Status(Status::BROKEN_DATA_ERROR, "inconsistent data size");
+      }
+      const std::string_view key(rp, key_size);
+      const Status status = dbm->Remove(key);
+      if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
+        return status;
+      }
+      return Status(Status::SUCCESS);
+    }
+    case OP_MAGIC_CLEAR: {
+      return dbm->Clear();
+    }
+    default:
+      break;
+  }
+  return Status(Status::BROKEN_DATA_ERROR, "invalid opertion magic data");
 }
 
 }  // namespace tkrzw

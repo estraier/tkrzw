@@ -33,7 +33,9 @@ TEST(MessageQueueTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string prefix = tmp_dir.MakeUniquePath("casket-", "-mq");
   tkrzw::MessageQueue mq;
+  EXPECT_EQ(-1, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, tkrzw::MessageQueue::OPEN_TRUNCATE));
+  EXPECT_EQ(0, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   int64_t file_id = 0;
   int64_t timestamp = 0;
@@ -44,11 +46,17 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(0, timestamp);
   EXPECT_EQ(32, file_size);
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50));
+  EXPECT_EQ(0, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "one"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "two"));
+  EXPECT_EQ(10, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(5, "two"));
+  EXPECT_EQ(10, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(20, std::string(50, 'x')));
+  EXPECT_EQ(20, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(30, "four"));
+  EXPECT_EQ(30, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(40, "five"));
+  EXPECT_EQ(40, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
       prefix + ".0000000000", &file_id, &timestamp, &file_size));
@@ -67,10 +75,12 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::GetFileSize(prefix + ".0000000002"), file_size);
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 0, tkrzw::MessageQueue::OPEN_READ_ONLY));
   auto reader = mq.MakeReader(0);
+  EXPECT_EQ(-1, reader->GetTimestamp());
   std::vector<std::pair<int64_t, std::string>> records;
   while (true) {
     std::string message;
     const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    EXPECT_EQ(timestamp, reader->GetTimestamp());
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
       break;
@@ -104,7 +114,6 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(41);
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, reader->Read(0, &timestamp, &message));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   std::vector<std::string> paths;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::RemoveOldFiles(prefix, 10));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
@@ -118,6 +127,27 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::RemoveOldFiles(prefix, 40));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
   EXPECT_THAT(paths, ElementsAre(prefix + ".0000000002"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "six"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(70, "seven"));
+  reader = mq.MakeReader(10);
+  records.clear();
+  while (true) {
+    std::string message;
+    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
+      break;
+    }
+    records.emplace_back(std::make_pair(timestamp, message));
+  }
+  EXPECT_THAT(records, ElementsAre(
+      std::pair<uint64_t, std::string>{30, "four"},
+      std::pair<uint64_t, std::string>{40, "five"},
+      std::pair<uint64_t, std::string>{40, "six"},
+      std::pair<uint64_t, std::string>{70, "seven"}));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 
 TEST(MessageQueueTest, Serial) {

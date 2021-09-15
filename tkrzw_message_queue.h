@@ -52,12 +52,17 @@ class MessageQueue final {
      * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
      * message.
      * @param message The pointer to a string object to store the msssage data.
-     * @return The result status.  If the timeout is not positive and there's no record,
-     * NOT_FOUND_ERROR is returned.  If the timeout is positive and the time out is reached,
-     * INFEASIBLE_ERROR is returned.  If the writer closes the file while waiting, CANCELED_ERROR
-     * is returned.
+     * @return The result status.  If the queue is in the read-only mode and there's no record to
+     * read, NOT_FOUND_ERROR is returned.  If the time out is reached, INFEASIBLE_ERROR is
+     * returned.  If the writer closes the file while waiting, CANCELED_ERROR is returned.
      */
     Status Read(double timeout, int64_t* timestamp, std::string* message);
+
+    /**
+     * Gets the latest timestamp.
+     * @return The latest timestamp, or -1 if nothing has been read.
+     */
+    int64_t GetTimestamp();
 
    private:
     /**
@@ -120,6 +125,12 @@ class MessageQueue final {
    * @return The result status.
    */
   Status Write(int64_t timestamp, std::string_view message);
+
+  /**
+   * Gets the latest timestamp.
+   * @return The latest timestamp, or -1 on failure.
+   */
+  int64_t GetTimestamp();
 
   /**
    * Makes a message reader.

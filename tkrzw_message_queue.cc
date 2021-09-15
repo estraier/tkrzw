@@ -45,6 +45,7 @@ class MessageQueueImpl final {
   Status Open(const std::string& prefix, int64_t max_file_size, int32_t options);
   Status Close();
   Status Write(int64_t timestamp, std::string_view message);
+  int64_t GetTimestamp();
   static Status SaveMetadata(
       File* file, int32_t cyclic_magic, int64_t file_id,  int64_t timestamp);
   static Status LoadMetadata(
@@ -77,6 +78,7 @@ class MessageQueueReaderImpl final {
   MessageQueueReaderImpl(MessageQueueImpl* queue, int64_t min_timestamp);
   ~MessageQueueReaderImpl();
   Status Read(double timeout, int64_t* timestamp, std::string* message);
+  int64_t GetTimestamp();
 
  private:
   void ReleaseFile(int64_t file_id_);
@@ -87,6 +89,7 @@ class MessageQueueReaderImpl final {
   std::shared_ptr<File> file_;
   int64_t file_id_;
   int64_t file_offset_;
+  int64_t timestamp_;
 };
 
 MessageQueueImpl::MessageQueueImpl()
@@ -211,6 +214,14 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
   return Status(Status::SUCCESS);
 }
 
+int64_t MessageQueueImpl::GetTimestamp() {
+  std::lock_guard lock(mutex_);
+  if (files_.empty()) {
+    return -1;
+  }
+  return timestamp_;
+}
+
 Status MessageQueueImpl::SaveMetadata(
     File* file, int32_t cyclic_magic, int64_t file_id,  int64_t timestamp) {
   const int64_t file_size = std::max<int64_t>(file->GetSizeSimple(), METADATA_SIZE);
@@ -321,7 +332,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
 
 MessageQueueReaderImpl::MessageQueueReaderImpl(MessageQueueImpl* queue, int64_t min_timestamp)
     : queue_(queue), min_timestamp_(min_timestamp), file_(nullptr),
-      file_id_(-1), file_offset_(-1) {
+      file_id_(-1), file_offset_(-1), timestamp_(-1) {
   std::lock_guard<std::mutex> lock(queue->mutex_);
   queue_->readers_.emplace_back(this);
 }
@@ -417,11 +428,17 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
     if (status != Status::SUCCESS) {
       return status;
     }
+    timestamp_ = *timestamp;
     if (*timestamp >= min_timestamp_) {
       break;
     }
   }
   return Status(Status::SUCCESS);
+}
+
+int64_t MessageQueueReaderImpl::GetTimestamp() {
+  std::unique_lock<std::mutex> lock(queue_->mutex_);
+  return timestamp_;
 }
 
 void MessageQueueReaderImpl::ReleaseFile(int64_t file_id_) {
@@ -484,6 +501,10 @@ Status MessageQueue::Close() {
 
 Status MessageQueue::Write(int64_t timestamp, std::string_view message) {
   return impl_->Write(timestamp, message);
+}
+
+int64_t MessageQueue::GetTimestamp() {
+  return impl_->GetTimestamp();
 }
 
 std::unique_ptr<MessageQueue::Reader> MessageQueue::MakeReader(int64_t min_timestamp) {
@@ -576,6 +597,10 @@ MessageQueue::Reader::~Reader() {
 Status MessageQueue::Reader::Read(double timeout, int64_t* timestamp, std::string* message) {
   assert(timestamp != nullptr && message != nullptr);
   return impl_->Read(timeout, timestamp, message);
+}
+
+int64_t MessageQueue::Reader::GetTimestamp() {
+  return impl_->GetTimestamp();
 }
 
 }  // namespace tkrzw

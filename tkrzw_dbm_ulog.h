@@ -22,6 +22,7 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_message_queue.h"
 #include "tkrzw_thread_util.h"
 
 namespace tkrzw {
@@ -33,7 +34,7 @@ class DBMUpdateLoggerStrDeque final : public DBM::UpdateLogger {
  public:
   /**
    * Constructor.
-   * @param delimiter The delimiter put between fields in a log.
+   * @param delim The delimiter put between fields in a log.
    */
   explicit DBMUpdateLoggerStrDeque(const std::string& delim = "\t");
 
@@ -143,13 +144,13 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
 
   /**
    * Constructor.
-   * @param logger The logger to do actual logging.
+   * @param ulog The logger to do actual logging.
    */
   explicit DBMUpdateLoggerSecondShard(DBM::UpdateLogger* ulog) : ulog_(ulog) {}
 
   /**
    * Set the update logger to do actual logging.
-   * @param logger The update logger to do actual logging.
+   * @param ulog The update logger to do actual logging.
    */
   void SetUpdateLogger(DBM::UpdateLogger* ulog) {
     ulog_ = ulog;
@@ -184,7 +185,65 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
   }
 
  public:
+  /** The internal update logger. */
   DBM::UpdateLogger* ulog_;
+};
+
+/**
+ * DBM update logger with a message queue.
+ */
+class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
+ public:
+  /**
+   * Constructor.
+   * @param mq The message queue object to store update logs.  The ownership is not taken.
+   * @param server_id The server ID of the process.
+   * @param dbm_index The index of the DBM on the server.
+   */
+ explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index);
+
+  /**
+   * Writes a log for modifying an existing record or adding a new record.
+   * @param key The key of the record.
+   * @param value The new value of the record.
+   * @return The result status.
+   */
+  Status WriteSet(std::string_view key, std::string_view value) override;
+
+  /**
+   * Writes a log for removing an existing record.
+   * @param key The key of the record.
+   * @return The result status.
+   */
+  Status WriteRemove(std::string_view key) override;
+
+  /**
+   * Writes a log for removing all records.
+   * @return The result status.
+   */
+  Status WriteClear() override;
+
+  /**
+   * Applys the operation in an update log to a database.
+   * @param dbm The DBM object of the database.
+   * @param server_id The server ID to focus on.  If it is negative, every log is used.
+   * Otherwise, if the server ID doesn't match, the log is ignored.
+   * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
+   * Otherwise, if the DBM index doesn't match, the log is ignored.
+   * @param message The update log message.
+   * @return The result status.  If the log is ignored due to the filter, INFEASIBLE_ERROR is
+   * returned.
+   */
+  static Status ApplyUpdateLog(
+      DBM* dbm, int32_t server_id, int32_t dbm_index, std::string_view message);
+
+ private:
+  /** The message queue. */
+  MessageQueue* mq_;
+  /** The server ID of the process. */
+  int32_t server_id_;
+  /** The index of the DBM on the server. */
+  int32_t dbm_index_;
 };
 
 }  // namespace tkrzw
