@@ -595,7 +595,7 @@ void TinyDBMImpl::ProcessImpl(
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
     if (update_logger_ != nullptr) {
-      update_logger_->WriteAdd(key, new_value);
+      update_logger_->WriteSet(key, new_value);
     }
     rec.child = top;
     rec.key_ptr = key.data();
@@ -636,7 +636,7 @@ void TinyDBMImpl::AppendImpl(
     ptr = rec.child;
   }
   if (update_logger_ != nullptr) {
-    update_logger_->WriteAdd(key, value);
+    update_logger_->WriteSet(key, value);
   }
   rec.child = top;
   rec.key_ptr = key.data();

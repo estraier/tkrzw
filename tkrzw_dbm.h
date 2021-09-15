@@ -781,15 +781,7 @@ class DBM {
     virtual ~UpdateLogger() = default;
 
     /**
-     * Writes a log for adding a new record.
-     * @param key The key of the record.
-     * @param value The value of the record.
-     * @return The result status.
-     */
-    virtual Status WriteAdd(std::string_view key, std::string_view value) = 0;
-
-    /**
-     * Writes a log for modifying an existing record.
+     * Writes a log for modifying an existing record or adding a new record.
      * @param key The key of the record.
      * @param value The new value of the record.
      * @return The result status.

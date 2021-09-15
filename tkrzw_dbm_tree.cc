@@ -1919,7 +1919,7 @@ void TreeDBMImpl::ProcessImpl(
         new_value.data() != DBM::RecordProcessor::REMOVE.data() &&
         writable) {
       if (update_logger_ != nullptr) {
-        update_logger_->WriteAdd(key, new_value);
+        update_logger_->WriteSet(key, new_value);
       }
       TreeRecord* new_rec = CreateTreeRecord(key, new_value);
       node->records.insert(it, new_rec);

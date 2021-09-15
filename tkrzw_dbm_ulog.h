@@ -36,15 +36,7 @@ class DBMUpdateLoggerDBM final : public DBM::UpdateLogger {
   explicit DBMUpdateLoggerDBM(DBM* dbm);
 
   /**
-   * Writes a log for adding a new record.
-   * @param key The key of the record.
-   * @param value The value of the record.
-   * @return The result status.
-   */
-  Status WriteAdd(std::string_view key, std::string_view value) override;
-
-  /**
-   * Writes a log for modifying an existing record.
+   * Writes a log for modifying an existing record or adding a new record.
    * @param key The key of the record.
    * @param value The new value of the record.
    * @return The result status.
@@ -67,6 +59,49 @@ class DBMUpdateLoggerDBM final : public DBM::UpdateLogger {
  private:
   /** A DBM object to store logs in. */
   DBM* dbm_;
+};
+
+/**
+ * Update logger adapter for the second shard and later.
+ */
+class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
+ public:
+  /**
+   * Constructor.
+   * @param logger The logger to do actual logging.
+   */
+  explicit DBMUpdateLoggerSecondShard(DBM::UpdateLogger* logger) : logger_(logger) {}
+
+  /**
+   * Writes a log for modifying an existing record or adding a new record.
+   * @param key The key of the record.
+   * @param value The new value of the record.
+   * @return The result status.
+   */
+  Status WriteSet(std::string_view key, std::string_view value) override {
+    return logger_->WriteSet(key, value);
+  }
+
+  /**
+   * Writes a log for removing an existing record.
+   * @param key The key of the record.
+   * @return The result status.
+   */
+  Status WriteRemove(std::string_view key) override {
+    return logger_->WriteRemove(key);
+  }
+
+  /**
+   * Writes a log for removing all records.
+   * @return The result status.
+   * @details This does no operation.
+   */
+  Status WriteClear() override {
+    return Status(Status::SUCCESS);
+  }
+
+ public:
+  DBM::UpdateLogger* logger_;
 };
 
 }  // namespace tkrzw

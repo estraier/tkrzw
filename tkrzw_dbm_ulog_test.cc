@@ -40,7 +40,7 @@ TEST(DBMUpdateLoggerTest, DBMUpdateLoggerDBM) {
   tkrzw::DBMUpdateLoggerDBM ulog(&dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, ulog.WriteSet("one", "hop"));
   EXPECT_EQ("hop", dbm.GetSimple("one"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, ulog.WriteAdd("two", "step"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, ulog.WriteSet("two", "step"));
   EXPECT_EQ("step", dbm.GetSimple("two"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, ulog.WriteRemove("two"));
   EXPECT_EQ("", dbm.GetSimple("two"));

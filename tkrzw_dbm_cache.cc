@@ -379,7 +379,7 @@ void CacheSlot::ProcessImpl(
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
     if (dbm_->update_logger_ != nullptr) {
-      dbm_->update_logger_->WriteAdd(key, new_value);
+      dbm_->update_logger_->WriteSet(key, new_value);
     }
     rec.child = top;
     rec.prev = last_;

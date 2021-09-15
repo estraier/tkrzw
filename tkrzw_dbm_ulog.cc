@@ -25,10 +25,6 @@ namespace tkrzw {
 
 DBMUpdateLoggerDBM::DBMUpdateLoggerDBM(DBM* dbm) : dbm_(dbm) {}
 
-Status DBMUpdateLoggerDBM::WriteAdd(std::string_view key, std::string_view value) {
-  return dbm_->Set(key, value);
-}
-
 Status DBMUpdateLoggerDBM::WriteSet(std::string_view key, std::string_view value) {
   return dbm_->Set(key, value);
 }

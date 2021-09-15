@@ -1333,7 +1333,7 @@ Status SkipDBMImpl::UpdateRecord(std::string_view key, std::string_view new_valu
       if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
         status = update_logger_->WriteRemove(key);
       } else {
-        status = update_logger_->WriteAdd(key, new_value);
+        status = update_logger_->WriteSet(key, new_value);
       }
       if (status != Status::SUCCESS) {
         return status;

@@ -169,7 +169,7 @@ Status StdDBMImpl<STRMAP>::Process(
       if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
           new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
         if (update_logger_ != nullptr) {
-          update_logger_->WriteAdd(key, new_value);
+          update_logger_->WriteSet(key, new_value);
         }
         map_.emplace(std::move(key_str), new_value);
       }
@@ -222,7 +222,7 @@ Status StdDBMImpl<STRMAP>::ProcessMulti(
         if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
             new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
           if (update_logger_ != nullptr) {
-            update_logger_->WriteAdd(key, new_value);
+            update_logger_->WriteSet(key, new_value);
           }
           map_.emplace(std::move(key_str), new_value);
         }

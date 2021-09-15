@@ -1029,7 +1029,7 @@ void BabyDBMImpl::ProcessImpl(
         new_value.data() != DBM::RecordProcessor::REMOVE.data() &&
         writable) {
       if (update_logger_ != nullptr) {
-        update_logger_->WriteAdd(key, new_value);
+        update_logger_->WriteSet(key, new_value);
       }
       BabyRecord* new_rec = CreateBabyRecord(key, new_value);
       node->records.insert(it, new_rec);
@@ -1051,11 +1051,11 @@ void BabyDBMImpl::AppendImpl(
     BabyRecord* rec = *it;
     *it = AppendBabyRecord(rec, value, delim);
     if (update_logger_ != nullptr) {
-      update_logger_->WriteAdd(key, (*it)->GetValue());
+      update_logger_->WriteSet(key, (*it)->GetValue());
     }
   } else {
     if (update_logger_ != nullptr) {
-      update_logger_->WriteAdd(key, value);
+      update_logger_->WriteSet(key, value);
     }
     BabyRecord* new_rec = CreateBabyRecord(key, value);
     node->records.insert(it, new_rec);

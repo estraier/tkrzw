@@ -1523,7 +1523,7 @@ Status HashDBMImpl::ProcessImpl(
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
     if (update_logger_ != nullptr) {
-      status = update_logger_->WriteAdd(key, new_value);
+      status = update_logger_->WriteSet(key, new_value);
       if (status != Status::SUCCESS) {
         return status;
       }
