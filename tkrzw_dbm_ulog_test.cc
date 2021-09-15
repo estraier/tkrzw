@@ -134,43 +134,43 @@ TEST(DBMUpdateLoggerTest, MQWrite) {
 TEST(DBMUpdateLoggerTest, MQApplyUpdateLog) {
   tkrzw::StdHashDBM dbm(10);
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, ""));
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, ""));
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1\x00\x00\x0F\x0F", 5)));
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1", 1)));
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1\x00\x00", 3)));
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1\x00\x00\x0F", 4)));
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xFF\x00\x00", 3)));
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, 1, -1, std::string_view(
-                "\xFF\x00\x00", 3)));
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
+                "\xFF\x00\x00", 3), 1, -1));
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, 1, std::string_view(
-                "\xFF\x00\x00", 3)));
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
+                "\xFF\x00\x00", 3), -1, 1));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1\x00\x00\x03\x05onefirst", 13)));
   EXPECT_EQ("first", dbm.GetSimple("one"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA1\x00\x00\x03\x06twosecond", 14)));
   EXPECT_EQ("second", dbm.GetSimple("two"));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA2\x00\x00\x03two", 7)));
   EXPECT_EQ("", dbm.GetSimple("two"));
   EXPECT_EQ(1, dbm.CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, -1, -1, std::string_view(
+            tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(&dbm, std::string_view(
                 "\xA3\x00\x00", 3)));
   EXPECT_EQ(0, dbm.CountSimple());
 }
@@ -202,7 +202,7 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             break;
           }
           EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(
-              dest, 333333, 999, message));
+              dest, message, 333333, 999));
           if (--count == 0) {
             wc.Done();
           }

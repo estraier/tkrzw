@@ -156,7 +156,7 @@ Status DBMUpdateLoggerMQ::WriteClear() {
 }
 
 Status DBMUpdateLoggerMQ::ApplyUpdateLog(
-    DBM* dbm, int32_t server_id, int32_t dbm_index, std::string_view message) {
+    DBM* dbm, std::string_view message, int32_t server_id, int32_t dbm_index) {
   assert(dbm != nullptr);
   const char* rp = message.data();
   int32_t record_size = message.size();

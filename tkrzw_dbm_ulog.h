@@ -226,6 +226,20 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   /**
    * Applys the operation in an update log to a database.
    * @param dbm The DBM object of the database.
+   * @param message The update log message.
+   * @param server_id The server ID to focus on.  If it is negative, every log is used.
+   * Otherwise, if the server ID doesn't match, the log is ignored.
+   * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
+   * Otherwise, if the DBM index doesn't match, the log is ignored.
+   * @return The result status.  If the log is ignored due to the filter, INFEASIBLE_ERROR is
+   * returned.
+   */
+  static Status ApplyUpdateLog(
+      DBM* dbm, std::string_view message, int32_t server_id = -1, int32_t dbm_index = -1);
+
+  /**
+   * Applys the operations in the message queue files.
+   * @param dbm The DBM object of the database.
    * @param server_id The server ID to focus on.  If it is negative, every log is used.
    * Otherwise, if the server ID doesn't match, the log is ignored.
    * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
@@ -234,8 +248,10 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    * @return The result status.  If the log is ignored due to the filter, INFEASIBLE_ERROR is
    * returned.
    */
-  static Status ApplyUpdateLog(
+  /*
+  static Status ApplyUpdateLogFromFiles(
       DBM* dbm, int32_t server_id, int32_t dbm_index, std::string_view message);
+  */
 
  private:
   /** The message queue. */
