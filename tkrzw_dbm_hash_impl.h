@@ -432,19 +432,23 @@ inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
  * @param proc The record processor, which takes a decompressed value.
  * @param key The key of a record.
  * @param old_value The old value of the record.
+ * @param new_value_orig The pointer to store the original new value before compression.
  * @param compressor The compressor object for compression and decompression.  nullptr is OK.
  * @param comp_data_placeholder The praceholder to manage the compression data.
  * @return The value returned from the record processor.  If it is a normal value, compression is
  * done implicitly.
  */
+
 std::string_view CallRecordProcessFull(
     DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder);
 
 /**
  * Calls the ProcessEmpty method of a record processor with compression.
  * @param proc The record processor.
  * @param key The key of a record.
+ * @param new_value_orig The pointer to store the original new value before compression.
  * @param compressor The compressor object for compression and decompression.  nullptr is OK.
  * @param comp_data_placeholder The praceholder to manage the compression data.
  * @return The value returned from the record processor.  If it is a normal value, compression is
@@ -452,6 +456,7 @@ std::string_view CallRecordProcessFull(
  */
 std::string_view CallRecordProcessEmpty(
     DBM::RecordProcessor* proc, std::string_view key,
+    std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder);
 
 }  // namespace tkrzw

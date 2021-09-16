@@ -479,8 +479,9 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
           }
           value = rec.GetValue();
         }
+        std::string_view new_value_orig;
         const std::string_view new_value = CallRecordProcessFull(
-            proc, key, value, compressor_.get(), &comp_data_placeholder);
+            proc, key, value, &new_value_orig, compressor_.get(), &comp_data_placeholder);
         if (new_value.data() == nullptr) {
           return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
         }
@@ -526,8 +527,9 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
               }
               value = rec.GetValue();
             }
+            std::string_view new_value_orig;
             const std::string_view new_value = CallRecordProcessFull(
-                proc, key, value, compressor_.get(), &comp_data_placeholder);
+                proc, key, value, &new_value_orig, compressor_.get(), &comp_data_placeholder);
             if (new_value.data() == nullptr) {
               return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
             }
@@ -1372,7 +1374,7 @@ Status HashDBMImpl::ProcessImpl(
     }
     const auto rec_key = rec.GetKey();
     if (key == rec_key) {
-      std::string_view new_value;
+      std::string_view new_value, new_value_orig;
       const bool old_is_set = rec.GetOperationType() == HashRecord::OP_SET ||
           rec.GetOperationType() == HashRecord::OP_ADD;
       std::string_view old_value = rec.GetValue();
@@ -1389,10 +1391,10 @@ Status HashDBMImpl::ProcessImpl(
           old_value = std::string_view(nullptr, old_value.size());
         }
         new_value = CallRecordProcessFull(
-            proc, key, old_value, compressor_.get(), &comp_data_placeholder);
+            proc, key, old_value, &new_value_orig, compressor_.get(), &comp_data_placeholder);
       } else {
         new_value = CallRecordProcessEmpty(
-            proc, key, compressor_.get(), &comp_data_placeholder);
+            proc, key, &new_value_orig, compressor_.get(), &comp_data_placeholder);
       }
       if (new_value.data() == nullptr) {
         return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
@@ -1402,7 +1404,7 @@ Status HashDBMImpl::ProcessImpl(
           if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
             status = update_logger_->WriteRemove(key);
           } else {
-            status = update_logger_->WriteSet(key, new_value);
+            status = update_logger_->WriteSet(key, new_value_orig);
           }
           if (status != Status::SUCCESS) {
             return status;
@@ -1515,15 +1517,16 @@ Status HashDBMImpl::ProcessImpl(
       current_offset = rec.GetChildOffset();
     }
   }
+  std::string_view new_value_orig;
   const std::string_view new_value = CallRecordProcessEmpty(
-      proc, key, compressor_.get(), &comp_data_placeholder);
+      proc, key, &new_value_orig, compressor_.get(), &comp_data_placeholder);
   if (new_value.data() == nullptr) {
     return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
   }
   if (new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data() && writable) {
     if (update_logger_ != nullptr) {
-      status = update_logger_->WriteSet(key, new_value);
+      status = update_logger_->WriteSet(key, new_value_orig);
       if (status != Status::SUCCESS) {
         return status;
       }

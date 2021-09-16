@@ -1879,16 +1879,24 @@ void HashDBMTest::HashDBMDirectIOTest(tkrzw::HashDBM* dbm) {
 void HashDBMTest::HashDBMUpdateLoggerTest(tkrzw::HashDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
-  tkrzw::HashDBM::TuningParameters tuning_params;
-  tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
-  tuning_params.offset_width = 4;
-  tuning_params.align_pow = 0;
-  tuning_params.num_buckets = 10;
-  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-  UpdateLoggerTest(dbm);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
+      {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
+  for (const auto& record_comp_mode : record_comp_modes) {
+    if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
+      continue;
+    }
+    tkrzw::HashDBM::TuningParameters tuning_params;
+    tuning_params.update_mode = tkrzw::HashDBM::UPDATE_IN_PLACE;
+    tuning_params.record_comp_mode = record_comp_mode;
+    tuning_params.offset_width = 4;
+    tuning_params.align_pow = 0;
+    tuning_params.num_buckets = 10;
+    tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    UpdateLoggerTest(dbm);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  }
 }
 
 TEST_F(HashDBMTest, EmptyDatabase) {

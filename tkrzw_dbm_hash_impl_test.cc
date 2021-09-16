@@ -378,12 +378,14 @@ TEST(DBMHashImplTest, CallRecordProcess) {
   tkrzw::ScopedStringView placeholder;
   {
     Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
+    std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", "barbar", nullptr, &placeholder);
+        &proc, "foo", "barbar", &new_value_orig, nullptr, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
-    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", nullptr, &placeholder);
+    new_value = tkrzw::CallRecordProcessEmpty(
+        &proc, "boo", &new_value_orig, nullptr, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("boo", proc.GetKey());
     EXPECT_EQ("", proc.GetValue());
@@ -392,12 +394,15 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
     size_t comp_size = 0;
     char* comp_data = compressor->Compress("barbar", 6, &comp_size);
+    std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", std::string(comp_data, comp_size), compressor, &placeholder);
+        &proc, "foo", std::string(comp_data, comp_size), &new_value_orig,
+        compressor, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
-    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", compressor, &placeholder);
+    new_value = tkrzw::CallRecordProcessEmpty(
+        &proc, "boo", &new_value_orig, compressor, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("boo", proc.GetKey());
     EXPECT_EQ("", proc.GetValue());
@@ -407,8 +412,10 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     Checker proc("hello");
     size_t comp_size = 0;
     char* comp_data = compressor->Compress("barbar", 6, &comp_size);
+    std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", std::string(comp_data, comp_size), compressor, &placeholder);
+        &proc, "foo", std::string(comp_data, comp_size), &new_value_orig,
+        compressor, &placeholder);
     EXPECT_NE(nullptr, new_value.data());
     {
       size_t decomp_size = 0;
@@ -419,7 +426,8 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     }
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
-    new_value = tkrzw::CallRecordProcessEmpty(&proc, "boo", compressor, &placeholder);
+    new_value = tkrzw::CallRecordProcessEmpty(
+        &proc, "boo", &new_value_orig, compressor, &placeholder);
     EXPECT_NE(nullptr, new_value.data());
     {
       size_t decomp_size = 0;

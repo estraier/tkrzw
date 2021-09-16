@@ -611,6 +611,7 @@ void FreeBlockPool::Deserialize(std::string_view str, int32_t offset_width, int3
 
 std::string_view CallRecordProcessFull(
     DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder) {
   if (old_value.data() == nullptr) {
     old_value = std::string_view("", 0);
@@ -625,6 +626,7 @@ std::string_view CallRecordProcessFull(
     old_value = comp_data_placeholder->Get();
   }
   std::string_view new_value = proc->ProcessFull(key, old_value);
+  *new_value_orig = new_value;
   if (compressor != nullptr && new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
     size_t comp_size = 0;
@@ -641,8 +643,10 @@ std::string_view CallRecordProcessFull(
 
 std::string_view CallRecordProcessEmpty(
     DBM::RecordProcessor* proc, std::string_view key,
+    std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder) {
   std::string_view new_value = proc->ProcessEmpty(key);
+  *new_value_orig = new_value;
   if (compressor != nullptr && new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data()) {
     size_t comp_size = 0;
