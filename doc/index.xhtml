@@ -3979,7 +3979,6 @@ backup_dbm.Open("casket-backup.tkh", true);
 DBMUpdateLoggerDBM ulog(&backup_dbm);
 main_dbm.SetUpdateLogger(&ulog);
 main_dbm.Set("japan", "tokyo");
-backup_dbm.Close();
 ]]></code></pre>
 
 <p>However, using two databases is not ideal in most cases.  As the backup database is also online, you cannot stop it while the main database is in operation.  Moreover, the throughput of updating operatins is halved.</p>
