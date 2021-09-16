@@ -172,7 +172,9 @@ window.onload = function(){
 
 <p>All database classes share the same interface so that applications can use any of them with the common API.  All classes are thread-safe so that multiple threads can access the same database simultaneously.  Basically, the database file is opened with the "Open" method and closed with the "Close" method.  You can store records with the "Set" method, retrieve records with the "Get" method, and remove records with the "Remove" method.  Iterator is also supported to retrieve each and every record of the database.</p>
 
-<p>Transactional features are also supported.  If you want to evaluate a record and update it atomically, you use the "Process" method, which takes a key and an arbitrary callback function to operate the record.  If you want to evaluate multiple records and update them atomically, you use the "ProcessMulti" method, which takes keys and arbitrary callback functions to operate the records.  If you want to do long transactions without locking records, the "CompareExchange" method and the "CompareExchangeMulti" method are useful.</p>
+<p>Transactional features are also supported.  If you want to evaluate a record and update it atomically, you use the "Process" method, which takes a key and an arbitrary callback function to process the record.  If you want to evaluate multiple records and update them atomically, you use the "ProcessMulti" method, which takes keys and arbitrary callback functions to process the records.  If you want to do long transactions without locking records, the "CompareExchange" method and the "CompareExchangeMulti" method are useful.</p>
+
+<p>Each data class has different approaches for durability.  The file database classes support the auto restore feature to recover records after the process crashes.  The file hash/tree databases support the appending update mode, which prevents data corruption of existing records.  The file skip database and all on-memory databases atomically replace the entire database with a completed temporary file, which realizes the strongest durability on a single machine.  All database classes support producing online update logs, which enables online data replication and staged backup.</p>
 
 <p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
 
@@ -2886,6 +2888,7 @@ int main(int argc, char** argv) {
 <dd><code>--escape</code> : C-style escape/unescape is applied to the TSV data.</dd>
 <dd><code>--keys</code> : Exports keys only.</dd>
 <dd><code>--ulog <var>num</var></code> : Uses update logs based on the timestamp.</dd>
+<dd><code>--ulog_ids <var>num</var> <var>num</var></code> : Sets the server ID and the DBM index of update logs.</dd>
 <dt>Tuning options for HashDBM:</dt>
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
@@ -3940,6 +3943,92 @@ backup_dbm.Close();
 } snapshooter("casket-backup-20200515.tkh");
 dbm.Synchronize(false, &snapshooter);
 ]]></code></pre>
+
+<h3 id="tips_ulog">Update Logging and Message Queue</h3>
+
+<p>If you have a backup database file, you can recover the state of the database at the time of taking the backup file.  However, you loose updates after that time.  Taking update logs mitigates this issue.  Each database class supports injection of any update logger instance, whose class is derived from the UpdateLogger class.  The WriteSet method is called just before a record is modified or added by the Set method and so on.  The WriteRemove method is called just before a record is removed by the Remove method and so on.  The WriteClear method is called just before all records are removed the Clear method.  If you want to monitor all updates on the terminal, you'll write the following code.</p>
+
+<pre><code class="language-cpp"><![CDATA[class MyLogger : public DBM::UpdateLogger {
+  Status WriteSet(std::string_view key, std::string_view value) override {
+    std::cout << "SET:" << key << ":" << value << std::endl;
+    return Status(Status::SUCCESS);
+  }
+  Status WriteRemove(std::string_view key) override {
+    std::cout << "REMOVE:" << key << std::endl;
+    return Status(Status::SUCCESS);
+  }
+  Status WriteClear() override {
+    std::cout << "CLEAR" << std::endl;
+    return Status(Status::SUCCESS);
+  }
+};
+MyLogger ulog;
+dbm.SetUpdateLogger(&log);
+dbm.Set("japan", "tokyo");
+dbm.Set("china", "beijing");
+dbm.Remove("japan");
+dbm.Clear();
+]]></code></pre>
+
+<p>Note that all updates represent the current content of the database.  Let's say, if the value "foo" of a record is updated by Append method to be "foobar", WriteSet("foobar") is called.  It's not WriteAppend("bar").  If the Remove method is called but the record doesn't exist, no callback is called.</p>
+
+<p>By storing update logs into files, you can redo the operations later.  It's like row-level REDO logs of RDBMS.  One easy way to achieve it is to use another DBM object.  The class DBMUpdateLoggerDBM wraps any DBM object as UpdateLogger.  The following code replicates every updates of the main database to the backup database.</p>
+
+<pre><code class="language-cpp"><![CDATA[HashDBM backup_dbm;
+backup_dbm.Open("casket-backup.tkh", true);
+DBMUpdateLoggerDBM ulog(&backup_dbm);
+main_dbm.SetUpdateLogger(&ulog);
+main_dbm.Set("japan", "tokyo");
+backup_dbm.Close();
+]]></code></pre>
+
+<p>However, using two databases is not ideal in most cases.  As the backup database is also online, you cannot stop it while the main database is in operation.  Moreover, the throughput of updating operatins is halved.</p>
+
+<p>Instead, it is recommended to store update logs into flat files by the DBMUpdateLoggerMQ class.  It serializes update logs in a binary format and appends them at the end of a flat file.  Thanks to the simple structure, overhead for taking logs is relatively low.  Moreover, file rotation is done implicitly; If the size of the current file exceeds a threshold, a new file is created and then newer update logs are stored there.  The timestamp when the update happens is attached to each update log.  Thus, you can retrieve update logs in a specific time range.  Thanks to those features, you can maintain incremental backup data for online databases.</p>
+
+<p>The DBMUpdateLoggerMQ class uses a message queue managed by the MessageQueue class.  It realizes thread-safe operations of writing and reading logs simultaneously.  You specify a prefix of log files and the maximum file size when you call the Open method of MessageQueue.  The actual file name has a suffix of ten digits of a sequential ID, like "casket-ulog.0000000000" and "casket-ulog.0000000001".</p>
+
+<pre><code class="language-cpp"><![CDATA[MessageQueue mq;
+mq.Open("casket-ulog", 512<<20, MessageQueue::OPEN_TRUNCATE).OrDie();
+DBMUpdateLoggerMQ ulog(&mq);
+TreeDBM dbm;
+dbm.SetUpdateLogger(&ulog);
+dbm.Open("casket.tkt", true).OrDie();
+dbm.Set("two", "step");
+dbm.Close().OrDie();
+mq.Close().OrDie();
+]]></code></pre>
+
+<p>If the database is broken and lost somehow, you restore the current state by applying the update logs to the latest backup file.  It is a good practice to copy the backup file for restoration to keep the original file intact, just in case.</p>
+
+<pre><code class="language-cpp"><![CDATA[CopyFileData("casket-backup.tkt", "casket-restored.tkt").OrDie();
+TreeDBM dbm;
+dbm.Open("casket-restored.tkt", true).OrDie();
+DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(&dbm, "casket-ulog");
+dbm.Close().OrDie();
+]]></code></pre>
+
+<p>The typical scenario of operations with incremental backup data is like the following.  After restoration and before resuming the normal operations, the restored database should be copied as the new backup file.</p>
+
+<ul>
+<li>Makes a full backup data.</li>
+<li>Does normal update operations while taking update logs.</li>
+<li>The system crashes and the main database is lost somehow.</li>
+<li>Applies the update log to the full backup file.</li>
+<li>Archive/remove old update log files.</li>
+</ul>
+
+<p>The restore operation can be done by the command line utility too.</p>  
+
+<pre><code class="language-shell-session"><![CDATA[$ cp casket-backup.tkt casket-restored.tkt
+$ tkrzw_dbm_import --ulog 0 casket-restored.tkt casket-ulog
+]]></code></pre>
+
+<p>Unless the system crashes and restoration is done, the update log files continue to increase.  Thus, you should apply the update logs periodically and archive/remove unnecessary files.  The above command works with update log files which are in operation by another process.  As the race condition is avoided by checking metadata for each record, you can read update log files which can be written by another process simultaneously.  After you apply all exisiting update logs, you can remove the update log files except for the latest one.</p>
+
+<p>Though update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the timestamp.  Thus, you can apply update log files multiple times as long as the order is by the file ID.</p>
+
+<p>The reason why the MessageQueue class is used for taking logs is that another thread can monitor the latest updates and read them immediately.  This feature is utilized to implement data replication between network servers in Tkrzw-RPC.  You can also use it to implement data replication locally.  See the API of MessageQueue for details.</p>
 
 <h3 id="tips_migration">Data Migration</h3>
 

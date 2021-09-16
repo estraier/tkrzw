@@ -144,6 +144,7 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "six"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(70, "seven"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(65, ""));
   reader = mq.MakeReader(10);
   records.clear();
   while (true) {
@@ -159,7 +160,51 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{30, "four"},
       std::pair<uint64_t, std::string>{40, "five"},
       std::pair<uint64_t, std::string>{40, "six"},
-      std::pair<uint64_t, std::string>{70, "seven"}));
+      std::pair<uint64_t, std::string>{70, "seven"},
+      std::pair<uint64_t, std::string>{70, ""}));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000002", 65536));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000002", false));
+  file_offset = 0;
+  records.clear();
+  while (true) {
+    std::string message;
+    const tkrzw::Status status =
+        tkrzw::MessageQueue::ReadNextMessage(&file, &file_offset, &timestamp, &message, 40);
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, status);
+      break;
+    }
+    records.emplace_back(std::make_pair(timestamp, message));
+  }
+  EXPECT_THAT(records, ElementsAre(
+      std::pair<uint64_t, std::string>{30, ""},
+      std::pair<uint64_t, std::string>{40, "five"}));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000005", 65536));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, tkrzw::MessageQueue::OPEN_READ_ONLY));
+  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000005", 65536));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 65536));
+  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(80, "eight"));
+  reader = mq.MakeReader(70);
+  records.clear();
+  while (true) {
+    std::string message;
+    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    EXPECT_EQ(timestamp, reader->GetTimestamp());
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
+      break;
+    }
+    records.emplace_back(std::make_pair(timestamp, message));
+  }
+  EXPECT_THAT(records, ElementsAre(
+      std::pair<uint64_t, std::string>{70, "seven"},
+      std::pair<uint64_t, std::string>{70, ""},
+      std::pair<uint64_t, std::string>{80, "eight"}));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 

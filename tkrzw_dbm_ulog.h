@@ -201,7 +201,7 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    * @param dbm_index The index of the DBM on the server.
    * @param fixed_timestamp If not negative, the timestamp is fixed to the value.
    */
- explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id, int32_t dbm_index,
+ explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id = 0, int32_t dbm_index = 0,
                             int64_t fixed_timestamp = -1);
 
   /**

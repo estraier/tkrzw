@@ -33,8 +33,10 @@ static constexpr int32_t META_OFFSET_FILE_ID = 10;
 static constexpr int32_t META_OFFSET_TIMESTAMP = 16;
 static constexpr int32_t META_OFFSET_FILE_SIZE = 22;
 static constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 31;
-static constexpr size_t WRITE_BUFFER_SIZE = 10240;
+static constexpr size_t WRITE_BUFFER_SIZE = 8192;
+static constexpr size_t RECORD_HEADER_SIZE = 11;
 static constexpr uint32_t RECORD_MAGIC_DATA = 0xFF;
+static constexpr int32_t RECORD_NUM_RETRIES = 32;
 
 class MessageQueueImpl final {
   friend class MessageQueueReaderImpl;
@@ -90,6 +92,26 @@ class MessageQueueReaderImpl final {
   int64_t file_offset_;
   int64_t timestamp_;
 };
+
+static Status CheckFileZeroRegion(File* file, int64_t offset, int64_t end_offset) {
+  const int64_t max_check_size = 128 * 1024;
+  char buf[8192];
+  end_offset = std::min<int64_t>(offset + max_check_size, end_offset);
+  while (offset < end_offset) {
+    const int32_t read_size = std::min<int32_t>(end_offset - offset, sizeof(buf));
+    const Status status = file->Read(offset, buf, read_size);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    for (int32_t i = 0; i < read_size; i++) {
+      if (buf[i] != 0) {
+        return Status(Status::BROKEN_DATA_ERROR, "non-zero region");
+      }
+    }
+    offset += read_size;
+  }
+  return Status(Status::SUCCESS);
+}
 
 MessageQueueImpl::MessageQueueImpl()
     : prefix_(), max_file_size_(0), sync_hard_(false), read_only_(false),
@@ -157,14 +179,37 @@ Status MessageQueueImpl::Open(
   int64_t check_file_size = 0;
   status = LoadMetadata(last_file.get(), &cyclic_magic_, &check_file_id, &timestamp_,
                         &check_file_size);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (cyclic_magic_ < 0) {
+    for (int32_t i = 0; i < RECORD_NUM_RETRIES && cyclic_magic_ < 0; i++) {
+      std::this_thread::yield();
+      status = LoadMetadata(last_file.get(), &cyclic_magic_, &check_file_id, &timestamp_,
+                            &check_file_size);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+    if (cyclic_magic_ < 0) {
+      status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent cyclic magic data");
+    }
+  }
   if (check_file_id != last_file_id_) {
     status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file ID");
   }
-  if (cyclic_magic_ < 0) {
-    status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent cyclic magic data");
-  }
-  if (check_file_size != last_file->GetSizeSimple()) {
-    status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file size");
+  const int64_t act_file_size = last_file->GetSizeSimple();
+  if (check_file_size != act_file_size) {
+    if (check_file_size < act_file_size && CheckFileZeroRegion(
+            last_file.get(), check_file_size, act_file_size) == Status::SUCCESS) {
+      if (read_only_) {
+        status |= last_file->TruncateFakely(check_file_size);
+      } else {
+        status |= last_file->Truncate(check_file_size);
+      }
+    } else {
+      status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file size");
+    }
   }
   if (status != Status::SUCCESS) {
     return status;
@@ -204,9 +249,15 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
     if (files_.empty()) {
       return Status(Status::PRECONDITION_ERROR, "not opened message queue");
     }
-    const Status status = WriteImpl(timestamp, message);
+    Status status = WriteImpl(timestamp, message);
     if (status != Status::SUCCESS) {
       return status;
+    }
+    if (sync_hard_) {
+      status = Synchronize();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
     }
   }
   cond_.notify_all();
@@ -391,7 +442,7 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
       file_ = file_sp;
       file_offset_ = METADATA_SIZE;
     }
-    if (file_offset_ >= file_->GetSizeSimple()) {
+    if (file_offset_ + static_cast<int64_t>(RECORD_HEADER_SIZE) > file_->GetSizeSimple()) {
       if (file_id_ == queue_->last_file_id_) {
         if (queue_->read_only_) {
           file_ = nullptr;
@@ -404,7 +455,7 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
         }
         if (timeout == 0) {
           std::this_thread::yield();
-          if (file_offset_ >= file_->GetSizeSimple()) {
+          if (file_offset_ + static_cast<int64_t>(RECORD_HEADER_SIZE) > file_->GetSizeSimple()) {
             return Status(Status::INFEASIBLE_ERROR);
           }
           continue;
@@ -559,13 +610,31 @@ Status MessageQueue::ReadNextMessage(
   if (*file_offset <= METADATA_SIZE) {
     *file_offset = METADATA_SIZE;
   }
-  char header[11];
+  char header[RECORD_HEADER_SIZE];
   Status status = file->Read(*file_offset, header, sizeof(header));
   if (status != Status::SUCCESS) {
     return status;
   }
   const char* rp = header;
   if (*(uint8_t*)rp != RECORD_MAGIC_DATA) {
+    bool is_zero = true;
+    for (int32_t i = 0; i < static_cast<int32_t>(sizeof(header)); i++) {
+      if (header[i] != 0) {
+        is_zero = false;
+        break;
+      }
+    }
+    if (is_zero) {
+      const int64_t file_size = file->GetSizeSimple();
+      if (file_size > *file_offset) {
+        if (CheckFileZeroRegion(file, *file_offset, file_size) != Status::SUCCESS) {
+          is_zero = false;
+        }
+      }
+      if (is_zero) {
+        return Status(Status::CANCELED_ERROR);
+      }
+    }
     return Status(Status::BROKEN_DATA_ERROR, "invalid magic number");
   }
   rp++;
@@ -579,6 +648,16 @@ Status MessageQueue::ReadNextMessage(
   if (*timestamp >= min_timestamp) {
     message->resize(data_size + 1);
     status = file->Read(*file_offset, const_cast<char*>(message->data()), data_size + 1);
+    if (status != Status::SUCCESS) {
+      for (int32_t i = 0; i < RECORD_NUM_RETRIES && status == Status::INFEASIBLE_ERROR &&
+               *file_offset + data_size + 1 > file->GetSizeSimple(); i++) {
+        std::this_thread::yield();
+        status = file->Read(*file_offset, const_cast<char*>(message->data()), data_size + 1);
+      }
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
     const uint32_t meta_checksum = *(uint8_t*)(message->data() + data_size);
     message->resize(data_size);
     const uint32_t act_checksum =

@@ -185,7 +185,8 @@ class MessageQueue final {
    * message.
    * @param min_timestamp The minimum timestamp in milliseconds to fill the message data.
    * @param message The pointer to a string object to store the msssage data.
-   * @return The result status.
+   * @return The result status.  If the remaining part from the offset is filled with null codes,
+   * CANCELED_ERROR is returned.
    */
   static Status ReadNextMessage(
       File* file, int64_t* file_offset, int64_t* timestamp, std::string* message,

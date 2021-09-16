@@ -105,6 +105,7 @@ static void PrintUsageAndDie() {
   P("  --escape : C-style escape/unescape is applied to the TSV data.\n");
   P("  --keys : Exports keys only.\n");
   P("  --ulog num : Uses update logs based on the timestamp.\n");
+  P("  --ulog_ids num num : Sets the server ID and the DBM index of update logs.\n");
   P("\n");
   P("Tuning options for HashDBM:\n");
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
@@ -1601,7 +1602,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--tsv", 0}, {"--escape", 0}, {"--keys", 0}, {"--ulog", 1},
+    {"--tsv", 0}, {"--escape", 0}, {"--keys", 0}, {"--ulog", 1}, {"--ulog_ids", 2},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1626,6 +1627,8 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const bool keys_only = CheckMap(cmd_args, "--keys");
   const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
+  const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, 0);
+  const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, 0);
   if (file_path.empty()) {
     Die("The DBM file path must be specified");
   }
@@ -1666,7 +1669,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
       EPrintL("Open failed: ", status);
       ok = false;
     }
-    DBMUpdateLoggerMQ ulog(&mq, 0, 0, ulog_ts);
+    DBMUpdateLoggerMQ ulog(&mq, ulog_server_id, ulog_dbm_index, ulog_ts);
     auto writer =
         [&](std::string_view key, std::string_view value) -> std::string_view {
           if (key.data() != DBM::RecordProcessor::NOOP.data()) {
@@ -1731,7 +1734,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--params", 1},
-    {"--tsv", 0}, {"--escape", 0}, {"--ulog", 1},
+    {"--tsv", 0}, {"--escape", 0}, {"--ulog", 1}, {"--ulog_ids", 2},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1758,6 +1761,8 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
+  const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, 0);
+  const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, 0);
   if (file_path.empty()) {
     Die("The DBM file path must be specified");
   }
@@ -1789,7 +1794,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   bool ok = true;
   if (ulog_ts >= 0) {
     const Status status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
-        dbm.get(), rec_file_path, ulog_ts,0, 0);
+        dbm.get(), rec_file_path, ulog_ts, ulog_server_id, ulog_dbm_index);
     if (status != Status::SUCCESS) {
       EPrintL("ApplyUpdateLogFromFiles failed: ", status);
       ok = false;

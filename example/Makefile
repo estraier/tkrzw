@@ -8,7 +8,7 @@
 SHELL = /bin/sh
 
 # Targets
-MYBINS = helloworld accesscounter transfer \
+MYBINS = helloworld accesscounter transfer ulogrestore \
   hashdbm_ex1 hashdbm_ex2 hashdbm_ex3 \
   treedbm_ex1 treedbm_ex2 treedbm_ex3 \
   skipdbm_ex1 skipdbm_ex2 skipdbm_ex3 \
@@ -74,6 +74,9 @@ accesscounter : accesscounter.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 transfer : transfer.o
+	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+ulogrestore : ulogrestore.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 hashdbm_ex1 : hashdbm_ex1.o

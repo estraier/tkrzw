@@ -1089,7 +1089,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     mq->Open(ulog_prefix, 1LL << 30).OrDie();
     ulog = std::make_unique<tkrzw::DBMUpdateLoggerMQ>(mq.get(), 0, 0);
     dbm->SetUpdateLogger(ulog.get());
-  }  
+  }
   std::atomic_bool has_error(false);
   const int32_t dot_mod = std::max(num_iterations / 1000, 1);
   const int32_t fold_mod = std::max(num_iterations / 20, 1);
@@ -1218,7 +1218,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
       EPrintL("MessageQueue::Close failed: ", status);
       has_error = true;
     }
-  }  
+  }
   PrintL();
   return has_error ? 1 : 0;
 }

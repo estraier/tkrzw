@@ -104,7 +104,8 @@ Status DBMUpdateLoggerDBM::WriteClear() {
 
 DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
     MessageQueue* mq, int32_t server_id, int32_t dbm_index, int64_t fixed_timestamp)
-    : mq_(mq), server_id_(server_id), dbm_index_(dbm_index), fixed_timestamp_(fixed_timestamp) {}
+    : mq_(mq), server_id_(std::max(server_id, 0)), dbm_index_(std::max(dbm_index, 0)),
+      fixed_timestamp_(fixed_timestamp) {}
 
 Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value) {
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
@@ -281,6 +282,9 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
       status = tkrzw::MessageQueue::ReadNextMessage(
           &file, &file_offset, &timestamp, &message);
       if (status != Status::SUCCESS) {
+        if (status == Status::CANCELED_ERROR) {
+          continue;
+        }
         return status;
       }
       if (timestamp < min_timestamp) {
