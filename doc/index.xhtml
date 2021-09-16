@@ -3944,7 +3944,7 @@ backup_dbm.Close();
 dbm.Synchronize(false, &snapshooter);
 ]]></code></pre>
 
-<h3 id="tips_ulog">Update Logging and Message Queue</h3>
+<h3 id="tips_ulog">Update Logging and Incremental Backup</h3>
 
 <p>If you have a backup database file, you can recover the state of the database at the time of taking the backup file.  However, you loose updates after that time.  Taking update logs mitigates this issue.  Each database class supports injection of any update logger instance, whose class is derived from the UpdateLogger class.  The WriteSet method is called just before a record is modified or added by the Set method and so on.  The WriteRemove method is called just before a record is removed by the Remove method and so on.  The WriteClear method is called just before all records are removed the Clear method.  If you want to monitor all updates on the terminal, you'll write the following code.</p>
 
@@ -4018,7 +4018,7 @@ dbm.Close().OrDie();
 <li>Archive/remove old update log files.</li>
 </ul>
 
-<p>The restore operation can be done by the command line utility too.</p>  
+<p>The restore operation can be done by the command line utility too.  If you take update logs from the beginning, you can make a full backup file by applying all update logs to an empty database.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ cp casket-backup.tkt casket-restored.tkt
 $ tkrzw_dbm_import --ulog 0 casket-restored.tkt casket-ulog
@@ -4026,9 +4026,9 @@ $ tkrzw_dbm_import --ulog 0 casket-restored.tkt casket-ulog
 
 <p>Unless the system crashes and restoration is done, the update log files continue to increase.  Thus, you should apply the update logs periodically and archive/remove unnecessary files.  The above command works with update log files which are in operation by another process.  As the race condition is avoided by checking metadata for each record, you can read update log files which can be written by another process simultaneously.  After you apply all exisiting update logs, you can remove the update log files except for the latest one.</p>
 
-<p>Though update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the timestamp.  Thus, you can apply update log files multiple times as long as the order is by the file ID.</p>
+<p>Even if update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the occurrence time.  Thus, you can apply update log files multiple times as long as the order is by the file ID.</p>
 
-<p>The reason why the MessageQueue class is used for taking logs is that another thread can monitor the latest updates and read them immediately.  This feature is utilized to implement data replication between network servers in Tkrzw-RPC.  You can also use it to implement data replication locally.  See the API of MessageQueue for details.</p>
+<p>The reason why the MessageQueue class is used for taking logs is that another thread can monitor the latest updates and read them immediately.  This feature is utilized to implement data replication between network servers in Tkrzw-RPC.  That's why each update log has extra properties for the server and the DBM index.  You can also use DBMUpdateLoggerMQ to implement data replication locally.  See the API of DBMUpdateLoggerMQ and MessageQueue for details.</p>
 
 <h3 id="tips_migration">Data Migration</h3>
 
@@ -4062,6 +4062,12 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 ]]></code></pre>
 
 <p>Whereas data of flat records can include any kind of binary data or text data, TSV data cannot include tab, linefeed or binary data.  If you want to escape output data in C-style for exporting and unescape input data for importing, add the "--escape" flag.</p>
+
+<p>Data migration can be done via update logs although space efficiency is not good.  The "export" subcommand takes the "--ulog" option which sets the output type to update logs and specifies the timestamp added to each update log.  All existing records are treated as the "Set" operations.  The "import" command also takes the "--ulog" option which specifies the minimum timestamp for update logs to import.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export --ulog 0 casket-1.tkh casket-ulog
+$ tkrzw_dbm_util import --ulog 0 casket-2.tkh casket-ulog
+]]></code></pre>
 
 <h3 id="tips_inverted_index">Inverted Index for Full-text Search</h3>
 
