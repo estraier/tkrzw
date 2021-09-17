@@ -392,6 +392,49 @@ TEST_F(ShardDBMTest, UpdateLogger) {
   }
 }
 
+TEST_F(ShardDBMTest, UpdateLoggerMQ) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  struct Config final {
+    std::string path;
+    std::map<std::string, std::string> open_params;
+  };
+  const std::vector<Config> configs = {
+    {"casket.hash", {{"num_buckets", "100"}}},
+    {"casket.tree", {{"max_page_size", "1"}, {"max_branches", "2"}}},
+    {"casket.tiny", {{"num_buckets", "100"}}},
+    {"casket.baby", {}},
+  };
+  for (const auto& config : configs) {
+    const std::string ulog_prefix = tmp_dir.MakeUniquePath("casket-", "-ulog");
+    tkrzw::ShardDBM dbm;
+    const std::string path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    auto shard_open_params = config.open_params;
+    shard_open_params.emplace("num_shards", "4");
+    shard_open_params["ulog_prefix"] = ulog_prefix;
+    shard_open_params["ulog_max_file_size"] = "1024";
+    shard_open_params["ulog_server_id"] = "1234";
+    shard_open_params["ulog_dbm_index"] = "56789";
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, shard_open_params));
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string key = tkrzw::ToString(i);
+      const std::string value = tkrzw::ToString(i * i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, value));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Synchronize(false));
+    tkrzw::StdTreeDBM dbm_restored;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
+        &dbm_restored, ulog_prefix, 0, 1234, 56789));
+    EXPECT_EQ(dbm.CountSimple(), dbm_restored.CountSimple());
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string key = tkrzw::ToString(i);
+      const std::string value = tkrzw::ToString(i * i);
+      EXPECT_EQ(value, dbm_restored.GetSimple(key));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  }
+}
+
 TEST_F(ShardDBMTest, ShardRestoreAndRename) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");

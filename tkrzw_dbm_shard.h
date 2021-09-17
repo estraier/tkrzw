@@ -542,6 +542,10 @@ class ShardDBM final : public ParamDBM {
  private:
   /** The internal database objects. */
   std::vector<std::shared_ptr<PolyDBM>> dbms_;
+  /** The owned message queue for the update logger. */
+  std::unique_ptr<MessageQueue> ulog_mq_;
+  /** The owned update logger. */
+  std::unique_ptr<DBM::UpdateLogger> ulog_;
   /** Whether the internal databases are open. */
   bool open_;
   /** The stem name of the file paths of the internal databases. */

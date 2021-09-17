@@ -631,7 +631,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
-    {"--validate", 0},
+    {"--validate", 0}, {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -653,6 +653,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool with_validate = CheckMap(cmd_args, "--validate");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -663,7 +664,7 @@ static int32_t ProcessInspect(int32_t argc, const char** args) {
                false, false, 0, "", -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
-               "")) {
+               poly_params)) {
     return 1;
   }
   if (attr_name.empty()) {
@@ -763,6 +764,7 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
+    {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -784,6 +786,7 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_multi = CheckMap(cmd_args, "--multi");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -797,7 +800,7 @@ static int32_t ProcessGet(int32_t argc, const char** args) {
                false, false, 0, "", -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
-               "")) {
+               poly_params)) {
     return 1;
   }
   bool ok = false;
@@ -841,6 +844,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
     {"--no_overwrite", 0}, {"--append", 1}, {"--incr", 1}, {"--reducer", 1},
+    {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -868,6 +872,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
       GetStringArgument(cmd_args, "--append", 0, SkipDBM::REMOVING_VALUE);
   const int64_t incr_init = GetIntegerArgument(cmd_args, "--incr", 0, INT64MIN);
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -881,7 +886,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
                false, false, 0, "", -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
-               "")) {
+               poly_params)) {
     return 1;
   }
   bool ok = false;
@@ -960,6 +965,7 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--multi", 0},
+    {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -981,6 +987,7 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
   const bool is_padding = CheckMap(cmd_args, "--padding");
   const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
   const bool is_multi = CheckMap(cmd_args, "--multi");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -994,7 +1001,7 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
                false, false, 0, "", -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
-               "")) {
+               poly_params)) {
     return 1;
   }
   bool ok = false;
@@ -1032,6 +1039,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--move", 1}, {"--jump_key", 1}, {"--items", 1}, {"--escape", 0}, {"--keys", 0},
+    {"--params", 1},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1056,6 +1064,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
   const int64_t num_items = GetIntegerArgument(cmd_args, "--items", 0, 10);
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const bool keys_only = CheckMap(cmd_args, "--keys");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   if (file_path.empty()) {
     Die("The file path must be specified");
   }
@@ -1066,7 +1075,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
                false, false, 0, "", -1, -1, -1,
                -1, -1, "",
                -1, -1, -1, false,
-               "")) {
+               poly_params)) {
     return 1;
   }
   bool ok = true;
@@ -1761,8 +1770,8 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, INT64MIN);
-  const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, 0);
-  const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, 0);
+  const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, INT32MIN + 1);
+  const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, INT32MIN + 1);
   if (file_path.empty()) {
     Die("The DBM file path must be specified");
   }

@@ -22,6 +22,7 @@
 #include "tkrzw_dbm_std.h"
 #include "tkrzw_dbm_tiny.h"
 #include "tkrzw_dbm_tree.h"
+#include "tkrzw_dbm_ulog.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_mmap.h"
 #include "tkrzw_file_poly.h"
@@ -62,7 +63,7 @@ class NoopIterator final : public DBM::Iterator {
   }
 };
 
-std::string GuessClassNameFromPath(const std::string& path) {
+static std::string GuessClassNameFromPath(const std::string& path) {
   const std::string base = StrLowerCase(PathToBaseName(path));
   std::string ext = PathToExtension(base);
   const size_t sym_pos = ext.find("-");
@@ -89,7 +90,7 @@ std::string GuessClassNameFromPath(const std::string& path) {
   return "";
 }
 
-KeyComparator GetKeyComparatorByName(const std::string& comp_name) {
+static KeyComparator GetKeyComparatorByName(const std::string& comp_name) {
   const std::string lower_name = StrLowerCase(comp_name);
   if (lower_name == "lexicalkeycomparator" || lower_name == "lexical") {
     return LexicalKeyComparator;
@@ -124,7 +125,7 @@ KeyComparator GetKeyComparatorByName(const std::string& comp_name) {
   return nullptr;
 }
 
-SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
+static SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
   const std::string lower_name = StrLowerCase(func_name);
   if (lower_name == "reduceremove" || func_name == "remove") {
     return SkipDBM::ReduceRemove;
@@ -151,8 +152,8 @@ SkipDBM::ReducerType GetReducerByName(const std::string& func_name) {
   return nullptr;
 }
 
-void SetHashTuningParams(std::map<std::string, std::string>* params,
-                         HashDBM::TuningParameters* tuning_params) {
+static void SetHashTuningParams(
+    std::map<std::string, std::string>* params, HashDBM::TuningParameters* tuning_params) {
   const std::string update_mode = StrLowerCase(SearchMap(*params, "update_mode", ""));
   if (update_mode == "update_in_place" || update_mode == "in_place") {
     tuning_params->update_mode = HashDBM::UPDATE_IN_PLACE;
@@ -244,8 +245,8 @@ void SetHashTuningParams(std::map<std::string, std::string>* params,
   params->erase("cache_buckets");
 }
 
-void SetTreeTuningParams(std::map<std::string, std::string>* params,
-                         TreeDBM::TuningParameters* tuning_params) {
+static void SetTreeTuningParams(
+    std::map<std::string, std::string>* params, TreeDBM::TuningParameters* tuning_params) {
   SetHashTuningParams(params, tuning_params);
   tuning_params->max_page_size = StrToIntMetric(SearchMap(*params, "max_page_size", "-1"));
   tuning_params->max_branches = StrToIntMetric(SearchMap(*params, "max_branches", "-1"));
@@ -258,8 +259,8 @@ void SetTreeTuningParams(std::map<std::string, std::string>* params,
   params->erase("key_comparator");
 }
 
-void SetSkipTuningParams(std::map<std::string, std::string>* params,
-                         SkipDBM::TuningParameters* tuning_params) {
+static void SetSkipTuningParams(
+    std::map<std::string, std::string>* params, SkipDBM::TuningParameters* tuning_params) {
   tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
   tuning_params->step_unit = StrToIntMetric(SearchMap(*params, "step_unit", "-1"));
   tuning_params->max_level = StrToIntMetric(SearchMap(*params, "max_level", "-1"));
@@ -302,7 +303,27 @@ void SetSkipTuningParams(std::map<std::string, std::string>* params,
   params->erase("max_cached_records");
 }
 
-PolyDBM::PolyDBM() : dbm_(nullptr), open_(false) {}
+static Status MakeOwnedUpdateLogger(
+    std::map<std::string, std::string>* params,
+    std::unique_ptr<MessageQueue>* ulog_mq, std::unique_ptr<DBM::UpdateLogger>* ulog) {
+  Status status(Status::SUCCESS);
+  const std::string prefix = SearchMap(*params, "ulog_prefix", "");
+  const int64_t max_file_size = StrToIntMetric(SearchMap(*params, "ulog_max_file_size", "1Gi"));
+  const int32_t server_id = StrToIntMetric(SearchMap(*params, "ulog_server_id", "0"));
+  const int32_t dbm_index = StrToIntMetric(SearchMap(*params, "ulog_dbm_index", "0"));
+  if (!prefix.empty() && max_file_size > 0) {
+    *ulog_mq = std::make_unique<MessageQueue>();
+    status |= ulog_mq->get()->Open(prefix, max_file_size);
+    *ulog = std::make_unique<DBMUpdateLoggerMQ>(ulog_mq->get(), server_id, dbm_index);
+  }
+  params->erase("ulog_prefix");
+  params->erase("ulog_max_file_size");
+  params->erase("ulog_server_id");
+  params->erase("ulog_dbm_index");
+  return status;
+}
+
+PolyDBM::PolyDBM() : dbm_(nullptr), ulog_mq_(nullptr), ulog_(nullptr), open_(false) {}
 
 PolyDBM::~PolyDBM() {
   if (open_) {
@@ -316,7 +337,14 @@ Status PolyDBM::OpenAdvanced(
   if (dbm_ != nullptr) {
     return Status(Status::PRECONDITION_ERROR, "opened database");
   }
-  std::map<std::string, std::string> mod_params = params;
+  std::map<std::string, std::string> mod_params, ulog_params;
+  for (const auto& param : params) {
+    if (StrBeginsWith(param.first, "ulog_")) {
+      ulog_params.emplace(param);
+    } else {
+      mod_params.emplace(param);
+    }
+  }
   std::string class_name = StrLowerCase(SearchMap(mod_params, "dbm", ""));
   if (class_name.empty()) {
     class_name = GuessClassNameFromPath(path);
@@ -494,6 +522,20 @@ Status PolyDBM::OpenAdvanced(
   } else {
     return Status(Status::INVALID_ARGUMENT_ERROR, "unknown DBM class");
   }
+  Status status = MakeOwnedUpdateLogger(&ulog_params, &ulog_mq_, &ulog_);
+  if (!ulog_params.empty()) {
+    status |= Status(Status::INVALID_ARGUMENT_ERROR,
+                     StrCat("unsupported parameter: ", ulog_params.begin()->first));
+  }
+  if (status != Status::SUCCESS) {
+    ulog_.reset(nullptr);
+    ulog_mq_.reset(nullptr);
+    dbm_.reset(nullptr);
+    return status;
+  }
+  if (ulog_ != nullptr) {
+    dbm_->SetUpdateLogger(ulog_.get());
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -502,6 +544,13 @@ Status PolyDBM::Close() {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   Status status(Status::SUCCESS);
+  if (ulog_ != nullptr) {
+    ulog_.reset(nullptr);
+  }
+  if (ulog_mq_ != nullptr) {
+    status |= ulog_mq_->Close();
+    ulog_mq_.reset(nullptr);
+  }
   if (open_) {
     status |= dbm_->Close();
   }

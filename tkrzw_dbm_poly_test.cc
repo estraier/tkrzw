@@ -23,6 +23,7 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_poly.h"
+#include "tkrzw_dbm_std.h"
 #include "tkrzw_dbm_test_common.h"
 #include "tkrzw_dbm_ulog.h"
 #include "tkrzw_lib_common.h"
@@ -407,6 +408,48 @@ TEST_F(PolyDBMTest, UpdateLogger) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
         path, true, tkrzw::File::OPEN_TRUNCATE, config.open_params));
     UpdateLoggerTest(&dbm);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+  }
+}
+
+TEST_F(PolyDBMTest, UpdateLoggerMQ) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  struct Config final {
+    std::string path;
+    std::map<std::string, std::string> open_params;
+  };
+  const std::vector<Config> configs = {
+    {"casket.hash", {{"num_buckets", "100"}}},
+    {"casket.tree", {{"max_page_size", "1"}, {"max_branches", "2"}}},
+    {"casket.tiny", {{"num_buckets", "100"}}},
+    {"casket.baby", {}},
+  };
+  for (const auto& config : configs) {
+    const std::string ulog_prefix = tmp_dir.MakeUniquePath("casket-", "-ulog");
+    tkrzw::PolyDBM dbm;
+    auto params = config.open_params;
+    params["ulog_prefix"] = ulog_prefix;
+    params["ulog_max_file_size"] = "1024";
+    params["ulog_server_id"] = "1234";
+    params["ulog_dbm_index"] = "56789";
+    const std::string path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, params));
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string key = tkrzw::ToString(i);
+      const std::string value = tkrzw::ToString(i * i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, value));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Synchronize(false));
+    tkrzw::StdTreeDBM dbm_restored;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
+        &dbm_restored, ulog_prefix, 0, 1234, 56789));
+    EXPECT_EQ(dbm.CountSimple(), dbm_restored.CountSimple());
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string key = tkrzw::ToString(i);
+      const std::string value = tkrzw::ToString(i * i);
+      EXPECT_EQ(value, dbm_restored.GetSimple(key));
+    }
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
   }
 }

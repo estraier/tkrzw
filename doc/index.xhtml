@@ -3996,7 +3996,15 @@ dbm.SetUpdateLogger(&ulog);
 dbm.Set("two", "step");
 ]]></code></pre>
 
-<p>If the database is broken and lost somehow, you restore the current state by applying the update logs to the latest backup file.  It is a good practice to copy the backup file for restoration to keep the original file intact, just in case.</p>
+<p>The same thing can be done with PolyDBM and ShardDBM by setting tuning parameters.</p>
+
+<pre><code class="language-cpp"><![CDATA[PolyDBM dbm;
+dbm.Open("casket.tkt", true, {
+  {"ulog_prefix", "casket-ulog"}, {"ulog_max_file_size", "512Mi"}}).OrDie();
+dbm.Set("two", "step");
+]]></code></pre>
+
+<p>If the database is completely broken or lost somehow, you restore the current state by applying the update logs to the latest backup file.  It is a good practice to copy the backup file for restoration to keep the original file intact, just in case.</p>
 
 <pre><code class="language-cpp"><![CDATA[CopyFileData("casket-backup.tkt", "casket-restored.tkt").OrDie();
 TreeDBM dbm;

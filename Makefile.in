@@ -593,7 +593,7 @@ check-polydbm-perf :
 
 check-polydbm-util :
 	rm -Rf casket*
-	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --buckets 10 casket.tkh
+	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --params "num_buckets=10" casket.tkh 
 	$(RUNENV) ./tkrzw_dbm_util set --dbm poly casket.tkh one first
 	$(RUNENV) ./tkrzw_dbm_util set --dbm poly casket.tkh two second
 	$(RUNENV) ./tkrzw_dbm_util set --dbm poly casket.tkh three third
@@ -602,12 +602,12 @@ check-polydbm-util :
 	$(RUNENV) ./tkrzw_dbm_util set --dbm poly casket.tkh five fifth
 	$(RUNENV) ./tkrzw_dbm_util get --dbm poly casket.tkh two
 	$(RUNENV) ./tkrzw_dbm_util export --dbm poly casket.tkh casket.flat
-	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --buckets 10 casket-2.tkh
+	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --params "num_buckets=10" casket-2.tkh
 	$(RUNENV) ./tkrzw_dbm_util import --dbm poly casket-2.tkh casket.flat
 	$(RUNENV) ./tkrzw_dbm_util list --dbm poly casket-2.tkh
 	$(RUNENV) ./tkrzw_dbm_util list --dbm poly --move jump --jump_key three --items 2 casket-2.tkh
 	$(RUNENV) ./tkrzw_dbm_util export --dbm poly --tsv casket.tkh casket.tsv
-	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --buckets 10 casket-3.tkh
+	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --params "num_buckets=10" casket-3.tkh
 	$(RUNENV) ./tkrzw_dbm_util import --dbm poly --tsv casket-3.tkh casket.tsv
 	$(RUNENV) ./tkrzw_dbm_util get --dbm poly casket-3.tkh three
 	$(RUNENV) ./tkrzw_dbm_util rebuild --dbm poly casket.tkh
@@ -619,6 +619,12 @@ check-polydbm-util :
 	$(RUNENV) ./tkrzw_dbm_util restore --dbm poly casket-new.tkh
 	$(RUNENV) ./tkrzw_dbm_util get --dbm poly casket-new.tkh one
 	$(RUNENV) ./tkrzw_dbm_util inspect --dbm poly casket-new.tkh
+	$(RUNENV) ./tkrzw_dbm_util create --dbm poly --params "num_buckets=10" casket-orig.tkh
+	$(RUNENV) ./tkrzw_dbm_util set --dbm poly --params "ulog_prefix=casket-ulog" \
+	  casket-orig.tkh hello world
+	$(RUNENV) ./tkrzw_dbm_util import --ulog 0 --dbm poly --params "num_buckets=10" \
+	  casket-restored.tkh casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util get --dbm poly casket-restored.tkh hello
 
 check-sharddbm-perf :
 	rm -Rf casket*
@@ -637,8 +643,8 @@ check-sharddbm-perf :
 
 check-sharddbm-util :
 	rm -Rf casket*
-	$(RUNENV) ./tkrzw_dbm_util create --dbm shard --buckets 10 casket.tkt \
-	  --params "lock_mem_buckets=false,num_shards=3"
+	$(RUNENV) ./tkrzw_dbm_util create --dbm shard casket.tkt \
+	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=3"
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt one first
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt two second
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt three third
@@ -647,13 +653,13 @@ check-sharddbm-util :
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt five fifth
 	$(RUNENV) ./tkrzw_dbm_util get --dbm shard casket.tkt two
 	$(RUNENV) ./tkrzw_dbm_util export --dbm shard casket.tkt casket.flat
-	$(RUNENV) ./tkrzw_dbm_util create --dbm shard --buckets 10 casket-2.tkt \
-	  --params "lock_mem_buckets=false,num_shards=4"
+	$(RUNENV) ./tkrzw_dbm_util create --dbm shard casket-2.tkt \
+	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=4"
 	$(RUNENV) ./tkrzw_dbm_util import --dbm shard casket-2.tkt casket.flat
 	$(RUNENV) ./tkrzw_dbm_util list --dbm shard casket-2.tkt
 	$(RUNENV) ./tkrzw_dbm_util list --dbm shard --move jump --jump_key three --items 2 casket-2.tkt
 	$(RUNENV) ./tkrzw_dbm_util export --dbm shard --tsv casket.tkt casket.tsv
-	$(RUNENV) ./tkrzw_dbm_util create --dbm shard --buckets 10 casket-3.tkt
+	$(RUNENV) ./tkrzw_dbm_util create --dbm shard --params "num_buckets=10" casket-3.tkt
 	$(RUNENV) ./tkrzw_dbm_util import --dbm shard --tsv casket-3.tkt casket.tsv
 	$(RUNENV) ./tkrzw_dbm_util get --dbm shard casket-3.tkt three
 	$(RUNENV) ./tkrzw_dbm_util rebuild --dbm shard casket.tkt
@@ -665,6 +671,13 @@ check-sharddbm-util :
 	$(RUNENV) ./tkrzw_dbm_util restore --dbm shard casket-new.tkt
 	$(RUNENV) ./tkrzw_dbm_util get --dbm shard casket-new.tkt one
 	$(RUNENV) ./tkrzw_dbm_util inspect --dbm shard casket-new.tkt
+	$(RUNENV) ./tkrzw_dbm_util create --dbm shard --params "num_buckets=10,num_shards=4" \
+	  casket-orig.tkh
+	$(RUNENV) ./tkrzw_dbm_util set --dbm shard --params "ulog_prefix=casket-ulog,num_shards=4" \
+	  casket-orig.tkh hello world
+	$(RUNENV) ./tkrzw_dbm_util import --ulog 0 --dbm shard --params "num_buckets=10,num_shards=4" \
+	  casket-restored.tkh casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util get --dbm shard casket-restored.tkh hello
 
 check-index-perf :
 	rm -Rf casket*

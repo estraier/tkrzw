@@ -312,7 +312,7 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    */
   static Status ApplyUpdateLogFromFiles(
       DBM* dbm, const std::string& prefix, double min_timestamp = 0,
-      int32_t server_id = INT32MIN, int32_t dbm_index = INT32MIN);
+      int32_t server_id = INT32MIN + 1, int32_t dbm_index = INT32MIN + 1);
 
  private:
   /** The message queue. */

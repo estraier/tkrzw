@@ -35,7 +35,28 @@
 
 namespace tkrzw {
 
-ShardDBM::ShardDBM() : dbms_(), open_(false), path_(), ulog_second_() {}
+static Status MakeOwnedUpdateLogger(
+    std::map<std::string, std::string>* params,
+    std::unique_ptr<MessageQueue>* ulog_mq, std::unique_ptr<DBM::UpdateLogger>* ulog) {
+  Status status(Status::SUCCESS);
+  const std::string prefix = SearchMap(*params, "ulog_prefix", "");
+  const int64_t max_file_size = StrToIntMetric(SearchMap(*params, "ulog_max_file_size", "1Gi"));
+  const int32_t server_id = StrToIntMetric(SearchMap(*params, "ulog_server_id", "0"));
+  const int32_t dbm_index = StrToIntMetric(SearchMap(*params, "ulog_dbm_index", "0"));
+  if (!prefix.empty() && max_file_size > 0) {
+    *ulog_mq = std::make_unique<MessageQueue>();
+    status |= ulog_mq->get()->Open(prefix, max_file_size);
+    *ulog = std::make_unique<DBMUpdateLoggerMQ>(ulog_mq->get(), server_id, dbm_index);
+  }
+  params->erase("ulog_prefix");
+  params->erase("ulog_max_file_size");
+  params->erase("ulog_server_id");
+  params->erase("ulog_dbm_index");
+  return status;
+}
+
+ShardDBM::ShardDBM()
+    : dbms_(), ulog_mq_(nullptr), ulog_(nullptr), open_(false), path_(), ulog_second_() {}
 
 ShardDBM::~ShardDBM() {
   if (open_) {
@@ -64,7 +85,14 @@ Status ShardDBM::OpenAdvanced(
   for (int32_t i = 0; i < num_shards; i++) {
     dbms_.emplace_back(std::make_unique<PolyDBM>());
   }
-  auto mod_params = params;
+  std::map<std::string, std::string> mod_params, ulog_params;
+  for (const auto& param : params) {
+    if (StrBeginsWith(param.first, "ulog_")) {
+      ulog_params.emplace(param);
+    } else {
+      mod_params.emplace(param);
+    }
+  }
   mod_params.erase("num_shards");
   for (int32_t i = 0; i < static_cast<int32_t>(dbms_.size()); i++) {
     std::string shard_path;
@@ -79,8 +107,24 @@ Status ShardDBM::OpenAdvanced(
       return status;
     }
   }
+  Status status = MakeOwnedUpdateLogger(&ulog_params, &ulog_mq_, &ulog_);
+  if (!ulog_params.empty()) {
+    status |= Status(Status::INVALID_ARGUMENT_ERROR,
+                     StrCat("unsupported parameter: ", ulog_params.begin()->first));
+  }
+  if (status != Status::SUCCESS) {
+    ulog_.reset(nullptr);
+    ulog_mq_.reset(nullptr);
+    for (int32_t i = dbms_.size() - 1; i >= 0; i--) {
+      dbms_[i]->Close();
+    }
+    return status;
+  }
   open_ = true;
   path_ = path;
+  if (ulog_ != nullptr) {
+    SetUpdateLogger(ulog_.get());
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -89,6 +133,13 @@ Status ShardDBM::Close() {
     return Status(Status::PRECONDITION_ERROR, "not opened database");
   }
   Status status(Status::SUCCESS);
+  if (ulog_ != nullptr) {
+    ulog_.reset(nullptr);
+  }
+  if (ulog_mq_ != nullptr) {
+    status |= ulog_mq_->Close();
+    ulog_mq_.reset(nullptr);
+  }
   for (int32_t i = dbms_.size() - 1; i >= 0; i--) {
     status |= dbms_[i]->Close();
   }
