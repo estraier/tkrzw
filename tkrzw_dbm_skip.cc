@@ -806,7 +806,11 @@ Status SkipDBMImpl::Synchronize(
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
   CancelIterators();
-  Status status = FinishStorage(reducer);
+  Status status(Status::SUCCESS);
+  if (update_logger_ != nullptr) {
+    status |= update_logger_->Synchronize(hard);
+  }
+  status |= FinishStorage(reducer);
   status |= file_->Synchronize(hard);
   if (proc != nullptr) {
     proc->Process(path_);

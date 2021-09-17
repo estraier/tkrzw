@@ -102,6 +102,10 @@ Status DBMUpdateLoggerDBM::WriteClear() {
   return dbm_->Clear();
 }
 
+Status DBMUpdateLoggerDBM::Synchronize(bool hard) {
+  return dbm_->Synchronize(hard);
+}
+
 DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
     MessageQueue* mq, int32_t server_id, int32_t dbm_index, int64_t fixed_timestamp)
     : mq_(mq), server_id_(std::max(server_id, 0)), dbm_index_(std::max(dbm_index, 0)),
@@ -159,9 +163,17 @@ Status DBMUpdateLoggerMQ::WriteClear() {
   return mq_->Write(timestamp, std::string_view(write_buf, wp - write_buf));
 }
 
-Status DBMUpdateLoggerMQ::ApplyUpdateLog(
-    DBM* dbm, std::string_view message, int32_t server_id, int32_t dbm_index) {
-  assert(dbm != nullptr);
+Status DBMUpdateLoggerMQ::Synchronize(bool hard) {
+  return mq_->Synchronize(hard);
+}
+
+Status DBMUpdateLoggerMQ::ParseUpdateLog(std::string_view message, UpdateLog* op) {
+  assert(op != nullptr);
+  op->op_type = OP_VOID;
+  op->server_id = 0;
+  op->dbm_index = 0;
+  op->key = std::string_view();
+  op->value = std::string_view();
   const char* rp = message.data();
   int32_t record_size = message.size();
   if (record_size < 3) {
@@ -175,7 +187,7 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLog(
   if (step < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid server ID");
   }
-  const int32_t rec_server_id = num;
+  op->server_id = num;
   rp += step;
   record_size -= step;
   if (record_size < 1) {
@@ -185,13 +197,9 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLog(
   if (step < 1) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid DBM index");
   }
-  const int32_t rec_dbm_index = num;
+  op->dbm_index = num;
   rp += step;
   record_size -= step;
-  if ((server_id >= 0 && server_id != rec_server_id) ||
-      (dbm_index >= 0 && dbm_index != rec_dbm_index)) {
-    return Status(Status::INFEASIBLE_ERROR);
-  }
   switch (magic) {
     case OP_MAGIC_SET: {
       if (record_size < 1) {
@@ -217,9 +225,10 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLog(
       if (key_size + value_size != record_size) {
         return Status(Status::BROKEN_DATA_ERROR, "inconsistent data size");
       }
-      const std::string_view key(rp, key_size);
-      const std::string_view value(rp + key_size, value_size);
-      return dbm->Set(key, value);
+      op->op_type = OP_SET;
+      op->key = std::string_view(rp, key_size);
+      op->value = std::string_view(rp + key_size, value_size);
+      return Status(Status::SUCCESS);
     }
     case OP_MAGIC_REMOVE: {
       if (record_size < 1) {
@@ -235,20 +244,60 @@ Status DBMUpdateLoggerMQ::ApplyUpdateLog(
       if (key_size != record_size) {
         return Status(Status::BROKEN_DATA_ERROR, "inconsistent data size");
       }
-      const std::string_view key(rp, key_size);
-      const Status status = dbm->Remove(key);
-      if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
-        return status;
-      }
+      op->op_type = OP_REMOVE;
+      op->key = std::string_view(rp, key_size);
       return Status(Status::SUCCESS);
     }
     case OP_MAGIC_CLEAR: {
-      return dbm->Clear();
+      op->op_type = OP_CLEAR;
+      return Status(Status::SUCCESS);
     }
     default:
       break;
   }
   return Status(Status::BROKEN_DATA_ERROR, "invalid opertion magic data");
+}
+
+Status DBMUpdateLoggerMQ::ApplyUpdateLog(
+    DBM* dbm, std::string_view message, int32_t server_id, int32_t dbm_index) {
+  assert(dbm != nullptr);
+  UpdateLog op;
+  Status status = ParseUpdateLog(message, &op);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  if (server_id < 0) {
+    if (op.server_id == -server_id) {
+      return Status(Status::INFEASIBLE_ERROR);
+    }
+  } else {
+    if (op.server_id != server_id) {
+      return Status(Status::INFEASIBLE_ERROR);
+    }
+  }
+  if (dbm_index < 0) {
+    if (op.dbm_index == -dbm_index) {
+      return Status(Status::INFEASIBLE_ERROR);
+    }
+  } else {
+    if (op.dbm_index != dbm_index) {
+      return Status(Status::INFEASIBLE_ERROR);
+    }
+  }
+  switch (op.op_type) {
+    case OP_SET:
+      status = dbm->Set(op.key, op.value);
+      break;
+    case OP_REMOVE:
+      status = dbm->Remove(op.key);
+      break;
+    case OP_CLEAR:
+      status = dbm->Clear();
+      break;
+    default:
+      break;
+  }
+  return Status(Status::SUCCESS);
 }
 
 Status DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(

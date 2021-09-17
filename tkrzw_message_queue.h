@@ -128,6 +128,18 @@ class MessageQueue final {
   Status Write(int64_t timestamp, std::string_view message);
 
   /**
+   * Synchronizes the metadata and content to the file system.
+   * @param hard True to do physical synchronization with the hardware or false to do only
+   * logical synchronization with the file system.
+   * @return The result status.
+   * @details The metadata of the current file size is not written to the file until this method
+   * is called.  When an external process reads the latest file, it reads the region only to the
+   * offset of the metadata file size.  If OPEN_SYNC_HARD is set to the options of the Open
+   * method, synchronization is done implicitly for each write.
+   */
+  Status Synchronize(bool hard);
+
+  /**
    * Gets the latest timestamp.
    * @return The latest timestamp, or -1 on failure.
    */

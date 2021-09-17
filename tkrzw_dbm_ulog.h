@@ -127,6 +127,14 @@ class DBMUpdateLoggerDBM final : public DBM::UpdateLogger {
    */
   Status WriteClear() override;
 
+  /**
+   * Synchronizes the metadata and content to the file system.
+   * @param hard True to do physical synchronization with the hardware or false to do only
+   * logical synchronization with the file system.
+   * @return The result status.
+   */
+  Status Synchronize(bool hard) override;
+
  private:
   /** A DBM object to store logs in. */
   DBM* dbm_;
@@ -195,6 +203,36 @@ class DBMUpdateLoggerSecondShard final : public DBM::UpdateLogger {
 class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
  public:
   /**
+   * Enumeration for operation types.
+   */
+  enum OpType : int32_t {
+    /** Invalid operation. */
+    OP_VOID = 0,
+    /** To modify or add a record. */
+    OP_SET = 1,
+    /** To remove a record. */
+    OP_REMOVE = 2,
+    /** To remove all records. */
+    OP_CLEAR = 3,
+  };
+
+  /**
+   * Common structure of an update log.
+   */
+  struct UpdateLog {
+    /** The operation type. */
+    OpType op_type;
+    /** The server ID. */
+    int32_t server_id;
+    /** The DBM index. */
+    int32_t dbm_index;
+    /** The key of the record. */
+    std::string_view key;
+    /** The value of the record. */
+    std::string_view value;
+  };
+
+  /**
    * Constructor.
    * @param mq The message queue object to store update logs.  The ownership is not taken.
    * @param server_id The server ID of the process.
@@ -226,33 +264,55 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   Status WriteClear() override;
 
   /**
+   * Synchronizes the metadata and content to the file system.
+   * @param hard True to do physical synchronization with the hardware or false to do only
+   * logical synchronization with the file system.
+   * @return The result status.
+   */
+  Status Synchronize(bool hard) override;
+
+  /**
+   * Parses an update log message.
+   * @param message The update log message.
+   * @param op The pointer to the update log object to store the result.  The life duration of
+   * the key and the value fields is the same as the given message.
+   * @return The result status.
+   */
+  static Status ParseUpdateLog(std::string_view message, UpdateLog* op);
+
+  /**
    * Applys the operation in an update log to a database.
    * @param dbm The DBM object of the database.
    * @param message The update log message.
-   * @param server_id The server ID to focus on.  If it is negative, every log is used.
-   * Otherwise, if the server ID doesn't match, the log is ignored.
-   * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
-   * Otherwise, if the DBM index doesn't match, the log is ignored.
+   * @param server_id The server ID to focus on.  A negative applies a filter which ignores the
+   * message if the server ID mathces the absolute value.  Zero or a positive applies a filter
+   * which adopts the message if the server ID matches the value.
+   * @param dbm_index The DBM index to focus on.  A negative applies a filter which ignores the
+   * message if the DBM index mathces the absolute value.  Zero or a positive applies a filter
+   * which adopts the message if the DBM index matches the value.
    * @return The result status.  If the log is ignored due to the filter, INFEASIBLE_ERROR is
    * returned.
    */
   static Status ApplyUpdateLog(
-      DBM* dbm, std::string_view message, int32_t server_id = -1, int32_t dbm_index = -1);
+      DBM* dbm, std::string_view message,
+      int32_t server_id = INT32MIN, int32_t dbm_index = INT32MIN);
 
   /**
    * Applys the operations in the message queue files.
    * @param dbm The DBM object of the database.
    * @param prefix The prefix for the message queue file names.
    * @param min_timestamp The minimum timestamp in milliseconds of messages to read.
-   * @param server_id The server ID to focus on.  If it is negative, every log is used.
-   * Otherwise, if the server ID doesn't match, the log is ignored.
-   * @param dbm_index The DBM index to focus on.  If it is negative, every log is used.
-   * Otherwise, if the DBM index doesn't match, the log is ignored.
+   * @param server_id The server ID to focus on.  A negative applies a filter which ignores the
+   * message if the server ID mathces the absolute value.  Zero or a positive applies a filter
+   * which adopts the message if the server ID matches the value.
+   * @param dbm_index The DBM index to focus on.  A negative applies a filter which ignores the
+   * message if the DBM index mathces the absolute value.  Zero or a positive applies a filter
+   * which adopts the message if the DBM index matches the value.
    * @return The result status.
    */
   static Status ApplyUpdateLogFromFiles(
       DBM* dbm, const std::string& prefix, double min_timestamp = 0,
-      int32_t server_id = -1, int32_t dbm_index = -1);
+      int32_t server_id = INT32MIN, int32_t dbm_index = INT32MIN);
 
  private:
   /** The message queue. */

@@ -725,6 +725,9 @@ Status CacheDBMImpl::Rebuild(int64_t cap_rec_num, int64_t cap_mem_size) {
 Status CacheDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   Status status(Status::SUCCESS);
+  if (writable_ && update_logger_ != nullptr) {
+    status |= update_logger_->Synchronize(hard);
+  }
   if (open_ && writable_) {
     status |= ExportRecords();
     status |= file_->Synchronize(hard);

@@ -404,6 +404,9 @@ Status TinyDBMImpl::ShouldBeRebuilt(bool* tobe) {
 Status TinyDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   Status status(Status::SUCCESS);
+  if (writable_ && update_logger_ != nullptr) {
+    status |= update_logger_->Synchronize(hard);
+  }
   if (open_ && writable_) {
     status |= ExportRecords();
     status |= file_->Synchronize(hard);

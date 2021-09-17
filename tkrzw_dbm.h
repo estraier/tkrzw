@@ -785,6 +785,8 @@ class DBM {
      * @param key The key of the record.
      * @param value The new value of the record.
      * @return The result status.
+     * @details This is called by the Set, Append, Increment methods etc and when the Process
+     * method returns a new record value.
      */
     virtual Status WriteSet(std::string_view key, std::string_view value) = 0;
 
@@ -792,14 +794,27 @@ class DBM {
      * Writes a log for removing an existing record.
      * @param key The key of the record.
      * @return The result status.
+     * @details This is called by the Remove method and when the Process method returns REMOVE.
      */
     virtual Status WriteRemove(std::string_view key) = 0;
 
     /**
      * Writes a log for removing all records.
      * @return The result status.
+     * @details This is called by the Clear method.
      */
     virtual Status WriteClear() = 0;
+
+    /**
+     * Synchronizes the metadata and content to the file system.
+     * @param hard True to do physical synchronization with the hardware or false to do only
+     * logical synchronization with the file system.
+     * @return The result status.
+     * @details This is called by the Synchronize method.
+     */
+    virtual Status Synchronize(bool hard) {
+      return Status(Status::SUCCESS);
+    }
   };
 
   /**

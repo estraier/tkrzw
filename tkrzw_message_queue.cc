@@ -47,6 +47,7 @@ class MessageQueueImpl final {
   Status Open(const std::string& prefix, int64_t max_file_size, int32_t options);
   Status Close();
   Status Write(int64_t timestamp, std::string_view message);
+  Status Synchronize(bool hard);
   int64_t GetTimestamp();
   static Status SaveMetadata(
       File* file, int32_t cyclic_magic, int64_t file_id,  int64_t timestamp);
@@ -56,7 +57,7 @@ class MessageQueueImpl final {
 
  private:
   std::string MakeFilePath(int64_t file_id);
-  Status Synchronize();
+  Status SynchronizeImpl(bool hard);
   void ReleaseFiles();
   Status WriteImpl(int64_t timestamp, std::string_view message);
 
@@ -169,7 +170,7 @@ Status MessageQueueImpl::Open(
     return status;
   }
   if (last_file->GetSizeSimple() == 0) {
-    status = Synchronize();
+    status = SynchronizeImpl(sync_hard_);
     if (status != Status::SUCCESS) {
       files_.clear();
       return status;
@@ -225,7 +226,7 @@ Status MessageQueueImpl::Close() {
   }
   Status status(Status::SUCCESS);
   if (!read_only_) {
-    status |= Synchronize();
+    status |= SynchronizeImpl(sync_hard_);
   }
   for (auto& file : files_) {
     if (file.second->IsOpen()) {
@@ -254,7 +255,7 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
       return status;
     }
     if (sync_hard_) {
-      status = Synchronize();
+      status = SynchronizeImpl(true);
       if (status != Status::SUCCESS) {
         return status;
       }
@@ -262,6 +263,11 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
   }
   cond_.notify_all();
   return Status(Status::SUCCESS);
+}
+
+Status MessageQueueImpl::Synchronize(bool hard) {
+  std::lock_guard lock(mutex_);
+  return SynchronizeImpl(hard);
 }
 
 int64_t MessageQueueImpl::GetTimestamp() {
@@ -314,14 +320,14 @@ std::string MessageQueueImpl::MakeFilePath(int64_t file_id) {
   return StrCat(prefix_, numbuf);
 }
 
-Status MessageQueueImpl::Synchronize() {
+Status MessageQueueImpl::SynchronizeImpl(bool hard) {
   if (files_.empty()) {
     return Status(Status::PRECONDITION_ERROR, "no file");
   }
   auto& last_file = files_.rbegin()->second;
   cyclic_magic_ = cyclic_magic_ % 255 + 1;
   Status status = SaveMetadata(last_file.get(), cyclic_magic_, last_file_id_, timestamp_);
-  status |= last_file->Synchronize(sync_hard_);
+  status |= last_file->Synchronize(hard);
   return status;
 }
 
@@ -339,7 +345,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
   Status status(Status::SUCCESS);
   auto* last_file = files_.rbegin()->second.get();
   if (last_file->GetSizeSimple() >= max_file_size_) {
-    status = Synchronize();
+    status = SynchronizeImpl(sync_hard_);
     if (files_.rbegin()->second.use_count() <= 1) {
       status |= last_file->Close();
     }
@@ -353,14 +359,14 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
     last_file = last_file_sp.get();
     const std::string new_file_path = MakeFilePath(last_file_id_);
     status = last_file->Open(new_file_path, true, MessageQueue::OPEN_TRUNCATE);
-    status |= Synchronize();
+    status |= SynchronizeImpl(sync_hard_);
     if (status != Status::SUCCESS) {
       return status;
     }
     last_file_ = last_file_sp;
   }
   timestamp_ = std::max(timestamp, timestamp_);
-  const size_t est_size = 12 + message.size();
+  const size_t est_size = RECORD_HEADER_SIZE + message.size() + 1;
   char stack[WRITE_BUFFER_SIZE];
   char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
   char* wp = write_buf;
@@ -518,6 +524,10 @@ Status MessageQueue::Close() {
 
 Status MessageQueue::Write(int64_t timestamp, std::string_view message) {
   return impl_->Write(timestamp, message);
+}
+
+Status MessageQueue::Synchronize(bool hard) {
+  return impl_->Synchronize(hard);
 }
 
 int64_t MessageQueue::GetTimestamp() {

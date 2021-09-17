@@ -48,8 +48,30 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(32, file_size);
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50));
   EXPECT_EQ(0, mq.GetTimestamp());
+  tkrzw::MemoryMapParallelFile file;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000000", false));
+  int64_t file_offset = 0;
+  std::string message;
+  EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, tkrzw::MessageQueue::ReadNextMessage(
+      &file, &file_offset, &timestamp, &message));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(10, "one"));
   EXPECT_EQ(10, mq.GetTimestamp());
+  file_offset = 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadNextMessage(
+      &file, &file_offset, &timestamp, &message));
+  EXPECT_EQ(10, timestamp);
+  EXPECT_EQ("one", message);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      prefix + ".0000000000", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(0, file_id);
+  EXPECT_EQ(0, timestamp);
+  EXPECT_EQ(32, file_size);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
+      prefix + ".0000000000", &file_id, &timestamp, &file_size));
+  EXPECT_EQ(0, file_id);
+  EXPECT_EQ(10, timestamp);
+  EXPECT_EQ(47, file_size);
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(5, "two"));
   EXPECT_EQ(10, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(20, std::string(50, 'x')));
@@ -58,6 +80,7 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(30, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(40, "five"));
   EXPECT_EQ(40, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadFileMetadata(
       prefix + ".0000000000", &file_id, &timestamp, &file_size));
@@ -94,7 +117,6 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{20, std::string(50, 'x')},
       std::pair<uint64_t, std::string>{30, "four"},
       std::pair<uint64_t, std::string>{40, "five"}));
-  std::string message;
   reader = mq.MakeReader(10);
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
   EXPECT_EQ("one", message);
@@ -115,9 +137,8 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(41);
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, reader->Read(0, &timestamp, &message));
-  tkrzw::MemoryMapParallelFile file;
-  int64_t file_offset = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000002", false));
+  file_offset = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadNextMessage(
       &file, &file_offset, &timestamp, &message));
   EXPECT_EQ(30, timestamp);
