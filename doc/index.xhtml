@@ -4065,9 +4065,9 @@ $ tkrzw_dbm_util import --tsv casket.tkh external.tsv
 
 <p>Whereas data of flat records can include any kind of binary data or text data, TSV data cannot include tab, linefeed or binary data.  If you want to escape output data in C-style for exporting and unescape input data for importing, add the "--escape" flag.</p>
 
-<p>Data migration can be done via update logs although space efficiency is not good.  The "export" subcommand takes the "--ulog" option which sets the output type to update logs and specifies the timestamp added to each update log.  All existing records are treated as the "Set" operations.  The "import" command also takes the "--ulog" option which specifies the minimum timestamp for update logs to import.</p>
+<p>Data migration can be done via update logs although space efficiency is not good.  The "export" subcommand takes the "--ulog" option which sets the output type to update logs and specifies the timestamp added to each update log.  If the value is negative, the current time is used.  All existing records are treated as the "Set" operations.  The "import" command also takes the "--ulog" option which specifies the minimum timestamp for update logs to import.</p>
 
-<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export --ulog 0 casket-1.tkh casket-ulog
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util export --ulog -1 casket-1.tkh casket-ulog
 $ tkrzw_dbm_util import --ulog 0 casket-2.tkh casket-ulog
 ]]></code></pre>
 

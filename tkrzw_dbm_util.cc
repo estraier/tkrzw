@@ -1626,7 +1626,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
   const bool keys_only = CheckMap(cmd_args, "--keys");
-  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
+  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, INT64MIN);
   const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, 0);
   const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, 0);
   if (file_path.empty()) {
@@ -1639,7 +1639,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     Die("The DBM file and the record file must be different");
   }
   std::unique_ptr<File> rec_file;
-  if (ulog_ts < 0) {
+  if (ulog_ts == INT64MIN) {
     rec_file = MakeFileOrDie(file_impl, 0, 0);
     Status status = rec_file->Open(rec_file_path, true);
     if (status != Status::SUCCESS) {
@@ -1662,7 +1662,7 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = true;
-  if (ulog_ts >= 0) {
+  if (ulog_ts != INT64MIN) {
     tkrzw::MessageQueue mq;
     Status status = mq.Open(rec_file_path, 1LL << 30);
     if (status != Status::SUCCESS) {
@@ -1760,7 +1760,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
   const bool is_tsv = CheckMap(cmd_args, "--tsv");
   const bool with_escape = CheckMap(cmd_args, "--escape");
-  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, -1);
+  const int64_t ulog_ts = GetIntegerArgument(cmd_args, "--ulog", 0, INT64MIN);
   const int64_t ulog_server_id = GetIntegerArgument(cmd_args, "--ulog_ids", 0, 0);
   const int64_t ulog_dbm_index = GetIntegerArgument(cmd_args, "--ulog_ids", 1, 0);
   if (file_path.empty()) {
@@ -1773,7 +1773,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     Die("The DBM file and the record file must be different");
   }
   std::unique_ptr<File> rec_file;
-  if (ulog_ts < 0) {
+  if (ulog_ts == INT64MIN) {
     rec_file = MakeFileOrDie(file_impl, 0, 0);
     const Status status = rec_file->Open(rec_file_path, false);
     if (status != Status::SUCCESS) {
@@ -1792,7 +1792,7 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
     return 1;
   }
   bool ok = true;
-  if (ulog_ts >= 0) {
+  if (ulog_ts != INT64MIN) {
     const Status status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
         dbm.get(), rec_file_path, ulog_ts, ulog_server_id, ulog_dbm_index);
     if (status != Status::SUCCESS) {
