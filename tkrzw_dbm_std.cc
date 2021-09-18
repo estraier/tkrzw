@@ -129,6 +129,9 @@ Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t 
   if (status != Status::SUCCESS) {
     return status;
   }
+  if (file_->GetSizeSimple() < 1) {
+    timestamp_ = GetWallTime();
+  }
   status = ImportRecords();
   if (status != Status::SUCCESS) {
     file_->Close();

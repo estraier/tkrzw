@@ -291,7 +291,6 @@ Status ShardDBM::CompareExchangeMulti(
       }
       return NOOP;
     }
-
    private:
     Status* status_;
     std::string_view expected_;
@@ -444,6 +443,7 @@ Status ShardDBM::GetTimestamp(double* timestamp) {
       oldest = std::min(oldest, timestamp);
     }
   }
+  *timestamp = oldest;
   return status;
 }
 

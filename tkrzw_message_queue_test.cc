@@ -247,7 +247,7 @@ TEST(MessageQueueTest, Serial) {
             case 0: timeout = -1; break;
             case 1: timeout = 0.0001; break;
           }
-          int64_t timestamp;
+          int64_t timestamp = 0;
           std::string message;
           const tkrzw::Status status = reader->Read(timeout, &timestamp, &message);
           if (status != tkrzw::Status::SUCCESS) {
@@ -294,7 +294,7 @@ TEST(MessageQueueTest, Parallel) {
             case 0: timeout = -1; break;
             case 1: timeout = 0.0001; break;
           }
-          int64_t timestamp;
+          int64_t timestamp = 0;
           std::string message;
           const tkrzw::Status status = reader->Read(timeout, &timestamp, &message);
           if (status != tkrzw::Status::SUCCESS) {
