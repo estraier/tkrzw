@@ -43,7 +43,7 @@ static constexpr int32_t META_OFFSET_NUM_BUCKETS = 16;
 static constexpr int32_t META_OFFSET_NUM_RECORDS = 24;
 static constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 32;
 static constexpr int32_t META_OFFSET_FILE_SIZE = 40;
-static constexpr int32_t META_OFFSET_MOD_TIME = 48;
+static constexpr int32_t META_OFFSET_TIMESTAMP = 48;
 static constexpr int32_t META_OFFSET_DB_TYPE = 56;
 static constexpr int32_t META_OFFSET_OPAQUE = 62;
 static constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 127;
@@ -100,6 +100,7 @@ class HashDBMImpl final {
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
+  Status GetTimestamp(double* timestamp);
   Status Clear();
   Status Rebuild(
       const HashDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
@@ -114,7 +115,6 @@ class HashDBMImpl final {
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
-  double GetModificationTime();
   int32_t GetDatabaseType();
   Status SetDatabaseTypeMetadata(uint32_t db_type);
   std::string GetOpaqueMetadata();
@@ -191,7 +191,7 @@ class HashDBMImpl final {
   std::atomic_int64_t num_records_;
   std::atomic_int64_t eff_data_size_;
   int64_t file_size_;
-  int64_t mod_time_;
+  int64_t timestamp_;
   int32_t db_type_;
   std::string opaque_;
   int64_t record_base_;
@@ -232,7 +232,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       offset_width_(HashDBM::DEFAULT_OFFSET_WIDTH), align_pow_(HashDBM::DEFAULT_ALIGN_POW),
       closure_flags_(CLOSURE_FLAG_NONE),
       num_buckets_(HashDBM::DEFAULT_NUM_BUCKETS),
-      num_records_(0), eff_data_size_(0), file_size_(0), mod_time_(0),
+      num_records_(0), eff_data_size_(0), file_size_(0), timestamp_(0),
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
       fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0),
@@ -583,6 +583,15 @@ Status HashDBMImpl::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status HashDBMImpl::GetTimestamp(double* timestamp) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  *timestamp = timestamp_ / 1000000.0;
+  return Status(Status::SUCCESS);
+}
+
 Status HashDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
@@ -677,7 +686,7 @@ Status HashDBMImpl::Synchronize(bool hard, DBM::FileProcessor* proc) {
     return Status(Status::PRECONDITION_ERROR, "not healthy database");
   }
   file_size_ = file_->GetSizeSimple();
-  mod_time_ = GetWallTime() * 1000000;
+  timestamp_ = GetWallTime() * 1000000;
   Status status(Status::SUCCESS);
   if (update_logger_ != nullptr) {
     status |= update_logger_->Synchronize(hard);
@@ -719,7 +728,7 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
     Add("num_records", ToString(num_records_.load()));
     Add("eff_data_size", ToString(eff_data_size_.load()));
     Add("file_size", ToString(file_->GetSizeSimple()));
-    Add("mod_time", ToString(mod_time_ / 1000000.0));
+    Add("timestamp", SPrintF("%.6f", timestamp_ / 1000000.0));
     Add("db_type", ToString(db_type_));
     Add("max_file_size", ToString(1LL << (offset_width_ * 8 + align_pow_)));
     Add("record_base", ToString(record_base_));
@@ -799,14 +808,6 @@ int64_t HashDBMImpl::GetEffectiveDataSize() {
     return -1;
   }
   return eff_data_size_.load();
-}
-
-double HashDBMImpl::GetModificationTime() {
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  if (!open_) {
-    return -1;
-  }
-  return mod_time_ / 1000000.0;
 }
 
 int32_t HashDBMImpl::GetDatabaseType() {
@@ -1107,7 +1108,7 @@ Status HashDBMImpl::OpenImpl(bool writable) {
     pkg_minor_version_ = version_nums.size() > 1 ? StrToInt(version_nums[1]) : 0;
     closure_flags_ |= CLOSURE_FLAG_CLOSE;
     file_size_ = file_->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
+    timestamp_ = GetWallTime() * 1000000;
     status = SaveMetadata(true);
     if (status != Status::SUCCESS) {
       return status;
@@ -1164,7 +1165,7 @@ Status HashDBMImpl::CloseImpl() {
   Status status(Status::SUCCESS);
   if (writable_ && healthy_) {
     file_size_ = file_->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
+    timestamp_ = GetWallTime() * 1000000;
     status |= SaveMetadata(true);
     status |= SaveFBP();
   }
@@ -1182,7 +1183,7 @@ Status HashDBMImpl::CloseImpl() {
   num_records_.store(0);
   eff_data_size_.store(0);
   file_size_ = 0;
-  mod_time_ = 0;
+  timestamp_ = 0;
   db_type_ = 0;
   opaque_.clear();
   record_base_ = 0;
@@ -1219,7 +1220,7 @@ Status HashDBMImpl::SaveMetadata(bool finish) {
   WriteFixNum(meta + META_OFFSET_NUM_RECORDS, std::max<int64_t>(0, num_records_.load()), 8);
   WriteFixNum(meta + META_OFFSET_EFF_DATA_SIZE, std::max<int64_t>(0, eff_data_size_.load()), 8);
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
-  WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
+  WriteFixNum(meta + META_OFFSET_TIMESTAMP, timestamp_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
   const int32_t opaque_size = std::min<int32_t>(opaque_.size(), HashDBM::OPAQUE_METADATA_SIZE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
@@ -1234,7 +1235,7 @@ Status HashDBMImpl::LoadMetadata() {
       file_.get(), &cyclic_magic_, &pkg_major_version_, &pkg_minor_version_,
       &static_flags_, &offset_width_, &align_pow_,
       &closure_flags_, &num_buckets_, &num_records,
-      &eff_data_size, &file_size_, &mod_time_,
+      &eff_data_size, &file_size_, &timestamp_,
       &db_type_, &opaque_);
   if (status != Status::SUCCESS) {
     return status;
@@ -2407,6 +2408,11 @@ Status HashDBM::GetFilePath(std::string* path) {
   return impl_->GetFilePath(path);
 }
 
+Status HashDBM::GetTimestamp(double* timestamp) {
+  assert(timestamp != nullptr);
+  return impl_->GetTimestamp(timestamp);
+}
+
 Status HashDBM::Clear() {
   return impl_->Clear();
 }
@@ -2464,10 +2470,6 @@ File* HashDBM::GetInternalFile() const {
 
 int64_t HashDBM::GetEffectiveDataSize() {
   return impl_->GetEffectiveDataSize();
-}
-
-double HashDBM::GetModificationTime() {
-  return impl_->GetModificationTime();
 }
 
 int32_t HashDBM::GetDatabaseType() {
@@ -2562,12 +2564,12 @@ Status HashDBM::ReadMetadata(
     int32_t* pkg_major_version, int32_t* pkg_minor_version,
     int32_t* static_flags, int32_t* offset_width, int32_t* align_pow,
     int32_t* closure_flags, int64_t* num_buckets, int64_t* num_records,
-    int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+    int64_t* eff_data_size, int64_t* file_size, int64_t* timestamp,
     int32_t* db_type, std::string* opaque) {
   assert(file != nullptr && pkg_major_version != nullptr && pkg_minor_version != nullptr &&
          static_flags != nullptr && offset_width != nullptr && align_pow != nullptr &&
          closure_flags != nullptr && num_buckets != nullptr && num_records != nullptr &&
-         eff_data_size != nullptr && file_size != nullptr && mod_time != nullptr &&
+         eff_data_size != nullptr && file_size != nullptr && timestamp != nullptr &&
          db_type != nullptr && opaque != nullptr);
   int64_t act_file_size = 0;
   Status status = file->GetSize(&act_file_size);
@@ -2596,7 +2598,7 @@ Status HashDBM::ReadMetadata(
   *num_records = ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8);
   *eff_data_size = ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8);
   *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
-  *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
+  *timestamp = ReadFixNum(meta + META_OFFSET_TIMESTAMP, 8);
   *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, HashDBM::OPAQUE_METADATA_SIZE);
   const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
@@ -2799,14 +2801,14 @@ Status HashDBM::RestoreDatabase(
   int64_t old_num_records = 0;
   int64_t old_eff_data_size = 0;
   int64_t old_file_size = 0;
-  int64_t old_mod_time = 0;
+  int64_t old_timestamp = 0;
   int32_t old_db_type = 0;
   std::string old_opaque;
   if (ReadMetadata(
           &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
           &old_static_flags, &old_offset_width, &old_align_pow,
           &old_closure_flags, &old_num_buckets, &old_num_records,
-          &old_eff_data_size, &old_file_size, &old_mod_time,
+          &old_eff_data_size, &old_file_size, &old_timestamp,
           &old_db_type, &old_opaque) == Status::SUCCESS && old_cyclic_magic >= 0) {
     if (old_static_flags & STATIC_FLAG_UPDATE_IN_PLACE)  {
       update_mode = HashDBM::UPDATE_IN_PLACE;

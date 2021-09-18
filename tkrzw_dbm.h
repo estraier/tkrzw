@@ -1331,6 +1331,22 @@ class DBM {
   }
 
   /**
+   * Gets the timestamp in seconds of the last modified time.
+   * @param timestamp The pointer to a double object to contain the timestamp.
+   * @return The result status.
+   */
+  virtual Status GetTimestamp(double* timestamp) = 0;
+
+  /**
+   * Gets the timestamp of the last modified time, in a simple way.
+   * @return The timestamp of the last modified time, or NaN on failure.
+   */
+  virtual double GetTimestampSimple() {
+    double timestamp = 0;
+    return GetTimestamp(&timestamp) == Status::SUCCESS ? timestamp : DOUBLENAN;
+  }
+
+  /**
    * Removes all records.
    * @return The result status.
    */

@@ -53,6 +53,7 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   if (!ext.empty()) {
     copy_path += "." + ext;
   }
+  const double time_begin = tkrzw::GetWallTime();
   EXPECT_FALSE(dbm->IsOpen());
   EXPECT_FALSE(dbm->IsWritable());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(path, true));
@@ -64,8 +65,12 @@ inline void CommonDBMTest::FileTest(tkrzw::DBM* dbm, const std::string& path) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove("bb"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  const double time_end = tkrzw::GetWallTime();
   EXPECT_GT(tkrzw::GetFileSize(path), 0);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Open(path, true));
+  const double timestamp = dbm->GetTimestampSimple();
+  EXPECT_GE(timestamp, time_begin - 1);
+  EXPECT_LE(timestamp, time_end + 1);
   EXPECT_EQ(2, dbm->CountSimple());
   EXPECT_EQ("AA", dbm->GetSimple("a"));
   EXPECT_EQ("CCCC", dbm->GetSimple("ccc"));

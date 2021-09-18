@@ -287,7 +287,7 @@ double ParseDateStr(std::string_view str) {
     len--;
   }
   if (len == 0) {
-    return std::nan("");
+    return DOUBLENAN;
   }
   if (len > 1 && rp[0] == '0' && (rp[1] == 'x' || rp[1] == 'X')) {
     return StrToIntHex(std::string_view(reinterpret_cast<const char*>(rp + 2), len - 2));
@@ -384,14 +384,14 @@ double ParseDateStr(std::string_view str) {
     }
     uts.tm_mday = StrToInt(std::string_view(rp, len));
     if (uts.tm_mday < 1) {
-      return nan("");
+      return DOUBLENAN;
     }
     while (len > 0 && ((*rp >= '0' && *rp <= '9') || *rp == ' ')) {
       rp++;
       len--;
     }
     if (len < 3) {
-      return nan("");
+      return DOUBLENAN;
     }
     std::string_view month(rp, 3);
     if (StrCaseCompare(month, "jan") == 0) {
@@ -419,7 +419,7 @@ double ParseDateStr(std::string_view str) {
     } else if (StrCaseCompare(month, "dec") == 0) {
       uts.tm_mon = 11;
     } else {
-      return nan("");
+      return DOUBLENAN;
     }
     rp += 3;
     len -= 3;
@@ -491,7 +491,7 @@ double ParseDateStr(std::string_view str) {
     }
     return MakeUniversalTime(uts) - td;
   }
-  return std::nan("");
+  return DOUBLENAN;
 }
 
 double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
@@ -510,7 +510,7 @@ double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
   }
   const size_t len = wp - buf;
   if (len < 4) {
-    return nan("");
+    return DOUBLENAN;
   }
   struct std::tm uts;
   std::memset(&uts, 0, sizeof(uts));

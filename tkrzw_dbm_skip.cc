@@ -41,7 +41,7 @@ static constexpr int32_t META_OFFSET_CLOSURE_FLAGS = 15;
 static constexpr int32_t META_OFFSET_NUM_RECORDS = 24;
 static constexpr int32_t META_OFFSET_EFF_DATA_SIZE = 32;
 static constexpr int32_t META_OFFSET_FILE_SIZE = 40;
-static constexpr int32_t META_OFFSET_MOD_TIME = 48;
+static constexpr int32_t META_OFFSET_TIMESTAMP = 48;
 static constexpr int32_t META_OFFSET_DB_TYPE = 56;
 static constexpr int32_t META_OFFSET_OPAQUE = 62;
 static constexpr int32_t META_OFFSET_CYCLIC_MAGIC_BACK = 127;
@@ -85,6 +85,7 @@ class SkipDBMImpl final {
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
+  Status GetTimestamp(double* timestamp);
   Status Clear();
   Status Rebuild(
       const SkipDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
@@ -99,7 +100,6 @@ class SkipDBMImpl final {
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
-  double GetModificationTime();
   int32_t GetDatabaseType();
   Status SetDatabaseTypeMetadata(uint32_t db_type);
   std::string GetOpaqueMetadata();
@@ -140,7 +140,7 @@ class SkipDBMImpl final {
   int64_t num_records_;
   int64_t eff_data_size_;
   int64_t file_size_;
-  int64_t mod_time_;
+  int64_t timestamp_;
   int32_t db_type_;
   std::string opaque_;
   IteratorList iterators_;
@@ -189,7 +189,7 @@ SkipDBMImpl::SkipDBMImpl(std::unique_ptr<File> file)
       cyclic_magic_(0), pkg_major_version_(0), pkg_minor_version_(0),
       offset_width_(SkipDBM::DEFAULT_OFFSET_WIDTH), step_unit_(SkipDBM::DEFAULT_STEP_UNIT),
       max_level_(SkipDBM::DEFAULT_MAX_LEVEL), closure_flags_(CLOSURE_FLAG_NONE),
-      num_records_(0), eff_data_size_(0), file_size_(0), mod_time_(0),
+      num_records_(0), eff_data_size_(0), file_size_(0), timestamp_(0),
       db_type_(0), opaque_(), iterators_(),
       file_(std::move(file)), sorted_file_(nullptr), record_index_(0),
       sort_mem_size_(SkipDBM::DEFAULT_SORT_MEM_SIZE), insert_in_order_(false),
@@ -250,7 +250,7 @@ Status SkipDBMImpl::Open(const std::string& path, bool writable,
     pkg_minor_version_ = version_nums.size() > 1 ? StrToInt(version_nums[1]) : 0;
     closure_flags_ |= CLOSURE_FLAG_CLOSE;
     file_size_ = file_->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
+    timestamp_ = GetWallTime() * 1000000;
     const Status status = SaveMetadata(file_.get(), true);
     if (status != Status::SUCCESS) {
       return status;
@@ -364,7 +364,7 @@ Status SkipDBMImpl::Close() {
     } else {
       status |= DiscardStorage();
       file_size_ = file_->GetSizeSimple();
-      mod_time_ = GetWallTime() * 1000000;
+      timestamp_ = GetWallTime() * 1000000;
       status |= SaveMetadata(file_.get(), true);
     }
   }
@@ -385,7 +385,7 @@ Status SkipDBMImpl::Close() {
   num_records_ = 0;
   eff_data_size_ = 0;
   file_size_ = 0;
-  mod_time_ = 0;
+  timestamp_ = 0;
   db_type_ = 0;
   opaque_.clear();
   sort_mem_size_ = SkipDBM::DEFAULT_SORT_MEM_SIZE;
@@ -603,6 +603,15 @@ Status SkipDBMImpl::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status SkipDBMImpl::GetTimestamp(double* timestamp) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  *timestamp = timestamp_ / 1000000.0;
+  return Status(Status::SUCCESS);
+}
+
 Status SkipDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
@@ -634,7 +643,7 @@ Status SkipDBMImpl::Clear() {
   num_records_ = 0;
   eff_data_size_ = 0;
   file_size_ = file_->GetSizeSimple();
-  mod_time_ = GetWallTime() * 1000000;
+  timestamp_ = GetWallTime() * 1000000;
   status |= SaveMetadata(file_.get(), false);
   status |= LoadMetadata();
   status |= PrepareStorage();
@@ -844,7 +853,7 @@ std::vector<std::pair<std::string, std::string>> SkipDBMImpl::Inspect() {
     Add("num_records", ToString(num_records_));
     Add("eff_data_size", ToString(eff_data_size_));
     Add("file_size", ToString(file_->GetSizeSimple()));
-    Add("mod_time", ToString(mod_time_ / 1000000.0));
+    Add("timestamp", SPrintF("%.6f", timestamp_ / 1000000.0));
     Add("db_type", ToString(db_type_));
     Add("sort_mem_size", ToString(sort_mem_size_));
     Add("max_file_size", ToString(1LL << (offset_width_ * 8)));
@@ -894,14 +903,6 @@ int64_t SkipDBMImpl::GetEffectiveDataSize() {
     return -1;
   }
   return eff_data_size_;
-}
-
-double SkipDBMImpl::GetModificationTime() {
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  if (!open_) {
-    return -1;
-  }
-  return mod_time_ / 1000000.0;
 }
 
 int32_t SkipDBMImpl::GetDatabaseType() {
@@ -1069,7 +1070,7 @@ Status SkipDBMImpl::SaveMetadata(File* file, bool finish) {
   WriteFixNum(meta + META_OFFSET_NUM_RECORDS, num_records_, 8);
   WriteFixNum(meta + META_OFFSET_EFF_DATA_SIZE, eff_data_size_, 8);
   WriteFixNum(meta + META_OFFSET_FILE_SIZE, file_size_, 8);
-  WriteFixNum(meta + META_OFFSET_MOD_TIME, mod_time_, 8);
+  WriteFixNum(meta + META_OFFSET_TIMESTAMP, timestamp_, 8);
   WriteFixNum(meta + META_OFFSET_DB_TYPE, db_type_, 4);
   const int32_t opaque_size = std::min<int32_t>(opaque_.size(), SkipDBM::OPAQUE_METADATA_SIZE);
   std::memcpy(meta + META_OFFSET_OPAQUE, opaque_.data(), opaque_size);
@@ -1082,7 +1083,7 @@ Status SkipDBMImpl::LoadMetadata() {
       file_.get(), &cyclic_magic_, &pkg_major_version_, &pkg_minor_version_,
       &offset_width_, &step_unit_, &max_level_,
       &closure_flags_, &num_records_,
-      &eff_data_size_, &file_size_, &mod_time_,
+      &eff_data_size_, &file_size_, &timestamp_,
       &db_type_, &opaque_);
   if (status != Status::SUCCESS) {
     return status;
@@ -1192,7 +1193,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
       file_->GetSizeSimple() == static_cast<int64_t>(METADATA_SIZE) &&
       !record_sorter_->IsUpdated()) {
     file_size_ = sorted_file_->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
+    timestamp_ = GetWallTime() * 1000000;
     status |= SaveMetadata(sorted_file_.get(), true);
     file_->DisablePathOperations();
     if (IS_POSIX) {
@@ -1288,7 +1289,7 @@ Status SkipDBMImpl::FinishStorage(SkipDBM::ReducerType reducer) {
       }
     }
     file_size_ = merged_file->GetSizeSimple();
-    mod_time_ = GetWallTime() * 1000000;
+    timestamp_ = GetWallTime() * 1000000;
     status |= SaveMetadata(merged_file.get(), true);
     file_->DisablePathOperations();
     if (IS_POSIX) {
@@ -1767,6 +1768,11 @@ Status SkipDBM::GetFilePath(std::string* path) {
   return impl_->GetFilePath(path);
 }
 
+Status SkipDBM::GetTimestamp(double* timestamp) {
+  assert(timestamp != nullptr);
+  return impl_->GetTimestamp(timestamp);
+}
+
 Status SkipDBM::Clear() {
   return impl_->Clear();
 }
@@ -1825,10 +1831,6 @@ File* SkipDBM::GetInternalFile() const {
 
 int64_t SkipDBM::GetEffectiveDataSize() {
   return impl_->GetEffectiveDataSize();
-}
-
-double SkipDBM::GetModificationTime() {
-  return impl_->GetModificationTime();
 }
 
 int32_t SkipDBM::GetDatabaseType() {
@@ -1988,7 +1990,7 @@ Status SkipDBM::ReadMetadata(
     File* file, int32_t* cyclic_magic, int32_t* pkg_major_version, int32_t* pkg_minor_version,
     int32_t* offset_width, int32_t* step_unit, int32_t *max_level,
     int32_t* closure_flags, int64_t* num_records,
-    int64_t* eff_data_size, int64_t* file_size, int64_t* mod_time,
+    int64_t* eff_data_size, int64_t* file_size, int64_t* timestamp,
     int32_t* db_type, std::string* opaque) {
   int64_t act_file_size = 0;
   Status status = file->GetSize(&act_file_size);
@@ -2016,7 +2018,7 @@ Status SkipDBM::ReadMetadata(
   *num_records = ReadFixNum(meta + META_OFFSET_NUM_RECORDS, 8);
   *eff_data_size = ReadFixNum(meta + META_OFFSET_EFF_DATA_SIZE, 8);
   *file_size = ReadFixNum(meta + META_OFFSET_FILE_SIZE, 8);
-  *mod_time = ReadFixNum(meta + META_OFFSET_MOD_TIME, 8);
+  *timestamp = ReadFixNum(meta + META_OFFSET_TIMESTAMP, 8);
   *db_type = ReadFixNum(meta + META_OFFSET_DB_TYPE, 4);
   *opaque = std::string(meta + META_OFFSET_OPAQUE, SkipDBM::OPAQUE_METADATA_SIZE);
   const int32_t cyclic_magic_back = ReadFixNum(meta + META_OFFSET_CYCLIC_MAGIC_BACK, 1);
@@ -2054,14 +2056,14 @@ Status SkipDBM::RestoreDatabase(
   int64_t old_num_records = 0;
   int64_t old_eff_data_size = 0;
   int64_t old_file_size = 0;
-  int64_t old_mod_time = 0;
+  int64_t old_timestamp = 0;
   int32_t old_db_type = 0;
   std::string old_opaque;
   if (ReadMetadata(
           &old_file, &old_cyclic_magic, &old_pkg_major_version, &old_pkg_minor_version,
           &old_offset_width, &old_step_unit, &old_max_level,
           &old_closure_flags, &old_num_records,
-          &old_eff_data_size, &old_file_size, &old_mod_time,
+          &old_eff_data_size, &old_file_size, &old_timestamp,
           &old_db_type, &old_opaque) == Status::SUCCESS && old_cyclic_magic >= 0) {
     offset_width = old_offset_width;
     step_unit = old_step_unit;

@@ -119,6 +119,7 @@ class TreeDBMImpl final {
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
+  Status GetTimestamp(double* timestamp);
   Status Clear();
   Status Rebuild(
       const TreeDBM::TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard);
@@ -133,7 +134,6 @@ class TreeDBMImpl final {
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
-  double GetModificationTime();
   int32_t GetDatabaseType();
   Status SetDatabaseType(uint32_t db_type);
   std::string GetOpaqueMetadata();
@@ -712,6 +712,14 @@ Status TreeDBMImpl::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status TreeDBMImpl::GetTimestamp(double* timestamp) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return hash_dbm_->GetTimestamp(timestamp);
+}
+
 Status TreeDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (!open_) {
@@ -966,14 +974,6 @@ int64_t TreeDBMImpl::GetEffectiveDataSize() {
     return -1;
   }
   return eff_data_size_.load();
-}
-
-double TreeDBMImpl::GetModificationTime() {
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  if (!open_) {
-    return -1;
-  }
-  return hash_dbm_->GetModificationTime();
 }
 
 int32_t TreeDBMImpl::GetDatabaseType() {
@@ -2466,6 +2466,11 @@ Status TreeDBM::GetFilePath(std::string* path) {
   return impl_->GetFilePath(path);
 }
 
+Status TreeDBM::GetTimestamp(double* timestamp) {
+  assert(timestamp != nullptr);
+  return impl_->GetTimestamp(timestamp);
+}
+
 Status TreeDBM::Clear() {
   return impl_->Clear();
 }
@@ -2523,10 +2528,6 @@ File* TreeDBM::GetInternalFile() const {
 
 int64_t TreeDBM::GetEffectiveDataSize() {
   return impl_->GetEffectiveDataSize();
-}
-
-double TreeDBM::GetModificationTime() {
-  return impl_->GetModificationTime();
 }
 
 int32_t TreeDBM::GetDatabaseType() {

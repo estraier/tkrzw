@@ -66,7 +66,7 @@ void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
   EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(128, dbm->GetFileSizeSimple());
-  EXPECT_GT(dbm->GetModificationTime(), 0);
+  EXPECT_GT(dbm->GetTimestampSimple(), 0);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetDatabaseType(123));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->SetOpaqueMetadata("0123456789"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
@@ -78,7 +78,7 @@ void SkipDBMTest::SkipDBMEmptyDatabaseTest(tkrzw::SkipDBM* dbm) {
   EXPECT_FALSE(dbm->IsAutoRestored());
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(128, dbm->GetFileSizeSimple());
-  EXPECT_GT(dbm->GetModificationTime(), 0);
+  EXPECT_GT(dbm->GetTimestampSimple(), 0);
   EXPECT_EQ(123, dbm->GetDatabaseType());
   EXPECT_EQ("0123456789", dbm->GetOpaqueMetadata().substr(0, 10));
   const auto& meta = dbm->Inspect();

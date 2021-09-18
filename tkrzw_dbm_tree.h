@@ -319,6 +319,14 @@ class TreeDBM final : public DBM {
   Status GetFileSize(int64_t* size) override;
 
   /**
+   * Gets the timestamp in seconds of the last modified time.
+   * @param timestamp The pointer to a double object to contain the timestamp.
+   * @return The result status.
+   * @details Precondition: The database is opened.
+   */
+  Status GetTimestamp(double* timestamp) override;
+
+  /**
    * Gets the path of the database file.
    * @param path The pointer to a string object to contain the result path.
    * @return The result status.
@@ -459,13 +467,6 @@ class TreeDBM final : public DBM {
    * figure might deviate if auto restore happens.
    */
   int64_t GetEffectiveDataSize();
-
-  /**
-   * Gets the last modification time of the database.
-   * @return The last modification time of the UNIX epoch, or -1 on failure.
-   * @details Precondition: The database is opened.
-   */
-  double GetModificationTime();
 
   /**
    * Gets the database type

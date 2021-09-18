@@ -780,6 +780,17 @@ char* tkrzw_dbm_get_file_path(TkrzwDBM* dbm) {
   return path_ptr;
 }
 
+double tkrzw_dbm_get_timestamp(TkrzwDBM* dbm) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  double timestamp = 0;
+  last_status = xdbm->GetTimestamp(&timestamp);
+  if (last_status != Status::SUCCESS) {
+    return DOUBLENAN;
+  }
+  return timestamp;
+}
+
 bool tkrzw_dbm_clear(TkrzwDBM* dbm) {
   assert(dbm != nullptr);
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);

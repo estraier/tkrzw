@@ -268,6 +268,7 @@ TEST(LangCTest, Basic) {
   EXPECT_EQ(4, tkrzw_dbm_count(dbm));
   EXPECT_GT(tkrzw_dbm_get_file_size(dbm), 0);
   char* path_ptr = tkrzw_dbm_get_file_path(dbm);
+  EXPECT_GT(tkrzw_dbm_get_timestamp(dbm), 0);
   ASSERT_NE(nullptr, path_ptr);
   EXPECT_EQ(file_path, path_ptr);
   tkrzw::xfree(path_ptr);

@@ -131,6 +131,7 @@ class BabyDBMImpl final {
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
+  Status GetTimestamp(double* timestamp);
   Status Clear();
   Status Rebuild(int64_t num_buckets);
   Status ShouldBeRebuilt(bool* tobe);
@@ -168,6 +169,7 @@ class BabyDBMImpl final {
   bool open_;
   bool writable_;
   std::string path_;
+  double timestamp_;
   KeyComparator key_comparator_;
   BabyRecordComparator record_comp_;
   BabyLinkComparator link_comp_;
@@ -338,7 +340,8 @@ BabyLinkOnStack::~BabyLinkOnStack() {
 }
 
 BabyDBMImpl::BabyDBMImpl(std::unique_ptr<File> file, KeyComparator key_comparator)
-    : iterators_(), file_(std::move(file)), open_(false), writable_(false), path_(),
+    : iterators_(), file_(std::move(file)),
+      open_(false), writable_(false), path_(), timestamp_(0),
       key_comparator_(key_comparator),
       record_comp_(BabyRecordComparator(key_comparator)),
       link_comp_(BabyLinkComparator(key_comparator)),
@@ -400,6 +403,7 @@ Status BabyDBMImpl::Close() {
   open_ = false;
   writable_ = false;
   path_.clear();
+  timestamp_ = 0;
   return status;
 }
 
@@ -521,6 +525,15 @@ Status BabyDBMImpl::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status BabyDBMImpl::GetTimestamp(double* timestamp) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  *timestamp = timestamp_;
+  return Status(Status::SUCCESS);
+}
+
 Status BabyDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (update_logger_ != nullptr) {
@@ -560,6 +573,7 @@ std::vector<std::pair<std::string, std::string>> BabyDBMImpl::Inspect() {
   Add("class", "BabyDBM");
   if (open_) {
     Add("path", path_);
+    Add("timestamp", SPrintF("%.6f", timestamp_));
   }
   Add("num_records", ToString(num_records_.load()));
   Add("tree_level", ToString(tree_level_));
@@ -949,6 +963,15 @@ Status BabyDBMImpl::ImportRecords() {
       break;
     }
     if (rec_type != FlatRecord::RECORD_NORMAL) {
+      if (rec_type == FlatRecord::RECORD_METADATA) {
+        const auto& meta = DeserializeStrMap(key);
+        if (StrContains(SearchMap(meta, "class", ""), "DBM")) {
+          const auto& tsexpr = SearchMap(meta, "timestamp", "");
+          if (!tsexpr.empty()) {
+            timestamp_ = StrToDouble(tsexpr);
+          }
+        }
+      }
       continue;
     }
     key_store = key;
@@ -1460,6 +1483,11 @@ Status BabyDBM::GetFileSize(int64_t* size) {
 Status BabyDBM::GetFilePath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetFilePath(path);
+}
+
+Status BabyDBM::GetTimestamp(double* timestamp) {
+  assert(timestamp != nullptr);
+  return impl_->GetTimestamp(timestamp);
 }
 
 Status BabyDBM::Clear() {

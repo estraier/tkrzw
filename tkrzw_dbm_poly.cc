@@ -629,6 +629,13 @@ Status PolyDBM::GetFilePath(std::string* path) {
   return dbm_->GetFilePath(path);
 }
 
+Status PolyDBM::GetTimestamp(double* timestamp) {
+  if (dbm_ == nullptr) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  return dbm_->GetTimestamp(timestamp);
+}
+
 Status PolyDBM::Clear() {
   if (dbm_ == nullptr) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

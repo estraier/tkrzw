@@ -255,6 +255,13 @@ class BabyDBM final : public DBM {
   Status GetFilePath(std::string* path) override;
 
   /**
+   * Gets the timestamp in seconds of the last modified time.
+   * @param timestamp The pointer to a double object to contain the timestamp.
+   * @return The result status.
+   */
+  Status GetTimestamp(double* timestamp) override;
+
+  /**
    * Removes all records.
    * @return The result status.
    */

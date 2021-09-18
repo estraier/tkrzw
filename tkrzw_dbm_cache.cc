@@ -101,6 +101,7 @@ class CacheDBMImpl final {
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
   Status GetFilePath(std::string* path);
+  Status GetTimestamp(double* timestamp);
   Status Clear();
   Status Rebuild(int64_t cap_rec_num, int64_t cap_mem_size);
   Status Synchronize(bool hard, DBM::FileProcessor* proc);
@@ -126,6 +127,7 @@ class CacheDBMImpl final {
   bool open_;
   bool writable_;
   std::string path_;
+  double timestamp_;
   int64_t cap_rec_num_;
   int64_t cap_mem_size_;
   CacheSlot slots_[NUM_CACHE_SLOTS];
@@ -565,7 +567,7 @@ std::vector<std::string> CacheSlot::GetKeys() {
 }
 
 CacheDBMImpl::CacheDBMImpl(std::unique_ptr<File> file, int64_t cap_rec_num, int64_t cap_mem_size)
-    : file_(std::move(file)), open_(false), writable_(false), path_(),
+    : file_(std::move(file)), open_(false), writable_(false), path_(), timestamp_(0),
       cap_rec_num_(cap_rec_num > 0 ? cap_rec_num : CacheDBM::DEFAULT_CAP_REC_NUM),
       cap_mem_size_(cap_mem_size > 0 ? cap_mem_size : INT64MAX),
       slots_(), update_logger_(nullptr), mutex_() {
@@ -619,6 +621,7 @@ Status CacheDBMImpl::Close() {
   open_ = false;
   writable_ = false;
   path_.clear();
+  timestamp_ = 0;
   return status;
 }
 
@@ -694,6 +697,20 @@ Status CacheDBMImpl::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status CacheDBMImpl::GetTimestamp(double* timestamp) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  *timestamp = timestamp_;
+  return Status(Status::SUCCESS);
+}
+
+Status CacheDBM::GetTimestamp(double* timestamp) {
+  assert(timestamp != nullptr);
+  return impl_->GetTimestamp(timestamp);
+}
+
 Status CacheDBMImpl::Clear() {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (update_logger_ != nullptr) {
@@ -747,6 +764,7 @@ std::vector<std::pair<std::string, std::string>> CacheDBMImpl::Inspect() {
   Add("class", "CacheDBM");
   if (open_) {
     Add("path", path_);
+    Add("timestamp", SPrintF("%.6f", timestamp_));
   }
   int64_t num_records = 0;
   int64_t eff_data_size = 0;
@@ -845,6 +863,15 @@ Status CacheDBMImpl::ImportRecords() {
       break;
     }
     if (rec_type != FlatRecord::RECORD_NORMAL) {
+      if (rec_type == FlatRecord::RECORD_METADATA) {
+        const auto& meta = DeserializeStrMap(key);
+        if (StrContains(SearchMap(meta, "class", ""), "DBM")) {
+          const auto& tsexpr = SearchMap(meta, "timestamp", "");
+          if (!tsexpr.empty()) {
+            timestamp_ = StrToDouble(tsexpr);
+          }
+        }
+      }
       continue;
     }
     key_store = key;

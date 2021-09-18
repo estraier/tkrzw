@@ -431,6 +431,22 @@ Status ShardDBM::GetFilePath(std::string* path) {
   return Status(Status::SUCCESS);
 }
 
+Status ShardDBM::GetTimestamp(double* timestamp) {
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  Status status(Status::SUCCESS);
+  double oldest = DOUBLEINF;
+  for (auto& dbm : dbms_) {
+    double timestamp = 0;
+    status |= dbm->GetTimestamp(&timestamp);
+    if (status == Status::SUCCESS) {
+      oldest = std::min(oldest, timestamp);
+    }
+  }
+  return status;
+}
+
 Status ShardDBM::Clear() {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

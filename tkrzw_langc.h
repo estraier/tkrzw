@@ -702,6 +702,13 @@ int64_t tkrzw_dbm_get_file_size(TkrzwDBM* dbm);
 char* tkrzw_dbm_get_file_path(TkrzwDBM* dbm);
 
 /**
+ * Gets the timestamp in seconds of the last modified time.
+ * @param dbm The database object.
+ * @return The timestamp of the last modified time, or NaN on failure.
+ */
+double tkrzw_dbm_get_timestamp(TkrzwDBM* dbm);
+
+/**
  * Removes all records.
  * @param dbm The database object.
  * @return True on success or false on failure.
