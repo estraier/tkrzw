@@ -7,6 +7,12 @@
 	- PolyDBM supports parameters to enable update logging.
 	- FlatRecord supports the data type selection for metadata.
 
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.22
+	- tkrzw-python: 0.1.22
+	- tkrzw-ruby: 0.1.22
+	- tkrzw-go: 0.1.22
+
 2021-09-10  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.10
