@@ -4,6 +4,7 @@
 	- Library version: 1.54.0
 
 	- PolyDBM supports parameters to enable update logging.
+	- FlatRecord supports the data type selection for metadata.
 
 2021-09-10  Mikio Hirabayashi  <hirarin@gmail.com>
 

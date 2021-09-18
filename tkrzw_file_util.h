@@ -474,8 +474,15 @@ class FileReader {
  */
 class FlatRecord final {
  public:
-  /** The magic number of the record. */
-  static constexpr uint8_t RECORD_MAGIC = 0xFF;
+  /**
+   * Enumeration of record types.
+   */
+  enum RecordType : int32_t {
+    /** For normal records. */
+    RECORD_NORMAL = 0,
+    /** For metadata records. */
+    RECORD_METADATA = 1,
+  };
 
   /**
    * Constructor.
@@ -499,7 +506,13 @@ class FlatRecord final {
    * Gets the data.
    * @return The data.
    */
-  std::string_view GetData();
+  std::string_view GetData() const;
+
+  /**
+   * Gets the record type.
+   * @return The record type.
+   */
+  RecordType GetRecordType() const;
 
   /**
    * Gets the offset of the record.
@@ -516,11 +529,17 @@ class FlatRecord final {
   /**
    * Writes the record in the file.
    * @param data The record data.
+   * @param rectype The record type.
    * @return The result status.
    */
-  Status Write(std::string_view data);
+  Status Write(std::string_view data, RecordType rectype = RECORD_NORMAL);
 
  private:
+  friend class FlatRecordReader;
+  /** The magic number of the normal record. */
+  static constexpr uint8_t RECORD_MAGIC_NORMAL = 0xFF;
+  /** The magic number of the metadata. */
+  static constexpr uint8_t RECORD_MAGIC_METADATA = 0xFE;
   /** The size of the stack buffer to read the record. */
   static constexpr size_t READ_BUFFER_SIZE = 48;
   /** The size of the stack buffer to write the record. */
@@ -539,6 +558,8 @@ class FlatRecord final {
   size_t data_size_;
   /** The buffer for the body data. */
   char* body_buf_;
+  /** The record type. */
+  RecordType rec_type_;
 };
 
 /**
@@ -566,9 +587,11 @@ class FlatRecordReader {
    * Reads a record.
    * @param str The pointer to a string_view object which stores the result.  The region is
    * available until this method is called again or this object is deleted.
+   * @param rectype The pointer to a variable into which the record type is assigned.  If it
+   * is nullptr, it is ignored.
    * @return The result status.  NOT_FOUND_ERROR is returned at the end of file.
    */
-  Status Read(std::string_view* str);
+  Status Read(std::string_view* str, FlatRecord::RecordType* rectype = nullptr);
 
  private:
   /** The file object, unowned. */

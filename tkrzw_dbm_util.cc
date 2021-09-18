@@ -1802,6 +1802,14 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   }
   bool ok = true;
   if (ulog_ts != INT64MIN) {
+
+    if (ulog_ts < 0) {
+
+      // -10000 means 10 seconds bfore the timestamp.
+
+    }
+
+
     const Status status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
         dbm.get(), rec_file_path, ulog_ts, ulog_server_id, ulog_dbm_index);
     if (status != Status::SUCCESS) {

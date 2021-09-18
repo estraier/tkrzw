@@ -4022,7 +4022,7 @@ DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(&dbm, "casket-ulog");
 <li>Archive/remove old update log files.</li>
 </ul>
 
-<p>The restore operation can be done by the command line utility too.  If you take update logs from the beginning, you can make a full backup file by applying all update logs to an empty database.</p>
+<p>The restore operation can be done by the command line utility too.  If you take update logs from the beginning, you can make a full backup file by applying all update logs to an empty database.  The parameter of "--ulog" means the minimum timestamp in milliseconds of the updates to be applied.  So, 0 means all updates.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ cp casket-backup.tkt casket-restored.tkt
 $ tkrzw_dbm_util import --ulog 0 casket-restored.tkt casket-ulog
@@ -4030,7 +4030,11 @@ $ tkrzw_dbm_util import --ulog 0 casket-restored.tkt casket-ulog
 
 <p>Unless the system crashes and restoration is done, the update log files continue to increase.  Thus, you should apply the update logs periodically and archive/remove unnecessary files.  The above command works with update log files which are in operation by another process.  As the race condition is avoided by checking metadata for each record, you can read update log files which can be written by another process simultaneously.  After you apply all exisiting update logs, you can remove the update log files except for the latest one.</p>
 
-<p>Even if update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the occurrence time.  Thus, you can apply update log files multiple times as long as the order is by the file ID.</p>
+<p>Even if update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the occurrence time.  Thus, you can apply update log files multiple times as long as the order is by the file ID.  That said, applying update logs since some seconds before the timestamp of the database is a more efficient way.  The "some seconds" allowance absorbs the possibility of time skew.  You can set a relative timestamp in milliseconds if you set a nagative value for the parameter of "--ulog".  The following imports updates since 10 seconds before the timestamp of the backup database.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ cp casket-backup.tkt casket-restored.tkt
+$ tkrzw_dbm_util import --ulog -10000 casket-restored.tkt casket-ulog
+]]></code></pre>
 
 <p>The reason why the MessageQueue class is used for taking logs is that another thread can monitor the latest updates and read them immediately.  This feature is utilized to implement data replication between network servers in Tkrzw-RPC.  That's why each update log has extra properties for the server and the DBM index.  You can also use DBMUpdateLoggerMQ to implement data replication locally.  See the API of DBMUpdateLoggerMQ and MessageQueue for details.</p>
 
@@ -4053,7 +4057,7 @@ $ tkrzw_dbm_util import --ulog 0 casket-restored.tkt casket-ulog
 <dd>Arbitrary string data.</dd>
 </dl>
 
-<p>The magic data is 0xFF and helps us detect data corruption.  The data size is represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16383 takes 2 bytes. A value between 16384 and 2097151 takes 3 bytes.  A key-value pair is represented by two records in sequence.  To represent a key-value database, keys and values of records appear alternately.</p>
+<p>The magic data is 0xFF or 0xFE and helps us detect data corruption.  0xFF is for normal records and 0xFE is for metadata.  The data size is represented in byte delta encoding.  A value between 0 and 127 takes 1 byte.  A value between 128 and 16383 takes 2 bytes. A value between 16384 and 2097151 takes 3 bytes.  A key-value pair is represented by two records in sequence.  To represent a key-value database, keys and values of records appear alternately.</p>
 
 <p>You can export all records of an existing database into a flat record file, by a command like this.</p>
 

@@ -424,7 +424,8 @@ void CommonFileTest::FlatRecordTest(tkrzw::File* file) {
   }
   reader_buffer_sizes.emplace_back(0);
   tkrzw::FlatRecord rec(file);
-  for (const auto& data_size : data_sizes) {
+  for (size_t i = 0; i < data_sizes.size(); i++) {
+    const auto& data_size = data_sizes[i];
     std::string data(data_size, 'v');
     if (data_size > 0) {
       data.front() = 'A';
@@ -432,10 +433,13 @@ void CommonFileTest::FlatRecordTest(tkrzw::File* file) {
     if (data_size > 1) {
       data.back() = 'Z';
     }
-    EXPECT_EQ(tkrzw::Status::SUCCESS, rec.Write(data));
+    const tkrzw::FlatRecord::RecordType rec_type =
+        i % 2 == 0 ? tkrzw::FlatRecord::RECORD_NORMAL : tkrzw::FlatRecord::RECORD_METADATA;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, rec.Write(data, rec_type));
     const int64_t offset = rec.GetOffset();
     EXPECT_EQ(tkrzw::Status::SUCCESS, rec.Read(offset));
     EXPECT_EQ(data, rec.GetData());
+    EXPECT_EQ(rec_type, rec.GetRecordType());
   }
   const int64_t end_offset = file->GetSizeSimple();
   int64_t offset = 0;
@@ -450,6 +454,11 @@ void CommonFileTest::FlatRecordTest(tkrzw::File* file) {
       data.back() = 'Z';
     }
     EXPECT_EQ(data, rec.GetData());
+    if (index % 2 == 0) {
+      EXPECT_EQ(tkrzw::FlatRecord::RECORD_NORMAL, rec.GetRecordType());
+    } else {
+      EXPECT_EQ(tkrzw::FlatRecord::RECORD_METADATA, rec.GetRecordType());
+    }
     offset += rec.GetWholeSize();
     index++;
   }
@@ -459,7 +468,8 @@ void CommonFileTest::FlatRecordTest(tkrzw::File* file) {
     tkrzw::FlatRecordReader reader(file, reader_buffer_size);
     while (true) {
       std::string_view data;
-      const tkrzw::Status status = reader.Read(&data);
+      tkrzw::FlatRecord::RecordType rec_type;
+      const tkrzw::Status status = reader.Read(&data, &rec_type);
       if (status != tkrzw::Status::SUCCESS) {
         EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
         break;
@@ -469,6 +479,11 @@ void CommonFileTest::FlatRecordTest(tkrzw::File* file) {
       }
       if (data.size() > 1) {
         EXPECT_EQ('Z', data.back());
+      }
+      if (actual_sizes.size() % 2 == 0) {
+        EXPECT_EQ(tkrzw::FlatRecord::RECORD_NORMAL, rec_type);
+      } else {
+        EXPECT_EQ(tkrzw::FlatRecord::RECORD_METADATA, rec_type);
       }
       actual_sizes.emplace_back(data.size());
     }
