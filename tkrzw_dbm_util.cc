@@ -1678,7 +1678,8 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
       EPrintL("Open failed: ", status);
       ok = false;
     }
-    DBMUpdateLoggerMQ ulog(&mq, ulog_server_id, ulog_dbm_index, ulog_ts);
+    const int64_t timestamp = ulog_ts < 0 ? dbm->GetTimestampSimple() * 1000 : ulog_ts;
+    DBMUpdateLoggerMQ ulog(&mq, ulog_server_id, ulog_dbm_index, timestamp);
     auto writer =
         [&](std::string_view key, std::string_view value) -> std::string_view {
           if (key.data() != DBM::RecordProcessor::NOOP.data()) {
@@ -1802,16 +1803,10 @@ static int32_t ProcessImport(int32_t argc, const char** args) {
   }
   bool ok = true;
   if (ulog_ts != INT64MIN) {
-
-    if (ulog_ts < 0) {
-
-      // -10000 means 10 seconds bfore the timestamp.
-
-    }
-
-
+    const int64_t timestamp =
+        ulog_ts < 0 ? std::max<int64_t>(dbm->GetTimestampSimple() * 1000 + ulog_ts, 0) : ulog_ts;
     const Status status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(
-        dbm.get(), rec_file_path, ulog_ts, ulog_server_id, ulog_dbm_index);
+        dbm.get(), rec_file_path, timestamp, ulog_server_id, ulog_dbm_index);
     if (status != Status::SUCCESS) {
       EPrintL("ApplyUpdateLogFromFiles failed: ", status);
       ok = false;
