@@ -529,10 +529,10 @@ class FlatRecord final {
   /**
    * Writes the record in the file.
    * @param data The record data.
-   * @param rectype The record type.
+   * @param rec_type The record type.
    * @return The result status.
    */
-  Status Write(std::string_view data, RecordType rectype = RECORD_NORMAL);
+  Status Write(std::string_view data, RecordType rec_type = RECORD_NORMAL);
 
  private:
   friend class FlatRecordReader;
@@ -587,11 +587,11 @@ class FlatRecordReader {
    * Reads a record.
    * @param str The pointer to a string_view object which stores the result.  The region is
    * available until this method is called again or this object is deleted.
-   * @param rectype The pointer to a variable into which the record type is assigned.  If it
+   * @param rec_type The pointer to a variable into which the record type is assigned.  If it
    * is nullptr, it is ignored.
    * @return The result status.  NOT_FOUND_ERROR is returned at the end of file.
    */
-  Status Read(std::string_view* str, FlatRecord::RecordType* rectype = nullptr);
+  Status Read(std::string_view* str, FlatRecord::RecordType* rec_type = nullptr);
 
  private:
   /** The file object, unowned. */

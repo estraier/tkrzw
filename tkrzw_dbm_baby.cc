@@ -940,21 +940,28 @@ Status BabyDBMImpl::ImportRecords() {
   std::string key_store;
   while (true) {
     std::string_view key;
-    Status status = reader.Read(&key);
+    FlatRecord::RecordType rec_type;
+    Status status = reader.Read(&key, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       break;
     }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      continue;
+    }
     key_store = key;
     std::string_view value;
-    status = reader.Read(&value);
+    status = reader.Read(&value, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
+    }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid metadata position");
     }
     DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     BabyLeafNode* leaf_node = SearchTree(key_store);
@@ -976,6 +983,12 @@ Status BabyDBMImpl::ExportRecords() {
     return status;
   }
   FlatRecord flat_rec(file_.get());
+  std::map<std::string, std::string> meta;
+  meta["class"] = "BabyDBM";
+  meta["timestamp"] = SPrintF("%.6f", GetWallTime());
+  meta["num_records"] = ToString(num_records_.load());
+  meta["tree_level"] = ToString(tree_level_);
+  status |= flat_rec.Write(SerializeStrMap(meta), FlatRecord::RECORD_METADATA);
   BabyLeafNode* leaf_node = first_node_;
   while (leaf_node != nullptr) {
     std::shared_lock<SpinSharedMutex> page_lock(leaf_node->mutex);

@@ -489,21 +489,28 @@ Status TinyDBMImpl::ImportRecords() {
   std::string key_store;
   while (true) {
     std::string_view key;
-    Status status = reader.Read(&key);
+    FlatRecord::RecordType rec_type;
+    Status status = reader.Read(&key, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       break;
     }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      continue;
+    }
     key_store = key;
     std::string_view value;
-    status = reader.Read(&value);
+    status = reader.Read(&value, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
+    }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid metadata position");
     }
     DBM::RecordProcessorSet setter(&status, value, true, nullptr);
     ScopedHashLock record_lock(record_mutex_, key_store, true);
@@ -525,6 +532,12 @@ Status TinyDBMImpl::ExportRecords() {
     return status;
   }
   FlatRecord flat_rec(file_.get());
+  std::map<std::string, std::string> meta;
+  meta["class"] = "TinyDBM";
+  meta["timestamp"] = SPrintF("%.6f", GetWallTime());
+  meta["num_records"] = ToString(num_records_.load());
+  meta["num_buckets"] = ToString(num_buckets_);
+  status |= flat_rec.Write(SerializeStrMap(meta), FlatRecord::RECORD_METADATA);
   TinyRecord rec;
   for (int64_t bucket_index = 0; bucket_index < num_buckets_; bucket_index++) {
     char* ptr = buckets_[bucket_index];

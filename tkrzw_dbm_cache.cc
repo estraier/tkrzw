@@ -836,21 +836,28 @@ Status CacheDBMImpl::ImportRecords() {
   std::string key_store;
   while (true) {
     std::string_view key;
-    Status status = reader.Read(&key);
+    FlatRecord::RecordType rec_type;
+    Status status = reader.Read(&key, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       break;
     }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      continue;
+    }
     key_store = key;
     std::string_view value;
-    status = reader.Read(&value);
+    status = reader.Read(&value, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
+    }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid metadata position");
     }
     uint64_t hash = PrimaryHash(key_store, UINT64MAX);
     const int32_t slot_index = (hash & 0xff) % NUM_CACHE_SLOTS;
@@ -866,7 +873,24 @@ Status CacheDBMImpl::ExportRecords() {
   if (status != Status::SUCCESS) {
     return status;
   }
+  int64_t num_records = 0;
+  int64_t eff_data_size = 0;
+  int64_t mem_usage = 0;
+  for (auto& slot : slots_) {
+    num_records += slot.Count();
+    eff_data_size += slot.GetEffectiveDataSize();
+    mem_usage += slot.GetMemoryUsage();
+  }
   FlatRecord flat_rec(file_.get());
+  std::map<std::string, std::string> meta;
+  meta["class"] = "CacheDBM";
+  meta["timestamp"] = SPrintF("%.6f", GetWallTime());
+  meta["num_records"] = ToString(num_records);
+  meta["eff_data_size"] = ToString(eff_data_size);
+  meta["mem_usage"] = ToString(mem_usage);
+  meta["cap_rec_num"] = ToString(cap_rec_num_);
+  meta["cap_mem_size"] = ToString(cap_mem_size_);
+  status |= flat_rec.Write(SerializeStrMap(meta), FlatRecord::RECORD_METADATA);
   for (auto& slot : slots_) {
     status = slot.ExportRecords(&flat_rec);
     if (status != Status::SUCCESS) {

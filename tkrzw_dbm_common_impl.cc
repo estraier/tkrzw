@@ -320,21 +320,28 @@ Status ImportDBMFromFlatRecords(DBM* dbm, File* src_file) {
   std::string key_store;
   while (true) {
     std::string_view key;
-    Status status = reader.Read(&key);
+    FlatRecord::RecordType rec_type;
+    Status status = reader.Read(&key, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       break;
     }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      continue;
+    }
     key_store = key;
     std::string_view value;
-    status = reader.Read(&value);
+    status = reader.Read(&value, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
+    }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid metadata position");
     }
     status = dbm->Set(key_store, value);
     if (status != Status::SUCCESS) {

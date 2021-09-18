@@ -469,21 +469,28 @@ Status StdDBMImpl<STRMAP>::ImportRecords() {
   std::string key_store;
   while (true) {
     std::string_view key;
-    Status status = reader.Read(&key);
+    FlatRecord::RecordType rec_type;
+    Status status = reader.Read(&key, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       break;
     }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      continue;
+    }
     key_store = key;
     std::string_view value;
-    status = reader.Read(&value);
+    status = reader.Read(&value, &rec_type);
     if (status != Status::SUCCESS) {
       if (status != Status::NOT_FOUND_ERROR) {
         return status;
       }
       return Status(Status::BROKEN_DATA_ERROR, "odd number of records");
+    }
+    if (rec_type != FlatRecord::RECORD_NORMAL) {
+      return Status(Status::BROKEN_DATA_ERROR, "invalid metadata position");
     }
     map_.emplace(key_store, value);
   }
@@ -503,6 +510,15 @@ Status StdDBMImpl<STRMAP>::ExportRecords() {
     return status;
   }
   FlatRecord rec(file_.get());
+  std::map<std::string, std::string> meta;
+  if (typeid(map_) == typeid(StringHashMap)) {
+    meta["class"] = "StdHashDBM";
+  } else {
+    meta["class"] = "StdTreeDBM";
+  }
+  meta["timestamp"] = SPrintF("%.6f", GetWallTime());
+  meta["num_records"] = ToString(map_.size());
+  status |= rec.Write(SerializeStrMap(meta), FlatRecord::RECORD_METADATA);
   auto it = map_.begin();
   while (it != map_.end()) {
     status |= rec.Write(it->first);

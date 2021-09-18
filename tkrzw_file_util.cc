@@ -1259,12 +1259,12 @@ size_t FlatRecord::GetWholeSize() const {
   return whole_size_;
 }
 
-Status FlatRecord::Write(std::string_view data, RecordType rectype) {
+Status FlatRecord::Write(std::string_view data, RecordType rec_type) {
   whole_size_ = sizeof(uint8_t) + SizeVarNum(data.size()) + data.size();
   char stack[WRITE_BUFFER_SIZE];
   char* write_buf = whole_size_ > sizeof(stack) ? new char[whole_size_] : stack;
   char* wp = write_buf;
-  switch (rectype) {
+  switch (rec_type) {
     case RECORD_METADATA:
       *(wp++) = RECORD_MAGIC_METADATA;
       break;
@@ -1295,19 +1295,19 @@ FlatRecordReader::~FlatRecordReader() {
   delete[] buffer_;
 }
 
-Status FlatRecordReader::Read(std::string_view* str, FlatRecord::RecordType* rectype) {
+Status FlatRecordReader::Read(std::string_view* str, FlatRecord::RecordType* rec_type) {
   constexpr int64_t min_record_size = sizeof(uint8_t) * 2;
   constexpr size_t max_header_size = sizeof(uint8_t) + sizeof(uint64_t);
   if (index_ + max_header_size <= data_size_) {
     size_t record_size = data_size_ - index_;
     const char* rp = buffer_ + index_;
     if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_NORMAL) {
-      if (rectype != nullptr) {
-        *rectype = FlatRecord::RECORD_NORMAL;
+      if (rec_type != nullptr) {
+        *rec_type = FlatRecord::RECORD_NORMAL;
       }
     } else if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_METADATA) {
-      if (rectype != nullptr) {
-        *rectype = FlatRecord::RECORD_METADATA;
+      if (rec_type != nullptr) {
+        *rec_type = FlatRecord::RECORD_METADATA;
       }
     } else {
       return Status(Status::BROKEN_DATA_ERROR, "invalid record magic number");
@@ -1347,12 +1347,12 @@ Status FlatRecordReader::Read(std::string_view* str, FlatRecord::RecordType* rec
   size_t record_size = data_size_;
   const char* rp = buffer_;
   if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_NORMAL) {
-    if (rectype != nullptr) {
-      *rectype = FlatRecord::RECORD_NORMAL;
+    if (rec_type != nullptr) {
+      *rec_type = FlatRecord::RECORD_NORMAL;
     }
   } else if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_METADATA) {
-    if (rectype != nullptr) {
-      *rectype = FlatRecord::RECORD_METADATA;
+    if (rec_type != nullptr) {
+      *rec_type = FlatRecord::RECORD_METADATA;
     }
   } else {
     return Status(Status::BROKEN_DATA_ERROR, "invalid record magic number");
@@ -1384,12 +1384,12 @@ Status FlatRecordReader::Read(std::string_view* str, FlatRecord::RecordType* rec
   record_size = buffer_size_;
   rp = buffer_;
   if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_NORMAL) {
-    if (rectype != nullptr) {
-      *rectype = FlatRecord::RECORD_NORMAL;
+    if (rec_type != nullptr) {
+      *rec_type = FlatRecord::RECORD_NORMAL;
     }
   } else if (*(uint8_t*)rp == FlatRecord::RECORD_MAGIC_METADATA) {
-    if (rectype != nullptr) {
-      *rectype = FlatRecord::RECORD_METADATA;
+    if (rec_type != nullptr) {
+      *rec_type = FlatRecord::RECORD_METADATA;
     }
   } else {
     return Status(Status::BROKEN_DATA_ERROR, "invalid record magic number");
