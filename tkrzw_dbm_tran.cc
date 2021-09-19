@@ -200,7 +200,7 @@ static int32_t ProcessBuild(int32_t argc, const char** args) {
           }
         }
       }
-      if (with_rebuild && op_dist(mt) % (num_iterations / 100 /*hoge*/ + 1) == 0 &&
+      if (with_rebuild && op_dist(mt) % (num_iterations / 4 + 1) == 0 &&
           id == master_id.load()) {
         if (async == nullptr) {
           const Status status = dbm.Rebuild();
