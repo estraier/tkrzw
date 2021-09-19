@@ -776,7 +776,7 @@ Status MemoryMapAtomicFileImpl::Close() {
   // Unmaps the memory.
   if (map_ != DUMMY_MAP) {
     if (writable_ && (open_options_ & File::OPEN_SYNC_HARD)) {
-      if (!FlushViewOfFile(map_, map_size_.load())) {
+      if (!FlushViewOfFile(map_, map_size_)) {
         status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
       }
       if (!FlushFileBuffers(file_handle_)) {
