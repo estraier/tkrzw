@@ -1904,7 +1904,8 @@ void TreeDBMImpl::ProcessImpl(
         node->page_size +=
             static_cast<int32_t>(new_rec_size) - static_cast<int32_t>(old_rec_size);
         node->dirty = true;
-        eff_data_size_.fetch_add(new_value.size() - old_value_size);
+        eff_data_size_.fetch_add(
+            static_cast<int32_t>(new_value.size()) - static_cast<int32_t>(old_value_size));
         if (static_cast<int32_t>(new_value.size()) > old_value_size) {
           if (CheckLeafNodeToDivide(node)) {
             reorg_ids_.Insert(std::make_pair(node->id, std::string(records.front()->GetKey())));

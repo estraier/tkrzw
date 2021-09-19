@@ -1508,7 +1508,8 @@ Status HashDBMImpl::ProcessImpl(
           }
         } else {
           if (old_is_set) {
-            eff_data_size_.fetch_add(new_value.size() - old_value.size());
+            eff_data_size_.fetch_add(
+                static_cast<int32_t>(new_value.size()) - static_cast<int32_t>(old_value.size()));
           } else {
             num_records_.fetch_add(1);
             eff_data_size_.fetch_add(key.size() + new_value.size());
