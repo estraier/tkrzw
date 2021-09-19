@@ -197,6 +197,10 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Unmaps the memory.
   const int64_t unmap_size = std::max(map_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) &&
+      msync(map_, unmap_size, MS_SYNC) != 0) {
+    status |= GetErrnoStatus("msync", errno);
+  }
   if (munmap(map_, unmap_size) != 0) {
     status |= GetErrnoStatus("munmap", errno);
   }
@@ -794,6 +798,10 @@ Status MemoryMapAtomicFileImpl::Close() {
 
   // Unmaps the memory.
   const int64_t unmap_size = std::max(map_size_, static_cast<int64_t>(PAGE_SIZE));
+  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) &&
+      msync(map_, unmap_size, MS_SYNC) != 0) {
+    status |= GetErrnoStatus("msync", errno);
+  }
   if (munmap(map_, unmap_size) != 0) {
     status |= GetErrnoStatus("munmap", errno);
   }

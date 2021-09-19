@@ -422,8 +422,8 @@ int64_t tkrzw_future_get_int(TkrzwFuture* future);
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.
  * @param params Optional parameters in \"key=value,key=value\" format.  The options for the file
- * opening operation are set by "truncate", "no_create", "no_wait", and "no_lock".  The option for
- * the number of shards is set by "num_shards".  Other options are the same as
+ * opening operation are set by "truncate", "no_create", "no_wait", "no_lock", and "sync_hard".
+ * The option for the number of shards is set by "num_shards".  Other options are the same as
  * PolyDBM::OpenAdvanced.
  * @return The new database object, which should be released by the tkrzw_dbm_close function.
  * NULL is returned on failure.
@@ -1308,6 +1308,7 @@ TkrzwFuture* tkrzw_async_dbm_search(
  *   - no_create (bool): True to omit file creation.
  *   - no_wait (bool): True to fail if the file is locked by another process.
  *   - no_lock (bool): True to omit file locking.
+ *   - sync_hard (bool): True to do physical synchronization when closing.
  * @details The optional parameter "file" specifies the internal file implementation class.
  * The default file class is "MemoryMapAtomicFile".  The other supported classes are
  * "StdFile", "MemoryMapAtomicFile", "PositionalParallelFile", and "PositionalAtomicFile".

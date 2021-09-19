@@ -193,6 +193,14 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Unmaps the memory.
   if (map_ != DUMMY_MAP) {
+    if (writable_ && (open_options_ & File::OPEN_SYNC_HARD)) {
+      if (!FlushViewOfFile(map_, map_size_.load())) {
+        status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+      }
+      if (!FlushFileBuffers(file_handle_)) {
+        status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+      }
+    }
     if (!UnmapViewOfFile(map_)) {
       status |= GetSysErrorStatus("UnmapViewOfFile", GetLastError());
     }
@@ -767,6 +775,14 @@ Status MemoryMapAtomicFileImpl::Close() {
 
   // Unmaps the memory.
   if (map_ != DUMMY_MAP) {
+    if (writable_ && (open_options_ & File::OPEN_SYNC_HARD)) {
+      if (!FlushViewOfFile(map_, map_size_.load())) {
+        status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
+      }
+      if (!FlushFileBuffers(file_handle_)) {
+        status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+      }
+    }
     if (!UnmapViewOfFile(map_)) {
       status |= GetSysErrorStatus("UnmapViewOfFile", GetLastError());
     }

@@ -347,10 +347,14 @@ TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
   if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_lock", "false"))) {
     open_options |= tkrzw::File::OPEN_NO_LOCK;
   }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "sync_hard", "false"))) {
+    open_options |= tkrzw::File::OPEN_SYNC_HARD;
+  }
   xparams.erase("truncate");
   xparams.erase("no_create");
   xparams.erase("no_wait");
   xparams.erase("no_lock");
+  xparams.erase("sync_hard");
   ParamDBM* dbm = nullptr;
   if (num_shards >= 0) {
     dbm = new tkrzw::ShardDBM();
@@ -1428,6 +1432,9 @@ TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params) 
   }
   if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_lock", "false"))) {
     open_options |= tkrzw::File::OPEN_NO_LOCK;
+  }
+  if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "sync_hard", "false"))) {
+    open_options |= tkrzw::File::OPEN_SYNC_HARD;
   }
   PolyFile* file = new tkrzw::PolyFile();
   last_status = file->OpenAdvanced(path, writable, open_options, xparams);

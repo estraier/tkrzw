@@ -245,6 +245,9 @@ Status PositionalParallelFileImpl::Close() {
       trunc_size = AlignNumber(trunc_size, block_size_);
     }
     status |= TruncateFile(fd_, trunc_size);
+    if ((open_options_ & File::OPEN_SYNC_HARD) && fsync(fd_) != 0) {
+      status |= GetErrnoStatus("fsync", errno);
+    }
   }
 
   // Unlocks the file.
@@ -931,6 +934,9 @@ Status PositionalAtomicFileImpl::Close() {
       trunc_size = AlignNumber(trunc_size, block_size_);
     }
     status |= TruncateFile(fd_, trunc_size);
+    if ((open_options_ & File::OPEN_SYNC_HARD) && fsync(fd_) != 0) {
+      status |= GetErrnoStatus("fsync", errno);
+    }
   }
 
   // Unlocks the file.

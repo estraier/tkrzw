@@ -68,6 +68,7 @@ class StdDBMImpl {
   std::unique_ptr<File> file_;
   bool open_;
   bool writable_;
+  int32_t open_options_;
   std::string path_;
   double timestamp_;
   DBM::UpdateLogger* update_logger_;
@@ -96,8 +97,8 @@ class StdDBMIteratorImpl {
 
 template <class STRMAP>
 StdDBMImpl<STRMAP>::StdDBMImpl(std::unique_ptr<File> file, int64_t num_buckets)
-    : file_(std::move(file)), open_(false), writable_(false), path_(), timestamp_(0),
-      update_logger_(nullptr), mutex_() {
+    : file_(std::move(file)), open_(false), writable_(false), open_options_(0),
+      path_(), timestamp_(0), update_logger_(nullptr), mutex_() {
 }
 
 template <>
@@ -139,6 +140,7 @@ Status StdDBMImpl<STRMAP>::Open(const std::string& path, bool writable, int32_t 
   }
   open_ = true;
   writable_ = writable;
+  open_options_ = options;
   path_ = norm_path;
   return Status(Status::SUCCESS);
 }
@@ -158,6 +160,7 @@ Status StdDBMImpl<STRMAP>::Close() {
   map_.clear();
   open_ = false;
   writable_ = false;
+  open_options_ = 0;
   path_.clear();
   timestamp_ = 0;
   return status;
@@ -530,9 +533,10 @@ Status StdDBMImpl<STRMAP>::ExportRecords() {
     return status;
   }
   const std::string export_path = path_ + ".tmp.export";
-  status = file_->Open(export_path, true, File::OPEN_TRUNCATE);
+  const int32_t export_options = File::OPEN_TRUNCATE | (open_options_ & File::OPEN_SYNC_HARD);
+  status = file_->Open(export_path, true, export_options);
   if (status != Status::SUCCESS) {
-    file_->Open(path_, true);
+    file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);
     return status;
   }
   FlatRecord rec(file_.get());
@@ -557,11 +561,8 @@ Status StdDBMImpl<STRMAP>::ExportRecords() {
   status |= file_->Close();
   status |= RenameFile(export_path, path_);
   RemoveFile(export_path);
-  if (status != Status::SUCCESS) {
-    file_->Open(path_, true);
-    return status;
-  }
-  return file_->Open(path_, true);
+  status |= file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);
+  return status;
 }
 
 template <class STRMAP>

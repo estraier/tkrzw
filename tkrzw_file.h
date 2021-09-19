@@ -53,6 +53,8 @@ class File {
     OPEN_NO_WAIT = 1 << 2,
     /** To omit file locking. */
     OPEN_NO_LOCK = 1 << 3,
+    /** To do physical synchronization when closing. */
+    OPEN_SYNC_HARD = 1 << 4,
   };
 
   /**

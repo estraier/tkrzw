@@ -1,3 +1,17 @@
+2021-09-20  Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.12
+	- Library version: 1.55.0
+
+	- File::OPEN_SYNC_HARD is added.
+	- On-memory databases uses File::OPEN_SYNC_HARD for exporting records.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.23
+	- tkrzw-python: 0.1.23
+	- tkrzw-ruby: 0.1.23
+	- tkrzw-go: 0.1.23
+
 2021-09-18  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.11

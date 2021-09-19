@@ -126,6 +126,7 @@ class CacheDBMImpl final {
   std::unique_ptr<File> file_;
   bool open_;
   bool writable_;
+  int32_t open_options_;
   std::string path_;
   double timestamp_;
   int64_t cap_rec_num_;
@@ -567,7 +568,8 @@ std::vector<std::string> CacheSlot::GetKeys() {
 }
 
 CacheDBMImpl::CacheDBMImpl(std::unique_ptr<File> file, int64_t cap_rec_num, int64_t cap_mem_size)
-    : file_(std::move(file)), open_(false), writable_(false), path_(), timestamp_(0),
+    : file_(std::move(file)), open_(false), writable_(false), open_options_(0),
+      path_(), timestamp_(0),
       cap_rec_num_(cap_rec_num > 0 ? cap_rec_num : CacheDBM::DEFAULT_CAP_REC_NUM),
       cap_mem_size_(cap_mem_size > 0 ? cap_mem_size : INT64MAX),
       slots_(), update_logger_(nullptr), mutex_() {
@@ -604,6 +606,7 @@ Status CacheDBMImpl::Open(const std::string& path, bool writable, int32_t option
   }
   open_ = true;
   writable_ = writable;
+  open_options_ = options;
   path_ = norm_path;
   return Status(Status::SUCCESS);
 }
@@ -623,6 +626,7 @@ Status CacheDBMImpl::Close() {
   InitAllSlots();
   open_ = false;
   writable_ = false;
+  open_options_ = 0;
   path_.clear();
   timestamp_ = 0;
   return status;
@@ -899,8 +903,15 @@ Status CacheDBMImpl::ImportRecords() {
 }
 
 Status CacheDBMImpl::ExportRecords() {
-  Status status = file_->Truncate(0);
+  Status status = file_->Close();
   if (status != Status::SUCCESS) {
+    return status;
+  }
+  const std::string export_path = path_ + ".tmp.export";
+  const int32_t export_options = File::OPEN_TRUNCATE | (open_options_ & File::OPEN_SYNC_HARD);
+  status = file_->Open(export_path, true, export_options);
+  if (status != Status::SUCCESS) {
+    file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);
     return status;
   }
   int64_t num_records = 0;
@@ -927,7 +938,11 @@ Status CacheDBMImpl::ExportRecords() {
       return status;
     }
   }
-  return Status(Status::SUCCESS);
+  status |= file_->Close();
+  status |= RenameFile(export_path, path_);
+  RemoveFile(export_path);
+  status |= file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);
+  return status;
 }
 
 Status CacheDBMImpl::ReadNextBucketRecords(CacheDBMIteratorImpl* iter) {

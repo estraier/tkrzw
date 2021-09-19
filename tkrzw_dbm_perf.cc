@@ -45,6 +45,7 @@ static void PrintUsageAndDie() {
     " std, mmap-para, mmap-atom, pos-para, pos-atom. (default: mmap-para)\n");
   P("  --no_wait : Fails if the file is locked by another process.\n");
   P("  --no_lock : Omits file locking.\n");
+  P("  --sync_hard : Synchronizes the file physically when closing.\n");
   P("  --alloc_init num : The initial allocation size. (default: %lld)\n",
     File::DEFAULT_ALLOC_INIT_SIZE);
   P("  --alloc_inc num : The allocation increment factor. (default: %.1f)\n",
@@ -227,7 +228,7 @@ std::unique_ptr<DBM> MakeDBMOrDie(
 
 // Sets up a DBM object.
 bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_path,
-              bool with_no_wait, bool with_no_lock,
+              bool with_no_wait, bool with_no_lock, bool with_sync_hard,
               bool is_append, int32_t record_crc, const std::string& record_comp,
               int32_t offset_width, int32_t align_pow, int64_t num_buckets,
               int32_t fbp_cap, int32_t min_read_size, bool lock_mem_buckets, bool cache_buckets,
@@ -245,6 +246,9 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
   }
   if (with_no_lock) {
     open_options |= File::OPEN_NO_LOCK;
+  }
+  if (with_sync_hard) {
+    open_options |= File::OPEN_SYNC_HARD;
   }
   const auto& dbm_type = dbm->GetType();
   if (dbm_type == typeid(HashDBM)) {
@@ -586,7 +590,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--random_key", 0}, {"--random_value", 0},
     {"--set_only", 0}, {"--get_only", 0}, {"--iter_only", 0}, {"--remove_only", 0},
     {"--validate", 0}, {"--copy", 1},
-    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0}, {"--sync_hard", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -622,6 +626,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const bool with_sync_hard = CheckMap(cmd_args, "--sync_hard");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
@@ -724,7 +729,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     delete[] value_buf;
   };
   if (is_set_only) {
-    if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
+    if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
@@ -803,7 +808,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
   };
   if (is_get_only) {
-    if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
+    if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
@@ -878,7 +883,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
   };
   if (is_iter_only) {
-    if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock,
+    if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
@@ -940,7 +945,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     }
   };
   if (is_remove_only) {
-    if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock,
+    if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                   lock_mem_buckets, cache_buckets,
@@ -1004,7 +1009,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--random_seed", 1}, {"--verbose", 0},
     {"--random_key", 0}, {"--random_value", 0}, {"--keys", 1},
     {"--rebuild", 0}, {"--sleep", 1}, {"--validate", 0},
-    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0}, {"--sync_hard", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -1038,6 +1043,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const bool with_sync_hard = CheckMap(cmd_args, "--sync_hard");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
@@ -1167,7 +1173,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     }
     delete[] value_buf;
   };
-  if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
+  if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
                 offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                 lock_mem_buckets, cache_buckets,
@@ -1229,7 +1235,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"", 0}, {"--dbm", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1},
     {"--random_seed", 1}, {"--verbose", 0},
     {"--iterator", 0}, {"--sync", 0}, {"--clear", 0}, {"--rebuild", 0}, {"--validate", 0},
-    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0},
+    {"--path", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0}, {"--sync_hard", 0},
     {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--direct_io", 0},
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
@@ -1262,6 +1268,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
   const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
   const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const bool with_sync_hard = CheckMap(cmd_args, "--sync_hard");
   const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
   const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
@@ -1489,7 +1496,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     }
     delete[] value_buf;
   };
-  if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock,
+  if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
                 offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
                 lock_mem_buckets, cache_buckets,

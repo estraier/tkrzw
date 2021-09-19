@@ -217,6 +217,9 @@ Status PositionalParallelFileImpl::Close() {
     status |= TruncateFileInternally(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_.load() != trunc_size;
+    if ((open_options_ & File::OPEN_SYNC_HARD) && !FlushFileBuffers(file_handle_)) {
+      status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+    }
   }
 
   // Unlocks the file.
@@ -895,6 +898,9 @@ Status PositionalAtomicFileImpl::Close() {
     status |= TruncateFileInternally(file_handle_, trunc_size);
     retruncate =
         !(access_options_ & PositionalFile::ACCESS_PADDING) && file_size_ != trunc_size;
+    if ((open_options_ & File::OPEN_SYNC_HARD) && !FlushFileBuffers(file_handle_)) {
+      status |= GetSysErrorStatus("FlushFileBuffers", GetLastError());
+    }
   }
 
   // Unlocks the file.
