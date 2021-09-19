@@ -857,8 +857,8 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  if (file_size_.load() != map_size_.load()) {
-    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+  if (file_size_ != map_size_) {
+    const int64_t new_map_size = std::max(file_size_, static_cast<int64_t>(PAGE_SIZE));
     const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
     if (status != Status::SUCCESS) {
       map_handle_ = nullptr;
@@ -867,9 +867,9 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
       file_handle_ = nullptr;
       return status;
     }
-    map_size_.store(new_map_size);
+    map_size_ = new_map_size;
   }
-  Status status = TruncateFileInternally(file_handle_, file_size_.load());
+  Status status = TruncateFileInternally(file_handle_, file_size_);
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_)) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());

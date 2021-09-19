@@ -79,8 +79,14 @@ install :
 uninstall :
 	-rd /S "$(BASEDIR)"
 
-check : check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-langc
+check : check-perf-sampler check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-langc
 	-del casket* /F /Q > NUL: 2>&1
+	@echo #
+	@echo #================================================================
+	@echo # Checking completed.
+	@echo #================================================================
+
+check-light : check-perf-sampler check-build-util check-hashdbm-util check-treedbm-util check-skipdbm-util check-polydbm-util check-sharddbm-util
 	@echo #
 	@echo #================================================================
 	@echo # Checking completed.
@@ -641,6 +647,38 @@ check-langc :
 	tkrzw_langc_check.exe "casket.tkh" "truncate=true,num_buckets=10000" 20000
 	tkrzw_langc_check.exe "casket.tkt" "truncate=true,num_buckets=1000" 20000
 	tkrzw_langc_check.exe "casket.tks" "truncate=true" 20000
+
+check-perf-sampler :
+	-del casket* /F /Q > NUL: 2>&1
+	tkrzw_file_perf.exe sequence --file std \
+	  --iter 1000 --threads 2 --size 20 casket
+	tkrzw_file_perf.exe sequence --file mmap-para \
+	  --iter 1000 --threads 2 --size 20 casket
+	tkrzw_file_perf.exe sequence --file mmap-atom \
+	  --iter 1000 --threads 2 --size 20 casket
+	tkrzw_file_perf.exe sequence --file pos-para \
+	  --iter 1000 --threads 2 --size 20 casket
+	tkrzw_file_perf.exe sequence --file pos-atom \
+	  --iter 1000 --threads 2 --size 20 casket
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkh \
+	  --iter 1000 --threads 2 --params "dbm=hash,num_buckets=2000"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkt \
+	  --iter 1000 --threads 2 --params "dbm=tree,num_buckets=500"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tks \
+	  --iter 1000 --threads 2 --params "dbm=skip"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkmt \
+	  --iter 1000 --threads 2 --params "dbm=tiny,num_buckets=2000"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkmb \
+	  --iter 1000 --threads 2 --params "dbm=baby"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkmc \
+	  --iter 1000 --threads 2 --params "dbm=cache,cap_rec_num=3000"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tksh \
+	  --iter 1000 --threads 2 --params "dbm=stdhash,num_buckets=2000"
+	tkrzw_dbm_perf.exe sequence --dbm poly --path casket.tkst \
+	  --iter 1000 --threads 2 --params "dbm=stdhash"
+	tkrzw_langc_check.exe "casket.tkh" "truncate=true,num_buckets=1000" 1000
+	tkrzw_langc_check.exe "casket.tkt" "truncate=true,num_buckets=200" 1000
+	tkrzw_langc_check.exe "casket.tks" "truncate=true" 1000
 
 check-direct : check-direct-hashdbm check-direct-treedbm check-direct-skipdbm
 
