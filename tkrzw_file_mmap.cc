@@ -290,8 +290,20 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
-  map_size_.store(file_size_.load());
-  Status status = TruncateFile(fd_, map_size_.load());
+  if (file_size_.load() != map_size_.load()) {
+    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+    void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
+    if (new_map == MAP_FAILED) {
+      const Status status = GetErrnoStatus("mremap", errno);
+      map_ = nullptr;
+      close(fd_);
+      fd_ = -1;
+      return status;
+    }
+    map_ = static_cast<char*>(new_map);
+    map_size_.store(new_map_size);
+  }
+  Status status = TruncateFile(fd_, file_size_.load());
   if (hard) {
     if (size == 0) {
       size = map_size_;
@@ -876,8 +888,20 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  map_size_ = file_size_;
-  Status status = TruncateFile(fd_, map_size_);
+  if (file_size_ != map_size_) {
+    const int64_t new_map_size = std::max(file_size_, static_cast<int64_t>(PAGE_SIZE));
+    void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
+    if (new_map == MAP_FAILED) {
+      const Status status = GetErrnoStatus("mremap", errno);
+      map_ = nullptr;
+      close(fd_);
+      fd_ = -1;
+      return status;
+    }
+    map_ = static_cast<char*>(new_map);
+    map_size_ = new_map_size;
+  }
+  Status status = TruncateFile(fd_, file_size_);
   if (hard) {
     if (size == 0) {
       size = map_size_;

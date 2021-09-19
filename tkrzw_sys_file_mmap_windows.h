@@ -281,9 +281,19 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
-  Status status(Status::SUCCESS);
-  map_size_.store(file_size_.load());
-  status |= TruncateFileInternally(file_handle_, map_size_.load());
+  if (file_size_.load() != map_size_.load()) {
+    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+    const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+    if (status != Status::SUCCESS) {
+      map_handle_ = nullptr;
+      map_ = nullptr;
+      CloseHandle(file_handle_);
+      file_handle_ = nullptr;
+      return status;
+    }
+    map_size_.store(new_map_size);
+  }
+  Status status = TruncateFileInternally(file_handle_, file_size_.load());
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_.load())) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());
@@ -847,9 +857,19 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  Status status(Status::SUCCESS);
-  map_size_ = file_size_;
-  status |= TruncateFileInternally(file_handle_, map_size_);
+  if (file_size_.load() != map_size_.load()) {
+    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+    const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
+    if (status != Status::SUCCESS) {
+      map_handle_ = nullptr;
+      map_ = nullptr;
+      CloseHandle(file_handle_);
+      file_handle_ = nullptr;
+      return status;
+    }
+    map_size_.store(new_map_size);
+  }
+  Status status = TruncateFileInternally(file_handle_, file_size_.load());
   if (hard) {
     if (!FlushViewOfFile(map_, map_size_)) {
       status |= GetSysErrorStatus("MapViewOfFile", GetLastError());

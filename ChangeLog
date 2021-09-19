@@ -3,6 +3,8 @@
 	- Release: 1.0.11
 	- Library version: 1.54.0
 
+	- Fix overflow bugs on 32-bit systems.
+	- Fix memory leak bug in MemoryMapFile::Synchronize.
 	- GetModificationTime is renamed to GetTimestamp.
 	- PolyDBM supports parameters to enable update logging.
 	- FlatRecord supports the data type selection for metadata.

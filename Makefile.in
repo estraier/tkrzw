@@ -137,6 +137,7 @@ distclean : clean apidocclean
 	  config.cache config.log config.status config.tmp autom4te.cache build
 
 check :
+	$(MAKE) check-perf-sampler
 	$(MAKE) check-build-util
 	$(MAKE) check-str-perf
 	$(MAKE) check-file-perf
@@ -157,7 +158,6 @@ check :
 	$(MAKE) check-index-perf
 	$(MAKE) check-tran
 	$(MAKE) check-langc
-	$(MAKE) check-perf-sampler
 	rm -Rf casket*
 	@printf '\n'
 	@printf '#================================================================\n'
@@ -165,13 +165,13 @@ check :
 	@printf '#================================================================\n'
 
 check-light :
+	$(MAKE) check-perf-sampler
 	$(MAKE) check-build-util
 	$(MAKE) check-hashdbm-util
 	$(MAKE) check-treedbm-util
 	$(MAKE) check-skipdbm-util
 	$(MAKE) check-polydbm-util
 	$(MAKE) check-sharddbm-util
-	$(MAKE) check-perf-sampler
 	rm -Rf casket*
 	@printf '\n'
 	@printf '#================================================================\n'
@@ -726,10 +726,10 @@ check-tran :
 	  --sync_freq 100 --async 3 --rebuild --remove \
 	  --params "record_crc_mode=16,$(DBMTRANRECCOMPPARAMS)"
 	$(RUNENV) ./tkrzw_dbm_tran check --restore casket.tkt
-	$(RUNENV) ./tkrzw_dbm_tran build casket.tks --iter 30000 --threads 4 \
+	$(RUNENV) ./tkrzw_dbm_tran build casket.tks --iter 10000 --threads 4 \
 	  --sync_freq 10000
 	$(RUNENV) ./tkrzw_dbm_tran check --restore casket.tks
-	$(RUNENV) ./tkrzw_dbm_tran build casket.tks --iter 30000 --threads 4 \
+	$(RUNENV) ./tkrzw_dbm_tran build casket.tks --iter 10000 --threads 4 \
 	  --sync_freq 10000 --async 3 --rebuild --remove
 	$(RUNENV) ./tkrzw_dbm_tran check --restore casket.tks
 	$(RUNENV) ./tkrzw_dbm_tran async casket.tkh --iter 15000 --threads 4 \
@@ -749,6 +749,16 @@ check-langc :
 
 check-perf-sampler :
 	rm -Rf casket*
+	$(RUNENV) ./tkrzw_file_perf sequence --file std \
+	  --iter 1000 --threads 2 --size 20 casket
+	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-para \
+	  --iter 1000 --threads 2 --size 20 casket
+	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-atom \
+	  --iter 1000 --threads 2 --size 20 casket
+	$(RUNENV) ./tkrzw_file_perf sequence --file pos-para \
+	  --iter 1000 --threads 2 --size 20 casket
+	$(RUNENV) ./tkrzw_file_perf sequence --file pos-atom \
+	  --iter 1000 --threads 2 --size 20 casket
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm poly --path casket.tkh \
 	  --iter 1000 --threads 2 --params "dbm=hash,num_buckets=2000"
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm poly --path casket.tkt \

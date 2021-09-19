@@ -621,10 +621,10 @@ check-tran :
 	tkrzw_dbm_tran.exe build casket.tkt --iter 30000 --threads 4 \
 	  --sync_freq 100 --async 3 --rebuild --remove --params "record_crc_mode=16"
 	tkrzw_dbm_tran.exe check casket.tkt
-	tkrzw_dbm_tran.exe build casket.tks --iter 30000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tks --iter 10000 --threads 4 \
 	  --sync_freq 10000
 	tkrzw_dbm_tran.exe check casket.tks
-	tkrzw_dbm_tran.exe build casket.tks --iter 30000 --threads 4 \
+	tkrzw_dbm_tran.exe build casket.tks --iter 10000 --threads 4 \
 	  --sync_freq 10000 --async 3 --rebuild --remove
 	tkrzw_dbm_tran.exe check casket.tks
 	tkrzw_dbm_tran.exe async casket.tkh --iter 15000 --threads 4 \
