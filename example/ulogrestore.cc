@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
   // Updates the database with the update logging enabled.
   {
     MessageQueue mq;
-    mq.Open("casket-ulog", 512<<20, MessageQueue::OPEN_TRUNCATE).OrDie();
+    mq.Open("casket-ulog", 512 << 20, MessageQueue::OPEN_TRUNCATE).OrDie();
     DBMUpdateLoggerMQ ulog(&mq);
     TreeDBM dbm;
     dbm.SetUpdateLogger(&ulog);
