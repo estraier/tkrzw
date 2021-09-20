@@ -272,6 +272,18 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   Status Synchronize(bool hard) override;
 
   /**
+   * Stops logging of the current thread.
+   * @details This stops logging of the current thread regardless of the logger instance.
+   */
+  static void StopThreadLogging();
+
+  /**
+   * Resumes logging of the current thread.
+   * @details This resumes logging of the current thread regardless of the logger instance.
+   */
+  static void ResumeThreadLogging();
+
+  /**
    * Parses an update log message.
    * @param message The update log message.
    * @param op The pointer to the update log object to store the result.  The life duration of
@@ -315,6 +327,8 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
       int32_t server_id = INT32MIN + 1, int32_t dbm_index = INT32MIN + 1);
 
  private:
+  /** Whether the current thread stops logging. */
+  static thread_local bool stop_thread_logging_;
   /** The message queue. */
   MessageQueue* mq_;
   /** The server ID of the process. */

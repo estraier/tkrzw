@@ -225,11 +225,13 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
   const std::string prefix = tmp_dir.MakeUniquePath("casket-", "-mq");
   constexpr int32_t num_iterations = 10000;
   tkrzw::MessageQueue mq;
-  tkrzw::DBMUpdateLoggerMQ ulog(&mq, 333333, 999);
-  tkrzw::StdTreeDBM src_dbm, dest_dbm1, dest_dbm2;
+  tkrzw::DBMUpdateLoggerMQ ulog(&mq, 333333, 999), ulog_dummy(&mq, 333, 999);
+  tkrzw::StdTreeDBM src_dbm, dest_dbm1, dest_dbm2, dummy_dbm1, dummy_dbm2;
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             mq.Open(prefix, 100000, tkrzw::MessageQueue::OPEN_TRUNCATE));
   src_dbm.SetUpdateLogger(&ulog);
+  dummy_dbm1.SetUpdateLogger(&ulog);
+  dummy_dbm2.SetUpdateLogger(&ulog_dummy);
   tkrzw::WaitCounter wc(2);
   auto copier =
       [&](tkrzw::DBM* dest) {
@@ -246,10 +248,13 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, status);
             break;
           }
-          EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(
-              dest, message, 333333, 999));
-          if (--count == 0) {
-            wc.Done();
+          status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(dest, message, 333333, 999);
+          if (status == tkrzw::Status::SUCCESS) {
+            if (--count == 0) {
+              wc.Done();
+            }
+          } else {
+            EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
           }
         }
         wc.Done();
@@ -270,6 +275,10 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
       switch (op_dist(mt)) {
         case 0:
           EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set(key, value));
+          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          dummy_dbm1.Set(key, "DUMMY");
+          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          dummy_dbm2.Set(key, "DUMMY");
           break;
         case 1:
           EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Append(key, value, ":"));
@@ -280,12 +289,22 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
             EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set(key, value));
           }
+          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          dummy_dbm1.Remove(key);
+          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          dummy_dbm2.Remove(key);
           break;
         }
         default: {
-          const tkrzw::Status status = src_dbm.Set(key, value);
-          EXPECT_TRUE(status == tkrzw::Status::SUCCESS ||
-                      status == tkrzw::Status::NOT_FOUND_ERROR);
+          const tkrzw::Status status = src_dbm.Set(key, value, false);
+          if (status != tkrzw::Status::SUCCESS) {
+            EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, status);
+            EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Remove(key));
+          }
+          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          dummy_dbm1.Set(key, "DUMMY");
+          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          dummy_dbm2.Set(key, "DUMMY");
           break;
         }
       }

@@ -51,8 +51,8 @@ const int64_t TKRZW_INT64MIN = INT64MIN;
 
 const int64_t TKRZW_INT64MAX = INT64MAX;
 
-thread_local Status last_status(Status::SUCCESS);
-thread_local std::string last_message;
+static thread_local Status last_status(Status::SUCCESS);
+static thread_local std::string last_message;
 
 const char* const TKRZW_REC_PROC_NOOP = (char*)-1;
 

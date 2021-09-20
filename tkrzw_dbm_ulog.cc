@@ -106,12 +106,17 @@ Status DBMUpdateLoggerDBM::Synchronize(bool hard) {
   return dbm_->Synchronize(hard);
 }
 
+thread_local bool DBMUpdateLoggerMQ::stop_thread_logging_ = false;
+
 DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
     MessageQueue* mq, int32_t server_id, int32_t dbm_index, int64_t fixed_timestamp)
     : mq_(mq), server_id_(std::max(server_id, 0)), dbm_index_(std::max(dbm_index, 0)),
       fixed_timestamp_(fixed_timestamp) {}
 
 Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value) {
+  if (stop_thread_logging_) {
+    return Status(Status::SUCCESS);
+  }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   const size_t est_size = 20 + key.size() + value.size();
@@ -134,6 +139,9 @@ Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value)
 }
 
 Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
+  if (stop_thread_logging_) {
+    return Status(Status::SUCCESS);
+  }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   const size_t est_size = 20 + key.size();
@@ -153,6 +161,9 @@ Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
 }
 
 Status DBMUpdateLoggerMQ::WriteClear() {
+  if (stop_thread_logging_) {
+    return Status(Status::SUCCESS);
+  }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
   char stack[WRITE_BUFFER_SIZE];
   char* write_buf = stack;
@@ -165,6 +176,14 @@ Status DBMUpdateLoggerMQ::WriteClear() {
 
 Status DBMUpdateLoggerMQ::Synchronize(bool hard) {
   return mq_->Synchronize(hard);
+}
+
+void DBMUpdateLoggerMQ::StopThreadLogging() {
+  stop_thread_logging_ = true;
+}
+
+void DBMUpdateLoggerMQ::ResumeThreadLogging() {
+  stop_thread_logging_ = false;
 }
 
 Status DBMUpdateLoggerMQ::ParseUpdateLog(std::string_view message, UpdateLog* op) {
