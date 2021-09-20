@@ -3875,6 +3875,8 @@ one    first
 <dd>This restores unhealthy databases to the state at the last time when Synchronize succeeds.  Adding RESTORE_NO_SHORTCUTS reduces the risk of possible missing links in case that null codes are written unexpectedly.  Adding RESTORE_WITH_HARDSYNC to the restore mode gives you more safety against another crash during the restoration operation.</dd>
 <dt>Call the Synchronize method after the transaction which you must consider completed/consistent.</dt>
 <dd>The "hard" flag should be true to tolarate system crashes.  If it is false, it can toralate only process crashes.  If hard=true is more costly since it writes all cached data to disk and waits for confirmation from the hardware.</dd>
+<dt>Open the database with a file open option OPEN_SYNC_HARD.</dt>
+<dd>This option causes the same physical synchronization as above just before closing the database file.</dd>
 </dl>
 
 <p>In addition, if you are concerned that the storage device could taint the existing region on the same disk block when you append data, you should set the TuningParameters.align_pow to OpenAdvanced to a value for the disk block size.  Typically, it's from 9 (meaning 2^9 = 512 bytes) to 14 (meaning 2^14 = 16384).  However, it means that the minimum record size becomes 512 or 16384, whereby the space efficiency can be unpractically low.</p>
@@ -3884,9 +3886,11 @@ one    first
 <dl>
 <dt>Call the Synchronize method after the transaction which you must consider completed/consistent.</dt>
 <dd>The "hard" flag should be true to tolarate system crashes.  If it is false, it can toralate only process crashes.  If hard=true is more costly since it writes all cached data to disk and waits for confirmation from the hardware.</dd>
+<dt>Open the database with a file open option OPEN_SYNC_HARD.</dt>
+<dd>This option causes the same physical synchronization as above just before closing the database file.</dd>
 </dl>
 
-<p>The Synchronize method of SkipDBM and on-memory databases makes a new database file as a temporary file.  Then, the old database file is replaced with the temporary file atomically.  Thus, the database never breaks and no record is ever lost.  Even so, SkipDBM has restore features just in case that the file is currupted for unexpected reasons.  RESTORE_DEFAULT and RESTORE_SYNC are equivalent for SkipDBM.</p>
+<p>The Synchronize method of SkipDBM and on-memory databases makes a new database file as a temporary file.  Then, the old database file is replaced with the temporary file atomically.  Thus, the database never breaks and no record is ever lost.  Even so, SkipDBM has restore features just in case that the file is currupted for unexpected reasons.  RESTORE_DEFAULT and RESTORE_SYNC are equivalent for SkipDBM.  Actually, calling Synchronize often is not practical in terms of performance.  Just setting OPEN_SYNC_HARD and delaying synchronization as much as poossible is better for performance.</p>
 
 <p>If you use ShardDBM for sharding databases, ACID traits across crashes are not guaranteed regardless of the inner database classes.  That's because the Synchronize method is called one by one for each inner databases without the global locking.  It can end up with a partial success of Synchronize.</p>
 
@@ -4236,7 +4240,9 @@ void DumpBuffer(BabyDBM* buffer, int32_t file_id) {
 
 <p>Databases of Tkrzw are designed to be shared among multiple threads.  However, they are not designed to be shared among multiple processes.  When one process opens a database file as a writer, an exclusive lock is applied to the file so that other processes trying to open the same database file are blocked until the database is closed.  When one process opens a database file as a reader, a shared lock is applied to the file so that other reader processes can open the same database but other writer processes are blocked until the database is closed.  Thereby, consistency of the state of the database and atomicity of updating operations are assured in the multi-processing environment.</p>
 
-<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.  If the throughput requirement or the latency requirement is more than a threshold, you should write a multi-thread application program to serve the database.</p>
+<p>A workaround way to share the same database among multiple processes is that each operation to access the database is done between opening the database and closing the database.  Although it causes unnecessarily read/write operations for each database access, it is feasible up to a certain throughput (100 QPS or something).  The workaround is useful with traditional shell commands and CGI scripts.</p>
+
+<p>If possible, using the service of Tkrzw-RPC is more practical.  A server process serves one or more databaes.  Clients access the server via the gRPC protocol, which realizes more throughput than 10,000 QPS and can handle more than 10,000 clients at the same time.</p>
 
 <h3 id="tips_file_classes">File Classes</h3>
 
