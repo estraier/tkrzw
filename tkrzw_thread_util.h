@@ -836,7 +836,7 @@ class WaitCounter {
 
   /**
    * Waits for the counter value to be zero or less.
-   * @param timeout The timeout in seconds to wait for.   Zero means no wait.  Negative means
+   * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
    * unlimited.
    * @return True if successful or false on timeout.
    */

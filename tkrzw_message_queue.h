@@ -48,7 +48,7 @@ class MessageQueue final {
 
     /**
      * Reads a message from the queue.
-     * @param timeout The timeout to wait for in seconds.  Zero means no wait.  Negative means
+     * @param timeout The timeout to wait in seconds.  Zero means no wait.  Negative means
      * unlimited.
      * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
      * message.
@@ -117,6 +117,12 @@ class MessageQueue final {
    * @return The result status.
    */
   Status Close();
+
+  /**
+   * Cancels operations of the current readers.
+   * @return The result status.
+   */
+  Status CancelReaders();
 
   /**
    * Writes a message.

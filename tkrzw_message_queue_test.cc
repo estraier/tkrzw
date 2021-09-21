@@ -226,6 +226,9 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{70, "seven"},
       std::pair<uint64_t, std::string>{70, ""},
       std::pair<uint64_t, std::string>{80, "eight"}));
+  reader = mq.MakeReader(70);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.CancelReaders());
+  EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, reader->Read(0, &timestamp, &message));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 

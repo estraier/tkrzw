@@ -46,6 +46,7 @@ class MessageQueueImpl final {
   ~MessageQueueImpl();
   Status Open(const std::string& prefix, int64_t max_file_size, int32_t options);
   Status Close();
+  Status CancelReaders();
   Status Write(int64_t timestamp, std::string_view message);
   Status Synchronize(bool hard);
   int64_t GetTimestamp();
@@ -92,6 +93,7 @@ class MessageQueueReaderImpl final {
   int64_t file_id_;
   int64_t file_offset_;
   int64_t timestamp_;
+  bool canceled_;
 };
 
 static Status CheckFileZeroRegion(File* file, int64_t offset, int64_t end_offset) {
@@ -237,6 +239,18 @@ Status MessageQueueImpl::Close() {
   last_file_ = nullptr;
   cond_.notify_all();
   return status;
+}
+
+Status MessageQueueImpl::CancelReaders() {
+  std::lock_guard lock(mutex_);
+  if (files_.empty()) {
+    return Status(Status::PRECONDITION_ERROR, "not opened message queue");
+  }
+  for (auto* reader : readers_) {
+    reader->canceled_ = true;
+  }
+  cond_.notify_all();
+  return Status(Status::SUCCESS);
 }
 
 Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
@@ -388,7 +402,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
 
 MessageQueueReaderImpl::MessageQueueReaderImpl(MessageQueueImpl* queue, int64_t min_timestamp)
     : queue_(queue), min_timestamp_(min_timestamp), file_(nullptr),
-      file_id_(-1), file_offset_(-1), timestamp_(-1) {
+      file_id_(-1), file_offset_(-1), timestamp_(-1), canceled_(false) {
   std::lock_guard<std::mutex> lock(queue->mutex_);
   queue_->readers_.emplace_back(this);
 }
@@ -404,7 +418,7 @@ MessageQueueReaderImpl::~MessageQueueReaderImpl() {
 Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::string* message) {
   while (true) {
     std::unique_lock<std::mutex> lock(queue_->mutex_);
-    if (queue_->files_.empty()) {
+    if (canceled_ || queue_->files_.empty()) {
       file_ = nullptr;
       if (file_id_ >= 0) {
         ReleaseFile(file_id_);
@@ -520,6 +534,10 @@ Status MessageQueue::Open(
 
 Status MessageQueue::Close() {
   return impl_->Close();
+}
+
+Status MessageQueue::CancelReaders() {
+  return impl_->CancelReaders();
 }
 
 Status MessageQueue::Write(int64_t timestamp, std::string_view message) {
