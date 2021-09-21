@@ -37,6 +37,7 @@ static constexpr size_t WRITE_BUFFER_SIZE = 8192;
 static constexpr size_t RECORD_HEADER_SIZE = 11;
 static constexpr uint32_t RECORD_MAGIC_DATA = 0xFF;
 static constexpr int32_t RECORD_NUM_RETRIES = 32;
+static constexpr double SLEEP_TIME_PER_RETRY = 0.004;
 
 class MessageQueueImpl final {
   friend class MessageQueueReaderImpl;
@@ -165,7 +166,7 @@ Status MessageQueueImpl::Open(
   }
   auto& last_file = files_[last_file_id_];
   const std::string last_path = MakeFilePath(last_file_id_);
-  last_file = std::make_unique<MemoryMapParallelFile>();
+  last_file = std::make_unique<PositionalParallelFile>();
   status = last_file->Open(last_path, !read_only_);
   if (status != Status::SUCCESS) {
     files_.clear();
@@ -187,7 +188,7 @@ Status MessageQueueImpl::Open(
   }
   if (cyclic_magic_ < 0) {
     for (int32_t i = 0; i < RECORD_NUM_RETRIES && cyclic_magic_ < 0; i++) {
-      std::this_thread::yield();
+      SleepThread(SLEEP_TIME_PER_RETRY);
       status = LoadMetadata(last_file.get(), &cyclic_magic_, &check_file_id, &timestamp_,
                             &check_file_size);
       if (status != Status::SUCCESS) {
@@ -369,7 +370,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
     ReleaseFiles();
     last_file_id_++;
     auto& last_file_sp = files_[last_file_id_];
-    last_file_sp = std::make_unique<MemoryMapParallelFile>();
+    last_file_sp = std::make_unique<PositionalParallelFile>();
     last_file = last_file_sp.get();
     const std::string new_file_path = MakeFilePath(last_file_id_);
     status = last_file->Open(new_file_path, true, MessageQueue::OPEN_TRUNCATE);
@@ -451,7 +452,7 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
     if (file_ == nullptr) {
       auto& file_sp = queue_->files_[file_id_];
       if (file_sp == nullptr) {
-        file_sp = std::make_unique<MemoryMapParallelFile>();
+        file_sp = std::make_unique<PositionalParallelFile>();
         const std::string file_path = queue_->MakeFilePath(file_id_);
         Status status = file_sp->Open(file_path, false);
         if (status != Status::SUCCESS) {
@@ -474,7 +475,9 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
           continue;
         }
         if (timeout == 0) {
+          queue_->mutex_.unlock();
           std::this_thread::yield();
+          queue_->mutex_.lock();
           if (file_offset_ + static_cast<int64_t>(RECORD_HEADER_SIZE) > file_->GetSizeSimple()) {
             return Status(Status::INFEASIBLE_ERROR);
           }
@@ -677,14 +680,7 @@ Status MessageQueue::ReadNextMessage(
     message->resize(data_size + 1);
     status = file->Read(*file_offset, const_cast<char*>(message->data()), data_size + 1);
     if (status != Status::SUCCESS) {
-      for (int32_t i = 0; i < RECORD_NUM_RETRIES && status == Status::INFEASIBLE_ERROR &&
-               *file_offset + data_size + 1 > file->GetSizeSimple(); i++) {
-        std::this_thread::yield();
-        status = file->Read(*file_offset, const_cast<char*>(message->data()), data_size + 1);
-      }
-      if (status != Status::SUCCESS) {
-        return status;
-      }
+      return status;
     }
     const uint32_t meta_checksum = *(uint8_t*)(message->data() + data_size);
     message->resize(data_size);
