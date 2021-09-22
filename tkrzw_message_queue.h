@@ -89,6 +89,8 @@ class MessageQueue final {
     OPEN_SYNC_HARD = 1 << 1,
     /** To not write anything. */
     OPEN_READ_ONLY = 1 << 2,
+    /** To ignore broken records. */
+    OPEN_IGNORE_BROKEN = 1 << 3,
   };
 
   /**

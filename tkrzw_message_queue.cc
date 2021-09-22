@@ -167,6 +167,7 @@ Status MessageQueueImpl::Open(
   auto& last_file = files_[last_file_id_];
   const std::string last_path = MakeFilePath(last_file_id_);
   last_file = std::make_unique<PositionalParallelFile>();
+  last_file->SetAllocationStrategy(0, 0);
   status = last_file->Open(last_path, !read_only_);
   if (status != Status::SUCCESS) {
     files_.clear();
@@ -202,10 +203,28 @@ Status MessageQueueImpl::Open(
   if (check_file_id != last_file_id_) {
     status |= Status(Status::BROKEN_DATA_ERROR, "inconsistent file ID");
   }
+  if (status != Status::SUCCESS) {
+    if (options & MessageQueue::OPEN_IGNORE_BROKEN) {
+      check_file_size = -1;
+    } else {
+      return status;
+    }
+  }
   const int64_t act_file_size = last_file->GetSizeSimple();
   if (check_file_size != act_file_size) {
-    if (check_file_size < act_file_size && CheckFileZeroRegion(
-            last_file.get(), check_file_size, act_file_size) == Status::SUCCESS) {
+    if (!read_only_) {
+      int64_t offset = METADATA_SIZE;
+      int64_t timestamp = 0;
+      std::string message;
+      while (MessageQueue::ReadNextMessage(
+                 last_file.get(), &offset, &timestamp, &message, INT64MAX) == Status::SUCCESS) {
+      }
+      check_file_size = offset;
+    }
+    if (check_file_size == act_file_size ||
+        (options & MessageQueue::OPEN_IGNORE_BROKEN) ||
+        (check_file_size < act_file_size && CheckFileZeroRegion(
+            last_file.get(), check_file_size, act_file_size) == Status::SUCCESS)) {
       if (read_only_) {
         status |= last_file->TruncateFakely(check_file_size);
       } else {
@@ -373,6 +392,7 @@ Status MessageQueueImpl::WriteImpl(int64_t timestamp, std::string_view message) 
     last_file_sp = std::make_unique<PositionalParallelFile>();
     last_file = last_file_sp.get();
     const std::string new_file_path = MakeFilePath(last_file_id_);
+    last_file->SetAllocationStrategy(0, 0);
     status = last_file->Open(new_file_path, true, MessageQueue::OPEN_TRUNCATE);
     status |= SynchronizeImpl(sync_hard_);
     if (status != Status::SUCCESS) {
