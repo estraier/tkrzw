@@ -325,7 +325,7 @@ Status ReadFile(const std::string& path, std::string* content, int64_t max_size)
   Status status(Status::SUCCESS);
   constexpr size_t bufsiz = 8192;
   char buf[bufsiz];
-  while (content->size() < max_size) {
+  while (static_cast<int64_t>(content->size()) < max_size) {
     int32_t size = read(fd, buf, std::min<int64_t>(bufsiz, max_size - content->size()));
     if (size <= 0) {
       if (size < 0) {
