@@ -155,9 +155,12 @@ TEST(FileUtilTest, FileOperations) {
   EXPECT_FALSE(tkrzw::PathIsDirectory(file_path));
   EXPECT_EQ(8, tkrzw::GetFileSize(file_path));
   std::string content;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content, 3));
+  EXPECT_EQ("abc", content);
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ("abc\ndef\n", content);
   EXPECT_EQ("abc\ndef\n", tkrzw::ReadFileSimple(file_path));
+  EXPECT_EQ("abc\n", tkrzw::ReadFileSimple(file_path, "", 4));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(file_path));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ("miss", tkrzw::ReadFileSimple(file_path, "miss"));
@@ -257,7 +260,6 @@ TEST(FileUtilTest, DirectoryOperation) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SynchronizeFile(new_dir_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS,
             tkrzw::SynchronizeFile(tkrzw::JoinPath(new_dir_path, "child")));
-
 }
 
 TEST(FileUtilTest, TemporaryDirectory) {

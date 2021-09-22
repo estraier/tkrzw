@@ -315,7 +315,7 @@ Status WriteFileAtomic(const std::string& path, std::string_view content,
   return Status(Status::SUCCESS);
 }
 
-Status ReadFile(const std::string& path, std::string* content) {
+Status ReadFile(const std::string& path, std::string* content, int64_t max_size) {
   assert(content != nullptr);
   content->clear();
   const int32_t fd = open(path.c_str(), O_RDONLY);
@@ -325,8 +325,8 @@ Status ReadFile(const std::string& path, std::string* content) {
   Status status(Status::SUCCESS);
   constexpr size_t bufsiz = 8192;
   char buf[bufsiz];
-  while (true) {
-    int32_t size = read(fd, buf, bufsiz);
+  while (content->size() < max_size) {
+    int32_t size = read(fd, buf, std::min<int64_t>(bufsiz, max_size - content->size()));
     if (size <= 0) {
       if (size < 0) {
         status |= GetErrnoStatus("read", errno);
@@ -341,9 +341,11 @@ Status ReadFile(const std::string& path, std::string* content) {
   return status;
 }
 
-std::string ReadFileSimple(const std::string& path, std::string_view default_value) {
+std::string ReadFileSimple(const std::string& path, std::string_view default_value,
+                           int64_t max_size) {
   std::string content;
-  return ReadFile(path, &content) == Status::SUCCESS ? content : std::string(default_value);
+  return ReadFile(path, &content, max_size) == Status::SUCCESS ?
+      content : std::string(default_value);
 }
 
 Status TruncateFile(const std::string& path, int64_t size) {

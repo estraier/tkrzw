@@ -168,17 +168,20 @@ Status WriteFileAtomic(const std::string& path, std::string_view content,
  * Reads the content from a file.
  * @param path The path of the file to make.
  * @param content The pointer to a string object to contain the content.
+ * @param max_size The maximum size in bytes to read.
  * @return The result status.
  */
-Status ReadFile(const std::string& path, std::string* content);
+Status ReadFile(const std::string& path, std::string* content, int64_t max_size = INT32MAX);
 
 /**
  * Reads the content from a file, in a simple way.
  * @param path The path of the file to make.
  * @param default_value The value to be returned on failure.
+ * @param max_size The maximum size in bytes to read.
  * @return The content of the file on success, or the default value on failure.
  */
-std::string ReadFileSimple(const std::string& path, std::string_view default_value = "");
+std::string ReadFileSimple(const std::string& path, std::string_view default_value = "",
+                           int64_t max_size = INT32MAX);
 
 /**
  * Truncates a file.
