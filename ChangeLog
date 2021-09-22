@@ -4,6 +4,8 @@
 	- Library version: 1.56.0
 
 	- MessageQueue uses PositionalParallelFile.
+	- MessageQueue supports auto restoration.
+	- PositionalParallelFile supports disabling preliminary allocation.
 
 2021-09-20  Mikio Hirabayashi  <hirarin@gmail.com>
 
