@@ -154,6 +154,17 @@ std::string GetPathToTemporaryDirectory();
 Status WriteFile(const std::string& path, std::string_view content);
 
 /**
+ * Writes a file with a content, in an atomic manner by file renaming.
+ * @param path The path of the file to write.
+ * @param content The content.
+ * @param tmp_path The path of the temporary file which is renamed to the above path.  If it is
+ * empty, a string made of the original path and the extension ".tmp" is used.
+ * @return The result status.
+ */
+Status WriteFileAtomic(const std::string& path, std::string_view content,
+                       const std::string& tmp_path = "");
+
+/**
  * Reads the content from a file.
  * @param path The path of the file to make.
  * @param content The pointer to a string object to contain the content.

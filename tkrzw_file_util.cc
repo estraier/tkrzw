@@ -300,6 +300,21 @@ Status WriteFile(const std::string& path, std::string_view content) {
   return status;
 }
 
+Status WriteFileAtomic(const std::string& path, std::string_view content,
+                       const std::string& tmp_path) {
+  const std::string& mod_tmp_path = tmp_path.empty() ? path + ".tmp" : tmp_path;
+  Status status = WriteFile(mod_tmp_path, content);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  status = RenameFile(mod_tmp_path, path);
+  if (status != Status::SUCCESS) {
+    RemoveFile(mod_tmp_path);
+    return status;
+  }
+  return Status(Status::SUCCESS);
+}
+
 Status ReadFile(const std::string& path, std::string* content) {
   assert(content != nullptr);
   content->clear();

@@ -185,6 +185,15 @@ TEST(FileUtilTest, FileOperations) {
   EXPECT_EQ(10, tkrzw::GetFileSize(new_file_path));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::RemoveFile(new_file_path));
   EXPECT_EQ(-1, tkrzw::GetFileSize(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFileAtomic(file_path, "1234", new_file_path));
+  EXPECT_TRUE(tkrzw::PathIsFile(file_path));
+  EXPECT_FALSE(tkrzw::PathIsFile(new_file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
+  EXPECT_EQ("1234", content);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::WriteFileAtomic(file_path, "5678"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
+  EXPECT_FALSE(tkrzw::PathIsFile(file_path + ".tmp"));
+  EXPECT_EQ("5678", content);
 }
 
 TEST(FileUtilTest, CopyFileData) {
