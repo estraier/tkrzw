@@ -43,6 +43,11 @@ TEST_F(StdFileTest, EmptyFile) {
   EmptyFileTest(&file);
 }
 
+TEST_F(StdFileTest, SmallFile) {
+  tkrzw::StdFile file;
+  SmallFileTest(&file);
+}
+
 TEST_F(StdFileTest, SimpleRead) {
   tkrzw::StdFile file;
   SimpleReadTest(&file);

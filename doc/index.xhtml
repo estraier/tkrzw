@@ -4369,6 +4369,15 @@ $ tkrzw_dbm_util get --file pos-para casket.tkh Japan
 dbm.Open("casket.tkh", true);
 ]]></code></pre>
 
+<p>All file classes except for StdFile use a preliminary allocation strategy for performance improvement by default.  When the file size exceeds a threshold, the file size is doubled, which reduces the frequency of allocation operations.  The initial file size is 1MB by default.  PositionalParallelFile and PositionalAtomicFile can disable this feature.  To disable it, you call the SetAllocationStrategy method.</p>
+
+<pre><code class="language-cpp"><![CDATA[PositionalParallelFile file;
+file.SetAllocationStrategy(0, 0);
+file.Open("casket.txt", true);
+]]></code></pre>
+
+<p>As MemoryMapParallelFile and MemoryMapAtomicFile use memory mapping, the file cannot be empty and the file size must be aligned to the page size of the OS, which is usually 4096, 8192, or 16384.  The file size is adjusted to the actual written data size when you call the Close method.  And, the file size is also the same as the actual written data size between the time when you call the Synchronize method and the time when you call the next updating method.</p>
+
 <p>The File class is an interface class and you can implement subclasses of it to support any kind of storage which supports random access.  Like the polymorphic database class (PolyDBM), the polymorphic file class (PolyFile) is provided.  It is useful to handle files of different implementation with the same interface.  See <a href="https://dbmx.net/tkrzw/api/classtkrzw_1_1PolyFile.html">the API document</a> for details.</p>
 
 <h3 id="tips_direct_io">Direct I/O</h3>

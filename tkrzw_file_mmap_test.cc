@@ -118,6 +118,11 @@ TEST_F(MemoryMapParallelFileTest, EmptyFile) {
   EmptyFileTest(&file);
 }
 
+TEST_F(MemoryMapParallelFileTest, SmallFile) {
+  tkrzw::MemoryMapParallelFile file;
+  SmallFileTest(&file);
+}
+
 TEST_F(MemoryMapParallelFileTest, SimpleRead) {
   tkrzw::MemoryMapParallelFile file;
   SimpleReadTest(&file);
@@ -199,6 +204,11 @@ TEST_F(MemoryMapAtomicFileTest, Attributes) {
 TEST_F(MemoryMapAtomicFileTest, EmptyFile) {
   tkrzw::MemoryMapAtomicFile file;
   EmptyFileTest(&file);
+}
+
+TEST_F(MemoryMapAtomicFileTest, SmallFile) {
+  tkrzw::MemoryMapAtomicFile file;
+  SmallFileTest(&file);
 }
 
 TEST_F(MemoryMapAtomicFileTest, SimpleRead) {

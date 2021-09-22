@@ -220,8 +220,9 @@ class PositionalParallelFile final : public PositionalFile {
    * @param init_size An initial size of allocation.
    * @param inc_factor A factor to increase the size of allocation.
    * @return The result status.
-   * @details By default, the initial size is 1MB and the increasing factor is 2.  This method
-   * must be called before the file is opened.
+   * @details By default, the initial size is 1MB and the increasing factor is 2.  To fit the
+   * file size to the actual data, set the increasing factor zero.  This method must be called
+   * before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
@@ -439,8 +440,9 @@ class PositionalAtomicFile final : public PositionalFile {
    * @param init_size An initial size of allocation.
    * @param inc_factor A factor to increase the size of allocation.
    * @return The result status.
-   * @details By default, the initial size is 1MB and the increasing factor is 2.  This method
-   * must be called before the file is opened.
+   * @details By default, the initial size is 1MB and the increasing factor is 2.  To fit the
+   * file size to the actual data, set the increasing factor zero.  This method must be called
+   * before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 

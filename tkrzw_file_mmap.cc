@@ -158,7 +158,7 @@ Status MemoryMapParallelFileImpl::Open(
   int64_t map_size = file_size;
   int32_t mprot = PROT_READ;
   if (writable) {
-    map_size = std::max(map_size, alloc_init_size_);
+    map_size = std::max<int64_t>(1, std::max(map_size, alloc_init_size_));
     map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
     const Status status = TruncateFile(fd, map_size);
@@ -758,7 +758,7 @@ Status MemoryMapAtomicFileImpl::Open(
   int64_t map_size = file_size;
   int32_t mprot = PROT_READ;
   if (writable) {
-    map_size = std::max(map_size, alloc_init_size_);
+    map_size = std::max<int64_t>(1, std::max(map_size, alloc_init_size_));
     map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot |= PROT_WRITE;
     const Status status = TruncateFile(fd, map_size);

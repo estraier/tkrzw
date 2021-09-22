@@ -146,7 +146,8 @@ Status MemoryMapParallelFileImpl::Open(
   DWORD mprot = PAGE_READONLY;
   DWORD vmode = FILE_MAP_READ;
   if (writable) {
-    map_size = std::max(map_size, alloc_init_size_);
+    map_size = std::max<int64_t>(1, std::max(map_size, alloc_init_size_));
+    map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot = PAGE_READWRITE;
     vmode = FILE_MAP_WRITE;
   }
@@ -727,7 +728,8 @@ Status MemoryMapAtomicFileImpl::Open(
   DWORD mprot = PAGE_READONLY;
   DWORD vmode = FILE_MAP_READ;
   if (writable) {
-    map_size = std::max(map_size, alloc_init_size_);
+    map_size = std::max<int64_t>(1, std::max(map_size, alloc_init_size_));
+    map_size = AlignNumber(map_size, PAGE_SIZE);
     mprot = PAGE_READWRITE;
     vmode = FILE_MAP_WRITE;
   }

@@ -26,6 +26,7 @@ using namespace testing;
 class CommonFileTest : public Test {
  protected:
   void EmptyFileTest(tkrzw::File* file);
+  void SmallFileTest(tkrzw::File* file);
   void SimpleReadTest(tkrzw::File* file);
   void SimpleWriteTest(tkrzw::File* file);
   void ReallocWriteTest(tkrzw::File* file);
@@ -70,6 +71,59 @@ void CommonFileTest::EmptyFileTest(tkrzw::File* file) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->CopyProperties(tmp_file.get()));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Open(file_path, true, tkrzw::File::OPEN_TRUNCATE));
   EXPECT_EQ(tkrzw::Status::SUCCESS, tmp_file->Close());
+}
+
+void CommonFileTest::SmallFileTest(tkrzw::File* file) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(0, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  std::string total_data;
+  for (int32_t i = 0; i < 20; i++) {
+    const std::string data(i % 3 + 1, 'a' + i % 3);
+    if (i % 2 == 0) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(total_data.size(), data.data(), data.size()));
+    } else {
+      int64_t new_off = 0;
+      EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size(), &new_off));
+      EXPECT_EQ(total_data.size(), new_off);
+    }
+    total_data += data;
+    if (file->IsMemoryMapping()) {
+      EXPECT_EQ(tkrzw::AlignNumber(total_data.size(), tkrzw::PAGE_SIZE),
+                tkrzw::GetFileSize(file_path));
+    } else {
+      EXPECT_EQ(total_data.size(), tkrzw::GetFileSize(file_path));
+    }
+    char buf[5];
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              file->Read(total_data.size() - data.size(), buf, data.size()));
+    EXPECT_EQ(data, std::string_view(buf, data.size()));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(total_data.size(), tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  char buf[8192];
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(0, buf, total_data.size()));
+  EXPECT_EQ(total_data, std::string_view(buf, total_data.size()));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(5));
+  if (file->IsMemoryMapping()) {
+    EXPECT_EQ(tkrzw::PAGE_SIZE, tkrzw::GetFileSize(file_path));
+  } else {
+    EXPECT_EQ(5, tkrzw::GetFileSize(file_path));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(5, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 2));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Write(0, "0123456789", 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Read(0, buf, 10));
+  EXPECT_EQ("0123456789", std::string_view(buf, 10));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(5));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Synchronize(false));
+  EXPECT_EQ(5, tkrzw::GetFileSize(file_path));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
+  EXPECT_EQ(5, tkrzw::GetFileSize(file_path));
 }
 
 void CommonFileTest::SimpleReadTest(tkrzw::File* file) {

@@ -246,8 +246,9 @@ class MemoryMapParallelFile final : public MemoryMapFile {
    * @param init_size An initial size of allocation.
    * @param inc_factor A factor to increase the size of allocation.
    * @return The result status.
-   * @details By default, the initial size is 1MB and the increasing factor is 2.  This method
-   * must be called before the file is opened.
+   * @details By default, the initial size is 1MB and the increasing factor is 2.  Note that
+   * a memory map cannot be empty and its size must be aligned to the page size.  This adjustment
+   * is done implicitly.  This method must be called before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 
@@ -527,8 +528,9 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * @param init_size An initial size of allocation.
    * @param inc_factor A factor to increase the size of allocation.
    * @return The result status.
-   * @details By default, the initial size is 1MB and the increasing factor is 2.  This method
-   * must be called before the file is opened.
+   * @details By default, the initial size is 1MB and the increasing factor is 2.  Note that
+   * a memory map cannot be empty and its size must be aligned to the page size.  This adjustment
+   * is done implicitly.  This method must be called before the file is opened.
    */
   Status SetAllocationStrategy(int64_t init_size, double inc_factor) override;
 

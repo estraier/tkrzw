@@ -253,6 +253,11 @@ TEST_F(PositionalParallelFileTest, EmptyFile) {
   EmptyFileTest(&file);
 }
 
+TEST_F(PositionalParallelFileTest, SmallFile) {
+  tkrzw::PositionalParallelFile file;
+  SmallFileTest(&file);
+}
+
 TEST_F(PositionalParallelFileTest, SimpleRead) {
   tkrzw::PositionalParallelFile file;
   SimpleReadTest(&file);
@@ -379,6 +384,11 @@ TEST_F(PositionalAtomicFileTest, Attributes) {
 TEST_F(PositionalAtomicFileTest, EmptyFile) {
   tkrzw::PositionalAtomicFile file;
   EmptyFileTest(&file);
+}
+
+TEST_F(PositionalAtomicFileTest, SmallFile) {
+  tkrzw::PositionalAtomicFile file;
+  SmallFileTest(&file);
 }
 
 TEST_F(PositionalAtomicFileTest, SimpleRead) {

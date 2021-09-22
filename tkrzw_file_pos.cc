@@ -357,9 +357,13 @@ Status PositionalParallelFileImpl::Truncate(int64_t size) {
     status |= page_cache_->Flush(0, size);
     page_cache_->Clear();
   }
-  int64_t new_trunc_size =
-      std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
+  int64_t new_trunc_size = 0;
+  if (alloc_inc_factor_ <= 0) {
+    new_trunc_size = std::max(size, alloc_init_size_);
+  } else {
+    new_trunc_size = std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
+    new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
+  }
   status |= TruncateFile(fd_, new_trunc_size);
   if (status == Status::SUCCESS) {
     file_size_.store(size);
@@ -533,6 +537,10 @@ Status PositionalParallelFileImpl::AllocateSpace(int64_t min_size) {
   }
   std::lock_guard<std::mutex> lock(mutex_);
   if (min_size <= trunc_size_.load()) {
+    return Status(Status::SUCCESS);
+  }
+  if (alloc_inc_factor_ <= 0) {
+    trunc_size_.store(min_size);
     return Status(Status::SUCCESS);
   }
   int64_t new_trunc_size =
@@ -1039,9 +1047,13 @@ Status PositionalAtomicFileImpl::Truncate(int64_t size) {
     status |= page_cache_->Flush(0, size);
     page_cache_->Clear();
   }
-  int64_t new_trunc_size =
-      std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
-  new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
+  int64_t new_trunc_size = 0;
+  if (alloc_inc_factor_ <= 0) {
+    new_trunc_size = std::max(size, alloc_init_size_);
+  } else {
+    new_trunc_size = std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
+    new_trunc_size = AlignNumber(new_trunc_size, std::max<int64_t>(PAGE_SIZE, block_size_));
+  }
   status |= TruncateFile(fd_, new_trunc_size);
   if (status == Status::SUCCESS) {
     file_size_ = size;
@@ -1223,6 +1235,10 @@ bool PositionalAtomicFileImpl::IsDirectIO() {
 
 Status PositionalAtomicFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= trunc_size_) {
+    return Status(Status::SUCCESS);
+  }
+  if (alloc_inc_factor_ <= 0) {
+    trunc_size_ = min_size;
     return Status(Status::SUCCESS);
   }
   int64_t new_trunc_size =
