@@ -113,23 +113,23 @@ TEST(DBMUpdateLoggerTest, MQWrite) {
   auto reader = mq.MakeReader(begin_ts);
   int64_t timestamp = 0;
   std::string message;
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_GE(timestamp, begin_ts);
   EXPECT_LE(timestamp, end_ts);
   EXPECT_EQ(std::string("\xA1\x01\x02\x03\x05onefirst", 13), message);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_GE(timestamp, begin_ts);
   EXPECT_LE(timestamp, end_ts);
   EXPECT_EQ(std::string("\xA1\x01\x02\x03\x06twosecond", 14), message);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_GE(timestamp, begin_ts);
   EXPECT_LE(timestamp, end_ts);
   EXPECT_EQ(std::string("\xA2\x01\x02\x03two", 7), message);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_GE(timestamp, begin_ts);
   EXPECT_LE(timestamp, end_ts);
   EXPECT_EQ(std::string("\xA3\x01\x02", 3), message);
-  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 
@@ -240,7 +240,7 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
         while (true) {
           int64_t timestamp = 0;
           std::string message;
-          tkrzw::Status status = reader->Read(0.001, &timestamp, &message);
+          tkrzw::Status status = reader->Read(&timestamp, &message, 0.001);
           if (status != tkrzw::Status::SUCCESS) {
             if (status == tkrzw::Status::INFEASIBLE_ERROR) {
               continue;

@@ -103,7 +103,7 @@ TEST(MessageQueueTest, Basic) {
   std::vector<std::pair<int64_t, std::string>> records;
   while (true) {
     std::string message;
-    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
       break;
@@ -118,25 +118,25 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{30, "four"},
       std::pair<uint64_t, std::string>{40, "five"}));
   reader = mq.MakeReader(10);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("one", message);
   reader = mq.MakeReader(20);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ(std::string(50, 'x'), message);
   reader = mq.MakeReader(29);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("four", message);
   reader = mq.MakeReader(30);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("four", message);
   reader = mq.MakeReader(39);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(40);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(41);
-  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000002", false));
   file_offset = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::ReadNextMessage(
@@ -170,7 +170,7 @@ TEST(MessageQueueTest, Basic) {
   records.clear();
   while (true) {
     std::string message;
-    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
       break;
@@ -214,7 +214,7 @@ TEST(MessageQueueTest, Basic) {
   records.clear();
   while (true) {
     std::string message;
-    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
       break;
@@ -228,7 +228,7 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{80, "eight"}));
   reader = mq.MakeReader(70);
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.CancelReaders());
-  EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, reader->Read(0, &timestamp, &message));
+  EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
 }
 
@@ -248,7 +248,7 @@ TEST(MessageQueueTest, AutoRestore) {
   while (true) {
     int64_t timestamp = 0;
     std::string message;
-    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
       break;
@@ -271,7 +271,7 @@ TEST(MessageQueueTest, AutoRestore) {
   while (true) {
     int64_t timestamp = 0;
     std::string message;
-    const tkrzw::Status status = reader->Read(0, &timestamp, &message);
+    const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
       break;
@@ -299,14 +299,14 @@ TEST(MessageQueueTest, Serial) {
         auto reader = mq.MakeReader(0);
         int32_t count = num_messages;
         while (true) {
-          double timeout = 0;
+          double wait_time = 0;
           switch (count % 3) {
-            case 0: timeout = -1; break;
-            case 1: timeout = 0.0001; break;
+            case 0: wait_time = -1; break;
+            case 1: wait_time = 0.0001; break;
           }
           int64_t timestamp = 0;
           std::string message;
-          const tkrzw::Status status = reader->Read(timeout, &timestamp, &message);
+          const tkrzw::Status status = reader->Read(&timestamp, &message, wait_time);
           if (status != tkrzw::Status::SUCCESS) {
             if (status == tkrzw::Status::INFEASIBLE_ERROR) {
               continue;
@@ -346,14 +346,14 @@ TEST(MessageQueueTest, Parallel) {
         auto reader = mq.MakeReader(0);
         int32_t count = num_messages;
         while (true) {
-          double timeout = 0;
+          double wait_time = 0;
           switch (count % 3) {
-            case 0: timeout = -1; break;
-            case 1: timeout = 0.0001; break;
+            case 0: wait_time = -1; break;
+            case 1: wait_time = 0.0001; break;
           }
           int64_t timestamp = 0;
           std::string message;
-          const tkrzw::Status status = reader->Read(timeout, &timestamp, &message);
+          const tkrzw::Status status = reader->Read(&timestamp, &message, wait_time);
           if (status != tkrzw::Status::SUCCESS) {
             if (status == tkrzw::Status::INFEASIBLE_ERROR) {
               continue;

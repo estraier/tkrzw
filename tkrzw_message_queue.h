@@ -48,16 +48,16 @@ class MessageQueue final {
 
     /**
      * Reads a message from the queue.
-     * @param timeout The timeout to wait in seconds.  Zero means no wait.  Negative means
-     * unlimited.
      * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
      * message.
      * @param message The pointer to a string object to store the msssage data.
+     * @param wait_time The time in seconds to wait for the next log.  Zero means no wait.
+     * Negative means unlimited.
      * @return The result status.  If the queue is in the read-only mode and there's no record to
-     * read, NOT_FOUND_ERROR is returned.  If the time out is reached, INFEASIBLE_ERROR is
+     * read, NOT_FOUND_ERROR is returned.  If the time wait time passes, INFEASIBLE_ERROR is
      * returned.  If the writer closes the file while waiting, CANCELED_ERROR is returned.
      */
-    Status Read(double timeout, int64_t* timestamp, std::string* message);
+    Status Read(int64_t* timestamp, std::string* message, double wait_time = 0);
 
     /**
      * Gets the latest timestamp.

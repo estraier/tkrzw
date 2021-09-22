@@ -82,7 +82,7 @@ class MessageQueueReaderImpl final {
  public:
   MessageQueueReaderImpl(MessageQueueImpl* queue, int64_t min_timestamp);
   ~MessageQueueReaderImpl();
-  Status Read(double timeout, int64_t* timestamp, std::string* message);
+  Status Read(int64_t* timestamp, std::string* message, double wait_time);
   int64_t GetTimestamp();
 
  private:
@@ -436,7 +436,7 @@ MessageQueueReaderImpl::~MessageQueueReaderImpl() {
   }
 }
 
-Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::string* message) {
+Status MessageQueueReaderImpl::Read(int64_t* timestamp, std::string* message, double wait_time) {
   while (true) {
     std::unique_lock<std::mutex> lock(queue_->mutex_);
     if (canceled_ || queue_->files_.empty()) {
@@ -490,11 +490,11 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
           ReleaseFile(file_id_);
           return Status(Status::NOT_FOUND_ERROR);
         }
-        if (timeout < 0) {
+        if (wait_time < 0) {
           queue_->cond_.wait(lock);
           continue;
         }
-        if (timeout == 0) {
+        if (wait_time == 0) {
           queue_->mutex_.unlock();
           std::this_thread::yield();
           queue_->mutex_.lock();
@@ -504,7 +504,7 @@ Status MessageQueueReaderImpl::Read(double timeout, int64_t* timestamp, std::str
           continue;
         }
         auto wait_rv = queue_->cond_.wait_for(
-            lock, std::chrono::microseconds(static_cast<int64_t>(timeout * 1000000)));
+            lock, std::chrono::microseconds(static_cast<int64_t>(wait_time * 1000000)));
         if (wait_rv == std::cv_status::timeout) {
           return Status(Status::INFEASIBLE_ERROR);
         }
@@ -722,9 +722,9 @@ MessageQueue::Reader::~Reader() {
   delete impl_;
 }
 
-Status MessageQueue::Reader::Read(double timeout, int64_t* timestamp, std::string* message) {
+Status MessageQueue::Reader::Read(int64_t* timestamp, std::string* message, double wait_time) {
   assert(timestamp != nullptr && message != nullptr);
-  return impl_->Read(timeout, timestamp, message);
+  return impl_->Read(timestamp, message, wait_time);
 }
 
 int64_t MessageQueue::Reader::GetTimestamp() {
