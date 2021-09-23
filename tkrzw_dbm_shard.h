@@ -501,6 +501,12 @@ class ShardDBM final : public ParamDBM {
   std::unique_ptr<DBM> MakeDBM() const override;
 
   /**
+   * Gets the logger to write all update operations.
+   * @return The update logger if it has been set or nullptr if it hasn't.
+   */
+  UpdateLogger* GetUpdateLogger() const override;
+
+  /**
    * Sets the logger to write all update operations.
    * @param update_logger The pointer to the update logger object.  Ownership is not taken.
    * If it is nullptr, no logger is used.

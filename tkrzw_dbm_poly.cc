@@ -815,6 +815,13 @@ std::unique_ptr<DBM> PolyDBM::MakeDBM() const {
   return std::make_unique<PolyDBM>();
 }
 
+DBM::UpdateLogger* PolyDBM::GetUpdateLogger() const {
+  if (dbm_ == nullptr) {
+    return nullptr;
+  }
+  return dbm_->GetUpdateLogger();
+}
+
 void PolyDBM::SetUpdateLogger(UpdateLogger* update_logger) {
   if (dbm_ == nullptr) {
     return;

@@ -112,6 +112,7 @@ class HashDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -791,6 +792,11 @@ bool HashDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> HashDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<HashDBM>(file_->MakeFile());
+}
+
+DBM::UpdateLogger* HashDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
 }
 
 void HashDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
@@ -2459,6 +2465,10 @@ std::unique_ptr<DBM::Iterator> HashDBM::MakeIterator() {
 
 std::unique_ptr<DBM> HashDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* HashDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void HashDBM::SetUpdateLogger(UpdateLogger* update_logger) {

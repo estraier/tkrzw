@@ -109,6 +109,7 @@ class CacheDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
   int64_t GetEffectiveDataSize();
@@ -804,6 +805,11 @@ std::unique_ptr<DBM> CacheDBMImpl::MakeDBM() {
   return std::make_unique<CacheDBM>(file_->MakeFile(), cap_rec_num_, cap_mem_size_);
 }
 
+DBM::UpdateLogger* CacheDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
+}
+
 void CacheDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   update_logger_ = update_logger;
@@ -1148,6 +1154,10 @@ std::unique_ptr<DBM::Iterator> CacheDBM::MakeIterator() {
 
 std::unique_ptr<DBM> CacheDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* CacheDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void CacheDBM::SetUpdateLogger(UpdateLogger* update_logger) {

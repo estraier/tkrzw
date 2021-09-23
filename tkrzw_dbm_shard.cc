@@ -588,6 +588,13 @@ std::unique_ptr<DBM> ShardDBM::MakeDBM() const {
   return std::make_unique<ShardDBM>();
 }
 
+DBM::UpdateLogger* ShardDBM::GetUpdateLogger() const {
+  if (!open_) {
+    return nullptr;
+  }
+  return dbms_.front()->GetUpdateLogger();
+}
+
 void ShardDBM::SetUpdateLogger(UpdateLogger* update_logger) {
   if (!open_) {
     return;

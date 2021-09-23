@@ -140,6 +140,7 @@ class BabyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
   KeyComparator GetKeyComparator();
@@ -599,6 +600,11 @@ bool BabyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> BabyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<BabyDBM>(file_->MakeFile());
+}
+
+DBM::UpdateLogger* BabyDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
 }
 
 void BabyDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
@@ -1521,6 +1527,10 @@ std::unique_ptr<DBM::Iterator> BabyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> BabyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* BabyDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void BabyDBM::SetUpdateLogger(UpdateLogger* update_logger) {

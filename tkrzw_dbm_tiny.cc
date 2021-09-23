@@ -69,6 +69,7 @@ class TinyDBMImpl final {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
 
@@ -465,6 +466,11 @@ bool TinyDBMImpl::IsWritable() {
 std::unique_ptr<DBM> TinyDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TinyDBM>(file_->MakeFile(), num_buckets_);
+}
+
+DBM::UpdateLogger* TinyDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
 }
 
 void TinyDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
@@ -920,6 +926,10 @@ std::unique_ptr<DBM::Iterator> TinyDBM::MakeIterator() {
 
 std::unique_ptr<DBM> TinyDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* TinyDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void TinyDBM::SetUpdateLogger(UpdateLogger* update_logger) {

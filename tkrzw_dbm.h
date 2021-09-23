@@ -1471,6 +1471,12 @@ class DBM {
   virtual std::unique_ptr<DBM> MakeDBM() const = 0;
 
   /**
+   * Gets the logger to write all update operations.
+   * @return The update logger if it has been set or nullptr if it hasn't.
+   */
+  virtual UpdateLogger* GetUpdateLogger() const = 0;
+
+  /**
    * Sets the logger to write all update operations.
    * @param update_logger The pointer to the update logger object.  Ownership is not taken.
    * If it is nullptr, no logger is used.

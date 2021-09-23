@@ -1389,6 +1389,7 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
   tkrzw::StdTreeDBM ulog_dbm;
   tkrzw::DBMUpdateLoggerDBM ulog(&ulog_dbm);
   dbm->SetUpdateLogger(&ulog);
+  EXPECT_EQ(&ulog, dbm->GetUpdateLogger());
   for (int32_t i = 1; i < 10; i++) {
     const std::string key = tkrzw::ToString(i);
     const std::string value = tkrzw::ToString(i * i);

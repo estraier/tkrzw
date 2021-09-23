@@ -55,6 +55,7 @@ class StdDBMImpl {
   bool IsOpen();
   bool IsWritable();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile() const;
 
@@ -462,6 +463,11 @@ std::unique_ptr<DBM> StdDBMImpl<StringHashMap>::MakeDBM() {
 }
 
 template <class STRMAP>
+DBM::UpdateLogger* StdDBMImpl<STRMAP>::GetUpdateLogger() {
+  return update_logger_;
+}
+
+template <class STRMAP>
 void StdDBMImpl<STRMAP>::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
   update_logger_ = update_logger;
 }
@@ -852,6 +858,10 @@ std::unique_ptr<DBM> StdHashDBM::MakeDBM() const {
   return impl_->MakeDBM();
 }
 
+DBM::UpdateLogger* StdHashDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
+}
+
 void StdHashDBM::SetUpdateLogger(UpdateLogger* update_logger) {
   impl_->SetUpdateLogger(update_logger);
 }
@@ -1007,6 +1017,10 @@ std::unique_ptr<DBM::Iterator> StdTreeDBM::MakeIterator() {
 
 std::unique_ptr<DBM> StdTreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* StdTreeDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void StdTreeDBM::SetUpdateLogger(UpdateLogger* update_logger) {

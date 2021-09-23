@@ -97,6 +97,7 @@ class SkipDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -886,6 +887,11 @@ bool SkipDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> SkipDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<SkipDBM>(file_->MakeFile());
+}
+
+DBM::UpdateLogger* SkipDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
 }
 
 void SkipDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
@@ -1819,6 +1825,10 @@ std::unique_ptr<DBM::Iterator> SkipDBM::MakeIterator() {
 
 std::unique_ptr<DBM> SkipDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* SkipDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void SkipDBM::SetUpdateLogger(UpdateLogger* update_logger) {

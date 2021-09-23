@@ -131,6 +131,7 @@ class TreeDBMImpl final {
   bool IsHealthy();
   bool IsAutoRestored();
   std::unique_ptr<DBM> MakeDBM();
+  DBM::UpdateLogger* GetUpdateLogger();
   void SetUpdateLogger(DBM::UpdateLogger* update_logger);
   File* GetInternalFile();
   int64_t GetEffectiveDataSize();
@@ -957,6 +958,11 @@ bool TreeDBMImpl::IsAutoRestored() {
 std::unique_ptr<DBM> TreeDBMImpl::MakeDBM() {
   std::shared_lock<SpinSharedMutex> lock(mutex_);
   return std::make_unique<TreeDBM>(hash_dbm_->GetInternalFile()->MakeFile());
+}
+
+DBM::UpdateLogger* TreeDBMImpl::GetUpdateLogger() {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  return update_logger_;
 }
 
 void TreeDBMImpl::SetUpdateLogger(DBM::UpdateLogger* update_logger) {
@@ -2517,6 +2523,10 @@ std::unique_ptr<DBM::Iterator> TreeDBM::MakeIterator() {
 
 std::unique_ptr<DBM> TreeDBM::MakeDBM() const {
   return impl_->MakeDBM();
+}
+
+DBM::UpdateLogger* TreeDBM::GetUpdateLogger() const {
+  return impl_->GetUpdateLogger();
 }
 
 void TreeDBM::SetUpdateLogger(UpdateLogger* update_logger) {
