@@ -245,6 +245,8 @@ class StdHashDBM final : public DBM {
    * Gets the timestamp in seconds of the last modified time.
    * @param timestamp The pointer to a double object to contain the timestamp.
    * @return The result status.
+   * @details The timestamp is updated when the database opened in the writable mode is closed
+   * or synchronized, even if no updating opertion is done.
    */
   Status GetTimestamp(double* timestamp) override;
 
@@ -557,6 +559,8 @@ class StdTreeDBM final : public DBM {
    * Gets the timestamp in seconds of the last modified time.
    * @param timestamp The pointer to a double object to contain the timestamp.
    * @return The result status.
+   * @details The timestamp is updated when the database opened in the writable mode is closed
+   * or synchronized, even if no updating opertion is done.
    */
   Status GetTimestamp(double* timestamp) override;
 

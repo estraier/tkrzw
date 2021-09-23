@@ -478,6 +478,8 @@ class HashDBM final : public DBM {
    * @param timestamp The pointer to a double object to contain the timestamp.
    * @return The result status.
    * @details Precondition: The database is opened.
+   * @details The timestamp is updated when the database opened in the writable mode is closed
+   * or synchronized, even if no updating opertion is done.
    */
   Status GetTimestamp(double* timestamp) override;
 
