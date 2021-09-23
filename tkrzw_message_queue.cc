@@ -49,6 +49,7 @@ class MessageQueueImpl final {
   Status Close();
   Status CancelReaders();
   Status Write(int64_t timestamp, std::string_view message);
+  Status UpdateTimestamp(int64_t timestamp);
   Status Synchronize(bool hard);
   int64_t GetTimestamp();
   static Status SaveMetadata(
@@ -275,8 +276,9 @@ Status MessageQueueImpl::CancelReaders() {
 
 Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
   if (timestamp < 0) {
-    timestamp = GetWallTime();
-  } else if (timestamp >= ((1LL << 48) - 1)) {
+    timestamp = GetWallTime() * 1000;
+  }
+  if (timestamp >= ((1LL << 48) - 1)) {
     return Status(Status::INVALID_ARGUMENT_ERROR, "out-of-range timestamp");
   }
   {
@@ -296,6 +298,18 @@ Status MessageQueueImpl::Write(int64_t timestamp, std::string_view message) {
     }
   }
   cond_.notify_all();
+  return Status(Status::SUCCESS);
+}
+
+Status MessageQueueImpl::UpdateTimestamp(int64_t timestamp) {
+  if (timestamp < 0) {
+    timestamp = GetWallTime() * 1000;
+  }
+  if (timestamp >= ((1LL << 48) - 1)) {
+    return Status(Status::INVALID_ARGUMENT_ERROR, "out-of-range timestamp");
+  }
+  std::lock_guard lock(mutex_);
+  timestamp_ = std::max(timestamp, timestamp_);
   return Status(Status::SUCCESS);
 }
 
@@ -565,6 +579,10 @@ Status MessageQueue::CancelReaders() {
 
 Status MessageQueue::Write(int64_t timestamp, std::string_view message) {
   return impl_->Write(timestamp, message);
+}
+
+Status MessageQueue::UpdateTimestamp(int64_t timestamp) {
+  return impl_->UpdateTimestamp(timestamp);
 }
 
 Status MessageQueue::Synchronize(bool hard) {

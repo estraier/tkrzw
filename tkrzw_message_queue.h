@@ -136,6 +136,13 @@ class MessageQueue final {
   Status Write(int64_t timestamp, std::string_view message);
 
   /**
+   * Updates the timestamp without writing a message.
+   * @param timestamp The timestamp in milliseconds of the massage.  If it is negative, the
+   * current wall time is specified.
+   */
+  Status UpdateTimestamp(int64_t timestamp);
+
+  /**
    * Synchronizes the metadata and content to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.

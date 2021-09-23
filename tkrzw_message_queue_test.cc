@@ -183,6 +183,11 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{40, "six"},
       std::pair<uint64_t, std::string>{70, "seven"},
       std::pair<uint64_t, std::string>{70, ""}));
+  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.UpdateTimestamp(10));
+  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, mq.UpdateTimestamp(75));
+  EXPECT_EQ(75, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000002", 65536));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Open(prefix + ".0000000002", false));
@@ -204,12 +209,13 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, file.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000005", 65536));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 50, tkrzw::MessageQueue::OPEN_READ_ONLY));
-  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(75, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::TruncateFile(prefix + ".0000000005", 65536));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Open(prefix, 65536));
-  EXPECT_EQ(70, mq.GetTimestamp());
+  EXPECT_EQ(75, mq.GetTimestamp());
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Write(80, "eight"));
+  EXPECT_EQ(80, mq.GetTimestamp());
   reader = mq.MakeReader(70);
   records.clear();
   while (true) {
