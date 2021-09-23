@@ -49,7 +49,7 @@ class MessageQueue final {
     /**
      * Reads a message from the queue.
      * @param timestamp The pointer to a variable to store the timestamp in milliseconds of the
-     * message.
+     * message.  This is set if the result is SUCCESS or INFEASIBLE_ERROR.
      * @param message The pointer to a string object to store the msssage data.
      * @param wait_time The time in seconds to wait for the next log.  Zero means no wait.
      * Negative means unlimited.

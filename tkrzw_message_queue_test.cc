@@ -173,6 +173,7 @@ TEST(MessageQueueTest, Basic) {
     const tkrzw::Status status = reader->Read(&timestamp, &message, 0);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
+      EXPECT_EQ(70, timestamp);
       break;
     }
     records.emplace_back(std::make_pair(timestamp, message));

@@ -513,6 +513,7 @@ Status MessageQueueReaderImpl::Read(int64_t* timestamp, std::string* message, do
           std::this_thread::yield();
           queue_->mutex_.lock();
           if (file_offset_ + static_cast<int64_t>(RECORD_HEADER_SIZE) > file_->GetSizeSimple()) {
+            *timestamp = queue_->timestamp_;
             return Status(Status::INFEASIBLE_ERROR);
           }
           continue;
@@ -520,6 +521,7 @@ Status MessageQueueReaderImpl::Read(int64_t* timestamp, std::string* message, do
         auto wait_rv = queue_->cond_.wait_for(
             lock, std::chrono::microseconds(static_cast<int64_t>(wait_time * 1000000)));
         if (wait_rv == std::cv_status::timeout) {
+          *timestamp = queue_->timestamp_;
           return Status(Status::INFEASIBLE_ERROR);
         }
         continue;
