@@ -4,6 +4,7 @@
 	- Library version: 1.57.0
 
 	- MessageQueue::UpdateTimestamp is added.
+	- MessageQueue::OverwriteThreadServerID is added.
 	- DBM::GetUpdateLogger is added.
 
 2021-09-20  Mikio Hirabayashi  <hirarin@gmail.com>

@@ -106,7 +106,7 @@ Status DBMUpdateLoggerDBM::Synchronize(bool hard) {
   return dbm_->Synchronize(hard);
 }
 
-thread_local bool DBMUpdateLoggerMQ::stop_thread_logging_ = false;
+thread_local int32_t DBMUpdateLoggerMQ::thread_local_server_id_ = -1;
 
 DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
     MessageQueue* mq, int32_t server_id, int32_t dbm_index, int64_t fixed_timestamp)
@@ -114,7 +114,10 @@ DBMUpdateLoggerMQ::DBMUpdateLoggerMQ(
       fixed_timestamp_(fixed_timestamp) {}
 
 Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value) {
-  if (stop_thread_logging_) {
+  int32_t rec_server_id = server_id_;
+  if (thread_local_server_id_ >= 0) {
+    rec_server_id = thread_local_server_id_;
+  } else if (thread_local_server_id_ == INT32MIN) {
     return Status(Status::SUCCESS);
   }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
@@ -123,7 +126,7 @@ Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value)
   char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
   char* wp = write_buf;
   *(wp++) = OP_MAGIC_SET;
-  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, rec_server_id);
   wp += WriteVarNum(wp, dbm_index_);
   wp += WriteVarNum(wp, key.size());
   wp += WriteVarNum(wp, value.size());
@@ -139,7 +142,10 @@ Status DBMUpdateLoggerMQ::WriteSet(std::string_view key, std::string_view value)
 }
 
 Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
-  if (stop_thread_logging_) {
+  int32_t rec_server_id = server_id_;
+  if (thread_local_server_id_ >= 0) {
+    rec_server_id = thread_local_server_id_;
+  } else if (thread_local_server_id_ == INT32MIN) {
     return Status(Status::SUCCESS);
   }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
@@ -148,7 +154,7 @@ Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
   char* write_buf = est_size > sizeof(stack) ? static_cast<char*>(xmalloc(est_size)) : stack;
   char* wp = write_buf;
   *(wp++) = OP_MAGIC_REMOVE;
-  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, rec_server_id);
   wp += WriteVarNum(wp, dbm_index_);
   wp += WriteVarNum(wp, key.size());
   std::memcpy(wp, key.data(), key.size());
@@ -161,7 +167,10 @@ Status DBMUpdateLoggerMQ::WriteRemove(std::string_view key) {
 }
 
 Status DBMUpdateLoggerMQ::WriteClear() {
-  if (stop_thread_logging_) {
+  int32_t rec_server_id = server_id_;
+  if (thread_local_server_id_ >= 0) {
+    rec_server_id = thread_local_server_id_;
+  } else if (thread_local_server_id_ == INT32MIN) {
     return Status(Status::SUCCESS);
   }
   const int64_t timestamp = fixed_timestamp_ < 0 ? GetWallTime() * 1000 : fixed_timestamp_;
@@ -169,7 +178,7 @@ Status DBMUpdateLoggerMQ::WriteClear() {
   char* write_buf = stack;
   char* wp = write_buf;
   *(wp++) = OP_MAGIC_CLEAR;
-  wp += WriteVarNum(wp, server_id_);
+  wp += WriteVarNum(wp, rec_server_id);
   wp += WriteVarNum(wp, dbm_index_);
   return mq_->Write(timestamp, std::string_view(write_buf, wp - write_buf));
 }
@@ -178,12 +187,8 @@ Status DBMUpdateLoggerMQ::Synchronize(bool hard) {
   return mq_->Synchronize(hard);
 }
 
-void DBMUpdateLoggerMQ::StopThreadLogging() {
-  stop_thread_logging_ = true;
-}
-
-void DBMUpdateLoggerMQ::ResumeThreadLogging() {
-  stop_thread_logging_ = false;
+void DBMUpdateLoggerMQ::OverwriteThreadServerID(int32_t server_id) {
+  thread_local_server_id_ = server_id;
 }
 
 Status DBMUpdateLoggerMQ::ParseUpdateLog(std::string_view message, UpdateLog* op) {

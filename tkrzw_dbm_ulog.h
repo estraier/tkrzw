@@ -239,8 +239,8 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    * @param dbm_index The index of the DBM on the server.
    * @param fixed_timestamp If not negative, the timestamp is fixed to the value.
    */
- explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id = 0, int32_t dbm_index = 0,
-                            int64_t fixed_timestamp = -1);
+  explicit DBMUpdateLoggerMQ(MessageQueue* mq, int32_t server_id = 0, int32_t dbm_index = 0,
+                             int64_t fixed_timestamp = -1);
 
   /**
    * Writes a log for modifying an existing record or adding a new record.
@@ -272,16 +272,12 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
   Status Synchronize(bool hard) override;
 
   /**
-   * Stops logging of the current thread.
-   * @details This stops logging of the current thread regardless of the logger instance.
+   * Overwrites the server ID of the current thread.
+   * @param server_id The server ID of the process.  If it is negative, the thread local setting
+   * is undone.  If it is INT32MIN, logging of the current thread is disable.
+   * @details This affects logging of only the current thread regardless of the logger instance.
    */
-  static void StopThreadLogging();
-
-  /**
-   * Resumes logging of the current thread.
-   * @details This resumes logging of the current thread regardless of the logger instance.
-   */
-  static void ResumeThreadLogging();
+  static void OverwriteThreadServerID(int32_t server_id);
 
   /**
    * Parses an update log message.
@@ -307,7 +303,7 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
    */
   static Status ApplyUpdateLog(
       DBM* dbm, std::string_view message,
-      int32_t server_id = INT32MIN, int32_t dbm_index = INT32MIN);
+      int32_t server_id = INT32MIN + 1, int32_t dbm_index = INT32MIN + 1);
 
   /**
    * Applys the operations in the message queue files.
@@ -327,8 +323,8 @@ class DBMUpdateLoggerMQ final : public DBM::UpdateLogger {
       int32_t server_id = INT32MIN + 1, int32_t dbm_index = INT32MIN + 1);
 
  private:
-  /** Whether the current thread stops logging. */
-  static thread_local bool stop_thread_logging_;
+  /** The thread local server ID. */
+  static thread_local int32_t thread_local_server_id_;
   /** The message queue. */
   MessageQueue* mq_;
   /** The server ID of the process. */

@@ -494,7 +494,7 @@ Status StdFile::GetSize(int64_t* size) {
 }
 
 Status StdFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  assert(init_size > 0 && inc_factor > 0);
+  assert(init_size >= 0 && inc_factor >= 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 

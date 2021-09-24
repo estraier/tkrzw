@@ -505,7 +505,7 @@ Status MemoryMapParallelFile::GetSize(int64_t* size) {
 }
 
 Status MemoryMapParallelFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  assert(init_size > 0 && inc_factor > 0);
+  assert(init_size >= 0 && inc_factor >= 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
@@ -1093,7 +1093,7 @@ Status MemoryMapAtomicFile::GetSize(int64_t* size) {
 }
 
 Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  assert(init_size > 0 && inc_factor > 0);
+  assert(init_size >= 0 && inc_factor >= 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 

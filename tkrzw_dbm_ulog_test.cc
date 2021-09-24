@@ -248,12 +248,17 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, status);
             break;
           }
+          tkrzw::DBMUpdateLoggerMQ::UpdateLog op;
+          EXPECT_EQ(tkrzw::Status::SUCCESS,
+                    tkrzw::DBMUpdateLoggerMQ::ParseUpdateLog(message, &op));
           status = tkrzw::DBMUpdateLoggerMQ::ApplyUpdateLog(dest, message, 333333, 999);
           if (status == tkrzw::Status::SUCCESS) {
+            EXPECT_EQ(333333, op.server_id);
             if (--count == 0) {
               wc.Done();
             }
           } else {
+            EXPECT_TRUE(op.server_id == 333 || op.server_id == 888);
             EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, status);
           }
         }
@@ -261,6 +266,9 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
       };
   auto th1 = std::thread(copier, &dest_dbm1);
   auto th2 = std::thread(copier, &dest_dbm2);
+
+  // dummy 3
+
   std::mt19937 mt(1);
   std::uniform_int_distribution<int32_t> key_num_dist(1, num_iterations);
   std::uniform_int_distribution<int32_t> op_dist(0, 3);
@@ -275,9 +283,11 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
       switch (op_dist(mt)) {
         case 0:
           EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set(key, value));
-          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(tkrzw::INT32MIN);
           dummy_dbm1.Set(key, "DUMMY");
-          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(888);
+          dummy_dbm2.Set(key, "DUMMY");
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(-1);
           dummy_dbm2.Set(key, "DUMMY");
           break;
         case 1:
@@ -289,9 +299,11 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
             EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Set(key, value));
           }
-          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(tkrzw::INT32MIN);
           dummy_dbm1.Remove(key);
-          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(888);
+          dummy_dbm2.Remove(key);
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(-1);
           dummy_dbm2.Remove(key);
           break;
         }
@@ -301,9 +313,11 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
             EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, status);
             EXPECT_EQ(tkrzw::Status::SUCCESS, src_dbm.Remove(key));
           }
-          tkrzw::DBMUpdateLoggerMQ::StopThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(tkrzw::INT32MIN);
           dummy_dbm1.Set(key, "DUMMY");
-          tkrzw::DBMUpdateLoggerMQ::ResumeThreadLogging();
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(888);
+          dummy_dbm2.Set(key, "DUMMY");
+          tkrzw::DBMUpdateLoggerMQ::OverwriteThreadServerID(-1);
           dummy_dbm2.Set(key, "DUMMY");
           break;
         }

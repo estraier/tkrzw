@@ -691,7 +691,7 @@ Status PositionalParallelFile::SetAccessStrategy(int64_t block_size, int32_t opt
 }
 
 Status PositionalParallelFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  assert(init_size > 0 && inc_factor > 0);
+  assert(init_size >= 0 && inc_factor >= 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
@@ -1381,7 +1381,7 @@ Status PositionalAtomicFile::SetAccessStrategy(int64_t block_size, int32_t optio
 }
 
 Status PositionalAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_factor) {
-  assert(init_size > 0 && inc_factor > 0);
+  assert(init_size >= 0 && inc_factor >= 0);
   return impl_->SetAllocationStrategy(init_size, inc_factor);
 }
 
