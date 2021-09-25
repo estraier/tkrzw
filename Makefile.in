@@ -137,8 +137,8 @@ distclean : clean apidocclean
 	  config.cache config.log config.status config.tmp autom4te.cache build
 
 check :
-	$(MAKE) check-perf-sampler
 	$(MAKE) check-build-util
+	$(MAKE) check-perf-sampler
 	$(MAKE) check-str-perf
 	$(MAKE) check-file-perf
 	$(MAKE) check-hashdbm-perf
@@ -166,8 +166,8 @@ check :
 	@printf '#================================================================\n'
 
 check-light :
-	$(MAKE) check-perf-sampler
 	$(MAKE) check-build-util
+	$(MAKE) check-perf-sampler
 	$(MAKE) check-hashdbm-util
 	$(MAKE) check-treedbm-util
 	$(MAKE) check-skipdbm-util

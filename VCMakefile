@@ -79,14 +79,14 @@ install :
 uninstall :
 	-rd /S "$(BASEDIR)"
 
-check : check-perf-sampler check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-ulog-util check-langc
+check : check-build-util check-perf-sampler check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-ulog-util check-langc
 	-del casket* /F /Q > NUL: 2>&1
 	@echo #
 	@echo #================================================================
 	@echo # Checking completed.
 	@echo #================================================================
 
-check-light : check-perf-sampler check-build-util check-hashdbm-util check-treedbm-util check-skipdbm-util check-polydbm-util check-sharddbm-util check-ulog-util
+check-light : check-build-util check-perf-sampler check-hashdbm-util check-treedbm-util check-skipdbm-util check-polydbm-util check-sharddbm-util check-ulog-util
 	@echo #
 	@echo #================================================================
 	@echo # Checking completed.
