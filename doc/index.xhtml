@@ -3060,6 +3060,57 @@ applet  A small application.
   --dbm skip --path casket.tks --step_unit 3 --max_level 13
 ]]></code></pre>
 
+<h3 id="commands_tkrzw_ulog_util">tkrzw_ulog_util: Update Logging Utilities</h3>
+
+<p>tkrzw_ulog_util is a command for managing update log files.  Thereby, you can add update logs, inspect update logs, list up files, and remove old files.  The usage is the following.  A subcommand name comes as the first argument.  Some options and other arguments can follow.</p>
+
+<dl>
+<dt><code>tkrzw_ulog_util writeset [<var>options</var>] <var>prefix</var> <var>key</var> <var>value</var></code></dt>
+<dd>Writes a SET operation.</dd>
+<dt><code>tkrzw_ulog_util writeremove [<var>options</var>] <var>prefix</var> <var>key</var></code></dt>
+<dd>Writes a REMOVE operation.</dd>
+<dt><code>tkrzw_ulog_util writeclear [<var>options</var>] <var>prefix</var></code></dt>
+<dd>Writes a CLEAR operation.</dd>
+<dt><code>tkrzw_ulog_util read [<var>options</var>] <var>prefix</var></code></dt>
+<dd>Reads each log.</dd>
+<dt><code>tkrzw_ulog_util listfiles [<var>options</var>] <var>prefix</var></code></dt>
+<dd>Lists log files.</dd>
+<dt><code>tkrzw_ulog_util removeoldfiles [<var>options</var>] <var>prefix</var></code></dt>
+<dd>Removes old log files.</dd>
+</dl>
+
+<dl>
+<dt>Options for the write subcommands:</dt>
+<dd><code>--timestamp <var>num</var></code> : The timestamp to record. (default: current time)</dd>
+<dd><code>--max_file_size <var>num</var></code> : The maximum file size. (default: 1Gi)</dd>
+<dd><code>--server_id <var>num</var></code> : The server ID to record. (default: 0)</dd>
+<dd><code>--dbm_index <var>num</var></code> : The DBM index to record. (default: 0)</dd>
+<dt>Options for the read subcommand:</dt>
+<dd><code>--timestamp <var>num</var></code> : The timestamp to start at (default: 0)</dd>
+<dd><code>--server_id <var>num</var></code> : The server ID to focus on. (default: all)</dd>
+<dd><code>--dbm_index <var>num</var></code> : The DBM index to focus on. (default: all)</dd>
+<dd><code>--items <var>num</var></code> : The number of items to print. (default: 10)</dd>
+<dd><code>--escape</code> : C-style escape is applied to the TSV data.</dd>
+<dt>Options for the listfiles subcommand:</dt>
+<dd><code>--timestamp <var>num</var></code> : The timestamp to start at (default: 0)</dd>
+<dt>Options for the removeoldfiles subcommand:</dt>
+<dd><code>--timestamp <var>num</var></code> : The timestamp of threshold. (default: -7D = 7 days ago)</dd>
+<dd><code>--exclude_latest</code> : Avoid removing the latest file.</dd>
+</dl>
+
+<p>The following is a sample usage to make a file of update logs to write three records and apply it to a database.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_ulog_util writeset casket-ulog one hop
+$ tkrzw_ulog_util writeset casket-ulog two step
+$ tkrzw_ulog_util writeset casket-ulog three jump
+$ tkrzw_dbm_util import --ulog 0 casket.tkt casket-ulog
+]]></code></pre>
+
+<p>To remove old update logs, you run the "removeoldfiles" subcommand.  The "--timestamp" option can take a relative time from the current time with a value beginning with "+" or "-".  And the value can have a suffix for the unit: "D" for days, "H" for hours, "M" for minutes, and "S" for seconds.  No unit means milliseconds.  It is a good manner not to remove the latest file regardless of its age.  If you remove files which are older than 2 days from now exclusing the latest one, you run the following.  Don't forget "-".</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_ulog_util removefiles --timestamp -2D --exclude_latest casket-ulog
+]]></code></pre>
+
 <h2 id="tips">Tips</h2>
 
 <h3 id="tips_hashdbm_tune">Tuning HashDBM</h3>
@@ -4034,7 +4085,10 @@ DBMUpdateLoggerMQ::ApplyUpdateLogFromFiles(&dbm, "casket-ulog");
 $ tkrzw_dbm_util import --ulog 0 casket-restored.tkt casket-ulog
 ]]></code></pre>
 
-<p>Unless the system crashes and restoration is done, the update log files continue to increase.  Thus, you should apply the update logs periodically and archive/remove unnecessary files.  The above command works with update log files which are in operation by another process.  As the race condition is avoided by checking metadata for each record, you can read update log files which can be written by another process simultaneously.  After you apply all exisiting update logs, you can remove the update log files except for the latest one.</p>
+<p>Unless the system crashes and restoration is done, the update log files continue to increase.  Thus, you should apply the update logs periodically and archive/remove unnecessary files.  The above command works with update log files which are in operation by another process.  As the race condition is avoided by checking metadata for each record, you can read update log files which can be written by another process simultaneously.  After you apply all exisiting update logs, you can remove the update log files except for the latest one.  The following command is useful to remove update log files which are older than a threshold (3 days ago), excluding the latest one.</p>
+
+<pre><code class="language-shell-session"><![CDATA[$ tkrzw_ulog_util removeoldfiles --timestamp "-3D" --exclude_latest casket-ulog
+]]></code></pre>
 
 <p>Even if update logs in the latest file is applied multiple times, it is safe.  Update logs for each record is idempotent, which means that applying the same operation multiple times has the same effect as applying it once.  The same thing can be said to a sequence of update logs sorted by the occurrence time.  Thus, you can apply update log files multiple times as long as the order is by the file ID.  That said, applying update logs since some seconds before the timestamp of the database is a more efficient way.  The "some seconds" allowance absorbs the possibility of time skew of the system.  You can set a relative timestamp in milliseconds if you set a nagative value for the parameter of "--ulog".  The following commands import updates since 10 seconds before the timestamp of the backup database.</p>
 

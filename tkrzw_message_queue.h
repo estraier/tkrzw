@@ -199,9 +199,11 @@ class MessageQueue final {
    * Remove files whose newest message is older than a threshold.
    * @param prefix The prefix for the file names.
    * @param threshold The threshold timestamp in milliseconds.
+   * @param exclude_latest If true, the latest file is never removed.
    * @return The result status.  Even if no files are matched, it returns success.
    */
-  static Status RemoveOldFiles(const std::string& prefix, int64_t threshold);
+  static Status RemoveOldFiles(const std::string& prefix, int64_t threshold,
+                               bool exclude_latest = false);
 
   /**
    * Reads the next message from a file.
@@ -218,6 +220,18 @@ class MessageQueue final {
   static Status ReadNextMessage(
       File* file, int64_t* file_offset, int64_t* timestamp, std::string* message,
       int64_t min_timestamp = 0);
+
+  /**
+   * Parses a timestamp expression.
+   * @param expr The timestamp expression.  If it begins with "+" or "-", the value is evaluated
+   * as relative value to the base_time.  If it ends with "D" or "d", the unit is the day.  If it
+   * ends with "H" or "h", the unit is the hour.  If it ends with "M" or "m", the unit is the
+   * minute.  If it ends with "s" or "S", the unit is the second.  Otherwise, the unit is the
+   * millisecond.
+   * @param base_time The base time in milliseconds.
+   * @return The result timestamp in milliseconds.
+   */
+  static int64_t ParseTimestamp(std::string_view expr, int64_t base_time);
 
  private:
   /** Pointer to the actual implementation. */

@@ -21,7 +21,7 @@ HEADERFILES = tkrzw_lib_common.h tkrzw_str_util.h tkrzw_hash_util.h tkrzw_time_u
 IMPLHEADERFILES = tkrzw_sys_config.h tkrzw_sys_util_windows.h tkrzw_sys_file_mmap_std.h tkrzw_sys_file_mmap_windows.h tkrzw_sys_file_pos_std.h tkrzw_sys_file_pos_windows.h
 LIBRARYFILES = tkrzw.lib
 LIBOBJFILES = tkrzw_lib_common.obj tkrzw_str_util.obj tkrzw_hash_util.obj tkrzw_time_util.obj tkrzw_compress.obj tkrzw_file_util.obj tkrzw_file_std.obj tkrzw_file_mmap.obj tkrzw_file_pos.obj tkrzw_file_poly.obj tkrzw_message_queue.obj tkrzw_dbm.obj tkrzw_dbm_ulog.obj tkrzw_dbm_common_impl.obj tkrzw_dbm_hash_impl.obj tkrzw_dbm_hash.obj tkrzw_dbm_tree_impl.obj tkrzw_dbm_tree.obj tkrzw_dbm_skip_impl.obj tkrzw_dbm_skip.obj tkrzw_dbm_tiny.obj tkrzw_dbm_baby.obj tkrzw_dbm_cache.obj tkrzw_dbm_std.obj tkrzw_dbm_poly.obj tkrzw_dbm_shard.obj tkrzw_dbm_async.obj tkrzw_cmd_util.obj tkrzw_langc.obj
-COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe tkrzw_dbm_tran.exe tkrzw_langc_check.exe
+COMMANDFILES = tkrzw_build_util.exe tkrzw_str_perf.exe tkrzw_file_perf.exe tkrzw_dbm_util.exe tkrzw_dbm_perf.exe tkrzw_dbm_tran.exe tkrzw_ulog_util.exe tkrzw_langc_check.exe
 CMDLIBRARIES = tkrzw.lib
 EXTRALIBRARIES =
 
@@ -79,14 +79,14 @@ install :
 uninstall :
 	-rd /S "$(BASEDIR)"
 
-check : check-perf-sampler check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-langc
+check : check-perf-sampler check-build-util check-file-perf check-hashdbm-perf check-hashdbm-util check-treedbm-perf check-treedbm-util check-skipdbm-perf check-skipdbm-util check-tinydbm-perf check-babydbm-perf check-cachedbm-perf check-stddbm-perf check-polydbm-perf check-polydbm-util check-sharddbm-perf check-sharddbm-util check-index-perf check-tran check-ulog-util check-langc
 	-del casket* /F /Q > NUL: 2>&1
 	@echo #
 	@echo #================================================================
 	@echo # Checking completed.
 	@echo #================================================================
 
-check-light : check-perf-sampler check-build-util check-hashdbm-util check-treedbm-util check-skipdbm-util check-polydbm-util check-sharddbm-util
+check-light : check-perf-sampler check-build-util check-hashdbm-util check-treedbm-util check-skipdbm-util check-polydbm-util check-sharddbm-util check-ulog-util
 	@echo #
 	@echo #================================================================
 	@echo # Checking completed.
@@ -642,6 +642,20 @@ check-tran :
 	tkrzw_dbm_tran.exe async casket.tkt --iter 15000 --threads 4 \
 	  --params "num_buckets=10000,max_page_size=1024" --rebuild --async 4 --wait_freq 1000
 
+check-ulog-util :
+	-del casket* /F /Q > NUL: 2>&1
+	tkrzw_ulog_util.exe writeset --max_file_size 100 casket-ulog zero nil
+	tkrzw_ulog_util.exe writeclear --max_file_size 100 casket-ulog
+	tkrzw_ulog_util.exe writeset --max_file_size 100 casket-ulog one hop
+	tkrzw_ulog_util.exe writeset --max_file_size 100 casket-ulog two step
+	tkrzw_ulog_util.exe writeset --max_file_size 100 casket-ulog three jump
+	tkrzw_ulog_util.exe writeremove --max_file_size 100 casket-ulog two
+	tkrzw_ulog_util.exe listfiles casket-ulog
+	tkrzw_dbm_util.exe import --ulog 0 casket.tkt casket-ulog
+	tkrzw_dbm_util.exe get casket.tkt one
+	tkrzw_dbm_util.exe list casket.tkt
+	tkrzw_ulog_util.exe removeoldfiles --timestamp +1s casket-ulog
+
 check-langc :
 	-del casket* /F /Q > NUL: 2>&1
 	tkrzw_langc_check.exe "casket.tkh" "truncate=true,num_buckets=10000" 20000
@@ -782,6 +796,9 @@ tkrzw_dbm_perf.exe : tkrzw_dbm_perf.obj tkrzw.lib
 
 tkrzw_dbm_tran.exe : tkrzw_dbm_tran.obj tkrzw.lib
 	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_dbm_tran.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
+
+tkrzw_ulog_util.exe : tkrzw_ulog_util.obj tkrzw.lib
+	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_ulog_util.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)
 
 tkrzw_langc_check.exe : tkrzw_langc_check.obj tkrzw.lib
 	$(LINK) $(LINKFLAGS) /OUT:$@ tkrzw_langc_check.obj $(CMDLIBRARIES) $(EXTRALIBRARIES)

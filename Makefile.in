@@ -157,6 +157,7 @@ check :
 	$(MAKE) check-sharddbm-util
 	$(MAKE) check-index-perf
 	$(MAKE) check-tran
+	$(MAKE) check-ulog-util
 	$(MAKE) check-langc
 	rm -Rf casket*
 	@printf '\n'
@@ -172,6 +173,7 @@ check-light :
 	$(MAKE) check-skipdbm-util
 	$(MAKE) check-polydbm-util
 	$(MAKE) check-sharddbm-util
+	$(MAKE) check-ulog-util
 	rm -Rf casket*
 	@printf '\n'
 	@printf '#================================================================\n'
@@ -741,6 +743,20 @@ check-tran :
 	$(RUNENV) ./tkrzw_dbm_tran async casket.tkt --iter 15000 --threads 4 \
 	  --params "num_buckets=10000,max_page_size=1024" --rebuild --async 4 --wait_freq 1000
 
+check-ulog-util :
+	rm -Rf casket*
+	$(RUNENV) ./tkrzw_ulog_util writeset --max_file_size 100 casket-ulog zero nil
+	$(RUNENV) ./tkrzw_ulog_util writeclear --max_file_size 100 casket-ulog
+	$(RUNENV) ./tkrzw_ulog_util writeset --max_file_size 100 casket-ulog one hop
+	$(RUNENV) ./tkrzw_ulog_util writeset --max_file_size 100 casket-ulog two step
+	$(RUNENV) ./tkrzw_ulog_util writeset --max_file_size 100 casket-ulog three jump
+	$(RUNENV) ./tkrzw_ulog_util writeremove --max_file_size 100 casket-ulog two
+	$(RUNENV) ./tkrzw_ulog_util listfiles casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util import --ulog 0 casket.tkt casket-ulog
+	$(RUNENV) ./tkrzw_dbm_util get casket.tkt one
+	$(RUNENV) ./tkrzw_dbm_util list casket.tkt
+	$(RUNENV) ./tkrzw_ulog_util removeoldfiles --timestamp +1s casket-ulog
+
 check-langc :
 	rm -Rf casket*
 	$(RUNENV) ./tkrzw_langc_check "casket.tkh" "truncate=true,num_buckets=10000" 20000
@@ -973,6 +989,9 @@ tkrzw_dbm_perf : tkrzw_dbm_perf.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
 tkrzw_dbm_tran : tkrzw_dbm_tran.o $(LIBRARYFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
+
+tkrzw_ulog_util : tkrzw_ulog_util.o $(LIBRARYFILES)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) $(CMDLIBS) $(LIBS)
 
 tkrzw_langc_check : tkrzw_langc_check.o $(LIBRARYFILES)

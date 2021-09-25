@@ -237,6 +237,12 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.CancelReaders());
   EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, mq.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::RemoveOldFiles(prefix, 10000, true));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
+  EXPECT_EQ(1, paths.size());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::RemoveOldFiles(prefix, 10000, false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::MessageQueue::FindFiles(prefix, &paths));
+  EXPECT_TRUE(paths.empty());
 }
 
 TEST(MessageQueueTest, AutoRestore) {
@@ -394,6 +400,27 @@ TEST(MessageQueueTest, Parallel) {
       EXPECT_EQ(tkrzw::ToString(i), result[i].second);
     }
   }
+}
+
+TEST(MessageQueueTest, ParseTimestamp) {
+  EXPECT_EQ(0, tkrzw::MessageQueue::ParseTimestamp("", 100000));
+  EXPECT_EQ(1234, tkrzw::MessageQueue::ParseTimestamp(" 1234 ", 100000));
+  EXPECT_EQ(101234, tkrzw::MessageQueue::ParseTimestamp("+1234", 100000));
+  EXPECT_EQ(98766, tkrzw::MessageQueue::ParseTimestamp("-1234", 100000));
+  EXPECT_EQ(43200000, tkrzw::MessageQueue::ParseTimestamp(" 0.5 d ", 0));
+  EXPECT_EQ(43200000, tkrzw::MessageQueue::ParseTimestamp("+0.5D", 0));
+  EXPECT_EQ(-43200000, tkrzw::MessageQueue::ParseTimestamp("-0.5D", 0));
+  EXPECT_EQ(1800000, tkrzw::MessageQueue::ParseTimestamp(" 0.5 h ", 0));
+  EXPECT_EQ(1800000, tkrzw::MessageQueue::ParseTimestamp("+0.5H", 0));
+  EXPECT_EQ(-1800000, tkrzw::MessageQueue::ParseTimestamp("-0.5H", 0));
+  EXPECT_EQ(30000, tkrzw::MessageQueue::ParseTimestamp( "0.5 m ", 0));
+  EXPECT_EQ(30000, tkrzw::MessageQueue::ParseTimestamp("+0.5M", 0));
+  EXPECT_EQ(-30000, tkrzw::MessageQueue::ParseTimestamp("-0.5M", 0));
+  EXPECT_EQ(500, tkrzw::MessageQueue::ParseTimestamp( "0.5 s ", 0));
+  EXPECT_EQ(500, tkrzw::MessageQueue::ParseTimestamp("+0.5S", 0));
+  EXPECT_EQ(-500, tkrzw::MessageQueue::ParseTimestamp("-0.5S", 0));
+  EXPECT_EQ(1631947423000, tkrzw::MessageQueue::ParseTimestamp("-7D", 1632552223000));
+  EXPECT_EQ(1632554023000, tkrzw::MessageQueue::ParseTimestamp("+0.5H", 1632552223000));
 }
 
 // END OF FILE

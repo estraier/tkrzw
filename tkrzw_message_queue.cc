@@ -650,11 +650,18 @@ Status MessageQueue::ReadFileMetadata(
   return status;
 }
 
-Status MessageQueue::RemoveOldFiles(const std::string& prefix, int64_t threshold) {
+Status MessageQueue::RemoveOldFiles(
+    const std::string& prefix, int64_t threshold, bool exclude_latest) {
   std::vector<std::string> file_paths;
   Status status = FindFiles(prefix, &file_paths);
   if (status != Status::SUCCESS) {
     return status;
+  }
+  if (file_paths.empty()) {
+    return Status(Status::SUCCESS);
+  }
+  if (exclude_latest) {
+    file_paths.pop_back();
   }
   for (const auto& path : file_paths) {
     int64_t file_id = 0;
@@ -732,6 +739,24 @@ Status MessageQueue::ReadNextMessage(
   }
   *file_offset += data_size + 1;
   return status;
+}
+
+int64_t MessageQueue::ParseTimestamp(std::string_view expr, int64_t base_time) {
+  std::string norm_expr = StrStripSpace(StrLowerCase(expr));
+  double value = StrToDouble(norm_expr);
+  if (StrSearchRegex(norm_expr, "[.\\d]+ *d") >= 0) {
+    value *= 1000 * 60 * 60 * 24;
+  } else if (StrSearchRegex(norm_expr, "[.\\d]+ *h") >= 0) {
+    value *= 1000 * 60 * 60;
+  } else if (StrSearchRegex(norm_expr, "[.\\d]+ *m") >= 0) {
+    value *= 1000 * 60;
+  } else if (StrSearchRegex(norm_expr, "[.\\d]+ *s") >= 0) {
+    value *= 1000;
+  }
+  if (!norm_expr.empty() && (norm_expr.front() == '+' || norm_expr.front() == '-')) {
+    value += base_time;
+  }
+  return value;
 }
 
 MessageQueue::Reader::Reader(MessageQueueImpl* queue_impl, uint64_t min_timestamp) {
