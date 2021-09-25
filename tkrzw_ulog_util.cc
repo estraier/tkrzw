@@ -329,7 +329,7 @@ static int32_t ProcessListFiles(int32_t argc, const char** args) {
 // Processes the removeoldfiles subcommand.
 static int32_t ProcessRemoveOldFiles(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
-    {"", 1}, {"--timestamp", 1},
+    {"", 1}, {"--timestamp", 1}, {"--exclude_latest", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;

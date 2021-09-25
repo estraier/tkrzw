@@ -755,7 +755,7 @@ check-ulog-util :
 	$(RUNENV) ./tkrzw_dbm_util import --ulog 0 casket.tkt casket-ulog
 	$(RUNENV) ./tkrzw_dbm_util get casket.tkt one
 	$(RUNENV) ./tkrzw_dbm_util list casket.tkt
-	$(RUNENV) ./tkrzw_ulog_util removeoldfiles --timestamp +1s casket-ulog
+	$(RUNENV) ./tkrzw_ulog_util removeoldfiles --timestamp +1s --exclude_latest casket-ulog
 
 check-langc :
 	rm -Rf casket*

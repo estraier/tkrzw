@@ -654,7 +654,7 @@ check-ulog-util :
 	tkrzw_dbm_util.exe import --ulog 0 casket.tkt casket-ulog
 	tkrzw_dbm_util.exe get casket.tkt one
 	tkrzw_dbm_util.exe list casket.tkt
-	tkrzw_ulog_util.exe removeoldfiles --timestamp +1s casket-ulog
+	tkrzw_ulog_util.exe removeoldfiles --timestamp +1s --exclude_latest casket-ulog
 
 check-langc :
 	-del casket* /F /Q > NUL: 2>&1
