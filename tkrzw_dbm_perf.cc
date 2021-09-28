@@ -706,7 +706,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       const std::string_view value(
-          value_buf + static_cast<uint32_t>(i) * (i + 1) % value_extra,
+          value_buf + static_cast<uint32_t>(i) * (i + 1U) % value_extra,
           is_random_value ? value_size_dist(misc_mt) : value_size);
       const Status status = dbm->Set(key, value);
       if (status != Status::SUCCESS) {
