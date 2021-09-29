@@ -851,6 +851,37 @@ class WaitCounter {
   std::condition_variable cond_;
 };
 
+/**
+ * Scoped counter for auto increment and decrement.
+ */
+template<typename T>
+class ScopedCounter final {
+ public:
+  /**
+   * Constructor.
+   * @param count The pointer to the counter object.
+   * @param increment The value to add in the constructor and subtract in the destructor.
+   */
+  explicit ScopedCounter(T* count, int32_t increment = 0);
+
+  /**
+   * Destructor.
+   */
+  ~ScopedCounter();
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit ScopedCounter(const ScopedCounter& rhs) = delete;
+  ScopedCounter& operator =(const ScopedCounter& rhs) = delete;
+
+ private:
+  /** The pointer to the counter object. */
+  T* count_;
+  /** The value to add and subtract. */
+  T increment_;
+};
+
 inline void SleepThread(double sec) {
   std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(sec * 1000000)));
 }
@@ -1352,6 +1383,17 @@ inline bool WaitCounter::Wait(double timeout) {
     }
   }
   return true;
+}
+
+template<typename T>
+inline ScopedCounter<T>::ScopedCounter(T* count, int32_t increment)
+    : count_(count), increment_(increment) {
+  *count_ += increment_;
+}
+
+template<typename T>
+inline ScopedCounter<T>::~ScopedCounter() {
+  *count_ -= increment_;
 }
 
 }  // namespace tkrzw

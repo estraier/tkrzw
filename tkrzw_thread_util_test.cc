@@ -641,4 +641,18 @@ TEST(ThreadUtilTest, WaitCounter) {
   }
 }
 
+TEST(ThreadUtilTest, ScopedCounter) {
+  std::atomic_int32_t count(0);
+  {
+    tkrzw::ScopedCounter sc(&count, 1);
+    EXPECT_EQ(1, count.load());
+  }
+  EXPECT_EQ(0, count.load());
+  {
+    tkrzw::ScopedCounter sc(&count, 10);
+    EXPECT_EQ(10, count.load());
+  }
+  EXPECT_EQ(0, count.load());
+}
+
 // END OF FILE
