@@ -533,6 +533,9 @@ Status MessageQueueReaderImpl::Read(int64_t* timestamp, std::string* message, do
         continue;
       }
     }
+    if (message == nullptr) {
+      return Status(Status::SUCCESS);
+    }
     const Status status = MessageQueue::ReadNextMessage(
         file_.get(), &file_offset_, timestamp, message, min_timestamp_);
     if (status != Status::SUCCESS) {
@@ -770,6 +773,11 @@ MessageQueue::Reader::~Reader() {
 Status MessageQueue::Reader::Read(int64_t* timestamp, std::string* message, double wait_time) {
   assert(timestamp != nullptr && message != nullptr);
   return impl_->Read(timestamp, message, wait_time);
+}
+
+Status MessageQueue::Reader::Wait(double wait_time) {
+  int64_t timestamp = 0;
+  return impl_->Read(&timestamp, nullptr, wait_time);
 }
 
 int64_t MessageQueue::Reader::GetTimestamp() {

@@ -118,10 +118,12 @@ TEST(MessageQueueTest, Basic) {
       std::pair<uint64_t, std::string>{30, "four"},
       std::pair<uint64_t, std::string>{40, "five"}));
   reader = mq.MakeReader(10);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Wait(0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("one", message);
   reader = mq.MakeReader(20);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Wait(-1));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, -1));
   EXPECT_EQ(std::string(50, 'x'), message);
   reader = mq.MakeReader(29);
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
@@ -130,9 +132,11 @@ TEST(MessageQueueTest, Basic) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("four", message);
   reader = mq.MakeReader(39);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Wait(0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(40);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Wait(0));
   EXPECT_EQ(tkrzw::Status::SUCCESS, reader->Read(&timestamp, &message, 0));
   EXPECT_EQ("five", message);
   reader = mq.MakeReader(41);
@@ -364,14 +368,30 @@ TEST(MessageQueueTest, Parallel) {
             case 0: wait_time = -1; break;
             case 1: wait_time = 0.0001; break;
           }
+
+
+          bool ready = false;
+          tkrzw::Status status = reader->Wait(0);
+          if (status == tkrzw::Status::SUCCESS) {
+            ready = true;
+          } else {
+            EXPECT_TRUE(status == tkrzw::Status::INFEASIBLE_ERROR ||
+                        status == tkrzw::Status::CANCELED_ERROR);
+          }
+
+
+
+
+
           int64_t timestamp = 0;
           std::string message;
-          const tkrzw::Status status = reader->Read(&timestamp, &message, wait_time);
+          status = reader->Read(&timestamp, &message, wait_time);
           if (status != tkrzw::Status::SUCCESS) {
             if (status == tkrzw::Status::INFEASIBLE_ERROR) {
               continue;
             }
             EXPECT_EQ(tkrzw::Status::CANCELED_ERROR, status);
+            EXPECT_FALSE(ready);
             break;
           }
           result->emplace_back(std::make_pair(timestamp, message));

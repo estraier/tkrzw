@@ -60,6 +60,16 @@ class MessageQueue final {
     Status Read(int64_t* timestamp, std::string* message, double wait_time = 0);
 
     /**
+     * Waits until the reader is ready to read tne next message.
+     * @param wait_time The time in seconds to wait for the next log.  Zero means no wait.
+     * Negative means unlimited.
+     * @return The result status.  If the queue is in the read-only mode and there's no record to
+     * read, NOT_FOUND_ERROR is returned.  If the time wait time passes, INFEASIBLE_ERROR is
+     * returned.  If the writer closes the file while waiting, CANCELED_ERROR is returned.
+     */
+    Status Wait(double wait_time = 0);
+
+    /**
      * Gets the latest timestamp.
      * @return The latest timestamp, or -1 if nothing has been read.
      */
