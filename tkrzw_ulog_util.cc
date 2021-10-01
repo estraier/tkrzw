@@ -306,21 +306,7 @@ static int32_t ProcessListFiles(int32_t argc, const char** args) {
       continue;
     }
     const double ts_sec = timestamp / 1000;
-    std::string ts_expr;
-    if (ts_sec > current_ts) {
-      ts_expr = "future";
-    } else {
-      const double diff = current_ts - ts_sec;
-      if (diff > 86400) {
-        ts_expr = SPrintF("%0.1f days", diff / 86400);
-      } else if (diff > 3600) {
-        ts_expr = SPrintF("%0.1f hours", diff / 3600);
-      } else if (diff > 60) {
-        ts_expr = SPrintF("%0.1f minutes", diff / 60);
-      } else {
-        ts_expr = SPrintF("%0.1f seconds", diff);
-      }
-    }
+    const std::string ts_expr = MakeRelativeTimeExpr(current_ts - ts_sec);
     PrintL(path, "\t", file_id, "\t", timestamp, "\t", ts_expr, "\t", file_size);
   }
   return has_error ? 1 : 0;

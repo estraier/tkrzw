@@ -862,7 +862,7 @@ class ScopedCounter final {
    * @param count The pointer to the counter object.
    * @param increment The value to add in the constructor and subtract in the destructor.
    */
-  explicit ScopedCounter(T* count, int32_t increment = 0);
+  explicit ScopedCounter(T* count, int32_t increment = 1);
 
   /**
    * Destructor.

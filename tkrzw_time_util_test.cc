@@ -206,4 +206,19 @@ TEST(ThreadUtilTest, ParseDateStrYYYYMMDD) {
   EXPECT_EQ(256037435, tkrzw::ParseDateStrYYYYMMDD("19780211183035", 32400));
 }
 
+TEST(ThreadUtilTest, MakeRelativeTimeExpr) {
+  EXPECT_EQ("0.0 seconds", tkrzw::MakeRelativeTimeExpr(0));
+  EXPECT_EQ("1.2 seconds", tkrzw::MakeRelativeTimeExpr(1.2));
+  EXPECT_EQ("-2.8 seconds", tkrzw::MakeRelativeTimeExpr(-2.8));
+  EXPECT_EQ("1.0 minutes", tkrzw::MakeRelativeTimeExpr(60));
+  EXPECT_EQ("-2.0 minutes", tkrzw::MakeRelativeTimeExpr(60 * -2));
+  EXPECT_EQ("3.5 minutes", tkrzw::MakeRelativeTimeExpr(60 * 3.5));
+  EXPECT_EQ("1.0 hours", tkrzw::MakeRelativeTimeExpr(60 * 60));
+  EXPECT_EQ("-2.0 hours", tkrzw::MakeRelativeTimeExpr(60 * 60 * -2));
+  EXPECT_EQ("3.5 hours", tkrzw::MakeRelativeTimeExpr(60 * 60 * 3.5));
+  EXPECT_EQ("1.0 days", tkrzw::MakeRelativeTimeExpr(60 * 60 * 24));
+  EXPECT_EQ("-2.0 days", tkrzw::MakeRelativeTimeExpr(60 * 60 * 24 * -2));
+  EXPECT_EQ("3.5 days", tkrzw::MakeRelativeTimeExpr(60 * 60 * 24 * 3.5));
+}
+
 // END OF FILE

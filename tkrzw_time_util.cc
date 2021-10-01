@@ -539,6 +539,18 @@ double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
   return MakeUniversalTime(uts) - td;
 }
 
+std::string MakeRelativeTimeExpr(double diff) {
+  const int64_t abs_diff = std::llabs(diff);
+  if (abs_diff >= 86400) {
+    return SPrintF("%0.1f days", diff / 86400);
+  } else if (abs_diff >= 3600) {
+    return SPrintF("%0.1f hours", diff / 3600);
+  } else if (abs_diff >= 60) {
+    return SPrintF("%0.1f minutes", diff / 60);
+  }
+  return SPrintF("%0.1f seconds", diff);
+}
+
 }  // namespace tkrzw
 
 // END OF FILE

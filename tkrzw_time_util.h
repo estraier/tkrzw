@@ -145,6 +145,13 @@ double ParseDateStr(std::string_view str);
  */
 double ParseDateStrYYYYMMDD(std::string_view str, int32_t td = INT32MIN);
 
+/**
+ * Makes a human-readable relative time expression of a time difference.
+ * @param diff The time difference in seconds.
+ * @return The result relative time expression, like "1.5 days" and "2.8 hours".
+ */
+std::string MakeRelativeTimeExpr(double diff);
+
 }  // namespace tkrzw
 
 #endif  // _TKRZW_TIME_UTIL_H
