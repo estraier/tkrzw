@@ -291,7 +291,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
   }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (file_size_.load() != map_size_.load()) {
-    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+    const int64_t new_map_size = std::max<int64_t>(1, file_size_.load())
     const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
     if (status != Status::SUCCESS) {
       map_handle_ = nullptr;
@@ -871,7 +871,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   if (file_size_ != map_size_) {
-    const int64_t new_map_size = std::max(file_size_, static_cast<int64_t>(PAGE_SIZE));
+    const int64_t new_map_size = std::max<int64_t>(1, file_size_);
     const Status status = RemapMemory(file_handle_, new_map_size, &map_handle_, &map_);
     if (status != Status::SUCCESS) {
       map_handle_ = nullptr;

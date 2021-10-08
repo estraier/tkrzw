@@ -42,12 +42,13 @@ inline void AdviseMemoryRandomAccessPattern(void* addr, size_t len) {
 inline void* tkrzw_mremap(
     void *old_address, size_t old_size, size_t new_size, int32_t fd) {
 #if defined(_SYS_LINUX_)
-  return mremap(old_address, old_size, new_size, MREMAP_MAYMOVE);
+  return mremap(old_address, std::max<int64_t>(1, old_size),
+                std::max<int64_t>(1, new_size), MREMAP_MAYMOVE);
 #else
-  if (munmap(old_address, old_size) != 0) {
+  if (munmap(old_address, std::max<int64_t>(1, old_size)) != 0) {
     return MAP_FAILED;
   }
-  return mmap(0, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  return mmap(0, std::max<int64_t>(1, new_size), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 #endif
 }
 
@@ -167,7 +168,7 @@ Status MemoryMapParallelFileImpl::Open(
   } else {
     map_size = std::max(map_size, static_cast<int64_t>(PAGE_SIZE));
   }
-  void* map = mmap(0, map_size, mprot, MAP_SHARED, fd, 0);
+  void* map = mmap(0, std::max<int64_t>(1, map_size), mprot, MAP_SHARED, fd, 0);
   if (map == MAP_FAILED) {
     const Status status = GetErrnoStatus("mmap", errno);
     close(fd);
@@ -195,11 +196,11 @@ Status MemoryMapParallelFileImpl::Close() {
 
   // Unmaps the memory.
   const int64_t unmap_size = std::max(map_size_.load(), static_cast<int64_t>(PAGE_SIZE));
-  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) &&
+  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) && unmap_size > 0 &&
       msync(map_, unmap_size, MS_SYNC) != 0) {
     status |= GetErrnoStatus("msync", errno);
   }
-  if (munmap(map_, unmap_size) != 0) {
+  if (munmap(map_, std::max<int64_t>(1, unmap_size)) != 0) {
     status |= GetErrnoStatus("munmap", errno);
   }
 
@@ -288,7 +289,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
   }
   std::lock_guard<SpinSharedMutex> lock(mutex_);
   if (file_size_.load() != map_size_.load()) {
-    const int64_t new_map_size = std::max(file_size_.load(), static_cast<int64_t>(PAGE_SIZE));
+    const int64_t new_map_size = file_size_.load();
     void* new_map = tkrzw_mremap(map_, map_size_.load(), new_map_size, fd_);
     if (new_map == MAP_FAILED) {
       const Status status = GetErrnoStatus("mremap", errno);
@@ -311,7 +312,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
     size = end - off;
     off = std::min<int64_t>(map_size_, off);
     size = std::min<int64_t>(map_size_ - off, size);
-    if (msync(map_ + off, size, MS_SYNC) != 0) {
+    if (size > 0 && msync(map_ + off, size, MS_SYNC) != 0) {
       status |= GetErrnoStatus("msync", errno);
     }
   }
@@ -734,7 +735,7 @@ Status MemoryMapAtomicFileImpl::Open(
   } else {
     map_size = std::max(map_size, static_cast<int64_t>(PAGE_SIZE));
   }
-  void* map = mmap(0, map_size, mprot, MAP_SHARED, fd, 0);
+  void* map = mmap(0, std::max<int64_t>(1, map_size), mprot, MAP_SHARED, fd, 0);
   if (map == MAP_FAILED) {
     const Status status = GetErrnoStatus("mmap", errno);
     close(fd);
@@ -763,11 +764,11 @@ Status MemoryMapAtomicFileImpl::Close() {
 
   // Unmaps the memory.
   const int64_t unmap_size = std::max(map_size_, static_cast<int64_t>(PAGE_SIZE));
-  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) &&
+  if (writable_ && (open_options_ & File::OPEN_SYNC_HARD) && unmap_size > 0 &&
       msync(map_, unmap_size, MS_SYNC) != 0) {
     status |= GetErrnoStatus("msync", errno);
   }
-  if (munmap(map_, unmap_size) != 0) {
+  if (munmap(map_, std::max<int64_t>(1, unmap_size)) != 0) {
     status |= GetErrnoStatus("munmap", errno);
   }
 
@@ -857,7 +858,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
   if (file_size_ != map_size_) {
-    const int64_t new_map_size = std::max(file_size_, static_cast<int64_t>(PAGE_SIZE));
+    const int64_t new_map_size = file_size_;
     void* new_map = tkrzw_mremap(map_, map_size_, new_map_size, fd_);
     if (new_map == MAP_FAILED) {
       const Status status = GetErrnoStatus("mremap", errno);
@@ -880,7 +881,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
     size = end - off;
     off = std::min<int64_t>(map_size_, off);
     size = std::min<int64_t>(map_size_ - off, size);
-    if (msync(map_ + off, size, MS_SYNC) != 0) {
+    if (size > 0 && msync(map_ + off, size, MS_SYNC) != 0) {
       status |= GetErrnoStatus("msync", errno);
     }
   }
