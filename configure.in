@@ -35,8 +35,6 @@ MYLDLIBPATH=""
 MYLDLIBPATHENV="LD_LIBRARY_PATH"
 MYFILEPERFDIRECTIOFLAGS=""
 MYDBMPERFDIRECTIOFLAGS=""
-MYFILEPERFMEMLOCKFLAGS=""
-MYDBMPERFMEMLOCKFLAGS=""
 MYDBMPERFRECCOMPFLAGS=""
 MYDBMTRANRECCOMPPARAMS=""
 MYPOSTCMD="true"
@@ -246,20 +244,6 @@ then
   enables="$enables (most-features)"
 fi
 
-# Memory locking test flags
-LOCKLIMIT="`ulimit -l 2>/dev/null`"
-if test -z "$LOCKLIMIT"
-then
-  LOCKLIMIT=0
-fi
-if test "$LOCKLIMIT" = "unlimited" || test "$LOCKLIMIT" -ge 1024
-then
-  MYFILEPERFMEMLOCKFLAGS="--lock_memory 10"
-  MYDBMPERFMEMLOCKFLAGS="--lock_mem_buckets"
-else
-  enables="$enables (omit-mlock-tests)"
-fi
-
 # Messages
 printf '#================================================================\n'
 printf '# Configuring Tkrzw version %s%s.\n' "$PACKAGE_VERSION" "$enables"
@@ -431,8 +415,6 @@ AC_SUBST(MYLDLIBPATH)
 AC_SUBST(MYLDLIBPATHENV)
 AC_SUBST(MYFILEPERFDIRECTIOFLAGS)
 AC_SUBST(MYDBMPERFDIRECTIOFLAGS)
-AC_SUBST(MYFILEPERFMEMLOCKFLAGS)
-AC_SUBST(MYDBMPERFMEMLOCKFLAGS)
 AC_SUBST(MYDBMPERFRECCOMPFLAGS)
 AC_SUBST(MYDBMTRANRECCOMPPARAMS)
 AC_SUBST(MYPOSTCMD)

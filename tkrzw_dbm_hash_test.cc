@@ -176,7 +176,6 @@ void HashDBMTest::HashDBMLargeRecordTest(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               LargeRecordTest(dbm);
@@ -218,7 +217,6 @@ void HashDBMTest::HashDBMBasicTest(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               BasicTest(dbm);
@@ -260,7 +258,6 @@ void HashDBMTest::HashDBMSequenceTest(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               SequenceTest(dbm);
@@ -302,7 +299,6 @@ void HashDBMTest::HashDBMAppendTest(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               AppendTest(dbm);
@@ -467,7 +463,6 @@ void HashDBMTest::HashDBMRandomTestOne(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               RandomTest(dbm, 1);
@@ -509,7 +504,6 @@ void HashDBMTest::HashDBMRandomTestThread(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               RandomTestThread(dbm);
@@ -544,7 +538,6 @@ void HashDBMTest::HashDBMRecordMigrationTest(tkrzw::HashDBM* dbm, tkrzw::File* f
         tuning_params.record_comp_mode = record_comp_mode;
         tuning_params.num_buckets = 1000;
         tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-        tuning_params.lock_mem_buckets = 1;
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
             file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
         EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(flat_file_path, true));
@@ -569,7 +562,6 @@ void HashDBMTest::HashDBMOpenCloseTest(tkrzw::HashDBM* dbm) {
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = num_keys;
   tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-  tuning_params.lock_mem_buckets = 1;
   std::mt19937 mt(1);
   std::uniform_int_distribution<int32_t> key_dist(1, num_keys);
   std::uniform_int_distribution<int32_t> value_len_dist(0, 8);
@@ -636,7 +628,6 @@ void HashDBMTest::HashDBMUpdateInPlaceTest(tkrzw::HashDBM* dbm) {
   tuning_params.num_buckets = 10;
   tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
   tuning_params.fbp_capacity = tkrzw::INT32MAX;
-  tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
@@ -754,7 +745,6 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
   tuning_params.align_pow = 2;
   tuning_params.num_buckets = 10;
   tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-  tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_DEFAULT, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());
@@ -1237,7 +1227,6 @@ void HashDBMTest::HashDBMRebuildStaticTestAll(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               HashDBMRebuildStaticTestOne(dbm, tuning_params);
             }
           }
@@ -1276,7 +1265,6 @@ void HashDBMTest::HashDBMRebuildRandomTest(tkrzw::HashDBM* dbm) {
               tuning_params.align_pow = align_pow;
               tuning_params.num_buckets = num_buckets;
               tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-              tuning_params.lock_mem_buckets = 1;
               EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
                   file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
               RebuildRandomTest(dbm);
@@ -1302,7 +1290,6 @@ void HashDBMTest::HashDBMRestoreTest(tkrzw::HashDBM* dbm) {
   tuning_params.align_pow = 0;
   tuning_params.num_buckets = 10;
   tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-  tuning_params.lock_mem_buckets = 1;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       first_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   EXPECT_TRUE(dbm->IsHealthy());

@@ -230,7 +230,6 @@ static void SetHashTuningParams(
   }
   tuning_params->fbp_capacity = StrToIntMetric(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToIntMetric(SearchMap(*params, "min_read_size", "-1"));
-  tuning_params->lock_mem_buckets = StrToBool(SearchMap(*params, "lock_mem_buckets", "false"));
   tuning_params->cache_buckets = StrToBool(SearchMap(*params, "cache_buckets", "false"));
   params->erase("update_mode");
   params->erase("record_crc_mode");
@@ -241,7 +240,6 @@ static void SetHashTuningParams(
   params->erase("restore_mode");
   params->erase("fbp_capacity");
   params->erase("min_read_size");
-  params->erase("lock_mem_buckets");
   params->erase("cache_buckets");
 }
 

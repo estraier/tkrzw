@@ -3,6 +3,7 @@
 	- Release: 1.0.17
 	- Library version: 1.60.0
 
+	- Abolish File::LockMemory and --lock_mem_buckets parameter of HashDBM.
 	- Fix bugs in AsyncDBM::Synchronize and AsyncDBM::Rebuild.
 
 2021-10-01  Mikio Hirabayashi  <hirarin@gmail.com>

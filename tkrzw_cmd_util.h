@@ -260,14 +260,6 @@ void SetAccessStrategyOrDie(File* file, int64_t block_size,
                             bool is_pagecache);
 
 /**
- * Locks the memory of the beginning region or die.
- * @param file The file object.
- * @param size The size of the beginning region to lock.
- * @details If the operation is not supported, this does nothing.
- */
-void LockMemoryOfFileOrDie(File* file, size_t size);
-
-/**
  * Sets the head buffer of the positional access file.
  * @param file The file object.
  * @param size The size of the head buffer.

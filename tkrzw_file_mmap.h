@@ -33,14 +33,6 @@ class MemoryMapFile : public File {
    * Destructor.
    */
   virtual ~MemoryMapFile() = default;
-
-  /**
-   * Locks the memory of the beginning region of the file, not to be swapped out.
-   * @param size The size of the beginning region to lock.
-   * @return The result status.
-   * @details This method must be called after the file is opened.
-   */
-  virtual Status LockMemory(size_t size) = 0;
 };
 
 class MemoryMapParallelFileImpl;
@@ -258,14 +250,6 @@ class MemoryMapParallelFile final : public MemoryMapFile {
    * @return The result status.
    */
   Status CopyProperties(File* file) override;
-
-  /**
-   * Locks the memory of the beginning region of the file, not to be swapped out.
-   * @param size The size of the beginning region to lock.
-   * @return The result status.
-   * @details This method must be called after the file is opened.
-   */
-  Status LockMemory(size_t size) override;
 
   /**
    * Gets the path of the file.
@@ -540,14 +524,6 @@ class MemoryMapAtomicFile final : public MemoryMapFile {
    * @return The result status.
    */
   Status CopyProperties(File* file) override;
-
-  /**
-   * Locks the memory of the beginning region of the file, not to be swapped out.
-   * @param size The size of the beginning region to lock.
-   * @return The result status.
-   * @details This method must be called after the file is opened.
-   */
-  Status LockMemory(size_t size) override;
 
   /**
    * Gets the path of the file.

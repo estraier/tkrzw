@@ -623,8 +623,6 @@ LIBOBJS
 MYPOSTCMD
 MYDBMTRANRECCOMPPARAMS
 MYDBMPERFRECCOMPFLAGS
-MYDBMPERFMEMLOCKFLAGS
-MYFILEPERFMEMLOCKFLAGS
 MYDBMPERFDIRECTIOFLAGS
 MYFILEPERFDIRECTIOFLAGS
 MYLDLIBPATHENV
@@ -2164,8 +2162,6 @@ MYLDLIBPATH=""
 MYLDLIBPATHENV="LD_LIBRARY_PATH"
 MYFILEPERFDIRECTIOFLAGS=""
 MYDBMPERFDIRECTIOFLAGS=""
-MYFILEPERFMEMLOCKFLAGS=""
-MYDBMPERFMEMLOCKFLAGS=""
 MYDBMPERFRECCOMPFLAGS=""
 MYDBMTRANRECCOMPPARAMS=""
 MYPOSTCMD="true"
@@ -2422,20 +2418,6 @@ fi
 if test "$enable_most_features" = "yes"
 then
   enables="$enables (most-features)"
-fi
-
-# Memory locking test flags
-LOCKLIMIT="`ulimit -l 2>/dev/null`"
-if test -z "$LOCKLIMIT"
-then
-  LOCKLIMIT=0
-fi
-if test "$LOCKLIMIT" = "unlimited" || test "$LOCKLIMIT" -ge 1024
-then
-  MYFILEPERFMEMLOCKFLAGS="--lock_memory 10"
-  MYDBMPERFMEMLOCKFLAGS="--lock_mem_buckets"
-else
-  enables="$enables (omit-mlock-tests)"
 fi
 
 # Messages
@@ -4741,8 +4723,6 @@ fi
 #================================================================
 
 # Export variables
-
-
 
 
 

@@ -159,7 +159,7 @@ TEST_F(PolyDBMTest, PolyBasic) {
       {"restore_mode", "read_only"}}, {}, {{"offset_width", "3"}}},
     {"HashDBM", "casket.tkh",
      {{"file", "mmap-atom"}, {"update_mode", "update_appending"}, {"offset_width", "3"},
-      {"align_pow", "1"}, {"num_buckets", "50"}, {"lock_mem_buckets", "true"}}, {}, {}},
+      {"align_pow", "1"}, {"num_buckets", "50"}}, {}, {}},
     {"HashDBM", "casket.tkh",
      {{"file", "pos-para"}, {"block_size", "512"}, {"access_options", "direct:padding"},
       {"num_buckets", "100"}, {"min_read_size", "512"}, {"cache_buckets", "true"}}, {}, {}},

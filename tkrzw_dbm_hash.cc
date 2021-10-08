@@ -199,7 +199,6 @@ class HashDBMImpl final {
   IteratorList iterators_;
   FreeBlockPool fbp_;
   int32_t min_read_size_;
-  bool lock_mem_buckets_;
   bool cache_buckets_;
   std::unique_ptr<File> file_;
   SpinSharedMutex mutex_;
@@ -236,8 +235,7 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       num_records_(0), eff_data_size_(0), file_size_(0), timestamp_(0),
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
-      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0),
-      lock_mem_buckets_(false), cache_buckets_(false),
+      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0), cache_buckets_(false),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
       rebuild_mutex_() {}
@@ -612,7 +610,6 @@ Status HashDBMImpl::Clear() {
   const int32_t align_pow = align_pow_;
   const int64_t num_buckets = num_buckets_;
   const int32_t min_read_size = min_read_size_;
-  const bool lock_mem_buckets = lock_mem_buckets_;
   const bool cache_buckets = cache_buckets_;
   const uint32_t db_type = db_type_;
   const std::string opaque = opaque_;
@@ -624,7 +621,6 @@ Status HashDBMImpl::Clear() {
   align_pow_ = align_pow;
   num_buckets_ = num_buckets;
   min_read_size_ = min_read_size;
-  lock_mem_buckets_ = lock_mem_buckets;
   cache_buckets_ = cache_buckets;
   db_type_ = db_type;
   opaque_ = opaque;
@@ -1098,7 +1094,6 @@ void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
   } else {
     min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
   }
-  lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
   cache_buckets_ = tuning_params.cache_buckets > 0;
 }
 
@@ -1195,7 +1190,6 @@ Status HashDBMImpl::CloseImpl() {
   record_base_ = 0;
   fbp_.Clear();
   min_read_size_ = 0;
-  lock_mem_buckets_ = false;
   cache_buckets_ = false;
   return status;
 }
@@ -1305,12 +1299,6 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
 
 Status HashDBMImpl::TuneFileAfterOpen() {
   Status status(Status::SUCCESS);
-  if (lock_mem_buckets_) {
-    auto* mem_file = dynamic_cast<MemoryMapFile*>(file_.get());
-    if (mem_file != nullptr) {
-      status |= mem_file->LockMemory(record_base_);
-    }
-  }
   if (cache_buckets_) {
     auto* pos_file = dynamic_cast<PositionalFile*>(file_.get());
     if (pos_file != nullptr) {
@@ -1636,7 +1624,6 @@ Status HashDBMImpl::RebuildImpl(
   tmp_tuning_params.fbp_capacity = HashDBM::DEFAULT_FBP_CAPACITY;
   tmp_tuning_params.min_read_size = tuning_params.min_read_size >= 0 ?
       tuning_params.min_read_size : min_read_size_;
-  tmp_tuning_params.lock_mem_buckets = 0;
   tmp_tuning_params.cache_buckets = tuning_params.cache_buckets >= 0 ?
       tuning_params.cache_buckets : cache_buckets_;
   HashDBM tmp_dbm(file_->MakeFile());
@@ -1752,9 +1739,6 @@ Status HashDBMImpl::RebuildImpl(
       } else {
         min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
       }
-    }
-    if (tuning_params.lock_mem_buckets >= 0) {
-      lock_mem_buckets_ = tuning_params.lock_mem_buckets > 0;
     }
     if (tuning_params.cache_buckets >= 0) {
       cache_buckets_ = tuning_params.cache_buckets > 0;

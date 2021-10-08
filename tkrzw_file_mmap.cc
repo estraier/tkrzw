@@ -64,7 +64,6 @@ class MemoryMapParallelFileImpl final {
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status CopyProperties(File* file);
-  Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
@@ -78,7 +77,6 @@ class MemoryMapParallelFileImpl final {
   std::atomic_int64_t file_size_;
   char* map_;
   std::atomic_int64_t map_size_;
-  std::atomic_int64_t lock_size_;
   bool writable_;
   int32_t open_options_;
   int64_t alloc_init_size_;
@@ -87,7 +85,7 @@ class MemoryMapParallelFileImpl final {
 };
 
 MemoryMapParallelFileImpl::MemoryMapParallelFileImpl() :
-    fd_(-1), file_size_(-0), map_(nullptr), map_size_(0), lock_size_(0),
+    fd_(-1), file_size_(-0), map_(nullptr), map_size_(0),
     writable_(false), open_options_(0),
     alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
     alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
@@ -235,7 +233,6 @@ Status MemoryMapParallelFileImpl::Close() {
   file_size_ .store(0);
   map_ = nullptr;
   map_size_.store(0);
-  lock_size_.store(0);
   writable_ = false;
   open_options_ = 0;
 
@@ -249,10 +246,6 @@ Status MemoryMapParallelFileImpl::Truncate(int64_t size) {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  if (lock_size_.load() > 0 && munlock(map_, lock_size_.load()) != 0) {
-    return GetErrnoStatus("munlock", errno);
-  }
-  lock_size_.store(0);
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
@@ -346,21 +339,6 @@ Status MemoryMapParallelFileImpl::CopyProperties(File* file) {
   return file->SetAllocationStrategy(alloc_init_size_, alloc_inc_factor_);
 }
 
-Status MemoryMapParallelFileImpl::LockMemory(size_t size) {
-  if (fd_ < 0) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  if (lock_size_.load() > 0 && munlock(map_, lock_size_.load()) != 0) {
-    return GetErrnoStatus("munlock", errno);
-  }
-  lock_size_.store(0);
-  if (size > 0 && mlock(map_, size) != 0) {
-    return GetErrnoStatus("mlock", errno);
-  }
-  lock_size_.store(size);
-  return Status(Status::SUCCESS);
-}
-
 Status MemoryMapParallelFileImpl::GetPath(std::string* path) {
   if (fd_ < 0) {
     return Status(Status::PRECONDITION_ERROR, "not opened file");
@@ -406,9 +384,6 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_.load()) {
     return Status(Status::SUCCESS);
   }
-  if (lock_size_.load() > 0 && munlock(map_, lock_size_.load()) != 0) {
-    return GetErrnoStatus("munlock", errno);
-  }
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
           map_size_.load() * alloc_inc_factor_)), static_cast<int64_t>(PAGE_SIZE));
@@ -428,10 +403,6 @@ Status MemoryMapParallelFileImpl::AllocateSpace(int64_t min_size) {
   AdviseMemoryRandomAccessPattern(new_map, new_map_size);
   map_ = static_cast<char*>(new_map);
   map_size_.store(new_map_size);
-  if (lock_size_.load() > 0 && mlock(map_, lock_size_.load()) != 0) {
-    lock_size_.store(0);
-    return GetErrnoStatus("mlock", errno);
-  }
   return Status(Status::SUCCESS);
 }
 
@@ -551,11 +522,6 @@ Status MemoryMapParallelFile::CopyProperties(File* file) {
   return impl_->CopyProperties(file);
 }
 
-Status MemoryMapParallelFile::LockMemory(size_t size) {
-  assert(size <= MAX_MEMORY_SIZE);
-  return impl_->LockMemory(size);
-}
-
 Status MemoryMapParallelFile::GetPath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetPath(path);
@@ -664,7 +630,6 @@ class MemoryMapAtomicFileImpl final {
   Status GetSize(int64_t* size);
   Status SetAllocationStrategy(int64_t init_size, double inc_factor);
   Status CopyProperties(File* file);
-  Status LockMemory(size_t size);
   Status GetPath(std::string* path);
   Status Rename(const std::string& new_path);
   Status DisablePathOperations();
@@ -678,7 +643,6 @@ class MemoryMapAtomicFileImpl final {
   int64_t file_size_;
   char* map_;
   int64_t map_size_;
-  int64_t lock_size_;
   bool writable_;
   int32_t open_options_;
   int64_t alloc_init_size_;
@@ -687,7 +651,7 @@ class MemoryMapAtomicFileImpl final {
 };
 
 MemoryMapAtomicFileImpl::MemoryMapAtomicFileImpl() :
-    fd_(-1), file_size_(0), map_(nullptr), map_size_(0), lock_size_(0),
+    fd_(-1), file_size_(0), map_(nullptr), map_size_(0),
     writable_(false), open_options_(0),
     alloc_init_size_(File::DEFAULT_ALLOC_INIT_SIZE),
     alloc_inc_factor_(File::DEFAULT_ALLOC_INC_FACTOR), mutex_() {}
@@ -837,7 +801,6 @@ Status MemoryMapAtomicFileImpl::Close() {
   file_size_ = 0;
   map_ = nullptr;
   map_size_ = 0;
-  lock_size_ = 0;
   writable_ = false;
   open_options_ = 0;
 
@@ -852,10 +815,6 @@ Status MemoryMapAtomicFileImpl::Truncate(int64_t size) {
   if (!writable_) {
     return Status(Status::PRECONDITION_ERROR, "not writable file");
   }
-  if (lock_size_ > 0 && munlock(map_, lock_size_) != 0) {
-    return GetErrnoStatus("munlock", errno);
-  }
-  lock_size_ = 0;
   int64_t new_map_size =
       std::max(std::max(size, static_cast<int64_t>(PAGE_SIZE)), alloc_init_size_);
   new_map_size = AlignNumber(new_map_size, PAGE_SIZE);
@@ -993,28 +952,9 @@ bool MemoryMapAtomicFileImpl::IsOpen() {
   return fd_ >= 0;
 }
 
-Status MemoryMapAtomicFileImpl::LockMemory(size_t size) {
-  std::lock_guard<SpinSharedMutex> lock(mutex_);
-  if (fd_ < 0) {
-    return Status(Status::PRECONDITION_ERROR, "not opened file");
-  }
-  if (lock_size_ > 0 && munlock(map_, lock_size_) != 0) {
-    return GetErrnoStatus("munlock", errno);
-  }
-  lock_size_ = 0;
-  if (size > 0 && mlock(map_, size) != 0) {
-    return GetErrnoStatus("mlock", errno);
-  }
-  lock_size_ = size;
-  return Status(Status::SUCCESS);
-}
-
 Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   if (min_size <= map_size_) {
     return Status(Status::SUCCESS);
-  }
-  if (lock_size_ > 0 && munlock(map_, lock_size_) != 0) {
-    return GetErrnoStatus("munlock", errno);
   }
   int64_t new_map_size =
       std::max(std::max(min_size, static_cast<int64_t>(
@@ -1034,10 +974,6 @@ Status MemoryMapAtomicFileImpl::AllocateSpace(int64_t min_size) {
   }
   map_ = static_cast<char*>(new_map);
   map_size_ = new_map_size;
-  if (lock_size_ > 0 && mlock(map_, lock_size_) != 0) {
-    lock_size_ = 0;
-    return GetErrnoStatus("mlock", errno);
-  }
   return Status(Status::SUCCESS);
 }
 
@@ -1155,11 +1091,6 @@ Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_
 Status MemoryMapAtomicFile::CopyProperties(File* file) {
   assert(file != nullptr);
   return impl_->CopyProperties(file);
-}
-
-Status MemoryMapAtomicFile::LockMemory(size_t size) {
-  assert(size <= MAX_MEMORY_SIZE);
-  return impl_->LockMemory(size);
 }
 
 Status MemoryMapAtomicFile::GetPath(std::string* path) {

@@ -3016,7 +3016,6 @@ applet  A small application.
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583)</dd>
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--min_read_size <var>num</var></code> : Sets the minimum reading size to read a record. (default: -1)</dd>
-<dd><code>--lock_mem_buckets</code> : Locks the memory for the hash buckets.</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
 <dt>Options for TreeDBM:</dt>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
@@ -3026,7 +3025,6 @@ applet  A small application.
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101)</dd>
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--min_read_size <var>num</var></code> : Sets the minimum reading size to read a record. (default: -1)</dd>
-<dd><code>--lock_mem_buckets</code> : Locks the memory for the hash buckets.</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
 <dd><code>--max_page_size <var>num</var></code> : Sets the maximum size of a page. (default: 8130)</dd>
 <dd><code>--max_branches <var>num</var></code> : Sets the maximum number of branches of inner nodes. (default: 256)</dd>
@@ -3117,8 +3115,6 @@ $ tkrzw_dbm_util import --ulog 0 casket.tkt casket-ulog
 
 <p>The file hash database uses a static hash table, whose size doesn't change implicitly.  The number of hash buckets is set when the database is created.  The load factor, which is defined as the ratio of the number of records to the number of buckets, should be less than 1, in order to maintain a good performance.  So, the number of buckets should be larger than the estimated number of records.  By default, the number of buckets is about 1 million.</p>
 
-<p>Locking the memory for the hash buckets with the "lock_mem_buckets" parameter is also effective to get stable performance.  It uses the "mlock" system call to force the memory region for the hash buckets to be on RAM, not to be in the swap space.  The downside is that if you make a huge hash table or make many database files, out-of-memory errors can occur.</p>
-
 <p>To create a very small database, you'll run a command like this.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_dbm_util create --dbm hash \
@@ -3134,7 +3130,7 @@ tuning_params.num_buckets = 10000;
 dbm.OpenAdvanced("casket.tkh", true, File::OPEN_DEFAULT, tuning_params);
 ]]></code></pre>
 
-<p>To make a very large database, you'll set offset_width=5, align_pow=4, and num_buckets=100000000 or something, and lock_mem_bucket.</p>
+<p>To make a very large database, you'll set offset_width=5, align_pow=4, and num_buckets=100000000 or something.</p>
 
 <p>When the load factor exceeds 1 and performance decreases, you'll rebuild the database.  By default, the number of buckets is set as twice as the number of records so that the load factor becomes 0.5.</p>
 
@@ -3261,7 +3257,7 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>If the machine has abundant memory, increasing the max_cached_pages parameter contributes better performance of random access.  By default, 10000 pages are cached.  The average page size is about 8K bytes so 80MB memory is used for the cache system.  Let's say, the machine has 2GB free memory.  Then, specifying 20,0000 or something is feasible.</p>
 
-<p>Usually, there's no need to modify the default tuning parameters.  By default, the maximum database size is 1TB because the offset width is 4 and the alignment power is 8.  If the number of records exceeds 20 million, the num_buckets parameter should be increased for better performance.  Locking the memory for the hash buckets with the "lock_mem_buckets" parameter is also effective to get stable performance.</p>
+<p>Usually, there's no need to modify the default tuning parameters.  By default, the maximum database size is 1TB because the offset width is 4 and the alignment power is 8.  If the number of records exceeds 20 million, the num_buckets parameter should be increased for better performance.</p>
 
 <p>To create a very small database, you'll run a command like this.</p>
 

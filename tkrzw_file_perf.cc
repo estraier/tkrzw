@@ -38,8 +38,6 @@ static void PrintUsageAndDie() {
     File::DEFAULT_ALLOC_INIT_SIZE);
   P("  --alloc_inc num : The allocation increment factor. (default: %.1f)\n",
     File::DEFAULT_ALLOC_INC_FACTOR);
-  P("  --lock_memory num : The size to lock the memory of the beginning region."
-    " (default: 0)\n");
   P("  --block_size num : The block size of the positional access file. (default: 1)\n");
   P("  --head_buffer num : The head buffer size of the positional access file. (default: 0)\n");
   P("  --direct_io : Enables the direct I/O option of the positional access file.\n");
@@ -60,7 +58,7 @@ static void PrintUsageAndDie() {
 static int32_t ProcessSequence(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--random_seed", 1},
-    {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--head_buffer", 1},
     {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--random", 0}, {"--append", 0}, {"--write_only", 0}, {"--read_only", 0},
@@ -81,7 +79,6 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       cmd_args, "--alloc_init", 0, File::DEFAULT_ALLOC_INIT_SIZE);
   const double alloc_increment = GetDoubleArgument(
       cmd_args, "--alloc_inc", 0, File::DEFAULT_ALLOC_INC_FACTOR);
-  const int64_t lock_memory = GetIntegerArgument(cmd_args, "--lock_memory", 0, 0);
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
   const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer", 0, 0);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
@@ -160,9 +157,6 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       PrintL("Open failed: ", status);
       has_error = true;
     }
-    if (lock_memory > 0) {
-      LockMemoryOfFileOrDie(file.get(), lock_memory);
-    }
     if (head_buffer_size > 0) {
       SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);
     }
@@ -227,9 +221,6 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
       PrintL("Open failed: ", status);
       has_error = true;
     }
-    if (lock_memory > 0) {
-      LockMemoryOfFileOrDie(file.get(), lock_memory);
-    }
     if (head_buffer_size > 0) {
       SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);
     }
@@ -262,7 +253,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
 static int32_t ProcessWicked(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
     {"", 1}, {"--file", 1}, {"--iter", 1}, {"--size", 1}, {"--threads", 1}, {"--random_seed", 1},
-    {"--alloc_init", 1}, {"--alloc_inc", 1}, {"--lock_memory", 1},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
     {"--block_size", 1}, {"--head_buffer", 1},
     {"--direct_io", 0}, {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
   };
@@ -282,7 +273,6 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
       cmd_args, "--alloc_init", 0, File::DEFAULT_ALLOC_INIT_SIZE);
   const double alloc_increment = GetDoubleArgument(
       cmd_args, "--alloc_inc", 0, File::DEFAULT_ALLOC_INC_FACTOR);
-  const int64_t lock_memory = GetIntegerArgument(cmd_args, "--lock_memory", 0, 0);
   const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
   const int64_t head_buffer_size = GetIntegerArgument(cmd_args, "--head_buffer", 0, 0);
   const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
@@ -376,9 +366,6 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   if (status != Status::SUCCESS) {
     PrintL("Open failed: ", status);
     has_error = true;
-  }
-  if (lock_memory > 0) {
-    LockMemoryOfFileOrDie(file.get(), lock_memory);
   }
   if (head_buffer_size > 0) {
     SetHeadBufferOfFileOrDie(file.get(), head_buffer_size);

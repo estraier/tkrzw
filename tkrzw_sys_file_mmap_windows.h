@@ -514,11 +514,6 @@ Status MemoryMapParallelFile::CopyProperties(File* file) {
   return impl_->CopyProperties(file);
 }
 
-Status MemoryMapParallelFile::LockMemory(size_t size) {
-  assert(size <= MAX_MEMORY_SIZE);
-  return Status(Status::SUCCESS);
-}
-
 Status MemoryMapParallelFile::GetPath(std::string* path) {
   assert(path != nullptr);
   return impl_->GetPath(path);
@@ -1100,11 +1095,6 @@ Status MemoryMapAtomicFile::SetAllocationStrategy(int64_t init_size, double inc_
 Status MemoryMapAtomicFile::CopyProperties(File* file) {
   assert(file != nullptr);
   return impl_->CopyProperties(file);
-}
-
-Status MemoryMapAtomicFile::LockMemory(size_t size) {
-  assert(size <= MAX_MEMORY_SIZE);
-  return Status(Status::SUCCESS);
 }
 
 Status MemoryMapAtomicFile::GetPath(std::string* path) {

@@ -125,8 +125,7 @@ check-file-perf :
 	tkrzw_file_perf.exe sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20  casket
 	tkrzw_file_perf.exe sequence --file mmap-para \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-	  --lock_memory 10 casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	tkrzw_file_perf.exe sequence --file mmap-para \
@@ -134,8 +133,7 @@ check-file-perf :
 	tkrzw_file_perf.exe wicked --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file mmap-atom \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-	  --lock_memory 10 casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	tkrzw_file_perf.exe sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	tkrzw_file_perf.exe sequence --file mmap-atom \
@@ -190,9 +188,9 @@ check-file-perf :
 check-hashdbm-perf :
 	-del casket* /F /Q > NUL: 2>&1
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets
+	  --iter 20000 --threads 5 --size 8 --buckets 100000
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets --append
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 --append
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value
 	tkrzw_dbm_perf.exe sequence --dbm hash --file mmap-para --path casket.tkh \
@@ -205,16 +203,16 @@ check-hashdbm-perf :
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 100000 --threads 1 --size 8 --buckets 10000 --random_key --random_value --rebuild
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 100000 --threads 1 --size 8 --buckets 10000 --lock_mem_buckets \
+	  --iter 100000 --threads 1 --size 8 --buckets 10000 \
 	  --random_key --random_value --keys 10000 --rebuild --append --record_crc 8 --validate
 	tkrzw_dbm_perf.exe parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
 	  --random_key --random_value --keys 5000 --rebuild --append  --record_crc 16 --sleep 0.00001
 	tkrzw_dbm_perf.exe wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
 	  --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 --lock_mem_buckets \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
 	  --append --record_crc 32 --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm hash --file pos-para --path casket.tkh \
 	  --block_size 512 --direct_io --padding \
@@ -305,7 +303,7 @@ check-treedbm-perf :
 	  --max_cached_pages 256 --random_key --random_value --keys 10000 --rebuild \
 		--append --record_crc 8 --validate
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 --lock_mem_buckets \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
 	  --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	tkrzw_dbm_perf.exe wicked --dbm tree --file mmap-para --path casket.tkt \
@@ -510,7 +508,7 @@ check-polydbm-perf :
 	  --params "dbm=hash,file=pos-para,num_buckets=100000,offset_width=3,align_pow=1"
 	tkrzw_dbm_perf.exe wicked --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0,lock_mem_buckets=false"
+	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0"
 
 check-polydbm-util :
 	-del casket* /F /Q > NUL: 2>&1
@@ -549,21 +547,21 @@ check-sharddbm-perf :
 	-del casket* /F /Q > NUL: 2>&1
 	tkrzw_dbm_perf.exe sequence --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	tkrzw_dbm_perf.exe sequence --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	tkrzw_dbm_perf.exe parallel --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	tkrzw_dbm_perf.exe wicked --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 
 check-sharddbm-util :
 	-del casket* /F /Q > NUL: 2>&1
 	tkrzw_dbm_util.exe create --dbm shard casket.tkt \
-	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=3"
+	  --params "num_buckets=10,num_shards=3"
 	tkrzw_dbm_util.exe set --dbm shard casket.tkt one first
 	tkrzw_dbm_util.exe set --dbm shard casket.tkt two second
 	tkrzw_dbm_util.exe set --dbm shard casket.tkt three third
@@ -573,7 +571,7 @@ check-sharddbm-util :
 	tkrzw_dbm_util.exe get --dbm shard casket.tkt two
 	tkrzw_dbm_util.exe export --dbm shard casket.tkt casket.flat
 	tkrzw_dbm_util.exe create --dbm shard casket-2.tkt \
-	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=4"
+	  --params "num_buckets=10,num_shards=4"
 	tkrzw_dbm_util.exe import --dbm shard casket-2.tkt casket.flat
 	tkrzw_dbm_util.exe list --dbm shard casket-2.tkt
 	tkrzw_dbm_util.exe list --dbm shard --move jump --jump_key three --items 2 casket-2.tkt

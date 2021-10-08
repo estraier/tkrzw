@@ -58,8 +58,6 @@ RUNENV := @MYLDLIBPATHENV@=@MYLDLIBPATH@:.
 VPATH := .:..
 FILEPERFDIRECTIOFLAGS=@MYFILEPERFDIRECTIOFLAGS@
 DBMPERFDIRECTIOFLAGS=@MYDBMPERFDIRECTIOFLAGS@
-FILEPERFMEMLOCKFLAGS=@MYFILEPERFMEMLOCKFLAGS@
-DBMPERFMEMLOCKFLAGS=@MYDBMPERFMEMLOCKFLAGS@
 DBMPERFRECCOMPFLAGS=@MYDBMPERFRECCOMPFLAGS@
 DBMTRANRECCOMPPARAMS=@MYDBMTRANRECCOMPPARAMS@
 POSTCMD := @MYPOSTCMD@
@@ -213,8 +211,7 @@ check-file-perf :
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20  casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-para \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-	  $(FILEPERFMEMLOCKFLAGS) casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-para \
@@ -222,8 +219,7 @@ check-file-perf :
 	$(RUNENV) ./tkrzw_file_perf wicked --file mmap-para \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-atom \
-	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 \
-	  $(FILEPERFMEMLOCKFLAGS) casket
+	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-atom \
 	  --iter 50000 --threads 5 --size 20 --alloc_init 1 --alloc_inc 1.2 --random casket
 	$(RUNENV) ./tkrzw_file_perf sequence --file mmap-atom \
@@ -279,10 +275,10 @@ check-hashdbm-perf :
 	rm -Rf casket*
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS)
+	  $(DBMPERFRECCOMPFLAGS)
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) --append --record_crc 8 --validate
+	  $(DBMPERFRECCOMPFLAGS) --append --record_crc 8 --validate
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 20000 --threads 5 --size 8 --buckets 100000 --random_key --random_value
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm hash --file mmap-para --path casket.tkh \
@@ -294,20 +290,16 @@ check-hashdbm-perf :
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
 	  --iter 100000 --threads 1 --size 8 --buckets 10000 --random_key --random_value --rebuild
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 100000 --threads 1 --size 8 --buckets 10000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
+	  --iter 100000 --threads 1 --size 8 --buckets 10000 $(DBMPERFRECCOMPFLAGS) \
 	  --random_key --random_value --keys 10000 --rebuild --append --record_crc 8 --validate
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 $(DBMPERFRECCOMPFLAGS) \
 	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFRECCOMPFLAGS) \
 	  --iterator --clear --rebuild
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm hash --file mmap-para --path casket.tkh \
-	  --iter 20000 --threads 5 --size 8 --buckets 100000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
+	  --iter 20000 --threads 5 --size 8 --buckets 100000 $(DBMPERFRECCOMPFLAGS) \
 	  --append  --record_crc 32 --iterator --clear --rebuild
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm hash --file pos-para --path casket.tkh \
 	  --block_size 512 $(DBMPERFDIRECTIOFLAGS) --padding \
@@ -400,8 +392,7 @@ check-treedbm-perf :
 	  --max_cached_pages 256 --random_key --random_value --keys 10000 --rebuild \
 	  --append --record_crc 8 --validate
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm tree --file mmap-para --path casket.tkt \
-	  --iter 10000 --threads 5 --size 8 --buckets 1000 \
-	  $(DBMPERFMEMLOCKFLAGS) $(DBMPERFRECCOMPFLAGS) \
+	  --iter 10000 --threads 5 --size 8 --buckets 1000 $(DBMPERFRECCOMPFLAGS) \
 	  --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value --keys 5000 --rebuild --append --record_crc 16 --sleep 0.00001
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm tree --file mmap-para --path casket.tkt \
@@ -606,7 +597,7 @@ check-polydbm-perf :
 	  --params "dbm=hash,file=pos-para,num_buckets=100000,offset_width=3,align_pow=1"
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0,lock_mem_buckets=false"
+	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0"
 
 check-polydbm-util :
 	rm -Rf casket*
@@ -647,21 +638,21 @@ check-sharddbm-perf :
 	rm -Rf casket*
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	$(RUNENV) ./tkrzw_dbm_perf sequence --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	$(RUNENV) ./tkrzw_dbm_perf parallel --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --random_key --random_value \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 	$(RUNENV) ./tkrzw_dbm_perf wicked --dbm shard --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
-	  --params "dbm=tree,lock_mem_buckets=false,num_shards=3"
+	  --params "dbm=tree,num_shards=3"
 
 check-sharddbm-util :
 	rm -Rf casket*
 	$(RUNENV) ./tkrzw_dbm_util create --dbm shard casket.tkt \
-	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=3"
+	  --params "num_buckets=10,num_shards=3"
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt one first
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt two second
 	$(RUNENV) ./tkrzw_dbm_util set --dbm shard casket.tkt three third
@@ -671,7 +662,7 @@ check-sharddbm-util :
 	$(RUNENV) ./tkrzw_dbm_util get --dbm shard casket.tkt two
 	$(RUNENV) ./tkrzw_dbm_util export --dbm shard casket.tkt casket.flat
 	$(RUNENV) ./tkrzw_dbm_util create --dbm shard casket-2.tkt \
-	  --params "num_buckets=10,lock_mem_buckets=false,num_shards=4"
+	  --params "num_buckets=10,num_shards=4"
 	$(RUNENV) ./tkrzw_dbm_util import --dbm shard casket-2.tkt casket.flat
 	$(RUNENV) ./tkrzw_dbm_util list --dbm shard casket-2.tkt
 	$(RUNENV) ./tkrzw_dbm_util list --dbm shard --move jump --jump_key three --items 2 casket-2.tkt

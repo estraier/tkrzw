@@ -149,7 +149,7 @@ TEST_F(ShardDBMTest, ShardBasic) {
      {{"dbm", "hash"}, {"num_buckets", "50"}}, {}, {{"offset_width", "3"}}},
     {"HashDBM", "casket.tkh",
      {{"update_mode", "update_appending"}, {"offset_width", "3"},
-      {"align_pow", "1"}, {"num_buckets", "50"}, {"lock_mem_buckets", "true"}}, {}, {}},
+      {"align_pow", "1"}, {"num_buckets", "50"}}, {}, {}},
     {"TreeDBM", "casket",
      {{"dbm", "tree"}, {"key_comparator", "decimal"}}, {}, {{"max_page_size", "512"}}},
     {"TreeDBM", "casket.tkt",

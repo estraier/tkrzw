@@ -179,13 +179,6 @@ void SetAccessStrategyOrDie(File* file, int64_t block_size,
   }
 }
 
-void LockMemoryOfFileOrDie(File* file, size_t size) {
-  auto* mem_file = dynamic_cast<MemoryMapFile*>(file);
-  if (mem_file != nullptr) {
-    mem_file->LockMemory(size).OrDie();
-  }
-}
-
 void SetHeadBufferOfFileOrDie(File* file, int64_t size) {
   auto* pos_file = dynamic_cast<PositionalFile*>(file);;
   if (pos_file != nullptr) {

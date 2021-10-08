@@ -34,7 +34,6 @@ template <class FILEIMPL>
 class MemoryMapFileTest : public CommonFileTest {
  protected:
   void ZoneTest(FILEIMPL* file);
-  void LockMemoryTest(FILEIMPL* file);
 };
 
 template <class FILEIMPL>
@@ -79,30 +78,6 @@ void MemoryMapFileTest<FILEIMPL>::ZoneTest(FILEIMPL* file) {
   std::string content;
   EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ReadFile(file_path, &content));
   EXPECT_EQ("abc00yz", content);
-}
-
-template <class FILEIMPL>
-void MemoryMapFileTest<FILEIMPL>::LockMemoryTest(FILEIMPL* file) {
-  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
-  const std::string file_path = tmp_dir.MakeUniquePath();
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->SetAllocationStrategy(1, 2));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Open(file_path, true));
-  const std::string data(4096, 'z');
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(8192));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->LockMemory(4096));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Append(data.data(), data.size()));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, file->Close());
 }
 
 class MemoryMapParallelFileTest : public MemoryMapFileTest<tkrzw::MemoryMapParallelFile> {};
@@ -188,11 +163,6 @@ TEST_F(MemoryMapParallelFileTest, Zone) {
   ZoneTest(&file);
 }
 
-TEST_F(MemoryMapParallelFileTest, LockMemory) {
-  tkrzw::MemoryMapParallelFile file;
-  LockMemoryTest(&file);
-}
-
 class MemoryMapAtomicFileTest : public MemoryMapFileTest<tkrzw::MemoryMapAtomicFile> {};
 
 TEST_F(MemoryMapAtomicFileTest, Attributes) {
@@ -274,11 +244,6 @@ TEST_F(MemoryMapAtomicFileTest, Rename) {
 TEST_F(MemoryMapAtomicFileTest, Zone) {
   tkrzw::MemoryMapAtomicFile file;
   ZoneTest(&file);
-}
-
-TEST_F(MemoryMapAtomicFileTest, LockMemory) {
-  tkrzw::MemoryMapAtomicFile file;
-  LockMemoryTest(&file);
 }
 
 // END OF FILE
