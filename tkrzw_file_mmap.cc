@@ -304,6 +304,7 @@ Status MemoryMapParallelFileImpl::Synchronize(bool hard, int64_t off, int64_t si
       fd_ = -1;
       return status;
     }
+    AdviseMemoryRandomAccessPattern(new_map, new_map_size);
     map_ = static_cast<char*>(new_map);
     map_size_.store(new_map_size);
   }
@@ -906,6 +907,7 @@ Status MemoryMapAtomicFileImpl::Synchronize(bool hard, int64_t off, int64_t size
       fd_ = -1;
       return status;
     }
+    AdviseMemoryRandomAccessPattern(new_map, new_map_size);
     map_ = static_cast<char*>(new_map);
     map_size_ = new_map_size;
   }

@@ -1,3 +1,10 @@
+2021-10-016 Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.17
+	- Library version: 1.60.0
+
+	- Fix bugs in AsyncDBM::Synchronize and AsyncDBM::Rebuild.
+
 2021-10-01  Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.16

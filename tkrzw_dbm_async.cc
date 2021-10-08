@@ -407,9 +407,9 @@ std::future<Status> AsyncDBM::Rebuild(const std::map<std::string, std::string>& 
       Status status(Status::SUCCESS);
       ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
       if (param_dbm == nullptr) {
-        status = param_dbm->RebuildAdvanced(params);
-      } else {
         status = dbm->Rebuild();
+      } else {
+        status = param_dbm->RebuildAdvanced(params);
       }
       if (postproc != nullptr) {
         postproc->Postprocess("Rebuild", status);
@@ -439,9 +439,9 @@ std::future<Status> AsyncDBM::Synchronize(bool hard, std::unique_ptr<DBM::FilePr
       Status status(Status::SUCCESS);
       ParamDBM* param_dbm = dynamic_cast<ParamDBM*>(dbm);
       if (param_dbm == nullptr) {
-        status = param_dbm->SynchronizeAdvanced(hard, proc.get(), params);
-      } else {
         status = dbm->Synchronize(hard, proc.get());
+      } else {
+        status = param_dbm->SynchronizeAdvanced(hard, proc.get(), params);
       }
       if (postproc != nullptr) {
         postproc->Postprocess("Synchronize", status);
