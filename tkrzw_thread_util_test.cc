@@ -641,6 +641,86 @@ TEST(ThreadUtilTest, WaitCounter) {
   }
 }
 
+TEST(ThreadUtilTest, SignalBroker) {
+  constexpr int32_t num_threads = 10;
+  constexpr int32_t num_loops = 1000;
+  tkrzw::WaitCounter wc(num_threads);
+  tkrzw::SignalBroker<int32_t> broker;
+  auto task = [&](int32_t id) {
+                for (int32_t i = 0; i < num_loops; i++) {
+                  if (i % 2 == 0) {
+                    EXPECT_TRUE(broker.Wait(id));
+                  } else {
+                    while (!broker.Wait(id, 0.00001)) {
+                    }
+                  }
+                  if ((id + i) % 3 == 0) {
+                    std::this_thread::yield();
+                  }
+                }
+                wc.Done();
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task, i));
+  }
+  int32_t count = 0;
+  while (!wc.Wait(0)) {
+    for (int32_t i = 0; i < num_threads; i++) {
+      if (broker.Send(i)) {
+        count++;
+      }
+      if ((count + i) % 3 == 0) {
+        std::this_thread::yield();
+      }
+    }
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(num_threads * num_loops, count);
+}
+
+TEST(ThreadUtilTest, SlottedSignalBroker) {
+  constexpr int32_t num_threads = 10;
+  constexpr int32_t num_loops = 1000;
+  tkrzw::WaitCounter wc(num_threads);
+  tkrzw::SlottedSignalBroker<int32_t> broker(4);
+  auto task = [&](int32_t id) {
+                for (int32_t i = 0; i < num_loops; i++) {
+                  if (i % 2 == 0) {
+                    EXPECT_TRUE(broker.Wait(id));
+                  } else {
+                    while (!broker.Wait(id, 0.00001)) {
+                    }
+                  }
+                  if ((id + i) % 3 == 0) {
+                    std::this_thread::yield();
+                  }
+                }
+                wc.Done();
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task, i));
+  }
+  int32_t count = 0;
+  while (!wc.Wait(0)) {
+    for (int32_t i = 0; i < num_threads; i++) {
+      if (broker.Send(i)) {
+        count++;
+      }
+      if ((count + i) % 3 == 0) {
+        std::this_thread::yield();
+      }
+    }
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(num_threads * num_loops, count);
+}
+
 TEST(ThreadUtilTest, ScopedCounter) {
   std::atomic_int32_t count(0);
   {
