@@ -318,6 +318,20 @@ class AsyncDBM final {
       std::string_view key, int64_t increment = 1, int64_t initial = 0);
 
   /**
+   * Changes the key of a record.
+   * @param old_key The old key of the record.
+   * @param new_key The new key of the record.
+   * @param overwrite Whether to overwrite the existing record of the new key.
+   * @return The result status.  If there's no matching record to the old key, NOT_FOUND_ERROR
+   * is returned.  If the overwrite flag is false and there is an existing record of the new key,
+   * DUPLICATION ERROR is returned.
+   * @details This method is done atomically by ProcessMulti.  The other threads observe that the
+   * record has either the old key or the new value.  No intermediate states are observed.
+   */
+  std::future<Status> Rekey(std::string_view old_key, std::string_view new_key,
+                            bool overwrite = true);
+
+  /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects derived from
    * RecordProcessor.  The ownership is taken.

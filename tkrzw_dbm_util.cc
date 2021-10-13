@@ -32,6 +32,8 @@ static void PrintUsageAndDie() {
   P("    : Sets a record.\n");
   P("  %s remove [common_options] file key\n", progname);
   P("    : Removes a record.\n");
+  P("  %s rekey [common_options] file old_key new_key\n", progname);
+  P("    : Changes the key of a record.\n");
   P("  %s list [common_options] file\n", progname);
   P("    : Lists up records and prints them.\n");
   P("  %s rebuild [common_options] [tuning_options] file\n", progname);
@@ -72,12 +74,15 @@ static void PrintUsageAndDie() {
   P("  --validate : Validates records.\n");
   P("\n");
   P("Options for the set subcommand:\n");
-  P("  --no_overwrite : Fails if there's an existing record wit the same key.\n");
+  P("  --no_overwrite : Fails if there's an existing record with the same key.\n");
   P("  --append str : Appends the value at the end after the given delimiter.\n");
   P("  --incr num : Increments the value with the given initial value.\n");
   P("  --reducer func : Sets the reducer for the skip database:"
     " none, first, second, last, concat, concatnull, concattab, concatline, total."
     " (default: none)\n");
+  P("\n");
+  P("Options for the rekey subcommand:\n");
+  P("  --no_overwrite : Fails if there's an existing record with the same key.\n");
   P("\n");
   P("Options for the list subcommand:\n");
   P("  --move type : Type of movement:"
@@ -1038,6 +1043,65 @@ static int32_t ProcessRemove(int32_t argc, const char** args) {
   return ok ? 0 : 1;
 }
 
+// Processes the rekey subcommand.
+static int32_t ProcessRekey(int32_t argc, const char** args) {
+  const std::map<std::string, int32_t>& cmd_configs = {
+    {"", 3}, {"--dbm", 1}, {"--file", 1}, {"--no_wait", 0}, {"--no_lock", 0}, {"--sync_hard", 0},
+    {"--alloc_init", 1}, {"--alloc_inc", 1},
+    {"--block_size", 1}, {"--direct_io", 0},
+    {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0}, {"--no_overwrite", 0},
+    {"--params", 1},
+  };
+  std::map<std::string, std::vector<std::string>> cmd_args;
+  std::string cmd_error;
+  if (!ParseCommandArguments(argc, args, cmd_configs, &cmd_args, &cmd_error)) {
+    EPrint("Invalid command: ", cmd_error, "\n\n");
+    PrintUsageAndDie();
+  }
+  const std::string file_path = GetStringArgument(cmd_args, "", 0, "");
+  const std::string old_key = GetStringArgument(cmd_args, "", 1, "");
+  const std::string new_key = GetStringArgument(cmd_args, "", 2, "");
+  const std::string dbm_impl = GetStringArgument(cmd_args, "--dbm", 0, "auto");
+  const std::string file_impl = GetStringArgument(cmd_args, "--file", 0, "mmap-para");
+  const bool with_no_wait = CheckMap(cmd_args, "--no_wait");
+  const bool with_no_lock = CheckMap(cmd_args, "--no_lock");
+  const bool with_sync_hard = CheckMap(cmd_args, "--sync_hard");
+  const int32_t alloc_init_size = GetIntegerArgument(cmd_args, "--alloc_init", 0, -1);
+  const double alloc_increment = GetDoubleArgument(cmd_args, "--alloc_inc", 0, 0);
+  const int64_t block_size = GetIntegerArgument(cmd_args, "--block_size", 0, 1);
+  const bool is_direct_io = CheckMap(cmd_args, "--direct_io");
+  const bool is_sync_io = CheckMap(cmd_args, "--sync_io");
+  const bool is_padding = CheckMap(cmd_args, "--padding");
+  const bool is_pagecache = CheckMap(cmd_args, "--pagecache");
+  const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
+  const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
+  if (file_path.empty()) {
+    Die("The file path must be specified");
+  }
+  std::unique_ptr<DBM> dbm =
+      MakeDBMOrDie(dbm_impl, file_impl, file_path, alloc_init_size, alloc_increment,
+                   block_size, is_direct_io, is_sync_io, is_padding, is_pagecache);
+  if (!OpenDBM(dbm.get(), file_path, true, false, false,
+               with_no_wait, with_no_lock, with_sync_hard,
+               false, false, 0, "", -1, -1, -1,
+               -1, -1, "",
+               -1, -1, -1, false,
+               poly_params)) {
+    return 1;
+  }
+  bool ok = false;
+  const Status status = dbm->Rekey(old_key, new_key, !with_no_overwrite);
+  if (status == Status::SUCCESS) {
+    ok = true;
+  } else {
+    EPrintL("Rekey failed: ", status);
+  }
+  if (!CloseDBM(dbm.get())) {
+    return 1;
+  }
+  return ok ? 0 : 1;
+}
+
 // Processes the list subcommand.
 static int32_t ProcessList(int32_t argc, const char** args) {
   const std::map<std::string, int32_t>& cmd_configs = {
@@ -1876,6 +1940,8 @@ int main(int argc, char** argv) {
       rv = tkrzw::ProcessSet(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "remove") == 0) {
       rv = tkrzw::ProcessRemove(argc - 1, args + 1);
+    } else if (std::strcmp(args[1], "rekey") == 0) {
+      rv = tkrzw::ProcessRekey(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "list") == 0) {
       rv = tkrzw::ProcessList(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "rebuild") == 0) {

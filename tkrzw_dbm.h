@@ -348,6 +348,67 @@ class DBM {
   };
 
   /**
+   * Record processor to implement DBM::Increment.
+   */
+  class RecordProcessorIncrement final : public DBM::RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param increment The incremental value.
+     * @param current The pointer to a string object to contain the current value.
+     * @param initial The initial value.
+     */
+    RecordProcessorIncrement(int64_t increment, int64_t* current, int64_t initial)
+        : increment_(increment), current_(current), initial_(initial) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (increment_ == INT64MIN) {
+        if (current_ != nullptr) {
+          *current_ = StrToIntBigEndian(value);
+        }
+        return NOOP;
+      }
+      const int64_t num = StrToIntBigEndian(value) + increment_;
+      if (current_ != nullptr) {
+        *current_ = num;
+      }
+      value_ = IntToStrBigEndian(num);
+      return value_;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (increment_ == INT64MIN) {
+        if (current_ != nullptr) {
+          *current_ = initial_;
+        }
+        return NOOP;
+      }
+      const int64_t num = initial_ + increment_;
+      if (current_ != nullptr) {
+        *current_ = num;
+      }
+      value_ =  IntToStrBigEndian(num);
+      return value_;
+    }
+
+   private:
+    /** The incrementing value. */
+    int64_t increment_;
+    /** The current value to report. */
+    int64_t* current_;
+    /** The initial value. */
+    int64_t initial_;
+    /** The new string value. */
+    std::string value_;
+  };
+
+  /**
    * Record checker to implement DBM::CompareExchangeMulti.
    */
   class RecordCheckerCompareExchangeMulti final : public DBM::RecordProcessor {
@@ -428,64 +489,113 @@ class DBM {
   };
 
   /**
-   * Record processor to implement DBM::Increment.
+   * Record checker to implement DBM::Rekey.
    */
-  class RecordProcessorIncrement final : public DBM::RecordProcessor {
+  class RecordCheckerRekey final : public DBM::RecordProcessor {
    public:
     /**
      * Constructor.
-     * @param increment The incremental value.
-     * @param current The pointer to a string object to contain the current value.
-     * @param initial The initial value.
+     * @param status The pointer to a status object.
      */
-    RecordProcessorIncrement(int64_t increment, int64_t* current, int64_t initial)
-        : increment_(increment), current_(current), initial_(initial) {}
+    RecordCheckerRekey(Status* status) : status_(status) {}
 
     /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (increment_ == INT64MIN) {
-        if (current_ != nullptr) {
-          *current_ = StrToIntBigEndian(value);
-        }
-        return NOOP;
-      }
-      const int64_t num = StrToIntBigEndian(value) + increment_;
-      if (current_ != nullptr) {
-        *current_ = num;
-      }
-      value_ = IntToStrBigEndian(num);
-      return value_;
+      status_->Set(Status::DUPLICATION_ERROR);
+      return NOOP;
     }
 
     /**
      * Processes an empty record space.
      */
     std::string_view ProcessEmpty(std::string_view key) override {
-      if (increment_ == INT64MIN) {
-        if (current_ != nullptr) {
-          *current_ = initial_;
-        }
-        return NOOP;
-      }
-      const int64_t num = initial_ + increment_;
-      if (current_ != nullptr) {
-        *current_ = num;
-      }
-      value_ =  IntToStrBigEndian(num);
-      return value_;
+      return NOOP;
     }
 
    private:
-    /** The incrementing value. */
-    int64_t increment_;
-    /** The current value to report. */
-    int64_t* current_;
-    /** The initial value. */
-    int64_t initial_;
-    /** The new string value. */
-    std::string value_;
+    /** The pointer to a status object. */
+    Status* status_;
+  };
+
+  /**
+   * Record remover to implement DBM::Rekey.
+   */
+  class RecordRemoverRekey final : public DBM::RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param status The pointer to a status object.
+     * @param old_value The pointer to a string object to store the old value.
+     */
+    RecordRemoverRekey(Status* status, std::string* old_value)
+        : status_(status), old_value_(old_value) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      *old_value_ = value;
+      return REMOVE;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      status_->Set(Status::NOT_FOUND_ERROR);
+      return NOOP;
+    }
+
+   private:
+    /** The pointer to a status object. */
+    Status* status_;
+    /** The pointer to a string object to store the old value. */
+    std::string* old_value_;
+  };
+
+  /**
+   * Record setter to implement DBM::Rekey.
+   */
+  class RecordSetterRekey final : public DBM::RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param status The pointer to a status object.
+     * @param new_value The pointer to a string object to store the old value.
+     */
+    RecordSetterRekey(Status* status, const std::string* new_value)
+        : status_(status), new_value_(new_value) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      return *new_value_;
+    }
+
+    /**
+     * Processes an empty record space.
+     */
+    std::string_view ProcessEmpty(std::string_view key) override {
+      if (*status_ != Status::SUCCESS) {
+        return NOOP;
+      }
+      return *new_value_;
+    }
+
+   private:
+    /** The pointer to a status object. */
+    Status* status_;
+    /** The new value to set. */
+    const std::string* new_value_;
   };
 
   /**
@@ -1253,6 +1363,43 @@ class DBM {
       return status;
     }
     return noop ? Status(Status::INFEASIBLE_ERROR) : Status(Status::SUCCESS);
+  }
+
+  /**
+   * Changes the key of a record.
+   * @param old_key The old key of the record.
+   * @param new_key The new key of the record.
+   * @param overwrite Whether to overwrite the existing record of the new key.
+   * @param value The pointer to a string object to contain the value of the record.  If it is
+   * nullptr, the value data is ignored.
+   * @return The result status.  If there's no matching record to the old key, NOT_FOUND_ERROR
+   * is returned.  If the overwrite flag is false and there is an existing record of the new key,
+   * DUPLICATION ERROR is returned.
+   * @details This method is done atomically by ProcessMulti.  The other threads observe that the
+   * record has either the old key or the new value.  No intermediate states are observed.
+   */
+  virtual Status Rekey(std::string_view old_key, std::string_view new_key,
+                       bool overwrite = true, std::string* value = nullptr) {
+    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
+    key_proc_pairs.reserve(3);
+    Status proc_status(Status::SUCCESS);
+    RecordCheckerRekey checker(&proc_status);
+    if (!overwrite) {
+      key_proc_pairs.emplace_back(std::pair(new_key, &checker));
+    }
+    std::string rec_value;
+    RecordRemoverRekey remover(&proc_status, &rec_value);
+    key_proc_pairs.emplace_back(std::pair(old_key, &remover));
+    RecordSetterRekey setter(&proc_status, &rec_value);
+    key_proc_pairs.emplace_back(std::pair(new_key, &setter));
+    const Status status = ProcessMulti(key_proc_pairs, true);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (proc_status == Status::SUCCESS && value != nullptr) {
+      *value = std::move(rec_value);
+    }
+    return proc_status;
   }
 
   /**

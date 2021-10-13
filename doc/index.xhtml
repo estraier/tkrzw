@@ -2832,6 +2832,8 @@ int main(int argc, char** argv) {
 <dd>Sets a record.</dd>
 <dt><code>tkrzw_dbm_util remove [<var>common_options</var>] <var>file</var> <var>key</var></code></dt>
 <dd>Removes a record.</dd>
+<dt><code>tkrzw_dbm_util rekey [<var>common_options</var>] <var>file</var> <var>old_key</var> <var>new_key</var></code></dt>
+<dd>Changes the key of a record.</dd>
 <dt><code>tkrzw_dbm_util list [<var>common_options</var>] <var>file</var></code></dt>
 <dd>Lists up records and prints them.</dd>
 <dt><code>tkrzw_dbm_util rebuild [<var>common_options</var>] [<var>tuning_options</var>] <var>file</var></code></dt>
@@ -2866,10 +2868,12 @@ int main(int argc, char** argv) {
 <dt>Options for the inspect subcommand:</dt>
 <dd><code>--validate</code> : Validates records.</dd>
 <dt>Options for the set subcommand:</dt>
-<dd><code>--no_overwrite</code> : Fails if there's an existing record wit the same key.</dd>
+<dd><code>--no_overwrite</code> : Fails if there's an existing record with the same key.</dd>
 <dd><code>--append <var>str</var></code> : Appends the value at the end after the given delimiter.</dd>
 <dd><code>--incr <var>num</var></code> : Increments the value with the given initial value.</dd>
 <dd><code>--reducer <var>func</var></code> : Sets the reducer for the skip database: none, first, second, last, concat, concatnull, concattab, concatline, total. (default: none)</dd>
+<dt>Options for the rekey subcommand:</dt>
+<dd><code>--no_overwrite</code> : Fails if there's an existing record with the same key.</dd>
 <dt>Options for the list subcommand:</dt>
 <dd><code>--move <var>type</var></code> : Type of movement: first, jump, jumplower, jumplowerinc, jumpupper, jumpupperinc. (default: first)</dd>
 <dd><code>--jump_key <var>str</var></code> : Specifies the jump key. (default: empty string)</dd>

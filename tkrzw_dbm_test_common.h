@@ -317,6 +317,28 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
       {{"one", "ichi"}, {"two", "ni"}}, ":"));
   EXPECT_EQ("1:ichi", dbm->GetSimple("one"));
   EXPECT_EQ("2:ni", dbm->GetSimple("two"));
+
+
+
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key1", "value1"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key3", "value3"));
+  value.clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key1", "key2", false, &value));
+  EXPECT_EQ("value1", value);
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("key1", &value));
+  value.clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("key2", &value));
+  EXPECT_EQ("value1", value);
+  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->Rekey("key2", "key3", false, &value));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("key2"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key2", "key3"));
+  EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("key2", &value));
+  value.clear();
+  EXPECT_EQ("value1", dbm->GetSimple("key3", "*"));
+
+
+
+
 }
 
 inline void CommonDBMTest::SequenceTest(tkrzw::DBM* dbm) {

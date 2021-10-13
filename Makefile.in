@@ -320,6 +320,8 @@ check-hashdbm-util :
 	$(RUNENV) ./tkrzw_dbm_util set --dbm hash casket.tkh four fourth
 	$(RUNENV) ./tkrzw_dbm_util remove --dbm hash casket.tkh four
 	$(RUNENV) ./tkrzw_dbm_util set --dbm hash casket.tkh five fifth
+	$(RUNENV) ./tkrzw_dbm_util rekey --dbm hash --no_overwrite casket.tkh five FIVE
+	$(RUNENV) ./tkrzw_dbm_util get --dbm hash casket.tkh FIVE
 	$(RUNENV) ./tkrzw_dbm_util get --dbm hash casket.tkh two
 	$(RUNENV) ./tkrzw_dbm_util set --dbm hash --multi casket.tkh 1 ichi 2 ni
 	$(RUNENV) ./tkrzw_dbm_util set --dbm hash --multi --append ":" casket.tkh 1 a 2 b
@@ -419,6 +421,8 @@ check-treedbm-util :
 	$(RUNENV) ./tkrzw_dbm_util set --dbm tree casket.tkt four fourth
 	$(RUNENV) ./tkrzw_dbm_util remove --dbm tree casket.tkt four
 	$(RUNENV) ./tkrzw_dbm_util set --dbm tree casket.tkt five fifth
+	$(RUNENV) ./tkrzw_dbm_util rekey --dbm tree --no_overwrite casket.tkt five FIVE
+	$(RUNENV) ./tkrzw_dbm_util get --dbm tree casket.tkt FIVE
 	$(RUNENV) ./tkrzw_dbm_util get --dbm tree casket.tkt two
 	$(RUNENV) ./tkrzw_dbm_util set --dbm tree --multi casket.tkt 1 ichi 2 ni
 	$(RUNENV) ./tkrzw_dbm_util set --dbm tree --multi --append ":" casket.tkt 1 a 2 b
@@ -494,6 +498,8 @@ check-skipdbm-util :
 	$(RUNENV) ./tkrzw_dbm_util set --dbm skip casket.tks four fourth
 	$(RUNENV) ./tkrzw_dbm_util remove --dbm skip casket.tks four
 	$(RUNENV) ./tkrzw_dbm_util set --dbm skip casket.tks five fifth
+	$(RUNENV) ./tkrzw_dbm_util rekey --dbm skip --no_overwrite casket.tks five FIVE
+	$(RUNENV) ./tkrzw_dbm_util get --dbm skip casket.tks FIVE
 	$(RUNENV) ./tkrzw_dbm_util get --dbm skip casket.tks two
 	$(RUNENV) ./tkrzw_dbm_util export --dbm skip casket.tks casket.flat
 	$(RUNENV) ./tkrzw_dbm_util create --dbm skip --buckets 10 casket-2.tks

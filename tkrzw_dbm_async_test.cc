@@ -179,6 +179,24 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(1, status_counter["SetMulti:SUCCESS"]);
     EXPECT_EQ(1, status_counter["AppendMulti:SUCCESS"]);
     EXPECT_EQ(1, status_counter["RemoveMulti:SUCCESS"]);
+    status_counter.clear();
+  }
+  {
+    tkrzw::AsyncDBM async(&dbm, 4);
+    async.SetCommonPostprocessor(postproc);
+    for (int32_t i = 1; i <= 100; i++) {
+      const std::string old_key = tkrzw::StrCat("foo:", i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.Set(old_key, old_key).get());
+      const std::string new_key = tkrzw::StrCat("bar:", i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.Rekey(old_key, new_key, false).get());
+      EXPECT_EQ(old_key, async.Get(new_key).get().second);
+    }
+  }
+  {
+    std::lock_guard lock(postproc_mutex);
+    EXPECT_EQ(100, status_counter["Set:SUCCESS"]);
+    EXPECT_EQ(100, status_counter["Rekey:SUCCESS"]);
+    EXPECT_EQ(100, status_counter["Get:SUCCESS"]);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
