@@ -234,6 +234,8 @@ check-hashdbm-util :
 	tkrzw_dbm_util.exe remove --dbm hash casket.tkh four
 	tkrzw_dbm_util.exe set --dbm hash casket.tkh five fifth
 	tkrzw_dbm_util.exe get --dbm hash casket.tkh two
+	tkrzw_dbm_util.exe rekey --dbm hash --no_overwrite casket.tkh five FIVE
+	tkrzw_dbm_util.exe get --dbm hash casket.tkh FIVE
 	tkrzw_dbm_util.exe set --dbm hash --multi casket.tkh 1 ichi 2 ni
 	tkrzw_dbm_util.exe set --dbm hash --multi --append ":" casket.tkh 1 a 2 b
 	tkrzw_dbm_util.exe get --dbm hash --multi casket.tkh 1 2 3
@@ -335,6 +337,8 @@ check-treedbm-util :
 	tkrzw_dbm_util.exe remove --dbm tree casket.tkt four
 	tkrzw_dbm_util.exe set --dbm tree casket.tkt five fifth
 	tkrzw_dbm_util.exe get --dbm tree casket.tkt two
+	tkrzw_dbm_util.exe rekey --dbm tree --no_overwrite casket.tkt five FIVE
+	tkrzw_dbm_util.exe get --dbm tree casket.tkt FIVE
 	tkrzw_dbm_util.exe set --dbm tree --multi casket.tkt 1 ichi 2 ni
 	tkrzw_dbm_util.exe set --dbm tree --multi --append ":" casket.tkt 1 a 2 b
 	tkrzw_dbm_util.exe get --dbm tree --multi casket.tkt 1 2 3
@@ -408,6 +412,8 @@ check-skipdbm-util :
 	tkrzw_dbm_util.exe remove --dbm skip casket.tks four
 	tkrzw_dbm_util.exe set --dbm skip casket.tks five fifth
 	tkrzw_dbm_util.exe get --dbm skip casket.tks two
+	tkrzw_dbm_util.exe rekey --dbm skip --no_overwrite casket.tks five FIVE
+	tkrzw_dbm_util.exe get --dbm skip casket.tks FIVE
 	tkrzw_dbm_util.exe export --dbm skip casket.tks casket.flat
 	tkrzw_dbm_util.exe create --dbm skip --buckets 10 casket-2.tks
 	tkrzw_dbm_util.exe import --dbm skip casket-2.tks casket.flat
