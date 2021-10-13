@@ -236,10 +236,17 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   status = iter3->Get();
   EXPECT_TRUE(status == tkrzw::Status::SUCCESS || status == tkrzw::Status::NOT_FOUND_ERROR);
   EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Jump("three"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Set("hello"));
+  std::string old_key, old_value;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Set("hello", &old_key, &old_value));
+  EXPECT_EQ("three", old_key);
+  EXPECT_EQ("SANSANSAN", old_value);
   EXPECT_EQ("three", iter->GetKey());
   EXPECT_EQ("hello", iter->GetValue());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Remove());
+  old_key.clear();
+  old_value.clear();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Remove(&old_key, &old_value));
+  EXPECT_EQ("three", old_key);
+  EXPECT_EQ("hello", old_value);
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, iter->Remove());
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, iter->Get());
   status = iter3->Get();
@@ -581,14 +588,15 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
   while (true) {
     std::string key, value;
-    tkrzw::DBM::RecordProcessorIteratorGet get_proc(&key, &value);
+    tkrzw::DBM::RecordProcessorIterator get_proc(
+        tkrzw::DBM::RecordProcessor::NOOP, &key, &value);
     tkrzw::Status status = iter->Process(&get_proc, false);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
       break;
     }
     EXPECT_TRUE(tkrzw::StrBeginsWith(value, "BEGIN:"));
-    tkrzw::DBM::RecordProcessorIteratorSet set_proc(key);
+    tkrzw::DBM::RecordProcessorIterator set_proc(key, nullptr, nullptr);
     EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Process(&set_proc, true));
     EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
   }
@@ -598,7 +606,8 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   int32_t count = 0;
   while (true) {
     std::string key, value;
-    tkrzw::DBM::RecordProcessorIteratorGet get_proc(&key, &value);
+    tkrzw::DBM::RecordProcessorIterator get_proc(
+        tkrzw::DBM::RecordProcessor::NOOP, &key, &value);
     tkrzw::Status status = iter->Process(&get_proc, false);
     if (status == tkrzw::Status::SUCCESS) {
       EXPECT_EQ(key, value);
@@ -606,7 +615,8 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
     } else {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
     }
-    tkrzw::DBM::RecordProcessorIteratorRemove remove_proc;
+    tkrzw::DBM::RecordProcessorIterator remove_proc(
+        tkrzw::DBM::RecordProcessor::REMOVE, nullptr, nullptr);
     status = iter->Process(&remove_proc, true);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);

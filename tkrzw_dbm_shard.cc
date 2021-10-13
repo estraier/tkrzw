@@ -869,24 +869,25 @@ Status ShardDBM::Iterator::Get(std::string* key, std::string* value) {
   return Status(Status::SUCCESS);
 }
 
-Status ShardDBM::Iterator::Set(std::string_view value) {
+Status ShardDBM::Iterator::Set(
+    std::string_view value, std::string* old_key, std::string* old_value) {
   if (heap_.empty()) {
     return Status(Status::NOT_FOUND_ERROR);
   }
   auto* slot = heap_.front();
-  const Status status = slot->iter->Set(value);
+  const Status status = slot->iter->Set(value, old_key, old_value);
   if (status == Status::SUCCESS) {
     slot->value = value;
   }
   return status;
 }
 
-Status ShardDBM::Iterator::Remove() {
+Status ShardDBM::Iterator::Remove(std::string* old_key, std::string* old_value) {
   if (heap_.empty()) {
     return Status(Status::NOT_FOUND_ERROR);
   }
   auto* slot = heap_.front();
-  const Status status = slot->iter->Remove();
+  const Status status = slot->iter->Remove(old_key, old_value);
   if (status == Status::SUCCESS) {
     std::pop_heap(heap_.begin(), heap_.end(), ShardSlotComparator(comp_, true));
     slot = heap_.back();

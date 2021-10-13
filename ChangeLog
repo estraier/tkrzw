@@ -4,6 +4,7 @@
 	- Library version: 1.61.0
 
 	- Add SignalBroker and SlottedSignalBroker.
+	- Iterator::Set and Iterator::Remove take pointers to store the old value.
 
 2021-10-06 Mikio Hirabayashi  <hirarin@gmail.com>
 

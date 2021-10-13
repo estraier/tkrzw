@@ -624,35 +624,40 @@ class DBM {
   };
 
   /**
-   * Record processor to implement DBM::Iterator::Get.
+   * Record processor to implement DBM::Iterator methods.
    */
-  class RecordProcessorIteratorGet final : public RecordProcessor {
+  class RecordProcessorIterator final : public RecordProcessor {
    public:
     /**
      * Constructor.
-     * @param key The pointer to a string object to contain the result key.
-     * @param value The pointer to a string object to contain the result value.
+     * @param new_value The new value returned to the database.
+     * @param cur_key The pointer to a string object to contain the current key.
+     * @param cur_value The pointer to a string object to contain the current value.
      */
-    RecordProcessorIteratorGet(std::string* key, std::string* value) : key_(key), value_(value) {}
+    RecordProcessorIterator(
+        std::string_view new_value, std::string* cur_key, std::string* cur_value)
+        : new_value_(new_value), cur_key_(cur_key), cur_value_(cur_value) {}
 
     /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (key_ != nullptr) {
-        *key_ = key;
+      if (cur_key_ != nullptr) {
+        *cur_key_ = key;
       }
-      if (value_ != nullptr) {
-        *value_ = value;
+      if (cur_value_ != nullptr) {
+        *cur_value_ = value;
       }
-      return NOOP;
+      return new_value_;
     }
 
    private:
+    /** The new value returned to the database. */
+    std::string_view new_value_;
     /** Key to report. */
-    std::string* key_;
+    std::string* cur_key_;
     /** Value to report. */
-    std::string* value_;
+    std::string* cur_value_;
   };
 
   /**
@@ -663,19 +668,26 @@ class DBM {
     /**
      * Constructor.
      * @param value A string of the value to set.
+     * @param old_value The pointer to a string object to contain the existing value.
      */
-    explicit RecordProcessorIteratorSet(std::string_view value) : value_(value) {}
+    explicit RecordProcessorIteratorSet(std::string_view value, std::string* old_value)
+        : value_(value), old_value_(old_value) {}
 
     /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (old_value_ != nullptr) {
+        *old_value_ = value;
+      }
       return value_;
     }
 
    private:
     /** Value to store. */
     std::string_view value_;
+    /** String to store the old value. */
+    std::string* old_value_;
   };
 
   /**
@@ -684,11 +696,25 @@ class DBM {
   class RecordProcessorIteratorRemove final : public RecordProcessor {
    public:
     /**
+     * Constructor.
+     * @param value A string of the value to set.
+     * @param old_value The pointer to a string object to contain the existing value.
+     */
+    explicit RecordProcessorIteratorRemove(std::string* old_value) : old_value_(old_value) {}
+
+    /**
      * Processes an existing record.
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (old_value_ != nullptr) {
+        *old_value_ = value;
+      }
       return REMOVE;
     }
+
+   private:
+    /** String to store the old value. */
+    std::string* old_value_;
   };
 
   /**
@@ -795,7 +821,7 @@ class DBM {
      * @return The result status.
      */
     virtual Status Get(std::string* key = nullptr, std::string* value = nullptr) {
-      RecordProcessorIteratorGet proc(key, value);
+      RecordProcessorIterator proc(RecordProcessor::NOOP, key, value);
       return Process(&proc, false);
     }
 
@@ -822,20 +848,29 @@ class DBM {
     /**
      * Sets the value of the current record.
      * @param value The value of the record.
+     * @param old_key The pointer to a string object to contain the old key.  If it is
+     * nullptr, it is ignored.
+     * @param old_value The pointer to a string object to contain the old value.  If it is
+     * nullptr, it is ignored.
      * @return The result status.
      */
-    virtual Status Set(std::string_view value) {
-      RecordProcessorIteratorSet proc(value);
+    virtual Status Set(std::string_view value, std::string* old_key = nullptr,
+                       std::string* old_value = nullptr) {
+      RecordProcessorIterator proc(value, old_key, old_value);
       return Process(&proc, true);
     }
 
     /**
      * Removes the current record.
+     * @param old_key The pointer to a string object to contain the old key.  If it is
+     * nullptr, it is ignored.
+     * @param old_value The pointer to a string object to contain the old value.  If it is
+     * nullptr, it is ignored.
      * @return The result status.
      * @details If possible, the iterator moves to the next record.
      */
-    virtual Status Remove() {
-      RecordProcessorIteratorRemove proc;
+    virtual Status Remove(std::string* old_key = nullptr, std::string* old_value = nullptr) {
+      RecordProcessorIterator proc(RecordProcessor::REMOVE, old_key, old_value);
       return Process(&proc, true);
     }
   };

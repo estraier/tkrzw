@@ -147,16 +147,25 @@ class ShardDBM final : public ParamDBM {
     /**
      * Sets the value of the current record.
      * @param value The value of the record.
+     * @param old_key The pointer to a string object to contain the old key.  If it is
+     * nullptr, it is ignored.
+     * @param old_value The pointer to a string object to contain the old value.  If it is
+     * nullptr, it is ignored.
      * @return The result status.
      */
-    Status Set(std::string_view value) override;
+    Status Set(std::string_view value, std::string* old_key = nullptr,
+               std::string* old_value = nullptr) override;
 
     /**
      * Removes the current record.
+     * @param old_key The pointer to a string object to contain the old key.  If it is
+     * nullptr, it is ignored.
+     * @param old_value The pointer to a string object to contain the old value.  If it is
+     * nullptr, it is ignored.
      * @return The result status.
      * @details If possible, the iterator moves to the next record.
      */
-    Status Remove() override;
+    Status Remove(std::string* old_key = nullptr, std::string* old_value = nullptr) override;
 
    private:
     /**
