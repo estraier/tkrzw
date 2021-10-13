@@ -7,6 +7,12 @@
 	- Iterator::Set and Iterator::Remove take pointers to store the old value.
 	- Add Iterator::Step and Iterator::PopFirst.
 
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.25
+	- tkrzw-python: 0.1.25
+	- tkrzw-ruby: 0.1.25
+	- tkrzw-go: 0.1.25
+
 2021-10-06 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.17
