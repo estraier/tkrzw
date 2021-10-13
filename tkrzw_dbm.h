@@ -1390,7 +1390,7 @@ class DBM {
    * is returned.  If the overwrite flag is false and there is an existing record of the new key,
    * DUPLICATION ERROR is returned.
    * @details This method is done atomically by ProcessMulti.  The other threads observe that the
-   * record has either the old key or the new value.  No intermediate states are observed.
+   * record has either the old key or the new key.  No intermediate states are observed.
    */
   virtual Status Rekey(std::string_view old_key, std::string_view new_key,
                        bool overwrite = true, std::string* value = nullptr) {
