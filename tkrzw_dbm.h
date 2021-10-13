@@ -661,63 +661,6 @@ class DBM {
   };
 
   /**
-   * Record processor to implement DBM::Iterator::Set.
-   */
-  class RecordProcessorIteratorSet final : public RecordProcessor {
-   public:
-    /**
-     * Constructor.
-     * @param value A string of the value to set.
-     * @param old_value The pointer to a string object to contain the existing value.
-     */
-    explicit RecordProcessorIteratorSet(std::string_view value, std::string* old_value)
-        : value_(value), old_value_(old_value) {}
-
-    /**
-     * Processes an existing record.
-     */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (old_value_ != nullptr) {
-        *old_value_ = value;
-      }
-      return value_;
-    }
-
-   private:
-    /** Value to store. */
-    std::string_view value_;
-    /** String to store the old value. */
-    std::string* old_value_;
-  };
-
-  /**
-   * Record processor to implement DBM::Iterator::Remove.
-   */
-  class RecordProcessorIteratorRemove final : public RecordProcessor {
-   public:
-    /**
-     * Constructor.
-     * @param value A string of the value to set.
-     * @param old_value The pointer to a string object to contain the existing value.
-     */
-    explicit RecordProcessorIteratorRemove(std::string* old_value) : old_value_(old_value) {}
-
-    /**
-     * Processes an existing record.
-     */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (old_value_ != nullptr) {
-        *old_value_ = value;
-      }
-      return REMOVE;
-    }
-
-   private:
-    /** String to store the old value. */
-    std::string* old_value_;
-  };
-
-  /**
    * Interface of iterator for each record.
    */
   class Iterator {
@@ -872,6 +815,42 @@ class DBM {
     virtual Status Remove(std::string* old_key = nullptr, std::string* old_value = nullptr) {
       RecordProcessorIterator proc(RecordProcessor::REMOVE, old_key, old_value);
       return Process(&proc, true);
+    }
+
+    /**
+     * Gets the current record and moves the iterator to the next record.
+     * @param key The pointer to a string object to contain the record key.  If it is nullptr,
+     * the key data is ignored.
+     * @param value The pointer to a string object to contain the record value.  If it is nullptr,
+     * the value data is ignored.
+     * @return The result status.
+     */
+    virtual Status Step(std::string* key = nullptr, std::string* value = nullptr) {
+      Status status = Get(key, value);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      status = Next();
+      if (status == Status::NOT_FOUND_ERROR) {
+        status.Set(Status::SUCCESS);
+      }
+      return status;
+    }
+
+    /**
+     * Jumps to the first record and removes it.
+     * @param key The pointer to a string object to contain the key of the first record.  If it
+     * is nullptr, it is ignored.
+     * @param value The pointer to a string object to contain the value of the first record.  If
+     * it is nullptr, it is ignored.
+     * @return The result status.
+     */
+    virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr) {
+      const Status status = First();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      return Remove(key, value);
     }
   };
 

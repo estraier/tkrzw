@@ -324,9 +324,6 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
       {{"one", "ichi"}, {"two", "ni"}}, ":"));
   EXPECT_EQ("1:ichi", dbm->GetSimple("one"));
   EXPECT_EQ("2:ni", dbm->GetSimple("two"));
-
-
-
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key1", "value1"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key3", "value3"));
   value.clear();
@@ -342,10 +339,32 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("key2", &value));
   value.clear();
   EXPECT_EQ("value1", dbm->GetSimple("key3", "*"));
-
-
-
-
+  for (int32_t size = 0; size <= 32768; size = size * 1.41 + 1) {
+    const std::string value(size, 'x');
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", value));
+  }
+  count = 0;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+  while (true) {
+    status = iter->Step(&key, &value);
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+      break;
+    }
+    count++;
+  }
+  EXPECT_EQ(dbm->CountSimple(), count);
+  int32_t pop_count = 0;
+  while (true) {
+    status = iter->PopFirst(&key, &value);
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+      break;
+    }
+    pop_count++;
+  }
+  EXPECT_EQ(count, pop_count);
+  EXPECT_EQ(0, dbm->CountSimple());
 }
 
 inline void CommonDBMTest::SequenceTest(tkrzw::DBM* dbm) {

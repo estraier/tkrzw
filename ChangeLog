@@ -5,6 +5,7 @@
 
 	- Add SignalBroker and SlottedSignalBroker.
 	- Iterator::Set and Iterator::Remove take pointers to store the old value.
+	- Add Iterator::Step and Iterator::PopFirst.
 
 2021-10-06 Mikio Hirabayashi  <hirarin@gmail.com>
 
