@@ -838,7 +838,7 @@ class DBM {
     }
 
     /**
-     * Jumps to the first record and removes it.
+     * Jumps to the first record, removes it, and gets the data.
      * @param key The pointer to a string object to contain the key of the first record.  If it
      * is nullptr, it is ignored.
      * @param value The pointer to a string object to contain the value of the first record.  If
