@@ -667,6 +667,24 @@ bool tkrzw_dbm_compare_exchange_multi(
     const TkrzwKeyValuePair* desired, int32_t num_desired);
 
 /**
+ * Changes the key of a record.
+ * @param dbm The database object.
+ * @param old_key_ptr The old key pointer.
+ * @param old_key_size The old key size.  If it is negative, strlen(old_key_ptr) is used.
+ * @param new_key_ptr The new key pointer.
+ * @param new_key_size The new key size.  If it is negative, strlen(new_key_ptr) is used.
+ * @param overwrite Whether to overwrite the existing record of the new key.
+ * @return True on success or false on failure.
+ * @details If there's no matching record to the old key, NOT_FOUND_ERROR is set.  If the
+ * overwrite flag is false and there is an existing record of the new key, DUPLICATION ERROR is
+ * set.  This method is done atomically by ProcessMulti.  The other threads observe that the
+ * record has either the old key or the new key.  No intermediate states are observed.
+ */
+bool tkrzw_dbm_rekey(
+    TkrzwDBM* dbm, const char* old_key_ptr, int32_t old_key_size,
+    const char* new_key_ptr, int32_t new_key_size, bool overwrite);
+
+/**
  * Processes each and every record in the database with a processor.
  * @param dbm The database object.
  * @param proc The callback function to process the record.
@@ -994,6 +1012,42 @@ bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value
  * @details If possible, the iterator moves to the next record.
  */
 bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter);
+
+/**
+ * Gets the current record and moves the iterator to the next record.
+ * @param iter The iterator object.
+ * @param key_ptr The pointer to a variable which points to the region containing the record key.
+ * If this function returns true, the region should be released by the free function.  If it is
+ * NULL, it is not used.
+ * @param key_size The pointer to a variable which stores the size of the region containing the
+ * record key.  If it is NULL, it is not used.
+ * @param value_ptr The pointer to a variable which points to the region containing the record
+ * value.  If this function returns true, the region should be released by the free function.
+ * If it is NULL, it is not used.
+ * @param value_size The pointer to a variable which stores the size of the region containing
+ * the record value.  If it is NULL, it is not used.
+ */
+bool tkrzw_dbm_iter_step(
+    TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
+    char** value_ptr, int32_t* value_size);
+
+/**
+ * Jumps to the first record, removes it, and gets the data.
+ * @param iter The iterator object.
+ * @param key_ptr The pointer to a variable which points to the region containing the record key.
+ * If this function returns true, the region should be released by the free function.  If it is
+ * NULL, it is not used.
+ * @param key_size The pointer to a variable which stores the size of the region containing the
+ * record key.  If it is NULL, it is not used.
+ * @param value_ptr The pointer to a variable which points to the region containing the record
+ * value.  If this function returns true, the region should be released by the free function.
+ * If it is NULL, it is not used.
+ * @param value_size The pointer to a variable which stores the size of the region containing
+ * the record value.  If it is NULL, it is not used.
+ */
+bool tkrzw_dbm_iter_pop_first(
+    TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
+    char** value_ptr, int32_t* value_size);
 
 /**
  * Restores a broken database as a new healthy database.

@@ -305,6 +305,14 @@ TEST(LangCTest, Basic) {
   EXPECT_STREQ("class", insp_elem->key_ptr);
   EXPECT_STREQ("HashDBM", insp_elem->value_ptr);
   tkrzw_free_str_map(insp_records, num_insp_records);
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "zero", 4, "foo", 3, false));
+  EXPECT_TRUE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true));
+  EXPECT_FALSE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true));
+  value_ptr = tkrzw_dbm_get(dbm, "one", 3, &value_size);
+  ASSERT_NE(nullptr, value_ptr);
+  EXPECT_EQ(3, value_size);
+  EXPECT_STREQ("foo", value_ptr);
+  tkrzw::xfree(value_ptr);
   TkrzwDBM* orig_dbm = tkrzw_dbm_open(file_path.c_str(), true, "no_create=true");
   ASSERT_NE(nullptr, orig_dbm);
   EXPECT_TRUE(tkrzw_dbm_is_healthy(orig_dbm));
@@ -506,6 +514,43 @@ TEST(LangCTest, Iterator) {
     EXPECT_TRUE(tkrzw_dbm_iter_remove(iter));
   }
   EXPECT_EQ(11, count);
+  EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "one", -1, "first", -1, false));
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "two", -1, "second", -1, false));
+  EXPECT_TRUE(tkrzw_dbm_set(dbm, "three", -1, "third", -1, false));
+  int32_t step_count = 0;
+  EXPECT_TRUE(tkrzw_dbm_iter_first(iter));
+  while (true) {
+    char* key_ptr = nullptr;
+    int32_t key_size = 0;
+    char* value_ptr = nullptr;
+    int32_t value_size = 0;
+    if (!tkrzw_dbm_iter_step(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
+      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
+      break;
+    }
+    EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+    tkrzw::xfree(value_ptr);
+    tkrzw::xfree(key_ptr);
+    step_count++;
+  }
+  EXPECT_EQ(tkrzw_dbm_count(dbm), step_count);
+  int32_t pop_count = 0;
+  while (true) {
+    char* key_ptr = nullptr;
+    int32_t key_size = 0;
+    char* value_ptr = nullptr;
+    int32_t value_size = 0;
+    if (!tkrzw_dbm_iter_pop_first(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
+      EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
+      break;
+    }
+    EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+    tkrzw::xfree(value_ptr);
+    tkrzw::xfree(key_ptr);
+    pop_count++;
+  }
+  EXPECT_EQ(step_count, pop_count);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
   tkrzw_dbm_iter_free(iter);
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
