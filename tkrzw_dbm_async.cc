@@ -377,16 +377,17 @@ std::future<std::pair<Status, int64_t>> AsyncDBM::Increment(
 }
 
 std::future<Status> AsyncDBM::Rekey(
-    std::string_view old_key, std::string_view new_key, bool overwrite) {
+    std::string_view old_key, std::string_view new_key, bool overwrite, bool copying) {
   struct RekeyTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
     std::string old_key;
     std::string new_key;
     bool overwrite;
+    bool copying;
     std::promise<Status> promise;
     void Do() override {
-      Status status = dbm->Rekey(old_key, new_key, overwrite);
+      Status status = dbm->Rekey(old_key, new_key, overwrite, copying);
       if (postproc != nullptr) {
         postproc->Postprocess("Rekey", status);
       }
@@ -399,6 +400,7 @@ std::future<Status> AsyncDBM::Rekey(
   task->new_key = new_key;
   task->old_key = old_key;
   task->overwrite = overwrite;
+  task->copying = copying;
   auto future = task->promise.get_future();
   queue_.Add(std::move(task));
   return future;

@@ -188,7 +188,7 @@ TEST(AsyncDBMTest, Basic) {
       const std::string old_key = tkrzw::StrCat("foo:", i);
       EXPECT_EQ(tkrzw::Status::SUCCESS, async.Set(old_key, old_key).get());
       const std::string new_key = tkrzw::StrCat("bar:", i);
-      EXPECT_EQ(tkrzw::Status::SUCCESS, async.Rekey(old_key, new_key, false).get());
+      EXPECT_EQ(tkrzw::Status::SUCCESS, async.Rekey(old_key, new_key, false, false).get());
       EXPECT_EQ(old_key, async.Get(new_key).get().second);
     }
   }

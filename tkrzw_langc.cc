@@ -740,7 +740,7 @@ bool tkrzw_dbm_compare_exchange_multi(
 
 bool tkrzw_dbm_rekey(
     TkrzwDBM* dbm, const char* old_key_ptr, int32_t old_key_size,
-    const char* new_key_ptr, int32_t new_key_size, bool overwrite) {
+    const char* new_key_ptr, int32_t new_key_size, bool overwrite, bool copying) {
   assert(dbm != nullptr && old_key_ptr != nullptr && new_key_ptr != nullptr);
   if (old_key_size < 0) {
     old_key_size = std::strlen(old_key_ptr);
@@ -750,7 +750,7 @@ bool tkrzw_dbm_rekey(
   }
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
   last_status = xdbm->Rekey(std::string_view(old_key_ptr, old_key_size),
-                            std::string_view(new_key_ptr, new_key_size), overwrite);
+                            std::string_view(new_key_ptr, new_key_size), overwrite, copying);
   return last_status == Status::SUCCESS;
 }
 

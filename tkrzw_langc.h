@@ -674,6 +674,7 @@ bool tkrzw_dbm_compare_exchange_multi(
  * @param new_key_ptr The new key pointer.
  * @param new_key_size The new key size.  If it is negative, strlen(new_key_ptr) is used.
  * @param overwrite Whether to overwrite the existing record of the new key.
+ * @param copying Whether to retain the record of the old key.
  * @return True on success or false on failure.
  * @details If there's no matching record to the old key, NOT_FOUND_ERROR is set.  If the
  * overwrite flag is false and there is an existing record of the new key, DUPLICATION ERROR is
@@ -682,7 +683,7 @@ bool tkrzw_dbm_compare_exchange_multi(
  */
 bool tkrzw_dbm_rekey(
     TkrzwDBM* dbm, const char* old_key_ptr, int32_t old_key_size,
-    const char* new_key_ptr, int32_t new_key_size, bool overwrite);
+    const char* new_key_ptr, int32_t new_key_size, bool overwrite, bool copying);
 
 /**
  * Processes each and every record in the database with a processor.

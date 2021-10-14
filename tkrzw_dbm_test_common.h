@@ -327,18 +327,20 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key1", "value1"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("key3", "value3"));
   value.clear();
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key1", "key2", false, &value));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key1", "key2", false, false, &value));
   EXPECT_EQ("value1", value);
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("key1", &value));
   value.clear();
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("key2", &value));
   EXPECT_EQ("value1", value);
-  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->Rekey("key2", "key3", false, &value));
+  EXPECT_EQ(tkrzw::Status::DUPLICATION_ERROR, dbm->Rekey("key2", "key3", false, true, &value));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get("key2"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key2", "key3"));
   EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, dbm->Get("key2", &value));
-  value.clear();
   EXPECT_EQ("value1", dbm->GetSimple("key3", "*"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Rekey("key3", "key4", false, true));
+  EXPECT_EQ("value1", dbm->GetSimple("key3", "*"));
+  EXPECT_EQ("value1", dbm->GetSimple("key4", "*"));
   for (int32_t size = 0; size <= 32768; size = size * 1.41 + 1) {
     const std::string value(size, 'x');
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", value));

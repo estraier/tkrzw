@@ -528,9 +528,10 @@ class DBM {
      * Constructor.
      * @param status The pointer to a status object.
      * @param old_value The pointer to a string object to store the old value.
+     * @param copying Whether to retain the record of the old key.
      */
-    RecordRemoverRekey(Status* status, std::string* old_value)
-        : status_(status), old_value_(old_value) {}
+    RecordRemoverRekey(Status* status, std::string* old_value, bool copying)
+        : status_(status), old_value_(old_value), copying_(copying) {}
 
     /**
      * Processes an existing record.
@@ -540,7 +541,7 @@ class DBM {
         return NOOP;
       }
       *old_value_ = value;
-      return REMOVE;
+      return copying_ ? NOOP : REMOVE;
     }
 
     /**
@@ -556,6 +557,8 @@ class DBM {
     Status* status_;
     /** The pointer to a string object to store the old value. */
     std::string* old_value_;
+    /** Whether to retain the record of the old key. */
+    bool copying_;
   };
 
   /**
@@ -1384,6 +1387,7 @@ class DBM {
    * @param old_key The old key of the record.
    * @param new_key The new key of the record.
    * @param overwrite Whether to overwrite the existing record of the new key.
+   * @param copying Whether to retain the record of the old key.
    * @param value The pointer to a string object to contain the value of the record.  If it is
    * nullptr, the value data is ignored.
    * @return The result status.  If there's no matching record to the old key, NOT_FOUND_ERROR
@@ -1393,7 +1397,8 @@ class DBM {
    * record has either the old key or the new key.  No intermediate states are observed.
    */
   virtual Status Rekey(std::string_view old_key, std::string_view new_key,
-                       bool overwrite = true, std::string* value = nullptr) {
+                       bool overwrite = true, bool copying = false,
+                       std::string* value = nullptr) {
     std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
     key_proc_pairs.reserve(3);
     Status proc_status(Status::SUCCESS);
@@ -1402,7 +1407,7 @@ class DBM {
       key_proc_pairs.emplace_back(std::pair(new_key, &checker));
     }
     std::string rec_value;
-    RecordRemoverRekey remover(&proc_status, &rec_value);
+    RecordRemoverRekey remover(&proc_status, &rec_value, copying);
     key_proc_pairs.emplace_back(std::pair(old_key, &remover));
     RecordSetterRekey setter(&proc_status, &rec_value);
     key_proc_pairs.emplace_back(std::pair(new_key, &setter));

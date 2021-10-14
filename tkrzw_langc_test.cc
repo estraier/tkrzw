@@ -306,8 +306,8 @@ TEST(LangCTest, Basic) {
   EXPECT_STREQ("HashDBM", insp_elem->value_ptr);
   tkrzw_free_str_map(insp_records, num_insp_records);
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "zero", 4, "foo", 3, false));
-  EXPECT_TRUE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true));
-  EXPECT_FALSE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true));
+  EXPECT_TRUE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true, false));
+  EXPECT_FALSE(tkrzw_dbm_rekey(dbm, "zero", 4, "one", 3, true, false));
   value_ptr = tkrzw_dbm_get(dbm, "one", 3, &value_size);
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(3, value_size);
