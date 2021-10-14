@@ -124,10 +124,10 @@ class BabyDBMImpl final {
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Append(std::string_view key, std::string_view value, std::string_view delim);
-  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -444,30 +444,6 @@ Status BabyDBMImpl::Append(std::string_view key, std::string_view value, std::st
   return Status(Status::SUCCESS);
 }
 
-Status BabyDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  BabyLeafNode* leaf_node = first_node_;
-  while (leaf_node != nullptr) {
-    if (writable) {
-      std::lock_guard<SpinSharedMutex> page_lock(leaf_node->mutex);
-      if (!leaf_node->records.empty()) {
-        const std::string key(leaf_node->records.front()->GetKey());
-        ProcessImpl(leaf_node, key, proc, true);
-        return Status(Status::SUCCESS);
-      }
-    } else {
-      std::shared_lock<SpinSharedMutex> page_lock(leaf_node->mutex);
-      if (!leaf_node->records.empty()) {
-        const std::string key(leaf_node->records.front()->GetKey());
-        ProcessImpl(leaf_node, key, proc, true);
-        return Status(Status::SUCCESS);
-      }
-    }
-    leaf_node = leaf_node->next;
-  }
-  return Status(Status::NOT_FOUND_ERROR);
-}
-
 Status BabyDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
@@ -504,6 +480,30 @@ Status BabyDBMImpl::ProcessMulti(
     }
   }
   return Status(Status::SUCCESS);
+}
+
+Status BabyDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  BabyLeafNode* leaf_node = first_node_;
+  while (leaf_node != nullptr) {
+    if (writable) {
+      std::lock_guard<SpinSharedMutex> page_lock(leaf_node->mutex);
+      if (!leaf_node->records.empty()) {
+        const std::string key(leaf_node->records.front()->GetKey());
+        ProcessImpl(leaf_node, key, proc, true);
+        return Status(Status::SUCCESS);
+      }
+    } else {
+      std::shared_lock<SpinSharedMutex> page_lock(leaf_node->mutex);
+      if (!leaf_node->records.empty()) {
+        const std::string key(leaf_node->records.front()->GetKey());
+        ProcessImpl(leaf_node, key, proc, true);
+        return Status(Status::SUCCESS);
+      }
+    }
+    leaf_node = leaf_node->next;
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status BabyDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
@@ -1494,15 +1494,15 @@ Status BabyDBM::Append(std::string_view key, std::string_view value, std::string
   return impl_->Append(key, value, delim);
 }
 
-Status BabyDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
-  assert(proc != nullptr);
-  return impl_->ProcessFirst(proc, writable);
-}
-
 Status BabyDBM::ProcessMulti(
     const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
+}
+
+Status BabyDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
 }
 
 Status BabyDBM::ProcessEach(RecordProcessor* proc, bool writable) {

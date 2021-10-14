@@ -95,10 +95,10 @@ class CacheDBMImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
-  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -678,16 +678,6 @@ Status CacheDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, b
   return Status(Status::SUCCESS);
 }
 
-Status CacheDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
-  std::shared_lock<SpinSharedMutex> lock(mutex_);
-  for (auto& slot : slots_) {
-    if (slot.ProcessFirst(proc, writable)) {
-      return Status(Status::SUCCESS);
-    }
-  }
-  return Status(Status::NOT_FOUND_ERROR);
-}
-
 Status CacheDBMImpl::ProcessMulti(
     const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
     bool writable) {
@@ -712,6 +702,16 @@ Status CacheDBMImpl::ProcessMulti(
     (*slot)->Unlock();
   }
   return Status(Status::SUCCESS);
+}
+
+Status CacheDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  for (auto& slot : slots_) {
+    if (slot.ProcessFirst(proc, writable)) {
+      return Status(Status::SUCCESS);
+    }
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status CacheDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
@@ -1143,15 +1143,15 @@ Status CacheDBM::Process(std::string_view key, RecordProcessor* proc, bool writa
   return impl_->Process(key, proc, writable);
 }
 
-Status CacheDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
-  assert(proc != nullptr);
-  return impl_->ProcessFirst(proc, writable);
-}
-
 Status CacheDBM::ProcessMulti(
     const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
+}
+
+Status CacheDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
 }
 
 Status CacheDBM::ProcessEach(RecordProcessor* proc, bool writable) {

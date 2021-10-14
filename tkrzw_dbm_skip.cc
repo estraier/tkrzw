@@ -78,10 +78,10 @@ class SkipDBMImpl final {
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Insert(std::string_view key, std::string_view value);
   Status GetByIndex(int64_t index, std::string* key, std::string* value);
-  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessEach(DBM::RecordProcessor* proc, bool writable);
   Status Count(int64_t* count);
   Status GetFileSize(int64_t* size);
@@ -470,6 +470,41 @@ Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* val
   return Status(Status::SUCCESS);
 }
 
+Status SkipDBMImpl::ProcessMulti(
+    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
+  if (writable) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    for (const auto& key_proc : key_proc_pairs) {
+      Status status = ProcessImpl(key_proc.first, key_proc.second, true);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+  } else {
+    std::shared_lock<SpinSharedMutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    for (const auto& key_proc : key_proc_pairs) {
+      Status status = ProcessImpl(key_proc.first, key_proc.second, false);
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
+  }
+  return Status(Status::SUCCESS);
+}
+
 Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
     std::lock_guard<SpinSharedMutex> lock(mutex_);
@@ -524,41 +559,6 @@ Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
     value = rec.GetValue();
   }
   proc->ProcessFull(key, value);
-  return Status(Status::SUCCESS);
-}
-
-Status SkipDBMImpl::ProcessMulti(
-    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-    bool writable) {
-  if (writable) {
-    std::lock_guard<SpinSharedMutex> lock(mutex_);
-    if (!open_) {
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
-    }
-    if (!writable_) {
-      return Status(Status::PRECONDITION_ERROR, "not writable database");
-    }
-    if (!healthy_) {
-      return Status(Status::PRECONDITION_ERROR, "not healthy database");
-    }
-    for (const auto& key_proc : key_proc_pairs) {
-      Status status = ProcessImpl(key_proc.first, key_proc.second, true);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-    }
-  } else {
-    std::shared_lock<SpinSharedMutex> lock(mutex_);
-    if (!open_) {
-      return Status(Status::PRECONDITION_ERROR, "not opened database");
-    }
-    for (const auto& key_proc : key_proc_pairs) {
-      Status status = ProcessImpl(key_proc.first, key_proc.second, false);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-    }
-  }
   return Status(Status::SUCCESS);
 }
 
@@ -1806,15 +1806,15 @@ Status SkipDBM::GetByIndex(int64_t index, std::string* key, std::string* value) 
   return impl_->GetByIndex(index, key, value);
 }
 
-Status SkipDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
-  assert(proc != nullptr);
-  return impl_->ProcessFirst(proc, writable);
-}
-
 Status SkipDBM::ProcessMulti(
     const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
+}
+
+Status SkipDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
 }
 
 Status SkipDBM::ProcessEach(RecordProcessor* proc, bool writable) {

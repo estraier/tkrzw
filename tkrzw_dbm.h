@@ -1310,32 +1310,10 @@ class DBM {
    * @return The current value or INT64MIN on failure.
    * @details The record value is treated as a decimal integer.  Negative is also supported.
    */
-  int64_t IncrementSimple(std::string_view key, int64_t increment = 1, int64_t initial = 0) {
+  virtual int64_t IncrementSimple(
+      std::string_view key, int64_t increment = 1, int64_t initial = 0) {
     int64_t current = 0;
     return Increment(key, increment, &current, initial) == Status::SUCCESS ? current : INT64MIN;
-  }
-
-  /**
-   * Processes the first record with a processor.
-   * @param proc The pointer to the processor object.
-   * @param writable True if the processor can edit the record.
-   * @return The result status.
-   * @details If the first record exists, the ProcessFull of the processor is called.
-   * Otherwise, this method fails and no method of the processor is called.
-   */
-  virtual Status ProcessFirst(RecordProcessor* proc, bool writable) = 0;
-
-  /**
-   * Processes the first record with a lambda function.
-   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
-   * of the record.  The second parameter is the value of the record.  The return value is a
-   * string reference to NOOP, REMOVE, or the new record value.
-   * @param writable True if the processor can edit the record.
-   * @return The result status.
-   */
-  virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable) {
-    RecordProcessorLambda proc(rec_lambda);
-    return ProcessFirst(&proc, writable);
   }
 
   /**
@@ -1442,6 +1420,31 @@ class DBM {
       *value = std::move(rec_value);
     }
     return proc_status;
+  }
+
+  /**
+   * Processes the first record with a processor.
+   * @param proc The pointer to the processor object.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   * @details If the first record exists, the ProcessFull of the processor is called.
+   * Otherwise, this method fails and no method of the processor is called.  Whereas ordered
+   * databases have efficient implementations of this method, unordered databases have
+   * inefficient implementations.
+   */
+  virtual Status ProcessFirst(RecordProcessor* proc, bool writable) = 0;
+
+  /**
+   * Processes the first record with a lambda function.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the record.  The return value is a
+   * string reference to NOOP, REMOVE, or the new record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   */
+  virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable) {
+    RecordProcessorLambda proc(rec_lambda);
+    return ProcessFirst(&proc, writable);
   }
 
   /**

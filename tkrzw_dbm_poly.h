@@ -424,7 +424,9 @@ class PolyDBM final : public ParamDBM {
    * @param writable True if the processor can edit the record.
    * @return The result status.
    * @details If the first record exists, the ProcessFull of the processor is called.
-   * Otherwise, this method fails and no method of the processor is called.
+   * Otherwise, this method fails and no method of the processor is called.  Whereas ordered
+   * databases have efficient implementations of this method, unordered databases have
+   * inefficient implementations.
    */
   Status ProcessFirst(RecordProcessor* proc, bool writable) override;
 
