@@ -182,8 +182,6 @@ TEST(DBMUpdateLoggerTest, MQParseUpdateLog) {
   EXPECT_EQ("", op.value);
 }
 
-
-
 TEST(DBMUpdateLoggerTest, MQApplyUpdateLog) {
   tkrzw::StdHashDBM dbm(10);
   EXPECT_EQ(tkrzw::Status::BROKEN_DATA_ERROR,
@@ -266,9 +264,6 @@ TEST(DBMUpdateLoggerTest, MQIntegrate) {
       };
   auto th1 = std::thread(copier, &dest_dbm1);
   auto th2 = std::thread(copier, &dest_dbm2);
-
-  // dummy 3
-
   std::mt19937 mt(1);
   std::uniform_int_distribution<int32_t> key_num_dist(1, num_iterations);
   std::uniform_int_distribution<int32_t> op_dist(0, 3);

@@ -397,6 +397,12 @@ TEST(LangCTest, Process) {
   EXPECT_EQ(1, value_size);
   EXPECT_STREQ("2", value_ptr);
   tkrzw::xfree(value_ptr);
+  int32_t count = tkrzw_dbm_count(dbm);
+  while (tkrzw_dbm_process_first(dbm, proc_remove, nullptr, true)) {
+    count--;
+  }
+  EXPECT_EQ(0, count);
+  EXPECT_EQ(0, tkrzw_dbm_count(dbm));
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
 
@@ -541,7 +547,7 @@ TEST(LangCTest, Iterator) {
     int32_t key_size = 0;
     char* value_ptr = nullptr;
     int32_t value_size = 0;
-    if (!tkrzw_dbm_iter_pop_first(iter, &key_ptr, &key_size, &value_ptr, &value_size)) {
+    if (!tkrzw_dbm_pop_first(dbm, &key_ptr, &key_size, &value_ptr, &value_size)) {
       EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
       break;
     }

@@ -3581,7 +3581,7 @@ if (dbm.Get(key, &value).IsOK()) {
 </ul></li>
 </ul>
 
-<p>When testing "value" passed to your callback against NOOP, make sure that you compare the pointers with the code "value.data() == DBM::RecordProcessor::NOOP.data()" rather than the incorrect code "value == DBM::RecordProcessor::NOOP", which would only compare the string values, or the incorrect code "&amp;value == &amp;NOOP", which would compare the object addresses.  The uniqueness of the special NOOP value comes from the value of its NOOP.data() pointer.  This applies to all callbacks for Process, ProcessMulti, and ProcessEach.</p>
+<p>When testing "value" passed to your callback against NOOP, make sure that you compare the pointers with the code "value.data() == DBM::RecordProcessor::NOOP.data()" rather than the incorrect code "value == DBM::RecordProcessor::NOOP", which would only compare the string values, or the incorrect code "&amp;value == &amp;NOOP", which would compare the object addresses.  The uniqueness of the special NOOP value comes from the value of its NOOP.data() pointer.  This applies to all callbacks for Process, ProcessMulti, ProcessFirst, and ProcessEach.</p>
 
 <p>When returning a new value from your callbacks including lambda ones, remember that you are returning a std::string_view, and so the memory to which the string_view.data() points must remain valid throughout Process.  This often means you must return a std::string_view that points to a member of your DBM::RecordProcessor subclass or a variable in a higher scope captured by reference in your lambda.</p>
 
@@ -3605,6 +3605,34 @@ if (dbm.Get(key, &value).IsOK()) {
 ]]></code></pre>
 
 <p>If your callback needs to spend a substantial amount of time between when it reads the existing database value and when it calculates the correct return value (NOOP, REMOVE, new value), this forces you to potentially degrade the performance of other threads, because your callback runs while Tkzrw is holding a lock on that record (and possibly other records) in the database.  For many applications, there is a clever way around this dilemma called CompareExchange.</p>
+
+<h3 id="tips_processfirst">DBM::ProcessFirst</h3>
+
+<p>If you want to do an atomic operation to the first record without checking the key beforehand, the ProcessFirst method is useful.  Using ProcessFirst is more effective than using an extternal iterator and call its First and Process methods in sequence.</p>
+
+<p>If you want to use the database as a queue (FIFO), you use TreeDBM or BabyDBM.  The record key is a sequential number or a timestamp, with a fixed length.  Calling SPrintf("%010d", num) or IntToStrBigEndian(num) is convenient.  If you use timestamps, a deduplication logic is required to avoid overwriting existing records.</p>
+
+<pre><code class="language-cpp"><![CDATA[Status Enqueue(TreeDBM* dbm, std::string_view value) {
+  for (int64_t seq_num = 0; true; seq_num++) {
+    const uint64_t timestamp = GetWallTime() * 10000000 + seq_num;
+    const Status status = dbm->Set(IntToStrBigEndian(timestamp), value, false);
+    if (status != Status::DUPLICATION_ERROR) {
+      // Return if SUCCESS or other errors than duplication.
+      return status;
+    }
+  }
+  return Status(Status::UNKNOWN_ERROR);  // unreachable
+}
+]]></code></pre>
+
+<p>There is a utility method PopFirst which is implemented based on ProcessFirst.  It retrieves the first record and removes it atomically.  The following example shows its usage.</p>
+
+<pre><code class="language-cpp"><![CDATA[Status Dequeue(TreeDBM* dbm, std::string* value) {
+  return dbm->PopFirst(nullptr, value);
+}
+]]></code></pre>
+
+<p>As with the Iterator class, ProcessFirst can be slow if it is used with unordered databases (HashDBM, TinyDBM, CacheDBM, StdHashDBM) because finding the first record might scan the whole hash buckets.  Meanwhile, Iterator and ProcessFirst are effective with ordered databases (TreeDBM, SkipDBM, BabyDBM, StdTreeDBM).</p>
 
 <h3 id="tips_processeach">DBM::ProcessEach</h3>
 
@@ -3888,7 +3916,7 @@ one    first
 
 <p>In the context of database, transaction is a concept of executing one or more database operations in a meaningful and reliable manner.  We expect tansactions have <a href="https://en.wikipedia.org/wiki/ACID">ACID</a> traits.  Tkrzw's transactional features are designed to achieve the ACID traits.  We should consider transactions in two aspects: transactions across threads and transactions across crashes.</p>
 
-<p><a href="#tips_process">Process</a>, <a href="#tips_processeach">ProcessMulti</a>, <a href="#tips_processmulti">ProcessMulti</a>, <a href="#tips_compareexchange">CompareExchange, and CompareExchangeMulti</a> assure Atomicity and Isolation.  Specifically, they assure that other threads reading the same database will either observe no changes to any of the records, or they will observe the complete set of changes to all of the records involved in the transaction, regardless of the relative timing of all threads in the process.  The business logic that you write inside your callbacks for those methods assure the Consistency of the transaction, another important aspect of ACID.</p>
+<p><a href="#tips_process">Process</a>, <a href="#tips_processfirst">ProcessFirst</a>, <a href="#tips_processeach">ProcessEach</a>, <a href="#tips_processmulti">ProcessMulti</a>, <a href="#tips_compareexchange">CompareExchange, and CompareExchangeMulti</a> assure Atomicity and Isolation.  Specifically, they assure that other threads reading the same database will either observe no changes to any of the records, or they will observe the complete set of changes to all of the records involved in the transaction, regardless of the relative timing of all threads in the process.  The business logic that you write inside your callbacks for those methods assure the Consistency of the transaction, another important aspect of ACID.</p>
 
 <p>File database implementations provide Durability across crashes as well as the other ACI traits.  If the application or system crashes when it is in the middle of a transaction, the database will rollback cleanly to the state before the transaction on the next Open.  Durability of a translaction is guaranteed only when the next Synchronize or Close method finishes successfully.  In this meaning, on-memory databases associated with files also provide the same level of durability.</p>
 

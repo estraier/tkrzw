@@ -686,6 +686,38 @@ bool tkrzw_dbm_rekey(
     const char* new_key_ptr, int32_t new_key_size, bool overwrite, bool copying);
 
 /**
+ * Processes the first record with a processor.
+ * @param dbm The database object.
+ * @param proc The callback function to process the record.
+ * @param proc_arg An arbitrary data which is given to the callback function.
+ * @param writable True if the processor can edit the record.
+ * @details If the first record exists, the callback function is called.  Otherwise, this
+ * method fails and the callback is not called.  If the callback function returns
+ * TKRZW_REC_PROC_NOOP, TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose
+ * ownership is not taken.
+ */
+bool tkrzw_dbm_process_first(
+    TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable);
+
+/**
+ * Gets the first record and removes it.
+ * @param dbm The database object.
+ * @param key_ptr The pointer to a variable which points to the region containing the record key.
+ * If this function returns true, the region should be released by the free function.  If it is
+ * NULL, it is not used.
+ * @param key_size The pointer to a variable which stores the size of the region containing the
+ * record key.  If it is NULL, it is not used.
+ * @param value_ptr The pointer to a variable which points to the region containing the record
+ * value.  If this function returns true, the region should be released by the free function.
+ * If it is NULL, it is not used.
+ * @param value_size The pointer to a variable which stores the size of the region containing
+ * the record value.  If it is NULL, it is not used.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
+                         char** value_ptr, int32_t* value_size);
+
+/**
  * Processes each and every record in the database with a processor.
  * @param dbm The database object.
  * @param proc The callback function to process the record.
@@ -953,9 +985,11 @@ bool tkrzw_dbm_iter_previous(TkrzwDBMIter* iter);
  * @param proc_arg An arbitrary data which is given to the callback function.
  * @param writable True if the processor can edit the record.
  * @return True on success or false on failure.
- * @details If the current record exists, the ProcessFull of the processor is called.
- * Otherwise, this method fails and the callback is not called.  If the current record is
- * removed, the iterator is moved to the next record.
+ * @details If the current record exists, the callback function is called.  Otherwise, this
+ * method fails and the callback is not called.  If the callback function returns
+ * TKRZW_REC_PROC_NOOP, TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose
+ * ownership is not taken.  If the current record is removed, the iterator is moved to the next
+ * record.
  */
 bool tkrzw_dbm_iter_process(
     TkrzwDBMIter* iter, tkrzw_record_processor proc, void* proc_arg, bool writable);
@@ -1029,24 +1063,6 @@ bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter);
  * the record value.  If it is NULL, it is not used.
  */
 bool tkrzw_dbm_iter_step(
-    TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
-    char** value_ptr, int32_t* value_size);
-
-/**
- * Jumps to the first record, removes it, and gets the data.
- * @param iter The iterator object.
- * @param key_ptr The pointer to a variable which points to the region containing the record key.
- * If this function returns true, the region should be released by the free function.  If it is
- * NULL, it is not used.
- * @param key_size The pointer to a variable which stores the size of the region containing the
- * record key.  If it is NULL, it is not used.
- * @param value_ptr The pointer to a variable which points to the region containing the record
- * value.  If this function returns true, the region should be released by the free function.
- * If it is NULL, it is not used.
- * @param value_size The pointer to a variable which stores the size of the region containing
- * the record value.  If it is NULL, it is not used.
- */
-bool tkrzw_dbm_iter_pop_first(
     TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
     char** value_ptr, int32_t* value_size);
 

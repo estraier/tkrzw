@@ -215,7 +215,8 @@ class StdHashDBM final : public DBM {
    * @param writable True if the processor can edit the record.
    * @return The result status.
    * @details If the first record exists, the ProcessFull of the processor is called.
-   * Otherwise, this method fails and no method of the processor is called.
+   * Otherwise, this method fails and no method of the processor is called.  This method can be
+   * slow because it can scan all buckets.
    */
   Status ProcessFirst(RecordProcessor* proc, bool writable) override;
 

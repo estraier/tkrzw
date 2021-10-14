@@ -602,6 +602,39 @@ class DBM {
   };
 
   /**
+   * Record processor to implement DBM::PopFirst.
+   */
+  class RecordProcessorPopFirst final : public RecordProcessor {
+   public:
+    /**
+     * Constructor.
+     * @param key The pointer to a string object to contain the existing value.
+     * @param value The pointer to a string object to contain the existing value.
+     */
+    explicit RecordProcessorPopFirst(std::string* key, std::string* value)
+        : key_(key), value_(value) {}
+
+    /**
+     * Processes an existing record.
+     */
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      if (key_ != nullptr) {
+        *key_ = key;
+      }
+      if (value_ != nullptr) {
+        *value_ = value;
+      }
+      return REMOVE;
+    }
+
+   private:
+    /** String to store the key. */
+    std::string* key_;
+    /** String to store the value. */
+    std::string* value_;
+  };
+
+  /**
    * Record processor to implement DBM::Export.
    */
   class RecordProcessorExport final : public RecordProcessor {
@@ -838,22 +871,6 @@ class DBM {
         status.Set(Status::SUCCESS);
       }
       return status;
-    }
-
-    /**
-     * Jumps to the first record, removes it, and gets the data.
-     * @param key The pointer to a string object to contain the key of the first record.  If it
-     * is nullptr, it is ignored.
-     * @param value The pointer to a string object to contain the value of the first record.  If
-     * it is nullptr, it is ignored.
-     * @return The result status.
-     */
-    virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr) {
-      const Status status = First();
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-      return Remove(key, value);
     }
   };
 
@@ -1445,6 +1462,19 @@ class DBM {
   virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable) {
     RecordProcessorLambda proc(rec_lambda);
     return ProcessFirst(&proc, writable);
+  }
+
+  /**
+   * Gets the first record and removes it.
+   * @param key The pointer to a string object to contain the key of the first record.  If it
+   * is nullptr, it is ignored.
+   * @param value The pointer to a string object to contain the value of the first record.  If
+   * it is nullptr, it is ignored.
+   * @return The result status.
+   */
+  virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr) {
+    RecordProcessorPopFirst proc(key, value);
+    return ProcessFirst(&proc, true);
   }
 
   /**

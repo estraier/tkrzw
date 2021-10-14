@@ -345,7 +345,7 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
     const std::string value(size, 'x');
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("x", value));
   }
-  count = 0;
+  std::map<std::string, std::string> records;
   EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
   while (true) {
     status = iter->Step(&key, &value);
@@ -353,19 +353,20 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
       break;
     }
-    count++;
+    records[key] = value;
   }
-  EXPECT_EQ(dbm->CountSimple(), count);
+  EXPECT_EQ(dbm->CountSimple(), records.size());
   int32_t pop_count = 0;
   while (true) {
-    status = iter->PopFirst(&key, &value);
+    status = dbm->PopFirst(&key, &value);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
       break;
     }
+    EXPECT_EQ(tkrzw::SearchMap(records, key, "*"), value);
     pop_count++;
   }
-  EXPECT_EQ(count, pop_count);
+  EXPECT_EQ(records.size(), pop_count);
   EXPECT_EQ(0, dbm->CountSimple());
 }
 
@@ -1642,15 +1643,23 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
   tkrzw::DBMUpdateLoggerStrDeque ulog_sq(" ");
   dbm->SetUpdateLogger(&ulog_sq);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Clear());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("zero", "null"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PopFirst());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("three", "3", ":"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("three", "3", ":"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove("two"));
-  EXPECT_EQ(6, ulog_sq.GetSize());
+  EXPECT_EQ(8, ulog_sq.GetSize());
   std::string text;
   EXPECT_TRUE(ulog_sq.PopFront(&text));
   EXPECT_EQ("CLEAR", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("SET zero null", text);
+  EXPECT_TRUE(ulog_sq.PopFront(&text));
+  EXPECT_EQ("REMOVE zero", text);
   EXPECT_TRUE(ulog_sq.PopFront(&text));
   EXPECT_EQ("SET one first", text);
   EXPECT_TRUE(ulog_sq.PopFront(&text));
@@ -1658,11 +1667,7 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
   EXPECT_TRUE(ulog_sq.PopFront(&text));
   EXPECT_EQ("SET three 3", text);
   EXPECT_TRUE(ulog_sq.PopFront(&text));
-  if (is_skip) {
-    EXPECT_EQ("SET three 3", text);
-  } else {
-    EXPECT_EQ("SET three 3:3", text);
-  }
+  EXPECT_EQ("SET three 3:3", text);
   EXPECT_TRUE(ulog_sq.PopFront(&text));
   EXPECT_EQ("REMOVE two", text);
 }

@@ -754,6 +754,67 @@ bool tkrzw_dbm_rekey(
   return last_status == Status::SUCCESS;
 }
 
+bool tkrzw_dbm_process_first(
+    TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable) {
+  assert(dbm != nullptr && proc != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  RecordProcessorWrapper xproc;
+  xproc.proc = proc;
+  xproc.arg = proc_arg;
+  last_status = xdbm->ProcessFirst(&xproc, writable);
+  return last_status == Status::SUCCESS;
+}
+
+bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
+                         char** value_ptr, int32_t* value_size) {
+  assert(dbm != nullptr);
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  bool rv = false;
+  if (key_ptr == nullptr && value_ptr == nullptr) {
+    last_status = xdbm->PopFirst();
+    rv = last_status == Status::SUCCESS;
+  } else if (value_ptr == nullptr) {
+    std::string key;
+    last_status = xdbm->PopFirst(&key);
+    if (last_status == Status::SUCCESS) {
+      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+      if (key_size != nullptr) {
+        *key_size = key.size();
+      }
+      rv = true;
+    }
+  } else if (key_ptr == nullptr) {
+    std::string value;
+    last_status = xdbm->PopFirst(nullptr, &value);
+    if (last_status == Status::SUCCESS) {
+      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+      if (value_size != nullptr) {
+        *value_size = value.size();
+      }
+      rv = true;
+    }
+  } else {
+    std::string key, value;
+    last_status = xdbm->PopFirst(&key, &value);
+    if (last_status == Status::SUCCESS) {
+      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+      if (key_size != nullptr) {
+        *key_size = key.size();
+      }
+      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+      if (value_size != nullptr) {
+        *value_size = value.size();
+      }
+      rv = true;
+    }
+  }
+  return rv;
+}
+
 bool tkrzw_dbm_process_each(
     TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable) {
   assert(dbm != nullptr && proc != nullptr);
@@ -1181,57 +1242,6 @@ bool tkrzw_dbm_iter_step(
   } else {
     std::string key, value;
     last_status = xiter->Step(&key, &value);
-    if (last_status == Status::SUCCESS) {
-      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
-      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
-      if (key_size != nullptr) {
-        *key_size = key.size();
-      }
-      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
-      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
-      if (value_size != nullptr) {
-        *value_size = value.size();
-      }
-      rv = true;
-    }
-  }
-  return rv;
-}
-
-bool tkrzw_dbm_iter_pop_first(
-    TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
-    char** value_ptr, int32_t* value_size) {
-  assert(iter != nullptr);
-  DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
-  bool rv = false;
-  if (key_ptr == nullptr && value_ptr == nullptr) {
-    last_status = xiter->PopFirst();
-    rv = last_status == Status::SUCCESS;
-  } else if (value_ptr == nullptr) {
-    std::string key;
-    last_status = xiter->PopFirst(&key);
-    if (last_status == Status::SUCCESS) {
-      *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
-      std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
-      if (key_size != nullptr) {
-        *key_size = key.size();
-      }
-      rv = true;
-    }
-  } else if (key_ptr == nullptr) {
-    std::string value;
-    last_status = xiter->PopFirst(nullptr, &value);
-    if (last_status == Status::SUCCESS) {
-      *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
-      std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
-      if (value_size != nullptr) {
-        *value_size = value.size();
-      }
-      rv = true;
-    }
-  } else {
-    std::string key, value;
-    last_status = xiter->PopFirst(&key, &value);
     if (last_status == Status::SUCCESS) {
       *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
       std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
