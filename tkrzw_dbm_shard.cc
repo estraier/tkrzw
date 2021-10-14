@@ -195,8 +195,18 @@ Status ShardDBM::Append(std::string_view key, std::string_view value, std::strin
   return dbm->Append(key, value, delim);
 }
 
+Status ShardDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  std::unique_ptr<ShardDBM::Iterator> iter(new Iterator(&dbms_));
+  Status status = iter->First();
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  return iter->Process(proc, writable);
+}
+
 Status ShardDBM::ProcessMulti(
-    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   if (!open_) {
     return Status(Status::PRECONDITION_ERROR, "not opened database");

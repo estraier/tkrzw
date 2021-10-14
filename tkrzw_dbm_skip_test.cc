@@ -655,6 +655,72 @@ void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
     const std::string value = tkrzw::StrUpperCase(std::string(5, c));
     EXPECT_EQ(value, dbm->GetSimple(key));
   }
+  for (char c = 'a'; c <= 'z'; c += 2) {
+    const std::string key(3, c);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(key));
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(13, dbm->CountSimple());
+  std::map<std::string, std::string> pop_records;
+  int32_t num_empty_calls = 0;
+  class PopProc : public tkrzw::DBM::RecordProcessor {
+   public:
+    PopProc(std::map<std::string, std::string>* records, int32_t* num_empty_calls)
+        : records_(records), num_empty_calls_(num_empty_calls) {}
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      records_->emplace(key, value);
+      return REMOVE;
+    }
+    std::string_view ProcessEmpty(std::string_view key) override {
+      (*num_empty_calls_)++;
+      return NOOP;
+    }
+   private:
+    std::map<std::string, std::string>* records_;
+    int32_t* num_empty_calls_;
+  };
+  PopProc pop_proc(&pop_records, &num_empty_calls);
+  class GetProc : public tkrzw::DBM::RecordProcessor {
+   public:
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+      last_key_ = key;
+      last_value_ = value;
+      return NOOP;
+    }
+    std::string LastKey() const {
+      return last_key_;
+    }
+    std::string LastValue() const {
+      return last_value_;
+    }
+   private:
+    std::string last_key_;
+    std::string last_value_;
+  };
+  GetProc get_proc;
+  while (true) {
+    tkrzw::Status status = dbm->ProcessFirst(&get_proc, false);
+    bool is_ok = false;
+    if (status == tkrzw::Status::SUCCESS) {
+      is_ok = true;
+    } else {
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+    }
+    status = dbm->ProcessFirst(&pop_proc, true);
+    if (status != tkrzw::Status::SUCCESS) {
+      EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+      break;
+    }
+    if (is_ok) {
+      EXPECT_EQ(get_proc.LastValue(), tkrzw::SearchMap(pop_records, get_proc.LastKey(), ""));
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  }
+  EXPECT_EQ(13, pop_records.size());
+  EXPECT_EQ("BBBBB", pop_records["bbb"]);
+  EXPECT_EQ("ZZZZZ", pop_records["zzz"]);
+  EXPECT_EQ(0, num_empty_calls);
+  EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 

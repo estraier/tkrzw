@@ -112,6 +112,7 @@ class TreeDBMImpl final {
   Status Close();
   Status Process(
       std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -575,6 +576,57 @@ Status TreeDBMImpl::Process(
     ProcessImpl(leaf_node.get(), key, proc, false);
   }
   return AdjustCaches();
+}
+
+Status TreeDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  if (writable && !reorg_ids_.IsEmpty()) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    const Status status = ReorganizeTree();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+  }
+  int64_t leaf_id = first_id_;
+  while (leaf_id > 0) {
+    std::shared_ptr<TreeLeafNode> node;
+    Status status = LoadLeafNode(leaf_id, false, &node);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (writable) {
+      std::lock_guard<SpinSharedMutex> leaf_lock(node->mutex);
+      if (!node->records.empty()) {
+        const std::string key(node->records.front()->GetKey());
+        ProcessImpl(node.get(), key, proc, true);
+        return Status(Status::SUCCESS);
+      }
+    } else {
+      std::shared_lock<SpinSharedMutex> leaf_lock(node->mutex);
+      if (!node->records.empty()) {
+        const std::string key(node->records.front()->GetKey());
+        ProcessImpl(node.get(), key, proc, false);
+        return Status(Status::SUCCESS);
+      }
+    }
+    leaf_id = node->next_id;
+    status = AdjustCaches();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status TreeDBMImpl::ProcessMulti(
@@ -2447,9 +2499,14 @@ Status TreeDBM::Process(std::string_view key, RecordProcessor* proc, bool writab
   return impl_->Process(key, proc, writable);
 }
 
+Status TreeDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status TreeDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 

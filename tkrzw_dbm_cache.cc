@@ -61,6 +61,7 @@ class CacheSlot final {
   void Process(std::string_view key, uint64_t hash, DBM::RecordProcessor* proc, bool writable);
   void ProcessImpl(
       std::string_view key, uint64_t hash, DBM::RecordProcessor* proc, bool writable);
+  bool ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   void ProcessEach(DBM::RecordProcessor* proc, bool writable);
   int64_t Count();
   int64_t GetEffectiveDataSize();
@@ -94,6 +95,7 @@ class CacheDBMImpl final {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -409,6 +411,40 @@ void CacheSlot::ProcessImpl(
   }
 }
 
+bool CacheSlot::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  if (writable) {
+    bool hit = false;
+    std::string key;
+    {
+      std::lock_guard<SpinMutex> lock(mutex_);
+      char* ptr = first_;
+      if (ptr != nullptr) {
+        CacheRecord rec;
+        rec.Deserialize(ptr);
+        key = std::string(rec.key_ptr, rec.key_size);
+        hit = true;
+      }
+    }
+    if (hit) {
+      const uint64_t hash = PrimaryHash(key, UINT64MAX) >> 8;
+      Process(key, hash, proc, true);
+      return true;
+    }
+  } else {
+    std::lock_guard<SpinMutex> lock(mutex_);
+    char* ptr = first_;
+    if (ptr != nullptr) {
+      CacheRecord rec;
+      rec.Deserialize(ptr);
+      const std::string_view key(rec.key_ptr, rec.key_size);
+      const std::string_view value(rec.value_ptr, rec.value_size);
+      proc->ProcessFull(key, value);
+      return true;
+    }
+  }
+  return false;
+}
+
 void CacheSlot::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
   if (writable) {
     std::vector<std::string> keys;
@@ -640,6 +676,16 @@ Status CacheDBMImpl::Process(std::string_view key, DBM::RecordProcessor* proc, b
   hash >>= 8;
   slots_[slot_index].Process(key, hash, proc, writable);
   return Status(Status::SUCCESS);
+}
+
+Status CacheDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  for (auto& slot : slots_) {
+    if (slot.ProcessFirst(proc, writable)) {
+      return Status(Status::SUCCESS);
+    }
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status CacheDBMImpl::ProcessMulti(
@@ -1097,9 +1143,14 @@ Status CacheDBM::Process(std::string_view key, RecordProcessor* proc, bool writa
   return impl_->Process(key, proc, writable);
 }
 
+Status CacheDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status CacheDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 

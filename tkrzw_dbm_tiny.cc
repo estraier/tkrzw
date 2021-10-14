@@ -53,6 +53,7 @@ class TinyDBMImpl final {
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Append(std::string_view key, std::string_view value, std::string_view delim);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -289,6 +290,36 @@ Status TinyDBMImpl::Append(std::string_view key, std::string_view value, std::st
   const int64_t bucket_index = record_lock.GetBucketIndex();
   AppendImpl(key, bucket_index, value, delim);
   return Status(Status::SUCCESS);
+}
+
+Status TinyDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  if (writable) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    TinyRecord rec;
+    for (int64_t bucket_index = 0; bucket_index < num_buckets_; bucket_index++) {
+      char* ptr = buckets_[bucket_index];
+      if (ptr != nullptr) {
+        rec.Deserialize(ptr);
+        const std::string key(rec.key_ptr, rec.key_size);
+        ProcessImpl(key, bucket_index, proc, true);
+        return Status(Status::SUCCESS);
+      }
+    }
+  } else {
+    std::shared_lock<SpinSharedMutex> lock(mutex_);
+    TinyRecord rec;
+    for (int64_t bucket_index = 0; bucket_index < num_buckets_; bucket_index++) {
+      char* ptr = buckets_[bucket_index];
+      if (ptr != nullptr) {
+        rec.Deserialize(ptr);
+        const std::string_view key(rec.key_ptr, rec.key_size);
+        const std::string_view value (rec.value_ptr, rec.value_size);
+        proc->ProcessFull(key, value);
+        return Status(Status::SUCCESS);
+      }
+    }
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status TinyDBMImpl::ProcessMulti(
@@ -859,9 +890,14 @@ Status TinyDBM::Append(std::string_view key, std::string_view value, std::string
   return impl_->Append(key, value, delim);
 }
 
+Status TinyDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status TinyDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 

@@ -78,6 +78,7 @@ class SkipDBMImpl final {
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
   Status Insert(std::string_view key, std::string_view value);
   Status GetByIndex(int64_t index, std::string* key, std::string* value);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -466,6 +467,63 @@ Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* val
     }
     *value = rec_value;
   }
+  return Status(Status::SUCCESS);
+}
+
+Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  if (writable) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    if (!open_) {
+      return Status(Status::PRECONDITION_ERROR, "not opened database");
+    }
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+    if (file_->GetSizeSimple() <= METADATA_SIZE) {
+      return Status(Status::NOT_FOUND_ERROR);
+    }
+    tkrzw::SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
+    Status status = rec.ReadMetadataKey(METADATA_SIZE, 0);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    const std::string_view key = rec.GetKey();
+    std::string_view value = rec.GetValue();
+    if (value.data() == nullptr) {
+      status = rec.ReadBody();
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+      value = rec.GetValue();
+    }
+    const std::string_view new_value = proc->ProcessFull(key, value);
+    return UpdateRecord(key, new_value);
+  }
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (file_->GetSizeSimple() <= METADATA_SIZE) {
+    return Status(Status::NOT_FOUND_ERROR);
+  }
+  tkrzw::SkipRecord rec(file_.get(), offset_width_, step_unit_, max_level_);
+  Status status = rec.ReadMetadataKey(METADATA_SIZE, 0);
+  if (status != Status::SUCCESS) {
+    return status;
+  }
+  const std::string_view key = rec.GetKey();
+  std::string_view value = rec.GetValue();
+  if (value.data() == nullptr) {
+    status = rec.ReadBody();
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    value = rec.GetValue();
+  }
+  proc->ProcessFull(key, value);
   return Status(Status::SUCCESS);
 }
 
@@ -1748,9 +1806,14 @@ Status SkipDBM::GetByIndex(int64_t index, std::string* key, std::string* value) 
   return impl_->GetByIndex(index, key, value);
 }
 
+Status SkipDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status SkipDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 

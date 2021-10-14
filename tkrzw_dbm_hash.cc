@@ -93,6 +93,7 @@ class HashDBMImpl final {
   Status Close();
   Status Process(
       std::string_view key, DBM::RecordProcessor* proc, bool readable, bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -406,6 +407,61 @@ Status HashDBMImpl::Process(
   ScopedHashLock record_lock(record_mutex_, key, writable);
   const int64_t bucket_index = record_lock.GetBucketIndex();
   return ProcessImpl(key, bucket_index, proc, readable, writable);
+}
+
+Status HashDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  std::shared_lock<SpinSharedMutex> lock(mutex_);
+  if (!open_) {
+    return Status(Status::PRECONDITION_ERROR, "not opened database");
+  }
+  if (writable) {
+    if (!writable_) {
+      return Status(Status::PRECONDITION_ERROR, "not writable database");
+    }
+    if (!healthy_) {
+      return Status(Status::PRECONDITION_ERROR, "not healthy database");
+    }
+  }
+  int64_t bucket_index = 0;
+  while (bucket_index < num_buckets_) {
+    ScopedHashLock record_lock(record_mutex_, bucket_index, writable);
+    if (record_lock.GetBucketIndex() < 0) {
+      bucket_index = 0;
+      continue;
+    }
+    int64_t current_offset = 0;
+    Status status = GetBucketValue(bucket_index, &current_offset);
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+    if (current_offset != 0) {
+      std::set<std::string> dead_keys;
+      while (current_offset > 0) {
+        HashRecord rec(file_.get(), crc_width_, offset_width_, align_pow_);
+        status = rec.ReadMetadataKey(current_offset, min_read_size_);
+        if (status != Status::SUCCESS) {
+          return status;
+        }
+        current_offset = rec.GetChildOffset();
+        std::string key(rec.GetKey());
+        if (CheckSet(dead_keys, key)) {
+          continue;
+        }
+        switch (rec.GetOperationType()) {
+          case HashRecord::OP_SET:
+          case HashRecord::OP_ADD:
+            return ProcessImpl(key, bucket_index, proc, true, writable);
+          case HashRecord::OP_REMOVE:
+            dead_keys.emplace(std::move(key));
+            break;
+          default:
+            break;
+        }
+      }
+    }
+    bucket_index++;
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 Status HashDBMImpl::ProcessMulti(
@@ -2081,7 +2137,6 @@ Status HashDBMImpl::ValidateHashBucketsImpl() {
   return status;
 }
 
-
 Status HashDBMImpl::ValidateRecordsImpl(
     int64_t record_base, int64_t end_offset,
     int64_t* null_end_offset, int64_t* act_count, int64_t* act_eff_data_size) {
@@ -2373,8 +2428,13 @@ Status HashDBM::Remove(std::string_view key, std::string* old_value) {
   return impl_status;
 }
 
+Status HashDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status HashDBM::ProcessMulti(
-    const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
     bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }

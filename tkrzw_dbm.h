@@ -1316,6 +1316,29 @@ class DBM {
   }
 
   /**
+   * Processes the first record with a processor.
+   * @param proc The pointer to the processor object.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   * @details If the first record exists, the ProcessFull of the processor is called.
+   * Otherwise, this method fails and no method of the processor is called.
+   */
+  virtual Status ProcessFirst(RecordProcessor* proc, bool writable) = 0;
+
+  /**
+   * Processes the first record with a lambda function.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the record.  The return value is a
+   * string reference to NOOP, REMOVE, or the new record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   */
+  virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable) {
+    RecordProcessorLambda proc(rec_lambda);
+    return ProcessFirst(&proc, writable);
+  }
+
+  /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects.
    * @param writable True if the processors can edit the records.

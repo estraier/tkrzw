@@ -39,6 +39,7 @@ class StdDBMImpl {
   Status Open(const std::string& path, bool writable, int32_t options);
   Status Close();
   Status Process(std::string_view key, DBM::RecordProcessor* proc, bool writable);
+  Status ProcessFirst(DBM::RecordProcessor* proc, bool writable);
   Status ProcessMulti(
       const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
       bool writable);
@@ -214,6 +215,43 @@ Status StdDBMImpl<STRMAP>::Process(
     }
   }
   return Status(Status::SUCCESS);
+}
+
+template <class STRMAP>
+Status StdDBMImpl<STRMAP>::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
+  if (writable) {
+    std::lock_guard<SpinSharedMutex> lock(mutex_);
+    auto it = map_.begin();
+    if (it != map_.end()) {
+      const std::string_view new_value = proc->ProcessFull(it->first, it->second);
+      if (new_value.data() == DBM::RecordProcessor::REMOVE.data()) {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteRemove(it->first);
+        }
+        for (auto* iterator : iterators_) {
+          if (iterator->it_ == it) {
+            ++iterator->it_;
+          }
+        }
+        map_.erase(it);
+      } else if (new_value.data() != DBM::RecordProcessor::NOOP.data()) {
+        if (update_logger_ != nullptr) {
+          update_logger_->WriteSet(it->first, new_value);
+        }
+        it->second = new_value;
+      }
+      return Status(Status::SUCCESS);
+    }
+  } else {
+    std::shared_lock<SpinSharedMutex> lock(mutex_);
+    const auto& const_map = map_;
+    auto it = const_map.begin();
+    if (it != const_map.end()) {
+      proc->ProcessFull(it->first, it->second);
+      return Status(Status::SUCCESS);
+    }
+  }
+  return Status(Status::NOT_FOUND_ERROR);
 }
 
 template <class STRMAP>
@@ -786,9 +824,14 @@ Status StdHashDBM::Process(std::string_view key, RecordProcessor* proc, bool wri
   return impl_->Process(key, proc, writable);
 }
 
+Status StdHashDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status StdHashDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
@@ -947,9 +990,14 @@ Status StdTreeDBM::Process(std::string_view key, RecordProcessor* proc, bool wri
   return impl_->Process(key, proc, writable);
 }
 
+Status StdTreeDBM::ProcessFirst(RecordProcessor* proc, bool writable) {
+  assert(proc != nullptr);
+  return impl_->ProcessFirst(proc, writable);
+}
+
 Status StdTreeDBM::ProcessMulti(
-      const std::vector<std::pair<std::string_view, DBM::RecordProcessor*>>& key_proc_pairs,
-      bool writable) {
+    const std::vector<std::pair<std::string_view, RecordProcessor*>>& key_proc_pairs,
+    bool writable) {
   return impl_->ProcessMulti(key_proc_pairs, writable);
 }
 
