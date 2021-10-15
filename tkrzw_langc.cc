@@ -280,6 +280,25 @@ char* tkrzw_future_get_str(TkrzwFuture* future, int32_t* size) {
   return value_ptr;
 }
 
+TkrzwKeyValuePair* tkrzw_future_get_str_pair(TkrzwFuture* future) {
+  assert(future != nullptr);
+  StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
+  const auto& result = xfuture->GetStringPair();
+  last_status = result.first;
+  const auto& record = result.second;
+  TkrzwKeyValuePair* elem = static_cast<TkrzwKeyValuePair*>(
+      xmalloc(sizeof(TkrzwKeyValuePair) + record.first.size() + record.second.size() + 2));
+  char* key_ptr = reinterpret_cast<char*>(elem + 1);
+  std::memcpy(key_ptr, record.first.c_str(), record.first.size() + 1);
+  char* value_ptr = key_ptr + record.first.size() + 1;
+  std::memcpy(value_ptr, record.second.c_str(), record.second.size() + 1);
+  elem->key_ptr = key_ptr;
+  elem->key_size = record.first.size();
+  elem->value_ptr = value_ptr;
+  elem->value_size = record.second.size();
+  return elem;
+}
+
 TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems) {
   assert(future != nullptr);
   StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
@@ -1475,6 +1494,28 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
       xasync->CompareExchangeMulti(expected_vec, desired_vec)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_rekey(
+    TkrzwAsyncDBM* async, const char* old_key_ptr, int32_t old_key_size,
+    const char* new_key_ptr, int32_t new_key_size, bool overwrite, bool copying) {
+  assert(async != nullptr && old_key_ptr != nullptr && new_key_ptr != nullptr);
+  if (old_key_size < 0) {
+    old_key_size = std::strlen(old_key_ptr);
+  }
+  if (new_key_size < 0) {
+    new_key_size = std::strlen(new_key_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Rekey(
+      std::string_view(old_key_ptr, old_key_size),
+      std::string_view(new_key_ptr, new_key_size), overwrite, copying)));
+}
+
+TkrzwFuture* tkrzw_async_dbm_pop_first(TkrzwAsyncDBM* async) {
+  assert(async != nullptr);
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->PopFirst()));
 }
 
 TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async) {

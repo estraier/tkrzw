@@ -533,6 +533,13 @@ class StatusFuture final {
   explicit StatusFuture(std::future<std::pair<Status, std::string>>&& future);
 
   /**
+   * Constructor for a status object and a string pair.
+   * @param future a future object.  The ownership is taken.
+   */
+  explicit StatusFuture(std::future<std::pair<
+                        Status, std::pair<std::string, std::string>>>&& future);
+
+  /**
    * Constructor for a status object and a string vector.
    * @param future a future object.  The ownership is taken.
    */
@@ -588,6 +595,13 @@ class StatusFuture final {
    * @details Either one of the Get method family can be called only once.
    */
   std::pair<Status, std::string> GetString();
+
+  /**
+   * Waits for the operation to be done and gets the status and the extra string pair.
+   * @return The result status and the extra string pair.
+   * @details Either one of the Get method family can be called only once.
+   */
+  std::pair<Status, std::pair<std::string, std::string>> GetStringPair();
 
   /**
    * Waits for the operation to be done and gets the status and the extra string vector.

@@ -379,6 +379,18 @@ void tkrzw_future_get(TkrzwFuture* future);
 char* tkrzw_future_get_str(TkrzwFuture* future, int32_t* size);
 
 /**
+ * Gets the status and the extra string pair of the operation of the future object.
+ * @param future the future object.
+ * @return The pointer to the extra string pair, which should be released by the free function.
+ * An empty string pair is returned on failure.
+ * @details The status is set as the last system operation status so the data can be accessed by
+ * the tkrzw_get_last_status and so on.  This can be called with the future which is associated
+ * to the status with an extra string pair.  This can be called only once for each future.
+ * object.
+ */
+TkrzwKeyValuePair* tkrzw_future_get_str_pair(TkrzwFuture* future);
+
+/**
  * Gets the status and the extra string array of the operation of the future object.
  * @param future the future object.
  * @param num_elems The pointer to the variable to store the number of elements of the extra
@@ -1270,6 +1282,35 @@ TkrzwFuture* tkrzw_async_dbm_increment(
 TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
     TkrzwAsyncDBM* async, const TkrzwKeyValuePair* expected, int32_t num_expected,
     const TkrzwKeyValuePair* desired, int32_t num_desired);
+
+/**
+ * Changes the key of a record asynchronously.
+ * @param async the asynchronous database adapter.
+ * @param old_key_ptr The old key pointer.
+ * @param old_key_size The old key size.  If it is negative, strlen(old_key_ptr) is used.
+ * @param new_key_ptr The new key pointer.
+ * @param new_key_size The new key size.  If it is negative, strlen(new_key_ptr) is used.
+ * @param overwrite Whether to overwrite the existing record of the new key.
+ * @param copying Whether to retain the record of the old key.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
+ * @details If there's no matching record to the old key, NOT_FOUND_ERROR is set.  If the
+ * overwrite flag is false and there is an existing record of the new key, DUPLICATION ERROR is
+ * set.  This method is done atomically by ProcessMulti.  The other threads observe that the
+ * record has either the old key or the new key.  No intermediate states are observed.
+ */
+TkrzwFuture* tkrzw_async_dbm_rekey(
+    TkrzwAsyncDBM* async, const char* old_key_ptr, int32_t old_key_size,
+    const char* new_key_ptr, int32_t new_key_size, bool overwrite, bool copying);
+
+/**
+ * Gets the first record and removes it asynchronously.
+ * @param async the asynchronous database adapter.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_str_pair
+ * function.
+ */
+TkrzwFuture* tkrzw_async_dbm_pop_first(TkrzwAsyncDBM* async);
 
 /**
  * Removes all records asynchronously.

@@ -452,6 +452,16 @@ TEST(AsyncDBMTest, StatusFeature) {
         EXPECT_EQ(tkrzw::Status::SUCCESS, remove_result);
       }
     }
+    tkrzw::StatusFuture clear_future(async.Clear());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, clear_future.Get());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set("aa", "AAA"));
+    tkrzw::StatusFuture rekey_future(async.Rekey("aa", "bb"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, rekey_future.Get());
+    tkrzw::StatusFuture pop_future(async.PopFirst());
+    const auto& pop_result = pop_future.GetStringPair();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, pop_result.first);
+    EXPECT_EQ("bb", pop_result.second.first);
+    EXPECT_EQ("AAA", pop_result.second.second);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
