@@ -406,6 +406,29 @@ std::future<Status> AsyncDBM::Rekey(
   return future;
 }
 
+std::future<std::pair<Status, std::pair<std::string, std::string>>> AsyncDBM::PopFirst() {
+  struct PopFirstTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    std::promise<std::pair<Status, std::pair<std::string, std::string>>> promise;
+    void Do() override {
+      std::string key, value;
+      Status status = dbm->PopFirst(&key, &value);
+      if (postproc != nullptr) {
+        postproc->Postprocess("PopFirst", status);
+      }
+      promise.set_value(std::make_pair(std::move(status), std::make_pair(
+          std::move(key), std::move(value))));
+    }
+  };
+  auto task = std::make_unique<PopFirstTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
 std::future<Status> AsyncDBM::Clear() {
   struct ClearTask : public TaskQueue::Task {
     DBM* dbm;

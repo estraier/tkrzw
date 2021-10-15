@@ -333,6 +333,40 @@ class AsyncDBM final {
                             bool overwrite = true, bool copying = false);
 
   /**
+   * Processes the first record with a processor.
+   * @param proc The processor object derived from RecordProcessor.  The ownership is taken.
+   * @param writable True if the processor can edit the record.
+   * @return The result status and the same processor object as the parameter.
+   * @details If the first record exists, the ProcessFull of the processor is called.
+   * Otherwise, this method fails and no method of the processor is called.  Whereas ordered
+   * databases have efficient implementations of this method, unordered databases have
+   * inefficient implementations.
+   */
+  template <typename PROC>
+  std::future<std::pair<Status, std::unique_ptr<PROC>>> ProcessFirst(
+      std::unique_ptr<PROC> proc, bool writable);
+
+  /**
+   * Processes the first record with a lambda function.
+   * @param rec_lambda The lambda function to process a record.  The first parameter is the key
+   * of the record.  The second parameter is the value of the record.  The return value is a
+   * string reference to NOOP, REMOVE, or the new record value.
+   * @param writable True if the processor can edit the record.
+   * @return The result status.
+   */
+  std::future<Status> ProcessFirst(DBM::RecordLambdaType rec_lambda, bool writable);
+
+  /**
+   * Gets the first record and removes it.
+   * @param key The pointer to a string object to contain the key of the first record.  If it
+   * is nullptr, it is ignored.
+   * @param value The pointer to a string object to contain the value of the first record.  If
+   * it is nullptr, it is ignored.
+   * @return The result status and a pair of the key and the value of the first record.
+   */
+  std::future<std::pair<Status, std::pair<std::string, std::string>>> PopFirst();
+
+  /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects derived from
    * RecordProcessor.  The ownership is taken.
@@ -628,6 +662,50 @@ inline std::future<Status> AsyncDBM::Process(
   auto task = std::make_unique<ProcessTask>();
   task->dbm = dbm_;
   task->key = key;
+  task->rec_lambda = rec_lambda;
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+template <typename PROC>
+inline std::future<std::pair<Status, std::unique_ptr<PROC>>> AsyncDBM::ProcessFirst(
+    std::unique_ptr<PROC> proc, bool writable) {
+  struct ProcessEachTask : public TaskQueue::Task {
+    DBM* dbm;
+    std::unique_ptr<PROC> proc;
+    bool writable;
+    std::promise<std::pair<Status, std::unique_ptr<PROC>>> promise;
+    void Do() override {
+      Status status = dbm->ProcessFirst(proc.get(), writable);
+      proc->ProcessStatus(status);
+      promise.set_value(std::make_pair(std::move(status), std::move(proc)));
+    }
+  };
+  auto task = std::make_unique<ProcessEachTask>();
+  task->dbm = dbm_;
+  task->proc = std::move(proc);
+  task->writable = writable;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
+inline std::future<Status> AsyncDBM::ProcessFirst(
+    DBM::RecordLambdaType rec_lambda, bool writable) {
+  struct ProcessEachTask : public TaskQueue::Task {
+    DBM* dbm;
+    DBM::RecordLambdaType rec_lambda;
+    bool writable;
+    std::promise<Status> promise;
+    void Do() override {
+      Status status = dbm->ProcessFirst(rec_lambda, writable);
+      promise.set_value(std::move(status));
+    }
+  };
+  auto task = std::make_unique<ProcessEachTask>();
+  task->dbm = dbm_;
   task->rec_lambda = rec_lambda;
   task->writable = writable;
   auto future = task->promise.get_future();

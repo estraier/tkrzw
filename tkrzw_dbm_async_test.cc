@@ -294,6 +294,23 @@ TEST(AsyncDBMTest, Process) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, r8);
     EXPECT_EQ("four", dbm.GetSimple("a"));
     EXPECT_EQ("cuatro", dbm.GetSimple("b"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.Set("!!", "foo", false).get());
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              async.ProcessFirst(std::make_unique<Bracketter>(), true).get().first);
+    std::string first_key, first_value;
+    auto r9 = async.ProcessFirst([&](
+        std::string_view key, std::string_view value) -> std::string_view {
+                                  first_key = key;
+                                  first_value = value;
+                                  return tkrzw::DBM::RecordProcessor::NOOP;
+                                }, true).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r9);
+    EXPECT_EQ("!!", first_key);
+    EXPECT_EQ("[foo]", first_value);
+    auto r10 = async.PopFirst().get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, r10.first);
+    EXPECT_EQ("!!", r10.second.first);
+    EXPECT_EQ("[foo]", r10.second.second);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
