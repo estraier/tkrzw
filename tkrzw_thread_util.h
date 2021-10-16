@@ -889,7 +889,7 @@ class SignalBroker final {
     /** The broker object. */
     SignalBroker* broker_;
   };
-  
+
   /**
    * Default constructor.
    */
