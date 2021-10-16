@@ -645,13 +645,54 @@ TEST(ThreadUtilTest, SignalBroker) {
   constexpr int32_t num_threads = 10;
   constexpr int32_t num_loops = 1000;
   tkrzw::WaitCounter wc(num_threads);
-  tkrzw::SignalBroker<int32_t> broker;
+  tkrzw::SignalBroker broker;
   auto task = [&](int32_t id) {
                 for (int32_t i = 0; i < num_loops; i++) {
+                  tkrzw::SignalBroker::Waiter waiter(&broker);
                   if (i % 2 == 0) {
-                    EXPECT_TRUE(broker.Wait(id));
+                    EXPECT_TRUE(waiter.Wait());
                   } else {
-                    while (!broker.Wait(id, 0.00001)) {
+                    while (!waiter.Wait(0.00001)) {
+                    }
+                  }
+                  if ((id + i) % 3 == 0) {
+                    std::this_thread::yield();
+                  }
+                }
+                wc.Done();
+              };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_threads; i++) {
+    threads.emplace_back(std::thread(task, i));
+  }
+  int32_t count = 0;
+  while (!wc.Wait(0)) {
+    for (int32_t i = 0; i < num_threads; i++) {
+      if (broker.Send(i % 10 > 0)) {
+        count++;
+      }
+      if ((count + i) % 3 == 0) {
+        std::this_thread::yield();
+      }
+    }
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
+TEST(ThreadUtilTest, KeySignalBroker) {
+  constexpr int32_t num_threads = 10;
+  constexpr int32_t num_loops = 1000;
+  tkrzw::WaitCounter wc(num_threads);
+  tkrzw::KeySignalBroker<int32_t> broker;
+  auto task = [&](int32_t id) {
+                for (int32_t i = 0; i < num_loops; i++) {
+                  tkrzw::KeySignalBroker<int32_t>::Waiter waiter(&broker, id);
+                  if (i % 2 == 0) {
+                    EXPECT_TRUE(waiter.Wait());
+                  } else {
+                    while (!waiter.Wait(0.00001)) {
                     }
                   }
                   if ((id + i) % 3 == 0) {
@@ -681,17 +722,18 @@ TEST(ThreadUtilTest, SignalBroker) {
   EXPECT_EQ(num_threads * num_loops, count);
 }
 
-TEST(ThreadUtilTest, SlottedSignalBroker) {
+TEST(ThreadUtilTest, SlottedKeySignalBroker) {
   constexpr int32_t num_threads = 10;
   constexpr int32_t num_loops = 1000;
   tkrzw::WaitCounter wc(num_threads);
-  tkrzw::SlottedSignalBroker<int32_t> broker(4);
+  tkrzw::SlottedKeySignalBroker<int32_t> broker(4);
   auto task = [&](int32_t id) {
                 for (int32_t i = 0; i < num_loops; i++) {
+                  tkrzw::SlottedKeySignalBroker<int32_t>::Waiter waiter(&broker, id);
                   if (i % 2 == 0) {
-                    EXPECT_TRUE(broker.Wait(id));
+                    EXPECT_TRUE(waiter.Wait());
                   } else {
-                    while (!broker.Wait(id, 0.00001)) {
+                    while (!waiter.Wait(0.00001)) {
                     }
                   }
                   if ((id + i) % 3 == 0) {

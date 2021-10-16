@@ -854,9 +854,42 @@ class WaitCounter final {
 /**
  * Broker to send a signal to another thread.
  */
-template<typename KEYTYPE>
 class SignalBroker final {
+  friend class Waiter;
  public:
+  /**
+   * Handler to wait for the signal.
+   * @details The constructor should be called before checking the resource.  Then, the Wait
+   * method should be called if the resource state doesn't satisfy the required condition.
+   */
+  class Waiter {
+   public:
+    /**
+     * Constructor.
+     * @param broker The broker object.
+     */
+    explicit Waiter(SignalBroker* broker);
+
+    /**
+     * Destructor.
+     */
+    ~Waiter();
+
+    /**
+     * Waits for a signal to happen.
+     * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
+     * unlimited.
+     * @return True if successful or false on timeout.
+     * @details This detects only signals which happen during this method is running.  In other
+     * words, signals which were sent before the call are not ignored.
+     **/
+    bool Wait(double timeout = -1);
+
+   private:
+    /** The broker object. */
+    SignalBroker* broker_;
+  };
+  
   /**
    * Default constructor.
    */
@@ -864,50 +897,70 @@ class SignalBroker final {
 
   /**
    * Sends a signal identified by a key.
-   * @param key The key of the signal.
    * @param all If true, notification is sent to all waiting threads.  If false, it is sent to
    * only one waiting thread.
    * @return True if the signal is received by an waiting thread, or false if not.
    */
-  bool Send(const KEYTYPE& key, bool all = true);
-
-  /**
-   * Waits for a signal to happen.
-   * @param key The key of the signal.
-   * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
-   * unlimited.
-   * @return True if successful or false on timeout.
-   * @details This detects only signals which happen during this method is running.  In other
-   * words, signals which were sent before the call are not ignored.
-   **/
-  bool Wait(const KEYTYPE& key, double timeout = -1);
+  bool Send(bool all = true);
 
  private:
-  /** The set of event keys. */
-  std::set<KEYTYPE> keys_;
+  /** The number of waiting threads. */
+  int32_t wait_count_;
   /** The mutex to guard the counter. */
   std::mutex mutex_;
   /** The conditional variable to notify the change. */
   std::condition_variable cond_;
+  /** The mutex to guard notification. */
+  SpinSharedMutex notify_mutex_;
 };
 
 /**
- * Slotted broker to send a signal to another thread.
+ * Broker to send a signal associated with a key to another thread.
  */
 template<typename KEYTYPE>
-class SlottedSignalBroker final {
+class KeySignalBroker final {
+  friend class Waiter;
  public:
   /**
-   * Default constructor.
-   * @param num_slots The number of slots.
+   * Handler to wait for the signal.
+   * @details The constructor should be called before checking the resource.  Then, the Wait
+   * method should be called if the resource state doesn't satisfy the required condition.
    */
-  explicit SlottedSignalBroker(int32_t num_slots);
+  class Waiter {
+   public:
+    /**
+     * Constructor.
+     * @param broker The broker object.
+     * @param key The key of the signal.
+     */
+    Waiter(KeySignalBroker* broker, const KEYTYPE& key);
+
+    /**
+     * Destructor.
+     */
+    ~Waiter();
+
+    /**
+     * Waits for a signal to happen.
+     * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
+     * unlimited.
+     * @return True if successful or false on timeout.
+     * @details This detects only signals which happen during this method is running.  In other
+     * words, signals which were sent before the call are not ignored.
+     **/
+    bool Wait(double timeout = -1);
+
+   private:
+    /** The broker object. */
+    KeySignalBroker* broker_;
+    /** The key of the signal. */
+    KEYTYPE key_;
+  };
 
   /**
    * Default constructor.
-   * @param num_slots The number of slots.
    */
-  ~SlottedSignalBroker();
+  KeySignalBroker();
 
   /**
    * Sends a signal identified by a key.
@@ -918,22 +971,79 @@ class SlottedSignalBroker final {
    */
   bool Send(const KEYTYPE& key, bool all = true);
 
+ private:
+  /** The set of event keys and the wait count. */
+  std::map<KEYTYPE, int32_t> counts_;
+  /** The mutex to guard the counter. */
+  std::mutex mutex_;
+  /** The conditional variable to notify the change. */
+  std::condition_variable cond_;
+  /** The mutex to guard notification. */
+  SpinSharedMutex notify_mutex_;
+};
+
+/**
+ * Slotted broker to send a signal associated with a key to another thread.
+ */
+template<typename KEYTYPE>
+class SlottedKeySignalBroker final {
+  friend class Waiter;
+ public:
   /**
-   * Waits for a signal to happen.
+   * Handler to wait for the signal.
+   * @details The constructor should be called before checking the resource.  Then, the Wait
+   * method should be called if the resource state doesn't satisfy the required condition.
+   */
+  class Waiter {
+   public:
+    /**
+     * Constructor.
+     * @param broker The broker object.
+     * @param key The key of the signal.
+     */
+    Waiter(SlottedKeySignalBroker<KEYTYPE>* broker, const KEYTYPE& key);
+
+    /**
+     * Waits for a signal to happen.
+     * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
+     * unlimited.
+     * @return True if successful or false on timeout.
+     * @details This detects only signals which happen during this method is running.  In other
+     * words, signals which were sent before the call are not ignored.
+     **/
+    bool Wait(double timeout = -1);
+
+   private:
+    /** The waiter of the key slot. */
+    typename KeySignalBroker<KEYTYPE>::Waiter slot_waiter_;
+  };
+
+  /**
+   * Default constructor.
+   * @param num_slots The number of slots.
+   */
+  explicit SlottedKeySignalBroker(int32_t num_slots);
+
+  /**
+   * Default constructor.
+   * @param num_slots The number of slots.
+   */
+  ~SlottedKeySignalBroker();
+
+  /**
+   * Sends a signal identified by a key.
    * @param key The key of the signal.
-   * @param timeout The timeout in seconds to wait.   Zero means no wait.  Negative means
-   * unlimited.
-   * @return True if successful or false on timeout.
-   * @details This detects only signals which happen during this method is running.  In other
-   * words, signals which were sent before the call are not ignored.
-   **/
-  bool Wait(const KEYTYPE& key, double timeout = -1);
+   * @param all If true, notification is sent to all waiting threads.  If false, it is sent to
+   * only one waiting thread.
+   * @return True if the signal is received by an waiting thread, or false if not.
+   */
+  bool Send(const KEYTYPE& key, bool all = true);
 
  private:
   /** The number of the slots. */
   int32_t num_slots_;
   /** The array of the slots. */
-  SignalBroker<KEYTYPE>* slots_;
+  KeySignalBroker<KEYTYPE>* slots_;
 };
 
 /**
@@ -1470,17 +1580,69 @@ inline bool WaitCounter::Wait(double timeout) {
   return true;
 }
 
-template<typename KEYTYPE>
-inline SignalBroker<KEYTYPE>::SignalBroker() : keys_(), mutex_(), cond_() {}
+inline SignalBroker::SignalBroker() : wait_count_(false), mutex_(), cond_(), notify_mutex_() {}
 
-template<typename KEYTYPE>
-inline bool SignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
+inline bool SignalBroker::Send(bool all) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (keys_.erase(key) == 0) {
+    if (wait_count_ == 0) {
+      return false;
+    }
+    wait_count_ = 0;
+  }
+  std::lock_guard lock(notify_mutex_);
+  if (all) {
+    cond_.notify_all();
+  } else {
+    cond_.notify_one();
+  }
+  return true;
+}
+
+inline SignalBroker::Waiter::Waiter(SignalBroker* broker) : broker_(broker) {
+  broker_->notify_mutex_.lock_shared();
+}
+
+inline SignalBroker::Waiter::~Waiter() {
+  broker_->notify_mutex_.unlock_shared();
+}
+
+inline bool SignalBroker::Waiter::Wait(double timeout) {
+  if (timeout < 0) {
+    timeout = UINT32MAX;
+  }
+  const auto deadline = std::chrono::steady_clock::now() +
+      std::chrono::microseconds(static_cast<int64_t>(timeout * 1000000));
+  std::unique_lock<std::mutex> lock(broker_->mutex_);
+  broker_->wait_count_++;
+  while (broker_->wait_count_ != 0) {
+    broker_->notify_mutex_.unlock_shared();
+    auto wait_rv = broker_->cond_.wait_until(lock, deadline);
+    broker_->notify_mutex_.lock_shared();
+    if (wait_rv == std::cv_status::timeout) {
+      if (broker_->wait_count_ == 0) {
+        return true;
+      }
+      broker_->wait_count_--;
       return false;
     }
   }
+  return true;
+}
+
+template<typename KEYTYPE>
+inline KeySignalBroker<KEYTYPE>::KeySignalBroker()
+    : counts_(), mutex_(), cond_(), notify_mutex_() {}
+
+template<typename KEYTYPE>
+inline bool KeySignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (counts_.erase(key) == 0) {
+      return false;
+    }
+  }
+  std::lock_guard lock(notify_mutex_);
   if (all) {
     cond_.notify_all();
   } else {
@@ -1490,43 +1652,71 @@ inline bool SignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
 }
 
 template<typename KEYTYPE>
-inline bool SignalBroker<KEYTYPE>::Wait(const KEYTYPE& key, double timeout) {
+inline KeySignalBroker<KEYTYPE>::Waiter::Waiter(KeySignalBroker* broker, const KEYTYPE& key)
+    : broker_(broker), key_(key) {
+  broker_->notify_mutex_.lock_shared();
+}
+
+template<typename KEYTYPE>
+inline KeySignalBroker<KEYTYPE>::Waiter::~Waiter() {
+  broker_->notify_mutex_.unlock_shared();
+}
+
+template<typename KEYTYPE>
+inline bool KeySignalBroker<KEYTYPE>::Waiter::Wait(double timeout) {
   if (timeout < 0) {
     timeout = UINT32MAX;
   }
   const auto deadline = std::chrono::steady_clock::now() +
       std::chrono::microseconds(static_cast<int64_t>(timeout * 1000000));
-  std::unique_lock<std::mutex> lock(mutex_);
-  keys_.emplace(key);
-  while (keys_.find(key) != keys_.end()) {
-    if (cond_.wait_until(lock, deadline) == std::cv_status::timeout) {
-      return keys_.erase(key) == 0;
+  std::unique_lock<std::mutex> lock(broker_->mutex_);
+  broker_->counts_[key_]++;
+  while (broker_->counts_.find(key_) != broker_->counts_.end()) {
+    broker_->notify_mutex_.unlock_shared();
+    auto wait_rv = broker_->cond_.wait_until(lock, deadline);
+    broker_->notify_mutex_.lock_shared();
+    if (wait_rv == std::cv_status::timeout) {
+      auto it = broker_->counts_.find(key_);
+      if (it == broker_->counts_.end()) {
+        return true;
+      }
+      if (it->second > 1) {
+        it->second--;
+      } else {
+        broker_->counts_.erase(it);
+      }
+      return false;
     }
   }
   return true;
 }
 
 template<typename KEYTYPE>
-inline SlottedSignalBroker<KEYTYPE>::SlottedSignalBroker(int32_t num_slots)
+inline SlottedKeySignalBroker<KEYTYPE>::SlottedKeySignalBroker(int32_t num_slots)
     : num_slots_(num_slots) {
-  slots_ = new SignalBroker<KEYTYPE>[num_slots];
+  slots_ = new KeySignalBroker<KEYTYPE>[num_slots];
 }
 
 template<typename KEYTYPE>
-inline SlottedSignalBroker<KEYTYPE>::~SlottedSignalBroker() {
+inline SlottedKeySignalBroker<KEYTYPE>::~SlottedKeySignalBroker() {
   delete[] slots_;
 }
 
 template<typename KEYTYPE>
-inline bool SlottedSignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
+inline bool SlottedKeySignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
   const int32_t bucket_index = static_cast<uint32_t>(std::hash<KEYTYPE>{}(key)) % num_slots_;
   return slots_[bucket_index].Send(key, all);
 }
 
 template<typename KEYTYPE>
-inline bool SlottedSignalBroker<KEYTYPE>::Wait(const KEYTYPE& key, double timeout) {
-  const int32_t bucket_index = static_cast<uint32_t>(std::hash<KEYTYPE>{}(key)) % num_slots_;
-  return slots_[bucket_index].Wait(key, timeout);
+inline SlottedKeySignalBroker<KEYTYPE>::Waiter::Waiter(
+    SlottedKeySignalBroker<KEYTYPE>* broker, const KEYTYPE& key)
+    : slot_waiter_(&broker->slots_[
+          static_cast<uint32_t>(std::hash<KEYTYPE>{}(key)) % broker->num_slots_], key) {}
+
+template<typename KEYTYPE>
+inline bool SlottedKeySignalBroker<KEYTYPE>::Waiter::Wait(double timeout) {
+  return slot_waiter_.Wait(timeout);
 }
 
 template<typename T>
