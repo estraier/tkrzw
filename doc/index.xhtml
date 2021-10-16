@@ -3613,8 +3613,8 @@ if (dbm.Get(key, &value).IsOK()) {
 <p>If you want to use the database as a queue (FIFO), you use TreeDBM or BabyDBM.  The record key is a sequential number or a timestamp, with a fixed length.  Calling SPrintf("%010d", num) or IntToStrBigEndian(num) is convenient.  If you use timestamps, a deduplication logic is required to avoid overwriting existing records.</p>
 
 <pre><code class="language-cpp"><![CDATA[Status Enqueue(TreeDBM* dbm, std::string_view value) {
-  for (int64_t seq_num = 0; true; seq_num++) {
-    const uint64_t timestamp = GetWallTime() * 10000000 + seq_num;
+  for (uint64_t seq = 0; true; seq++) {
+    const uint64_t timestamp = GetWallTime() * 100000000 + seq;
     const Status status = dbm->Set(IntToStrBigEndian(timestamp), value, false);
     if (status != Status::DUPLICATION_ERROR) {
       // Return if SUCCESS or other errors than duplication.

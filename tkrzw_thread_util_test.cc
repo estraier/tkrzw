@@ -667,7 +667,7 @@ TEST(ThreadUtilTest, SignalBroker) {
   int32_t count = 0;
   while (!wc.Wait(0)) {
     for (int32_t i = 0; i < num_threads; i++) {
-      if (broker.Send(i)) {
+      if (broker.Send(i, i % 10 > 0)) {
         count++;
       }
       if ((count + i) % 3 == 0) {

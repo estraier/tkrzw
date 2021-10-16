@@ -865,9 +865,11 @@ class SignalBroker final {
   /**
    * Sends a signal identified by a key.
    * @param key The key of the signal.
+   * @param all If true, notification is sent to all waiting threads.  If false, it is sent to
+   * only one waiting thread.
    * @return True if the signal is received by an waiting thread, or false if not.
    */
-  bool Send(const KEYTYPE& key);
+  bool Send(const KEYTYPE& key, bool all = true);
 
   /**
    * Waits for a signal to happen.
@@ -910,9 +912,11 @@ class SlottedSignalBroker final {
   /**
    * Sends a signal identified by a key.
    * @param key The key of the signal.
+   * @param all If true, notification is sent to all waiting threads.  If false, it is sent to
+   * only one waiting thread.
    * @return True if the signal is received by an waiting thread, or false if not.
    */
-  bool Send(const KEYTYPE& key);
+  bool Send(const KEYTYPE& key, bool all = true);
 
   /**
    * Waits for a signal to happen.
@@ -1470,14 +1474,18 @@ template<typename KEYTYPE>
 inline SignalBroker<KEYTYPE>::SignalBroker() : keys_(), mutex_(), cond_() {}
 
 template<typename KEYTYPE>
-inline bool SignalBroker<KEYTYPE>::Send(const KEYTYPE& key) {
+inline bool SignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (keys_.erase(key) == 0) {
       return false;
     }
   }
-  cond_.notify_all();
+  if (all) {
+    cond_.notify_all();
+  } else {
+    cond_.notify_one();
+  }
   return true;
 }
 
@@ -1510,9 +1518,9 @@ inline SlottedSignalBroker<KEYTYPE>::~SlottedSignalBroker() {
 }
 
 template<typename KEYTYPE>
-inline bool SlottedSignalBroker<KEYTYPE>::Send(const KEYTYPE& key) {
+inline bool SlottedSignalBroker<KEYTYPE>::Send(const KEYTYPE& key, bool all) {
   const int32_t bucket_index = static_cast<uint32_t>(std::hash<KEYTYPE>{}(key)) % num_slots_;
-  return slots_[bucket_index].Send(key);
+  return slots_[bucket_index].Send(key, all);
 }
 
 template<typename KEYTYPE>
