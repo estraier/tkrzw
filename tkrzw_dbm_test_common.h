@@ -370,10 +370,10 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   }
   EXPECT_EQ(records.size(), pop_count);
   EXPECT_EQ(0, dbm->CountSimple());
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("one", &key, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("one", 0, &key));
   EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), key);
   EXPECT_EQ("one", dbm->GetSimple(key, "*"));
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("two", &key, 0));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("two", 0, &key));
   EXPECT_EQ(std::string("\0\0\0\0\0\0\0\1", 8), key);
   EXPECT_EQ("two", dbm->GetSimple(key, "*"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PopFirst(&key, &value));

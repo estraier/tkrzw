@@ -367,6 +367,18 @@ class AsyncDBM final {
   std::future<std::pair<Status, std::pair<std::string, std::string>>> PopFirst();
 
   /**
+   * Adds a record with a key of the current timestamp.
+   * @param value The value of the record.
+   * @param wtime The current wall time used to generate the key.  If it is negative, the system
+   * clock is used.
+   * @return The result status.
+   * @details The key is generated as an 8-bite big-endian binary string of the timestamp.  If
+   * there is an existing record matching the generated key, the key is regenerated and the
+   * attempt is repeated until it succeeds.
+   */
+  std::future<std::pair<Status, std::string>> PushLast(std::string_view value, double wtime = -1);
+
+  /**
    * Processes multiple records with processors.
    * @param key_proc_pairs Pairs of the keys and their processor objects derived from
    * RecordProcessor.  The ownership is taken.

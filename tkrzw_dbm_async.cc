@@ -429,6 +429,33 @@ std::future<std::pair<Status, std::pair<std::string, std::string>>> AsyncDBM::Po
   return future;
 }
 
+std::future<std::pair<Status, std::string>> AsyncDBM::PushLast(
+    std::string_view value, double wtime) {
+  struct PushLastTask : public TaskQueue::Task {
+    DBM* dbm;
+    AsyncDBM::CommonPostprocessor* postproc;
+    std::string value;
+    double wtime;
+    std::promise<std::pair<Status, std::string>> promise;
+    void Do() override {
+      std::string key;
+      Status status = dbm->PushLast(value, wtime, &key);
+      if (postproc != nullptr) {
+        postproc->Postprocess("PushLast", status);
+      }
+      promise.set_value(std::make_pair(std::move(status), std::move(key)));
+    }
+  };
+  auto task = std::make_unique<PushLastTask>();
+  task->dbm = dbm_;
+  task->postproc = postproc_.get();
+  task->value = value;
+  task->wtime = wtime;
+  auto future = task->promise.get_future();
+  queue_.Add(std::move(task));
+  return future;
+}
+
 std::future<Status> AsyncDBM::Clear() {
   struct ClearTask : public TaskQueue::Task {
     DBM* dbm;
