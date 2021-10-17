@@ -1485,6 +1485,7 @@ class DBM {
    * is nullptr, it is ignored.
    * @param wtime The current wall time used to generate the key.  If it is negative, the system
    * clock is used.
+   * @return The result status.
    * @details The key is generated as an 8-bite big-endian binary string of the timestamp.  If
    * there is an existing record matching the generated key, the key is regenerated and the
    * attempt is repeated until it succeeds.
