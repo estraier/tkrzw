@@ -834,6 +834,16 @@ bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
   return rv;
 }
 
+bool tkrzw_dbm_push_last(TkrzwDBM* dbm, const char* value_ptr, int32_t value_size, double wtime) {
+  assert(dbm != nullptr && value_ptr != nullptr);
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->PushLast(std::string_view(value_ptr, value_size), wtime);
+  return last_status == Status::SUCCESS;
+}
+
 bool tkrzw_dbm_process_each(
     TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable) {
   assert(dbm != nullptr && proc != nullptr);

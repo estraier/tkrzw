@@ -730,6 +730,19 @@ bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
                          char** value_ptr, int32_t* value_size);
 
 /**
+ * Adds a record with a key of the current timestamp.
+ * @param value_ptr The value pointer.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @param wtime The current wall time used to generate the key.  If it is negative, the system
+ * clock is used.
+ * @return True on success or false on failure.
+ * @details The key is generated as an 8-bite big-endian binary string of the timestamp.  If
+ * there is an existing record matching the generated key, the key is regenerated and the
+ * attempt is repeated until it succeeds.
+ */
+bool tkrzw_dbm_push_last(TkrzwDBM* dbm, const char* value_ptr, int32_t value_size, double wtime);
+
+/**
  * Processes each and every record in the database with a processor.
  * @param dbm The database object.
  * @param proc The callback function to process the record.

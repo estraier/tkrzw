@@ -558,6 +558,28 @@ TEST(LangCTest, Iterator) {
   }
   EXPECT_EQ(step_count, pop_count);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+
+
+  EXPECT_TRUE(tkrzw_dbm_push_last(dbm, "foo", -1, 0));
+
+  char* key_ptr = nullptr;
+  int32_t key_size = 0;
+  char* value_ptr = nullptr;
+  int32_t value_size = 0;
+  EXPECT_TRUE(tkrzw_dbm_pop_first(dbm, &key_ptr, &key_size, &value_ptr, &value_size));
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+
+  EXPECT_EQ(std::string_view("\0\0\0\0\0\0\0\0", 8), std::string_view(key_ptr, key_size));
+
+
+  free(value_ptr);
+  free(key_ptr);
+
+
+
+
+
+
   tkrzw_dbm_iter_free(iter);
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
 }
