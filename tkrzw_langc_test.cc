@@ -149,12 +149,12 @@ TEST(LangCTest, Basic) {
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(5, value_size);
   EXPECT_STREQ("first", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   value_ptr = tkrzw_dbm_get(dbm, "more", 4, &value_size);
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(13, value_size);
   EXPECT_STREQ("hop:step:jump", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   value_ptr = tkrzw_dbm_set_and_get(dbm, "zero", -1, "nil", -1, false, NULL);
   EXPECT_EQ(nullptr, value_ptr);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
@@ -162,13 +162,13 @@ TEST(LangCTest, Basic) {
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_STREQ("nil", value_ptr);
   EXPECT_EQ(3, value_size);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   EXPECT_EQ(TKRZW_STATUS_DUPLICATION_ERROR, tkrzw_get_last_status_code());
   value_ptr = tkrzw_dbm_remove_and_get(dbm, "zero", -1, &value_size);
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_STREQ("nil", value_ptr);
   EXPECT_EQ(3, value_size);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   value_ptr = tkrzw_dbm_remove_and_get(dbm, "zero", -1, NULL);
   ASSERT_EQ(nullptr, value_ptr);
@@ -211,7 +211,7 @@ TEST(LangCTest, Basic) {
   value_ptr = tkrzw_dbm_get(dbm, "color", -1, &value_size);
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_STREQ("green", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   EXPECT_TRUE(tkrzw_dbm_compare_exchange(dbm, "color", -1, "green", -1, nullptr, 0));
   value_ptr = tkrzw_dbm_get(dbm, "color", -1, &value_size);
   EXPECT_EQ(nullptr, value_ptr);
@@ -263,7 +263,7 @@ TEST(LangCTest, Basic) {
   EXPECT_EQ(8, value_size);
   EXPECT_EQ(std::string_view("\x00\x00\x00\x00\x00\x00\x00\x06", 8),
             std::string_view(value_ptr, 8));
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   EXPECT_TRUE(tkrzw_dbm_remove(dbm, "num", -1));
   EXPECT_EQ(4, tkrzw_dbm_count(dbm));
   EXPECT_GT(tkrzw_dbm_get_file_size(dbm), 0);
@@ -271,7 +271,7 @@ TEST(LangCTest, Basic) {
   EXPECT_GT(tkrzw_dbm_get_timestamp(dbm), 0);
   ASSERT_NE(nullptr, path_ptr);
   EXPECT_EQ(file_path, path_ptr);
-  tkrzw::xfree(path_ptr);
+  free(path_ptr);
   for (int32_t i = 1; i <= 20; i++) {
     const std::string expr = tkrzw::ToString(i);
     EXPECT_TRUE(tkrzw_dbm_set(dbm, expr.data(), expr.size(), expr.data(), expr.size(), false));
@@ -312,7 +312,7 @@ TEST(LangCTest, Basic) {
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(3, value_size);
   EXPECT_STREQ("foo", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   TkrzwDBM* orig_dbm = tkrzw_dbm_open(file_path.c_str(), true, "no_create=true");
   ASSERT_NE(nullptr, orig_dbm);
   EXPECT_TRUE(tkrzw_dbm_is_healthy(orig_dbm));
@@ -367,7 +367,7 @@ TEST(LangCTest, Process) {
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(1, value_size);
   EXPECT_STREQ("2", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   EXPECT_TRUE(tkrzw_dbm_process(dbm, "bar", -1, proc_get, &num_value, false));
   EXPECT_EQ("*", num_value);
   EXPECT_TRUE(tkrzw_dbm_process(dbm, "foo", -1, proc_get, &num_value, false));
@@ -391,12 +391,12 @@ TEST(LangCTest, Process) {
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(1, value_size);
   EXPECT_STREQ("3", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   value_ptr = tkrzw_dbm_get(dbm, "num2", -1, &value_size);
   ASSERT_NE(nullptr, value_ptr);
   EXPECT_EQ(1, value_size);
   EXPECT_STREQ("2", value_ptr);
-  tkrzw::xfree(value_ptr);
+  free(value_ptr);
   int32_t count = tkrzw_dbm_count(dbm);
   while (tkrzw_dbm_process_first(dbm, proc_remove, nullptr, true)) {
     count--;
@@ -436,24 +436,24 @@ TEST(LangCTest, Iterator) {
     const std::string value = tkrzw::ToString(count * count);
     EXPECT_EQ(key, std::string_view(key_ptr, key_size));
     EXPECT_EQ(value, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
-    tkrzw::xfree(key_ptr);
+    free(value_ptr);
+    free(key_ptr);
     ASSERT_TRUE(tkrzw_dbm_iter_get(iter, &key_ptr, &key_size, nullptr, nullptr));
     EXPECT_EQ(key, std::string_view(key_ptr, key_size));
-    tkrzw::xfree(key_ptr);
+    free(key_ptr);
     ASSERT_TRUE(tkrzw_dbm_iter_get(iter, nullptr, nullptr, &value_ptr, &value_size));
     EXPECT_EQ(value, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
+    free(value_ptr);
     EXPECT_TRUE(tkrzw_dbm_iter_get(iter, nullptr, nullptr, nullptr, nullptr));
     key_ptr = tkrzw_dbm_iter_get_key(iter, &key_size);
     EXPECT_EQ(key, std::string_view(key_ptr, key_size));
-    tkrzw::xfree(key_ptr);
+    free(key_ptr);
     std::string num_value;
     EXPECT_TRUE(tkrzw_dbm_iter_process(iter, proc_increment, &num_value, true));
     const std::string inc_value = tkrzw::ToString(count * count + 1);
     value_ptr = tkrzw_dbm_iter_get_value(iter, &value_size);
     EXPECT_EQ(inc_value, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
+    free(value_ptr);
     EXPECT_TRUE(tkrzw_dbm_iter_next(iter));
   }
   TkrzwDBMIter* jump_iter = tkrzw_dbm_make_iterator(dbm);
@@ -472,8 +472,8 @@ TEST(LangCTest, Iterator) {
     const std::string value = tkrzw::ToString(count * count + 1);
     EXPECT_EQ(key, std::string_view(key_ptr, key_size));
     EXPECT_EQ(value, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
-    tkrzw::xfree(key_ptr);
+    free(value_ptr);
+    free(key_ptr);
     EXPECT_TRUE(tkrzw_dbm_iter_jump_lower(jump_iter, key.data(), key.size(), false));
     if (count > 1) {
       key_ptr = tkrzw_dbm_iter_get_key(jump_iter, &key_size);
@@ -514,8 +514,8 @@ TEST(LangCTest, Iterator) {
     const std::string value = tkrzw::ToString(count * count);
     EXPECT_EQ(key, std::string_view(key_ptr, key_size));
     EXPECT_EQ(value, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
-    tkrzw::xfree(key_ptr);
+    free(value_ptr);
+    free(key_ptr);
     count++;
     EXPECT_TRUE(tkrzw_dbm_iter_remove(iter));
   }
@@ -536,8 +536,8 @@ TEST(LangCTest, Iterator) {
       break;
     }
     EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
-    tkrzw::xfree(value_ptr);
-    tkrzw::xfree(key_ptr);
+    free(value_ptr);
+    free(key_ptr);
     step_count++;
   }
   EXPECT_EQ(tkrzw_dbm_count(dbm), step_count);
@@ -552,8 +552,8 @@ TEST(LangCTest, Iterator) {
       break;
     }
     EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
-    tkrzw::xfree(value_ptr);
-    tkrzw::xfree(key_ptr);
+    free(value_ptr);
+    free(key_ptr);
     pop_count++;
   }
   EXPECT_EQ(step_count, pop_count);
@@ -690,7 +690,7 @@ TEST(LangCTest, Sharding) {
     char* value_ptr = tkrzw_dbm_get(dbm, key.data(), key.size(), &value_size);
     ASSERT_NE(nullptr, value_ptr);
     EXPECT_EQ(key, std::string_view(value_ptr, value_size));
-    tkrzw::xfree(value_ptr);
+    free(value_ptr);
   }
   EXPECT_EQ(num_records, tkrzw_dbm_count(dbm));
   EXPECT_TRUE(tkrzw_dbm_close(dbm));
@@ -910,7 +910,7 @@ TEST(LangCTest, Async) {
   EXPECT_EQ(3, pop_rec->key_size);
   EXPECT_STREQ("1234", pop_rec->value_ptr);
   EXPECT_EQ(4, pop_rec->value_size);
-  tkrzw::xfree(pop_rec);
+  free(pop_rec);
   tkrzw_future_free(pop_future);
   pop_future = tkrzw_async_dbm_pop_first(async);
   pop_rec = tkrzw_future_get_str_pair(pop_future);
@@ -919,9 +919,24 @@ TEST(LangCTest, Async) {
   EXPECT_EQ(0, pop_rec->key_size);
   EXPECT_STREQ("", pop_rec->value_ptr);
   EXPECT_EQ(0, pop_rec->value_size);
-  tkrzw::xfree(pop_rec);
+  free(pop_rec);
   tkrzw_future_free(pop_future);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
+  TkrzwFuture* push_future = tkrzw_async_dbm_push_last(async, "foo", -1, 0);
+  int32_t key_size = 0;
+  char* key_ptr = tkrzw_future_get_str(push_future, &key_size);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  EXPECT_EQ(std::string_view("\0\0\0\0\0\0\0\0", 8), std::string_view(key_ptr, key_size));
+  free(key_ptr);
+  tkrzw_future_free(push_future);
+  pop_future = tkrzw_async_dbm_pop_first(async);
+  pop_rec = tkrzw_future_get_str_pair(pop_future);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  EXPECT_EQ(std::string_view("\0\0\0\0\0\0\0\0", 8),
+            std::string_view(pop_rec->key_ptr, pop_rec->key_size));
+  EXPECT_STREQ("foo", pop_rec->value_ptr);
+  free(pop_rec);
+  tkrzw_future_free(pop_future);
   EXPECT_TRUE(tkrzw_file_close(copy_file));
   tkrzw_async_dbm_free(async);
   EXPECT_TRUE(tkrzw_dbm_close(dbm));

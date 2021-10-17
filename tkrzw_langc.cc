@@ -1518,6 +1518,17 @@ TkrzwFuture* tkrzw_async_dbm_pop_first(TkrzwAsyncDBM* async) {
   return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->PopFirst()));
 }
 
+TkrzwFuture* tkrzw_async_dbm_push_last(
+    TkrzwAsyncDBM* async, const char* value_ptr, int32_t value_size, double wtime) {
+  assert(async != nullptr && value_ptr != nullptr);
+  if (value_size < 0) {
+    value_size = std::strlen(value_ptr);
+  }
+  AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
+  return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->PushLast(
+      std::string_view(value_ptr, value_size), wtime)));
+}
+
 TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async) {
   assert(async != nullptr);
   AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);

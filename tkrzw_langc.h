@@ -1313,6 +1313,22 @@ TkrzwFuture* tkrzw_async_dbm_rekey(
 TkrzwFuture* tkrzw_async_dbm_pop_first(TkrzwAsyncDBM* async);
 
 /**
+ * Adds a record with a key of the current timestamp.
+ * @param async the asynchronous database adapter.
+ * @param value_ptr The value pointer.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @param wtime The current wall time used to generate the key.  If it is negative, the system
+ * clock is used.
+ * @return The future object to monitor the result.  The future object should be released by the
+ * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get_str function.
+ * @details The key is generated as an 8-bite big-endian binary string of the timestamp.  If
+ * there is an existing record matching the generated key, the key is regenerated and the
+ * attempt is repeated until it succeeds.
+ */
+TkrzwFuture* tkrzw_async_dbm_push_last(
+    TkrzwAsyncDBM* async, const char* value_ptr, int32_t value_size, double wtime);
+
+/**
  * Removes all records asynchronously.
  * @param async the asynchronous database adapter.
  * @return The future object to monitor the result.  The future object should be released by the
