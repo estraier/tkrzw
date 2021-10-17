@@ -3610,29 +3610,21 @@ if (dbm.Get(key, &value).IsOK()) {
 
 <p>If you want to do an atomic operation to the first record without checking the key beforehand, the ProcessFirst method is useful.  Using ProcessFirst is more effective than using an extternal iterator and call its First and Process methods in sequence.</p>
 
-<p>If you want to use the database as a queue (FIFO), you use TreeDBM or BabyDBM.  The record key is a sequential number or a timestamp, with a fixed length.  Calling SPrintf("%010d", num) or IntToStrBigEndian(num) is convenient.  If you use timestamps, a deduplication logic is required to avoid overwriting existing records.</p>
+<p>As with the Iterator class, ProcessFirst can be slow if it is used with unordered databases (HashDBM, TinyDBM, CacheDBM, StdHashDBM) because finding the first record might scan the whole hash buckets.  Meanwhile, Iterator and ProcessFirst are effective with ordered databases (TreeDBM, SkipDBM, BabyDBM, StdTreeDBM).</p>
+
+<p>If you want to use the database as a queue (FIFO), you can use TreeDBM or BabyDBM, and their PushLast and PopFirst methods.  PushLast takes an arbitrary record value and generates its key from the current timetamp.  The, a record of the generated key and the given value is stored.  Deduplication of the key is done implicitly.  Thus, the enqueueing operation is written like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[Status Enqueue(TreeDBM* dbm, std::string_view value) {
-  for (uint64_t seq = 0; true; seq++) {
-    const uint64_t timestamp = GetWallTime() * 100000000 + seq;
-    const Status status = dbm->Set(IntToStrBigEndian(timestamp), value, false);
-    if (status != Status::DUPLICATION_ERROR) {
-      // Return if SUCCESS or other errors than duplication.
-      return status;
-    }
-  }
-  return Status(Status::UNKNOWN_ERROR);  // unreachable
+  return dbm->PushLast(value);
 }
 ]]></code></pre>
 
-<p>There is a utility method PopFirst which is implemented based on ProcessFirst.  It retrieves the first record and removes it atomically.  The following example shows its usage.</p>
+<p>PopFirst is implemented based on ProcessFirst.  It retrieves the first record and removes it atomically.  Thus, the dequeueing operation is written like the following.</p>
 
 <pre><code class="language-cpp"><![CDATA[Status Dequeue(TreeDBM* dbm, std::string* value) {
   return dbm->PopFirst(nullptr, value);
 }
 ]]></code></pre>
-
-<p>As with the Iterator class, ProcessFirst can be slow if it is used with unordered databases (HashDBM, TinyDBM, CacheDBM, StdHashDBM) because finding the first record might scan the whole hash buckets.  Meanwhile, Iterator and ProcessFirst are effective with ordered databases (TreeDBM, SkipDBM, BabyDBM, StdTreeDBM).</p>
 
 <h3 id="tips_processeach">DBM::ProcessEach</h3>
 
@@ -3813,6 +3805,56 @@ if (dbm.Get(key, &value).IsOK()) {
   return Status(Status::INFEASIBLE_ERROR, "too busy");
 }
 ]]></code></pre>
+
+<h3 id="tips_notification">Notification</h3>
+
+<p>In multi-thread programming, you sometimes want to use notificaiton features.  The SignalBroker class is useful to notify of generic updates to other threads.  The "producer" threads and the "consumer" threads share an instance of SignalBroker.  The producer threads calls its Send method after they update the database.</p>
+
+<pre><code class="language-cpp"><![CDATA[void Produce(DBM* dbm, SignalBroker* broker) {
+  dbm->PushLast("hello");
+  broker->Send();
+}
+]]></code></pre>
+
+<p>The consumer threads check the database first.  If the checked data doesn't satify the precondition of the succeeding operation, they wait for the next database update and its signal.  To prevent the signal from being sent between checking the current state and starting to wait, the Waiter object should be created before checking the current state.</p>
+
+<pre><code class="language-cpp"><![CDATA[void Consume(DBM* dbm, SignalBroker* broker) {
+  while (true) {
+    SignalBroker::Waiter waiter(broker);
+    std::string value;
+    if (dbm->PopFirst(nullptr, &value) == Status::SUCCESS) {
+      std::cout << value << std::endl;
+      break;
+    }
+    waiter.Wait();
+  }
+}
+]]></code></pre>
+
+<p>If you want to use signals associated with arbitrary identifiers, you can use SlottedKeySignalBroker.  The Send method takes a key and wakes up threads which are waiting for the same key.</p>
+
+<pre><code class="language-cpp"><![CDATA[void Produce(DBM* dbm, SlottedKeySignalBroker<std::string>* broker) {
+  dbm->Set("greeitng", "hello");
+  broker->Send("greeting");
+}
+]]></code></pre>
+
+<p>As in the SignalBroker case, the consumer uses a Waiter object to make a critical section to check the database and wait for the next update.</p>
+
+<pre><code class="language-cpp"><![CDATA[void Consume(DBM* dbm, SlottedKeySignalBroker<std::string>* broker) {
+  while (true) {
+    SlottedKeySignalBroker::Waiter waiter(broker, "greeting");
+    std::string value;
+    if (dbm->Get("greeting", &value) == Status::SUCCESS) {
+      std::cout << value << std::endl;
+      break;
+    }
+    waiter.Wait();
+  }
+}
+]]></code></pre>
+
+<p>Using SignalBroker and SlottedKeySignalBroker is better in terms of concurrency performance than using std::mutex and std::condition_variable.  SignalBroker and SlottedKeySignalBroker don't cause exclusive locking for the database operations but use shared locking.  Moreover, the Wait method of the Waiter class takes an optional timeout parameter so that you can use the long polling idiom.</p>
 
 <h3 id="tips_restore">Restoring Broken Databases</h3>
 

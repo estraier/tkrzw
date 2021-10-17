@@ -923,11 +923,8 @@ TEST(LangCTest, Async) {
   tkrzw_future_free(pop_future);
   EXPECT_EQ(0, tkrzw_dbm_count(dbm));
   TkrzwFuture* push_future = tkrzw_async_dbm_push_last(async, "foo", -1, 0);
-  int32_t key_size = 0;
-  char* key_ptr = tkrzw_future_get_str(push_future, &key_size);
+  tkrzw_future_get(push_future);
   EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
-  EXPECT_EQ(std::string_view("\0\0\0\0\0\0\0\0", 8), std::string_view(key_ptr, key_size));
-  free(key_ptr);
   tkrzw_future_free(push_future);
   pop_future = tkrzw_async_dbm_pop_first(async);
   pop_rec = tkrzw_future_get_str_pair(pop_future);

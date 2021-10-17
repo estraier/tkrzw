@@ -429,21 +429,20 @@ std::future<std::pair<Status, std::pair<std::string, std::string>>> AsyncDBM::Po
   return future;
 }
 
-std::future<std::pair<Status, std::string>> AsyncDBM::PushLast(
-    std::string_view value, double wtime) {
+std::future<Status> AsyncDBM::PushLast(std::string_view value, double wtime) {
   struct PushLastTask : public TaskQueue::Task {
     DBM* dbm;
     AsyncDBM::CommonPostprocessor* postproc;
     std::string value;
     double wtime;
-    std::promise<std::pair<Status, std::string>> promise;
+    std::promise<Status> promise;
     void Do() override {
       std::string key;
       Status status = dbm->PushLast(value, wtime, &key);
       if (postproc != nullptr) {
         postproc->Postprocess("PushLast", status);
       }
-      promise.set_value(std::make_pair(std::move(status), std::move(key)));
+      promise.set_value(std::move(status));
     }
   };
   auto task = std::make_unique<PushLastTask>();

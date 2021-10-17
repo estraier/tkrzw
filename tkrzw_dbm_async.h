@@ -376,7 +376,7 @@ class AsyncDBM final {
    * there is an existing record matching the generated key, the key is regenerated and the
    * attempt is repeated until it succeeds.
    */
-  std::future<std::pair<Status, std::string>> PushLast(std::string_view value, double wtime = -1);
+  std::future<Status> PushLast(std::string_view value, double wtime = -1);
 
   /**
    * Processes multiple records with processors.

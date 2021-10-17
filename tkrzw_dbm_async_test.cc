@@ -311,13 +311,11 @@ TEST(AsyncDBMTest, Process) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, r10.first);
     EXPECT_EQ("!!", r10.second.first);
     EXPECT_EQ("[foo]", r10.second.second);
-    auto r11 = async.PushLast("bar", 0).get();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.PushLast("bar", 0).get());
+    auto r11 = async.PopFirst().get();
     EXPECT_EQ(tkrzw::Status::SUCCESS, r11.first);
-    EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), r11.second);
-    auto r12 = async.PopFirst().get();
-    EXPECT_EQ(tkrzw::Status::SUCCESS, r12.first);
-    EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), r12.second.first);
-    EXPECT_EQ("bar", r12.second.second);
+    EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), r11.second.first);
+    EXPECT_EQ("bar", r11.second.second);
   }
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
