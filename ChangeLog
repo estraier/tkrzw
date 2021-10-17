@@ -5,7 +5,8 @@
 
 	- Add SignalBroker and SlottedSignalBroker.
 	- Iterator::Set and Iterator::Remove take pointers to store the old value.
-	- Add Iterator::Step and Iterator::PopFirst.
+	- Add Iterator::Step.
+	- Add DBM::PopFirst and DBM::PushLast.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.25
