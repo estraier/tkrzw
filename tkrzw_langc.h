@@ -731,6 +731,7 @@ bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
 
 /**
  * Adds a record with a key of the current timestamp.
+ * @param dbm The database object.
  * @param value_ptr The value pointer.
  * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
  * @param wtime The current wall time used to generate the key.  If it is negative, the system
