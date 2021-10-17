@@ -110,6 +110,11 @@ TEST_F(BabyDBMTest, IteratorBound) {
   IteratorBoundTest(&dbm);
 }
 
+TEST_F(BabyDBMTest, Queue) {
+  tkrzw::BabyDBM dbm;
+  QueueTest(&dbm);
+}
+
 TEST_F(BabyDBMTest, Iterator) {
   tkrzw::BabyDBM dbm;
   std::vector<std::unique_ptr<tkrzw::DBM::Iterator>> iters;

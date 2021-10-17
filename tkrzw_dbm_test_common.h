@@ -25,6 +25,7 @@
 #include "tkrzw_file_util.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_thread_util.h"
 
 using namespace testing;
 
@@ -44,6 +45,7 @@ class CommonDBMTest : public Test {
   void RecordMigrationTest(tkrzw::DBM* dbm, tkrzw::File* file);
   void BackIteratorTest(tkrzw::DBM* dbm);
   void IteratorBoundTest(tkrzw::DBM* dbm);
+  void QueueTest(tkrzw::DBM* dbm);
   void UpdateLoggerTest(tkrzw::DBM* dbm);
 };
 
@@ -368,6 +370,21 @@ inline void CommonDBMTest::BasicTest(tkrzw::DBM* dbm) {
   }
   EXPECT_EQ(records.size(), pop_count);
   EXPECT_EQ(0, dbm->CountSimple());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("one", &key, 0));
+  EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), key);
+  EXPECT_EQ("one", dbm->GetSimple(key, "*"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("two", &key, 0));
+  EXPECT_EQ(std::string("\0\0\0\0\0\0\0\1", 8), key);
+  EXPECT_EQ("two", dbm->GetSimple(key, "*"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PopFirst(&key, &value));
+  if (dbm->IsOrdered()) {
+    EXPECT_EQ(std::string("\0\0\0\0\0\0\0\0", 8), key);
+    EXPECT_EQ("one", value);
+  } else {
+    EXPECT_TRUE(value == "one" || value == "two");
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast("three"));
+  EXPECT_EQ(2, dbm->CountSimple());
 }
 
 inline void CommonDBMTest::SequenceTest(tkrzw::DBM* dbm) {
@@ -1501,6 +1518,51 @@ inline void CommonDBMTest::IteratorBoundTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("", iter->GetKey());
   EXPECT_EQ(tkrzw::Status::SUCCESS, iter->JumpUpper("9", false));
   EXPECT_EQ("", iter->GetKey());
+}
+
+inline void CommonDBMTest::QueueTest(tkrzw::DBM* dbm) {
+  int32_t num_producers = 3;
+  int32_t num_consumers = 5;
+  int32_t num_iterations = 10000;
+  std::atomic_int32_t push_count(0);
+  std::atomic_int32_t pop_count(0);
+  tkrzw::SignalBroker broker;
+  auto producer_task =
+      [&](int32_t id) {
+        for (int32_t i = 0; i < num_iterations; i++) {
+          EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->PushLast(tkrzw::StrCat(id, ":", i)));
+          broker.Send();
+          push_count.fetch_add(1);
+        }
+      };
+  auto consumer_task =
+      [&]() {
+        while (true) {
+          tkrzw::SignalBroker::Waiter waiter(&broker);
+          std::string key, value;
+          tkrzw::Status status = dbm->PopFirst(&key, &value);
+          if (status == tkrzw::Status::SUCCESS) {
+            pop_count.fetch_add(1);
+          } else {
+            EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+            if (!waiter.Wait(0.01) && push_count.load() == num_producers * num_iterations) {
+              break;
+            }
+          }
+        }
+      };
+  std::vector<std::thread> threads;
+  for (int32_t i = 0; i < num_producers; i++) {
+    threads.emplace_back(std::thread(producer_task, i));
+  }
+  for (int32_t i = 0; i < num_consumers; i++) {
+    threads.emplace_back(std::thread(consumer_task));
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(num_producers * num_iterations, push_count.load());
+  EXPECT_EQ(num_producers * num_iterations, pop_count.load());
 }
 
 inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {

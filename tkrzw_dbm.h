@@ -29,6 +29,7 @@
 #include "tkrzw_file.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
+#include "tkrzw_time_util.h"
 
 namespace tkrzw {
 
@@ -1475,6 +1476,32 @@ class DBM {
   virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr) {
     RecordProcessorPopFirst proc(key, value);
     return ProcessFirst(&proc, true);
+  }
+
+  /**
+   * Adds a record with a key of the current timestamp.
+   * @param value The value of the record.
+   * @param key The pointer to a string object to contain the generated key of the record.  If it
+   * is nullptr, it is ignored.
+   * @param wtime The current wall time used to generate the key.  If it is negative, the system
+   * clock is used.
+   * @details The key is generated as a big-endian binary string of the timestamp.  If there is
+   * an existing record matching the generated key, the key is regenerated and the attempt is
+   * repeated until it succeeds.
+   */
+  virtual Status PushLast(std::string_view value, std::string* key = nullptr, double wtime = -1) {
+    for (uint64_t seq = 0; true; seq++) {
+      const uint64_t timestamp = (wtime < 0 ? GetWallTime() : wtime) * 100000000 + seq;
+      const std::string& time_key = IntToStrBigEndian(timestamp);
+      const Status status = Set(time_key, value, false);
+      if (status != Status::DUPLICATION_ERROR) {
+        if (key != nullptr) {
+          *key = time_key;
+        }
+        return status;
+      }
+    }
+    return Status(Status::UNKNOWN_ERROR);
   }
 
   /**

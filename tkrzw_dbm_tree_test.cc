@@ -52,6 +52,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMRecordMigrationTest(tkrzw::TreeDBM* dbm, tkrzw::File* file);
   void TreeDBMBackIteratorTest(tkrzw::TreeDBM* dbm);
   void TreeDBMIteratorBoundTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMQueueTest(tkrzw::TreeDBM* dbm);
   void TreeDBMReorganizeTestOne(tkrzw::TreeDBM* dbm);
   void TreeDBMReorganizeTestAll(tkrzw::TreeDBM* dbm);
   void TreeDBMIteratorTest(tkrzw::TreeDBM* dbm);
@@ -439,6 +440,19 @@ void TreeDBMTest::TreeDBMIteratorBoundTest(tkrzw::TreeDBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
       file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
   IteratorBoundTest(dbm);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
+void TreeDBMTest::TreeDBMQueueTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath();
+  tkrzw::TreeDBM::TuningParameters tuning_params;
+  tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+  tuning_params.max_page_size = 64;
+  tuning_params.max_branches = 4;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  QueueTest(dbm);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
 }
 
@@ -1508,6 +1522,11 @@ TEST_F(TreeDBMTest, BackIterator) {
 TEST_F(TreeDBMTest, IteratorBound) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMIteratorBoundTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, Queue) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  TreeDBMQueueTest(&dbm);
 }
 
 TEST_F(TreeDBMTest, Reorganize) {
