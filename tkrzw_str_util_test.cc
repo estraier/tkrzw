@@ -793,7 +793,7 @@ TEST(StrUtilTest, StrReplaceRegex) {
 }
 
 TEST(StrUtilTest, ConvertUTF8AndUCS4) {
-  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
+  for (const std::string utf : {"", "abc", "αβγ", "あいう"}) {
     const std::vector<uint32_t>& ucs = tkrzw::ConvertUTF8ToUCS4(utf);
     const std::string& utf_restored = tkrzw::ConvertUCS4ToUTF8(ucs);
     EXPECT_EQ(utf, utf_restored);
@@ -810,7 +810,7 @@ TEST(StrUtilTest, ConvertUTF8AndUCS4) {
 }
 
 TEST(StrUtilTest, ConvertUTF8AndWide) {
-  for (const std::string& utf : {"", "abc", "αβγ", "あいう"}) {
+  for (const std::string utf : {"", "abc", "αβγ", "あいう"}) {
     const std::wstring wstr = tkrzw::ConvertUTF8ToWide(utf);
     const std::string& utf_restored = tkrzw::ConvertWideToUTF8(wstr);
     EXPECT_EQ(utf, utf_restored);
@@ -909,7 +909,10 @@ TEST(StrUtilTest, MakeStrVectorFromViews) {
   const std::vector<std::string>& values = tkrzw::MakeStrVectorFromViews(views);
   EXPECT_THAT(values, ElementsAreArray(views));
   const std::vector<std::string_view>& restored = tkrzw::MakeStrViewVectorFromValues(values);
-  EXPECT_THAT(restored, ElementsAreArray(values));
+  ASSERT_EQ(values.size(), restored.size());
+  for (size_t i = 0; i < restored.size(); i++) {
+    EXPECT_EQ(values[i], restored[i]);
+  }
 }
 
 TEST(StrUtilTest, SerializeStrMap) {
