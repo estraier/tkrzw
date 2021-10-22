@@ -27,7 +27,6 @@ RECURSIVE = NO
 
 # Configuration options related to the alphabetical index
 ALPHABETICAL_INDEX = YES
-COLS_IN_ALPHA_INDEX = 3
 
 # Configuration options related to the HTML output
 GENERATE_HTML = YES
