@@ -673,10 +673,12 @@ bool tkrzw_dbm_compare_exchange(
   if (key_size < 0) {
     key_size = std::strlen(key_ptr);
   }
-  if (expected_ptr != nullptr && expected_size < 0) {
+  if (expected_ptr != nullptr && expected_ptr != reinterpret_cast<char*>(1) &&
+      expected_size < 0) {
     expected_size = std::strlen(expected_ptr);
   }
-  if (desired_ptr != nullptr && desired_size < 0) {
+  if (desired_ptr != nullptr && desired_ptr != reinterpret_cast<char*>(1) &&
+      desired_size < 0) {
     desired_size = std::strlen(desired_ptr);
   }
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
