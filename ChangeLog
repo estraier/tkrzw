@@ -4,6 +4,7 @@
 	- Library version: 1.62.0
 
 	- Fix compilation errors with older GooleTest libraries.
+	- Support wild card as the parameters of CompareExchange.
 
 2021-10-12 Mikio Hirabayashi  <hirarin@gmail.com>
 

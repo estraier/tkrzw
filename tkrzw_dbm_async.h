@@ -286,7 +286,9 @@ class AsyncDBM final {
    * Compares the value of a record and exchanges if the condition meets.
    * @param key The key of the record.
    * @param expected The expected value.  If the data is nullptr, no existing record is expected.
+   * If the data is (char*)1, an existing record with any value is expacted.
    * @param desired The desired value.  If the data is nullptr, the record is to be removed.
+   * If the data is (char*)1, no update is done.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
   std::future<Status> CompareExchange(std::string_view key, std::string_view expected,
@@ -295,7 +297,8 @@ class AsyncDBM final {
   /**
    * Compares the values of records and exchanges if the condition meets.
    * @param expected The record keys and their expected values.  If the value is nullptr, no
-   * existing record is expected.
+   * existing record is expected.  If the value data is (char*)1, an existing record with any
+   * value is expacted.
    * @param desired The record keys and their desired values.  If the value is nullptr, the
    * record is to be removed.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
