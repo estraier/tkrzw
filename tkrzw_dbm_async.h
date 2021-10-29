@@ -150,9 +150,9 @@ class AsyncDBM final {
    * Processes a record with a lambda function.
    * @param key The key of the record.
    * @param rec_lambda The lambda function to process a record.  The first parameter is the key
-   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
-   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
-   * record value.
+   * of the record.  The second parameter is the value of the existing record, or
+   * RecordProcessor::NOOP if it the record doesn't exist.  The return value is a string
+   * reference to RecordProcessor::NOOP, RecordProcessor::REMOVE, or the new record value.
    * @param writable True if the processor can edit the record.
    * @return The result status.
    */
@@ -350,7 +350,7 @@ class AsyncDBM final {
    * Processes the first record with a lambda function.
    * @param rec_lambda The lambda function to process a record.  The first parameter is the key
    * of the record.  The second parameter is the value of the record.  The return value is a
-   * string reference to NOOP, REMOVE, or the new record value.
+   * string reference to RecordProcessor::NOOP, RecordProcessor::REMOVE, or the new record value.
    * @param writable True if the processor can edit the record.
    * @return The result status.
    */
@@ -395,8 +395,9 @@ class AsyncDBM final {
   /**
    * Processes multiple records with lambda functions.
    * @param key_lambda_pairs Pairs of the keys and their lambda functions.  The first parameter of
-   * the lambda functions is the key of the record, or NOOP if it the record doesn't exist.  The
-   * return value is a string reference to NOOP, REMOVE, or the new record value.
+   * the lambda functions is the key of the record, or RecordProcessor::NOOP if it the record
+   * doesn't exist.  The return value is a string reference to RecordProcessor::NOOP,
+   * RecordProcessor::REMOVE, or the new record value.
    * @param writable True if the processors can edit the records.
    * @return The result status.
    */
@@ -420,13 +421,14 @@ class AsyncDBM final {
   /**
    * Processes each and every record in the database with a lambda function.
    * @param rec_lambda The lambda function to process a record.  The first parameter is the key
-   * of the record.  The second parameter is the value of the existing record, or NOOP if it the
-   * record doesn't exist.  The return value is a string reference to NOOP, REMOVE, or the new
-   * record value.
+   * of the record.  The second parameter is the value of the existing record, or
+   * RecordProcessor::NOOP if it the record doesn't exist.  The return value is a string
+   * reference to RecordProcessor::NOOP, RecordProcessor::REMOVE, or the new record value.
    * @param writable True if the processor can edit the record.
    * @return The result status.
    * @details The lambda function is called repeatedly for each record.  It is also called once
-   * before the iteration and once after the iteration with both the key and the value being NOOP.
+   * before the iteration and once after the iteration with both the key and the value being
+   * RecordProcessor::NOOP.
    */
   std::future<Status> ProcessEach(DBM::RecordLambdaType rec_lambda, bool writable);
 
