@@ -307,10 +307,13 @@ class DBM {
      * @param desired A string of the expected value.
      * @param actual The pointer to a string object to contain the actual value.  If it is
      * nullptr, it is ignored.
+     * @param found The pointer to a variable to contain whether there is an existing record.  If
+     * it is nullptr, it is ignored.
      */
     RecordProcessorCompareExchange(Status* status, std::string_view expected,
-                                   std::string_view desired, std::string* actual)
-        : status_(status), expected_(expected), desired_(desired), actual_(actual) {}
+                                   std::string_view desired, std::string* actual, bool* found)
+        : status_(status), expected_(expected), desired_(desired),
+          actual_(actual), found_(found) {}
 
     /**
      * Processes an existing record.
@@ -318,6 +321,9 @@ class DBM {
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (actual_ != nullptr) {
         *actual_ = value;
+      }
+      if (found_ != nullptr) {
+        *found_ = true;
       }
       if (expected_.data() != nullptr &&
           (expected_.data() == ANY_DATA.data() || expected_ == value)) {
@@ -334,6 +340,9 @@ class DBM {
     std::string_view ProcessEmpty(std::string_view key) override {
       if (actual_ != nullptr) {
         *actual_ = "";
+      }
+      if (found_ != nullptr) {
+        *found_ = false;
       }
       if (expected_.data() == nullptr) {
         return desired_.data() == nullptr || desired_.data() == ANY_DATA.data() ?
@@ -352,6 +361,8 @@ class DBM {
     std::string_view desired_;
     /** Actual value to report. */
     std::string* actual_;
+    /** Checker for the existing record. */
+    bool* found_;
   };
 
   /**
@@ -1299,12 +1310,15 @@ class DBM {
    * If it is ANY_DATA, no update is done.
    * @param actual The pointer to a string object to contain the result value.  If it is nullptr,
    * it is ignored.
+   * @param found The pointer to a variable to contain whether there is an existing record.  If it
+   * is nullptr, it is ignored.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
    */
   virtual Status CompareExchange(std::string_view key, std::string_view expected,
-                                 std::string_view desired, std::string* actual = nullptr) {
+                                 std::string_view desired, std::string* actual = nullptr,
+                                 bool* found = nullptr) {
     Status impl_status(Status::SUCCESS);
-    RecordProcessorCompareExchange proc(&impl_status, expected, desired, actual);
+    RecordProcessorCompareExchange proc(&impl_status, expected, desired, actual, found);
     const Status status = Process(key, &proc, true);
     if (status != Status::SUCCESS) {
       return status;

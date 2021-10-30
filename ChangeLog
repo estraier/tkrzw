@@ -5,6 +5,7 @@
 
 	- Fix compilation errors with older GooleTest libraries.
 	- Support DBM::ANY_DATA as the parameters of CompareExchange.
+	- The found parameter is added to CompareExchange.
 
 	- Compatibility of the language interfaces
 	- tkrzw-java: 0.1.26

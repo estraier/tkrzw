@@ -690,22 +690,30 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("a", "foo"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "foo", "bar"));
   std::string actual;
-  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange("a", "foo", "baz", &actual));
-  EXPECT_EQ("bar", actual);
-  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "bar", "qux", &actual));
-  EXPECT_EQ("bar", actual);
-  EXPECT_EQ(tkrzw::Status::SUCCESS,
-            dbm->CompareExchange("z", std::string_view(), "zzz", &actual));
-  EXPECT_EQ("", actual);
+  bool found = false;
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-            dbm->CompareExchange("z", std::string_view(), "yyy", &actual));
-  EXPECT_EQ("zzz", actual);
-  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-            dbm->CompareExchange("y", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual));
-  EXPECT_EQ("", actual);
+            dbm->CompareExchange("a", "foo", "baz", &actual, &found));
+  EXPECT_EQ("bar", actual);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange("a", "bar", "qux", &actual, &found));
+  EXPECT_EQ("bar", actual);
+  EXPECT_TRUE(found);
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            dbm->CompareExchange("z", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual));
+            dbm->CompareExchange("z", std::string_view(), "zzz", &actual, &found));
+  EXPECT_EQ("", actual);
+  EXPECT_FALSE(found);
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
+            dbm->CompareExchange("z", std::string_view(), "yyy", &actual, &found));
   EXPECT_EQ("zzz", actual);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
+      "y", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual, &found));
+  EXPECT_EQ("", actual);
+  EXPECT_FALSE(found);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
+      "z", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual, &found));
+  EXPECT_EQ("zzz", actual);
+  EXPECT_TRUE(found);
   EXPECT_EQ("zzz", dbm->GetSimple("z"));
   int64_t current = 0;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Increment("b", -1, &current, -9));
