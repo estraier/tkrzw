@@ -285,11 +285,15 @@ std::future<Status> AsyncDBM::CompareExchange(std::string_view key, std::string_
   task->dbm = dbm_;
   task->postproc = postproc_.get();
   task->key = key;
-  if (expected.data() != nullptr) {
+  if (expected.data() == DBM::ANY_DATA.data()) {
+    task->expected_view = DBM::ANY_DATA;
+  } else if (expected.data() != nullptr) {
     task->expected = expected;
     task->expected_view = task->expected;
   }
-  if (desired.data() != nullptr) {
+  if (desired.data() == DBM::ANY_DATA.data()) {
+    task->desired_view = DBM::ANY_DATA;
+  } else if (desired.data() != nullptr) {
     task->desired = desired;
     task->desired_view = task->desired;
   }
@@ -325,6 +329,8 @@ std::future<Status> AsyncDBM::CompareExchangeMulti(
     const std::string_view key = task->placeholders.back();
     if (record.second.data() == nullptr) {
       task->expected.emplace_back(std::make_pair(key, std::string_view()));
+    } else if (record.second.data() == DBM::ANY_DATA.data()) {
+      task->expected.emplace_back(std::make_pair(key, DBM::ANY_DATA));
     } else {
       task->placeholders.emplace_back(record.second);
       task->expected.emplace_back(std::make_pair(

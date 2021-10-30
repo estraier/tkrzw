@@ -701,12 +701,10 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
             dbm->CompareExchange("z", std::string_view(), "yyy", &actual));
   EXPECT_EQ("zzz", actual);
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-            dbm->CompareExchange("y", std::string_view((char*)1, 0),
-                                 std::string_view((char*)1, 0), &actual));
+            dbm->CompareExchange("y", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual));
   EXPECT_EQ("", actual);
   EXPECT_EQ(tkrzw::Status::SUCCESS,
-            dbm->CompareExchange("z", std::string_view((char*)1, 0),
-                                 std::string_view((char*)1, 0), &actual));
+            dbm->CompareExchange("z", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual));
   EXPECT_EQ("zzz", actual);
   EXPECT_EQ("zzz", dbm->GetSimple("z"));
   int64_t current = 0;
@@ -880,12 +878,12 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
       kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})));
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchangeMulti(
-      kv_list({{"abc", std::string_view((char*)-1, 0)}}), kv_list({{"abc", "def"}})));
+      kv_list({{"abc", tkrzw::DBM::ANY_DATA}}), kv_list({{"abc", "def"}})));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"abc", std::string_view()}}), kv_list({{"abc", "def"}})));
   EXPECT_EQ("def", dbm->GetSimple("abc"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
-      kv_list({{"abc", std::string_view((char*)-1, 0)}}),
+      kv_list({{"abc", tkrzw::DBM::ANY_DATA}}),
       kv_list({{"abc", std::string_view()}})));
   EXPECT_EQ(0, dbm->CountSimple());
   constexpr int32_t num_threads = 5;

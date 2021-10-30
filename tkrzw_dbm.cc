@@ -20,6 +20,8 @@
 
 namespace tkrzw {
 
+const std::string_view DBM::ANY_DATA("\x00\xBA\xBE\x02\x11", 5);
+
 const std::string_view DBM::RecordProcessor::NOOP("\x00\xBE\xEF\x02\x11", 5);
 
 const std::string_view DBM::RecordProcessor::REMOVE("\x00\xDE\xAD\x02\x11", 5);

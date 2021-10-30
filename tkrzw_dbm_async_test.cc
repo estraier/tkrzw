@@ -134,6 +134,20 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ("4567", async.Get("a").get().second);
     EXPECT_EQ(tkrzw::Status::SUCCESS,
               async.CompareExchange("a", "4567", std::string_view()).get());
+    EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
+              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, "abc").get());
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              async.CompareExchange("a", std::string_view(), "abc").get());
+    EXPECT_EQ("abc", dbm.GetSimple("a"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, "def").get());
+    EXPECT_EQ("def", dbm.GetSimple("a"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA).get());
+    EXPECT_EQ("def", dbm.GetSimple("a"));
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, std::string_view()).get());
+    EXPECT_EQ("", dbm.GetSimple("a"));
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Increment("b", 2, 100).get().first);
     EXPECT_EQ(105, async.Increment("b", 3, 100).get().second);
     const std::map<std::string_view, std::string_view> records = {{"a", "A"}, {"b", "BB"}};
@@ -169,6 +183,17 @@ TEST(AsyncDBMTest, Basic) {
       kv_list({{"1", std::string_view()}, {"3", std::string_view()}, {"4", "hello"}})).get());
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
         kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})).get());
+    EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, async.CompareExchangeMulti(
+        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", "abc"}})).get());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
+        kv_list({{"xyz", std::string_view()}}), kv_list({{"xyz", "abc"}})).get());
+    EXPECT_EQ("abc", async.Get("xyz").get().second);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
+        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", "def"}})).get());
+    EXPECT_EQ("def", async.Get("xyz").get().second);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
+        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", std::string_view()}})).get());
+    EXPECT_EQ("", async.Get("xyz").get().second);
   }
   {
     std::lock_guard lock(postproc_mutex);

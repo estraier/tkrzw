@@ -54,6 +54,8 @@ const int64_t TKRZW_INT64MAX = INT64MAX;
 static thread_local Status last_status(Status::SUCCESS);
 static thread_local std::string last_message;
 
+const char* const TKRZW_ANY_DATA = (char*)-1;
+
 const char* const TKRZW_REC_PROC_NOOP = (char*)-1;
 
 const char* const TKRZW_REC_PROC_REMOVE = (char*)-2;
@@ -673,12 +675,14 @@ bool tkrzw_dbm_compare_exchange(
   if (key_size < 0) {
     key_size = std::strlen(key_ptr);
   }
-  if (expected_ptr != nullptr && expected_ptr != reinterpret_cast<char*>(1) &&
-      expected_size < 0) {
+  if (expected_ptr == TKRZW_ANY_DATA) {
+    expected_ptr = DBM::ANY_DATA.data();
+  } else if (expected_ptr != nullptr && expected_size < 0) {
     expected_size = std::strlen(expected_ptr);
   }
-  if (desired_ptr != nullptr && desired_ptr != reinterpret_cast<char*>(1) &&
-      desired_size < 0) {
+  if (desired_ptr == TKRZW_ANY_DATA) {
+    desired_ptr = DBM::ANY_DATA.data();
+  } else if (desired_ptr != nullptr && desired_size < 0) {
     desired_size = std::strlen(desired_ptr);
   }
   ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
@@ -737,10 +741,14 @@ bool tkrzw_dbm_compare_exchange_multi(
     const int32_t key_size =
         key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
     xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
-    const int32_t value_size =
-        key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
-        strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
-    xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+    const char* value_ptr = key_value_pair.value_ptr;
+    int32_t value_size = key_value_pair.value_size;
+    if (value_ptr == TKRZW_ANY_DATA) {
+      value_ptr = DBM::ANY_DATA.data();
+    } else if (value_ptr != nullptr && value_size < 0) {
+      value_size = strlen(value_ptr);
+    }
+    xpair.second = std::string_view(value_ptr, value_size);
   }
   std::vector<std::pair<std::string_view, std::string_view>> desired_vec(num_desired);
   for (int32_t i = 0; i < num_desired; i++) {

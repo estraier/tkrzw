@@ -280,7 +280,7 @@ Status ShardDBM::CompareExchangeMulti(
         return NOOP;
       }
       if (expected_.data() == nullptr ||
-          (expected_.data() != reinterpret_cast<char*>(-1) && expected_ != value)) {
+          (expected_.data() != ANY_DATA.data() && expected_ != value)) {
         *status_ = Status(Status::INFEASIBLE_ERROR);
         return NOOP;
       }

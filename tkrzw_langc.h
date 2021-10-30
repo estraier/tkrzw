@@ -122,6 +122,9 @@ typedef struct {
   void* _dummy_;
 } TkrzwFile;
 
+/** The special string_view value to represent any data. */
+extern const char* const TKRZW_ANY_DATA;
+
 /**
  * Type of the record processor function.
  * @details The first parameter is an opaque argument set by the caller.  The second parameter is
@@ -619,10 +622,10 @@ bool tkrzw_dbm_append_multi(
  * @param key_ptr The key pointer.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
  * @param expected_ptr The expected value pointer.  If it is NULL, no existing record is
- * expected.  If it is (char*)1, an existing record with any value is expacted.
+ * expected.  If it is TKRZW_ANY_DATA, an existing record with any value is expacted.
  * @param expected_size The expected value size.  If it is negative, strlen(expected_ptr) is used.
  * @param desired_ptr The desired value pointer.  If it is NULL, the record is to be removed.
- * expected.  If it is (char*)1, no update is done.
+ * expected.  If it is TKRZW_ANY_DATA, no update is done.
  * @param desired_size The desired value size.  If it is negative, strlen(desired_ptr) is used.
  * @return True on success or false on failure.
  * @details If the condition doesn't meet, INFEASIBLE_ERROR status code is set.
@@ -666,8 +669,8 @@ bool tkrzw_dbm_process_multi(
  * Compares the values of records and exchanges if the condition meets.
  * @param dbm The database object.
  * @param expected An array of the record keys and their expected values.  If the value is NULL,
- * no existing record is expected.  If the value is (char*)1, an existing record with any value
- * is expacted.
+ * no existing record is expected.  If the value is TKRZW_ANY_DATA, an existing record with any
+ * value is expacted.
  * @param num_expected The number of the expected array.
  * @param desired An array of the record keys and their desired values.  If the value is NULL,
  * the record is to be removed.

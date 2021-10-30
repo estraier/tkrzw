@@ -38,6 +38,9 @@ namespace tkrzw {
  */
 class DBM {
  public:
+  /** The special string_view value to represent any data. */
+  static const std::string_view ANY_DATA;
+
   /**
    * Interface of processor for a record.
    */
@@ -317,9 +320,9 @@ class DBM {
         *actual_ = value;
       }
       if (expected_.data() != nullptr &&
-          (expected_.data() == reinterpret_cast<char*>(1) || expected_ == value)) {
+          (expected_.data() == ANY_DATA.data() || expected_ == value)) {
         return desired_.data() == nullptr ? REMOVE :
-            desired_.data() == reinterpret_cast<char*>(1) ? NOOP : desired_;
+            desired_.data() == ANY_DATA.data() ? NOOP : desired_;
       }
       status_->Set(Status::INFEASIBLE_ERROR);
       return NOOP;
@@ -333,7 +336,7 @@ class DBM {
         *actual_ = "";
       }
       if (expected_.data() == nullptr) {
-        return desired_.data() == nullptr || desired_.data() == reinterpret_cast<char*>(1) ?
+        return desired_.data() == nullptr || desired_.data() == ANY_DATA.data() ?
             NOOP : desired_;
       }
       status_->Set(Status::INFEASIBLE_ERROR);
@@ -430,7 +433,7 @@ class DBM {
      */
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (expected_.data() == nullptr ||
-          (expected_.data() != reinterpret_cast<char*>(-1) && expected_ != value)) {
+          (expected_.data() != ANY_DATA.data() && expected_ != value)) {
         *noop_ = true;
       }
       return NOOP;
@@ -1291,9 +1294,9 @@ class DBM {
    * Compares the value of a record and exchanges if the condition meets.
    * @param key The key of the record.
    * @param expected The expected value.  If the data is nullptr, no existing record is expected.
-   * If the data is (char*)1, an existing record with any value is expacted.
+   * If it is ANY_DATA, an existing record with any value is expacted.
    * @param desired The desired value.  If the data is nullptr, the record is to be removed.
-   * If the data is (char*)1, no update is done.
+   * If it is ANY_DATA, no update is done.
    * @param actual The pointer to a string object to contain the result value.  If it is nullptr,
    * it is ignored.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
@@ -1379,8 +1382,8 @@ class DBM {
   /**
    * Compares the values of records and exchanges if the condition meets.
    * @param expected The record keys and their expected values.  If the value data is nullptr, no
-   * existing record is expected.  If the value data is (char*)1, an existing record with any
-   * value is expacted.
+   * existing record is expected.  If the value is ANY_DATA, an existing record with any value is
+   * expacted.
    * @param desired The record keys and their desired values.  If the value is nullptr, the
    * record is to be removed.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
