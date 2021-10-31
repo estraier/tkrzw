@@ -1253,10 +1253,10 @@ TkrzwFuture* tkrzw_async_dbm_append_multi(
  * @param key_ptr The key pointer.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
  * @param expected_ptr The expected value pointer.  If it is NULL, no existing record is
- * expected.
+ * expected.  If it is TKRZW_ANY_DATA, an existing record with any value is expacted.
  * @param expected_size The expected value size.  If it is negative, strlen(expected_ptr) is used.
  * @param desired_ptr The desired value pointer.  If it is NULL, the record is to be removed.
- * expected.
+ * expected.  If it is TKRZW_ANY_DATA, no update is done.
  * @param desired_size The desired value size.  If it is negative, strlen(desired_ptr) is used.
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
@@ -1288,7 +1288,8 @@ TkrzwFuture* tkrzw_async_dbm_increment(
  * Compares the values of records and exchanges if the condition meets asynchronously.
  * @param async the asynchronous database adapter.
  * @param expected An array of the record keys and their expected values.  If the value is NULL,
- * no existing record is expected.
+ * no existing record is expected.  If the value is TKRZW_ANY_DATA, an existing record with any
+ * value is expacted.
  * @param num_expected The number of the expected array.
  * @param desired An array of the record keys and their desired values.  If the value is NULL,
  * the record is to be removed.
