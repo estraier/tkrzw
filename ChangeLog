@@ -6,6 +6,12 @@
 	- Improve efficiency of CompareExchange.
 	- compare_exchange_and_get is added.
 
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.27
+	- tkrzw-python: 0.1.27
+	- tkrzw-ruby: 0.1.27
+	- tkrzw-go: 0.1.27
+
 2021-10-20 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.19
