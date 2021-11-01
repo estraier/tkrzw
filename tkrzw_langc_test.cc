@@ -226,6 +226,23 @@ TEST(LangCTest, Basic) {
   EXPECT_TRUE(tkrzw_dbm_compare_exchange(dbm, "xyz", 3, TKRZW_ANY_DATA, 0, nullptr, 0));
   value_ptr = tkrzw_dbm_get(dbm, "xyz", -1, &value_size);
   EXPECT_EQ(nullptr, value_ptr);
+  int32_t actual_size = 0;
+  char* actual_ptr = tkrzw_dbm_compare_exchange_and_get(
+      dbm, "xyz", -1, nullptr, 0, "123", -1, &actual_size);
+  EXPECT_EQ(nullptr, actual_ptr);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  actual_ptr = tkrzw_dbm_compare_exchange_and_get(
+      dbm, "xyz", -1, "123", -1, TKRZW_ANY_DATA, 0, &actual_size);
+  EXPECT_STREQ("123", actual_ptr);
+  EXPECT_EQ(3, actual_size);
+  free(actual_ptr);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
+  actual_ptr = tkrzw_dbm_compare_exchange_and_get(
+      dbm, "xyz", -1, TKRZW_ANY_DATA, 0, nullptr, 0, &actual_size);
+  EXPECT_STREQ("123", actual_ptr);
+  EXPECT_EQ(3, actual_size);
+  free(actual_ptr);
+  EXPECT_EQ(TKRZW_STATUS_SUCCESS, tkrzw_get_last_status_code());
   TkrzwKeyValuePair expected[2];
   expected[0].key_ptr = "color1";
   expected[0].key_size = -1;

@@ -1319,7 +1319,7 @@ class DBM {
                                  bool* found = nullptr) {
     Status impl_status(Status::SUCCESS);
     RecordProcessorCompareExchange proc(&impl_status, expected, desired, actual, found);
-    const Status status = Process(key, &proc, true);
+    const Status status = Process(key, &proc, desired.data() != ANY_DATA.data());
     if (status != Status::SUCCESS) {
       return status;
     }

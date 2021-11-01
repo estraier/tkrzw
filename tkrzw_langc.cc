@@ -692,6 +692,41 @@ bool tkrzw_dbm_compare_exchange(
   return last_status == Status::SUCCESS;
 }
 
+char* tkrzw_dbm_compare_exchange_and_get(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* expected_ptr, int32_t expected_size,
+    const char* desired_ptr, int32_t desired_size, int32_t* actual_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  if (expected_ptr == TKRZW_ANY_DATA) {
+    expected_ptr = DBM::ANY_DATA.data();
+  } else if (expected_ptr != nullptr && expected_size < 0) {
+    expected_size = std::strlen(expected_ptr);
+  }
+  if (desired_ptr == TKRZW_ANY_DATA) {
+    desired_ptr = DBM::ANY_DATA.data();
+  } else if (desired_ptr != nullptr && desired_size < 0) {
+    desired_size = std::strlen(desired_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  std::string actual;
+  bool found = false;
+  last_status = xdbm->CompareExchange(
+      std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
+      std::string_view(desired_ptr, desired_size), &actual, &found);
+  char* actual_ptr = nullptr;
+  if (found) {
+    actual_ptr = static_cast<char*>(xmalloc(actual.size() + 1));
+    std::memcpy(actual_ptr, actual.c_str(), actual.size() + 1);
+    if (actual_size != nullptr) {
+      *actual_size = actual.size();
+    }
+  }
+  return actual_ptr;
+}
+
 int64_t tkrzw_dbm_increment(
     TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
     int64_t increment, int64_t initial) {

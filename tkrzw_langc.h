@@ -636,6 +636,29 @@ bool tkrzw_dbm_compare_exchange(
     const char* desired_ptr, int32_t desired_size);
 
 /**
+ * Does compare-and-exchange and/or gets the old value of the record.
+ * @param dbm The database object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param expected_ptr The expected value pointer.  If it is NULL, no existing record is
+ * expected.  If it is TKRZW_ANY_DATA, an existing record with any value is expacted.
+ * @param expected_size The expected value size.  If it is negative, strlen(expected_ptr) is used.
+ * @param desired_ptr The desired value pointer.  If it is NULL, the record is to be removed.
+ * expected.  If it is TKRZW_ANY_DATA, no update is done.
+ * @param desired_size The desired value size.  If it is negative, strlen(desired_ptr) is used.
+ * @param actual_size The pointer to the variable to store the value size.  If it is NULL, it
+ * is not used.
+ * @return The pointer to the old value data, which should be released by the free function.  NULL
+ * is returned if there's no existing record.  The value data is trailed by a null code so that
+ * the region can be treated as a C-style string.
+ * @details If the condition doesn't meet, INFEASIBLE_ERROR status code is set.
+ */
+char* tkrzw_dbm_compare_exchange_and_get(
+    TkrzwDBM* dbm, const char* key_ptr, int32_t key_size,
+    const char* expected_ptr, int32_t expected_size,
+    const char* desired_ptr, int32_t desired_size, int32_t* actual_size);
+
+/**
  * Increments the numeric value of a record.
  * @param dbm The database object.
  * @param key_ptr The key pointer.
