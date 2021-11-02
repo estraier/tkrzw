@@ -1125,6 +1125,25 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
         }
       }
       if (op_dist(mt) % 5 == 0) {
+        std::string_view expected;
+        switch (op_dist(mt) % 3) {
+          case 0: expected = ""; break;
+          case 1: expected = tkrzw::DBM::ANY_DATA; break;
+        }
+        std::string_view desired;
+        switch (op_dist(mt) % 3) {
+          case 0: desired = ""; break;
+          case 1: desired = tkrzw::DBM::ANY_DATA; break;
+        }
+        std::string actual;
+        bool found = false;
+        const Status status = dbm->CompareExchange(key, expected, desired, &actual, &found);
+        if (status != Status::SUCCESS && status != Status::INFEASIBLE_ERROR) {
+          EPrintL("CompareExchange failed: ", status);
+          has_error = true;
+          break;
+        }
+      } else if (op_dist(mt) % 5 == 0) {
         const Status status = dbm->Remove(key);
         if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {
           EPrintL("Set failed: ", status);
