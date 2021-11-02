@@ -1308,8 +1308,8 @@ class DBM {
    * If it is ANY_DATA, an existing record with any value is expacted.
    * @param desired The desired value.  If the data is nullptr, the record is to be removed.
    * If it is ANY_DATA, no update is done.
-   * @param actual The pointer to a string object to contain the result value.  If it is nullptr,
-   * it is ignored.
+   * @param actual The pointer to a string object to contain the actual value of the existing
+   * record.  If it is nullptr, it is ignored.
    * @param found The pointer to a variable to contain whether there is an existing record.  If it
    * is nullptr, it is ignored.
    * @return The result status.  If the condition doesn't meet, INFEASIBLE_ERROR is returned.
