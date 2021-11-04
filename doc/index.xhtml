@@ -311,9 +311,9 @@ $ make testrun
 
 <h3 id="installation_windows">For Windows</h3>
 
-<p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.</p>
+<p>To build and install the library, you use "nmake".  Edit VCMakefile to assure the base path of Visual C++ and the base path of the system SDK are correct.  The directory names are different among minor versions so checking them is important.</p>
 
-<pre><code class="language-shell-session"><![CDATA[VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.28.29910
+<pre><code class="language-shell-session"><![CDATA[VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
 VCINCPATH = $(VCPATH)\include
 VCLIBPATH = $(VCPATH)\lib\x64
