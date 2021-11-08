@@ -32,6 +32,19 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
+TEST(AsyncDBMTest, Empty) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
+  std::string copy_path = tmp_dir.MakeUniquePath("casket-copy-", ".tkh");
+  tkrzw::PolyDBM dbm;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
+      file_path, true, tkrzw::File::OPEN_TRUNCATE, {{"num_buckets", "100"}}));
+  {
+    tkrzw::AsyncDBM async(&dbm, 4);
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
+}
+
 TEST(AsyncDBMTest, Basic) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkh");
