@@ -540,7 +540,7 @@ double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
 }
 
 std::string MakeRelativeTimeExpr(double diff) {
-  const int64_t abs_diff = std::llabs(diff);
+  const double abs_diff = std::fabs(diff);
   if (abs_diff >= 86400) {
     return SPrintF("%0.1f days", diff / 86400);
   } else if (abs_diff >= 3600) {
