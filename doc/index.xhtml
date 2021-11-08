@@ -277,11 +277,11 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  The flags "-llzma", "-llz4", "-lzstd", and "-lz" should be set only if corresponding features (<a href="https://tukaani.org/xz/">LZMA</a>, <a href="https://lz4.github.io/lz4/">LZ4</a>, <a href="https://facebook.github.io/zstd/">ZStd</a>, and <a href="https://zlib.net/">ZLib</a>) are enabled by the configure script.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flag "-lpthread" is necessary because the library uses threading functions.</p>
+<p>To build an application program, you'll typically run a command like this.  The compiler flag "-std=c++17" is necessary if the default C++ version of your compiler is older than C++17.  The flags "-llzma", "-llz4", "-lzstd", and "-lz" should be set only if corresponding features (<a href="https://tukaani.org/xz/">LZMA</a>, <a href="https://lz4.github.io/lz4/">LZ4</a>, <a href="https://facebook.github.io/zstd/">ZStd</a>, and <a href="https://zlib.net/">ZLib</a>) are enabled by the configure script.  If you don't use threading functions in the application code, you can omit the compiler flag "-pthread".  Even so, the linking flags "-latomic" and "-lpthread" are necessary because the library uses threading functions.</p>
 
 <pre><code class="language-shell-session"><![CDATA[$ g++ -std=c++17 -pthread -I/usr/local/include \
   -O2 -Wall helloworld.cc -o helloworld \
-  -L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lpthread
+  -L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -latomic -lpthread -lm -lc
 ]]></code></pre>
 
 <p>The bundled command "tkrzw_build_util" is useful to know necessary CPPFLAGS (flags for the preprocessor), and LDFLAGS (flags for the linker).</p>
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
 <pre><code class="language-shell-session"><![CDATA[$ tkrzw_build_util config -i
 -I/usr/local/include
 $ tkrzw_build_util config -l
--L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lrt -lpthread -lm -lc 
+-L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lrt -latomic -lpthread -lm -lc
 ]]></code></pre>
 
 <p>In some environments, you can also use the "pkg-config" command to list up those flags.</p>
@@ -298,7 +298,7 @@ $ tkrzw_build_util config -l
 $ pkg-config --cflags-only-I tkrzw
 -I/usr/local/include
 $ pkg-config --libs tkrzw
--L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lrt -lpthread -lm -lc
+-L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lrt -latomic -lpthread -lm -lc
 ]]></code></pre>
 
 <p>To run the test suite, GoogleTest is required.  Although testing the library is not necessary for most users, you can do so just in case.</p>
@@ -2726,7 +2726,7 @@ int main(int argc, char** argv) {
 
 <pre><code class="language-shell-session"><![CDATA[$ gcc -std=c11 -pthread -I/usr/local/include \
   -O2 -Wall helloworld.c -o helloworld \
-  -L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -lpthread
+  -L/usr/local/lib -ltkrzw -llzma -llz4 -lzstd -lz -lstdc++ -latomic -lpthread
 ]]></code></pre>
 
 <p>On Windows, typically, your program is built like this:</p>

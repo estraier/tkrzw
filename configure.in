@@ -5,11 +5,11 @@
 #================================================================
 
 # Package name
-AC_INIT([tkrzw], [1.0.20])
+AC_INIT([tkrzw], [1.0.21])
 
 # Package information
 MYLIBVER=1
-MYLIBREV=63
+MYLIBREV=64
 MYLIBFMT=0
 
 # Targets
@@ -277,6 +277,7 @@ AC_C_BIGENDIAN(MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_BIGEND")
 AC_CHECK_LIB(c, main)
 AC_CHECK_LIB(m, main)
 AC_CHECK_LIB(pthread, main)
+AC_CHECK_LIB(atomic, main)
 AC_CHECK_LIB(rt, main)
 AC_CHECK_LIB(stdc++, main)
 AC_CHECK_LIB(tkrzw, main, AC_MSG_WARN([old version of Tkrzw was detected]))
