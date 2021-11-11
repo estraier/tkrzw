@@ -3259,7 +3259,7 @@ std::cout << dbm.GetEffectiveDataSize() << std::endl;
 
 <p>The file tree database uses B+ tree.  Records are organized in ascending order of the key.  Records at adjacent positions are chunked as a unit called "page".  The larger each page is, the better space efficiency is.  And, performance of sequential access is also better.  Meanwhile, performance of random access deteriorates if pages are too big.  The default maximum page size 8130 is suitable in most cases.</p>
 
-<p>If the machine has abundant memory, increasing the max_cached_pages parameter contributes better performance of random access.  By default, 10000 pages are cached.  The average page size is about 8K bytes so 80MB memory is used for the cache system.  Let's say, the machine has 2GB free memory.  Then, specifying 20,0000 or something is feasible.</p>
+<p>If the machine has abundant memory, increasing the max_cached_pages parameter contributes better performance of random access.  By default, 10,000 pages are cached.  The average page size is about 8K bytes so 80MB memory is used for the cache system.  Let's say, the machine has 2GB free memory.  Then, specifying 200,000 or something is feasible.</p>
 
 <p>Usually, there's no need to modify the default tuning parameters.  By default, the maximum database size is 1TB because the offset width is 4 and the alignment power is 8.  If the number of records exceeds 20 million, the num_buckets parameter should be increased for better performance.</p>
 
@@ -3550,7 +3550,7 @@ if (dbm.Get(key, &value).IsOK()) {
 
 <p>Different database classes implement key locking with different granularities.  For example, HashDBM internally has a bank of 256 locks and keys get grouped together and guarded with these locks, whereas StdHashDBM internally has a single lock for all keys in the database.  These internal differences will not affect the correctness of your application, but they may impact its performance.  See the individual section for each database type to learn more.</p>
 
-<p>Process takes a callback that Tkzrw calls with the record lock held so that you may perform the atomic operation.  For that callback you can pass eitehr an instance of a subclass of DBM::RecordProcessor or a lambda function.  A subclass of DBM::RecordProcessor overwrites ProcessFull and ProcessEmpty methods.</p>
+<p>Process takes a callback that Tkzrw calls with the record lock held so that you may perform the atomic operation.  For that callback you can pass either an instance of a subclass of DBM::RecordProcessor or a lambda function.  A subclass of DBM::RecordProcessor overwrites ProcessFull and ProcessEmpty methods.</p>
 
 <ul>
 <li>If the database has an existing record for the key passed to Process, Tkzrw calls your ProcessFull(key, value) with the key and the existing value, and you can either:<ul>
@@ -3808,7 +3808,7 @@ if (dbm.Get(key, &value).IsOK()) {
 
 <h3 id="tips_notification">Notification</h3>
 
-<p>In multi-thread programming, you sometimes want to use notificaiton features.  The SignalBroker class is useful to notify of generic updates to other threads.  The "producer" threads and the "consumer" threads share an instance of SignalBroker.  The producer threads calls its Send method after they update the database.</p>
+<p>In multi-thread programming, you sometimes want to use notification features.  The SignalBroker class is useful to notify of generic updates to other threads.  The "producer" threads and the "consumer" threads share an instance of SignalBroker.  The producer threads calls its Send method after they update the database.</p>
 
 <pre><code class="language-cpp"><![CDATA[void Produce(DBM* dbm, SignalBroker* broker) {
   dbm->PushLast("hello");
