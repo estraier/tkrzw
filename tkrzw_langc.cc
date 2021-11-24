@@ -414,6 +414,16 @@ bool tkrzw_dbm_process(
   return last_status == Status::SUCCESS;
 }
 
+bool tkrzw_dbm_check(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
+  assert(dbm != nullptr && key_ptr != nullptr);
+  if (key_size < 0) {
+    key_size = std::strlen(key_ptr);
+  }
+  ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
+  last_status = xdbm->Get(std::string_view(key_ptr, key_size));
+  return last_status == Status::SUCCESS;
+}
+
 char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_t* value_size) {
   assert(dbm != nullptr && key_ptr != nullptr);
   if (key_size < 0) {

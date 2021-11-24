@@ -470,6 +470,14 @@ bool tkrzw_dbm_process(
     void* proc_arg, bool writable);
 
 /**
+ * Checks if a record exists or not.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @return True if the record exists, or false if not.
+ */
+bool tkrzw_dbm_check(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size);
+
+/**
  * Gets the value of a record of a key.
  * @param dbm The database object.
  * @param key_ptr The key pointer.

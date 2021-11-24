@@ -133,8 +133,10 @@ TEST(LangCTest, Basic) {
   EXPECT_TRUE(tkrzw_dbm_set(dbm, "one", 3, "first", 5, false));
   EXPECT_FALSE(tkrzw_dbm_set(dbm, "one", 3, "1", 1, false));
   EXPECT_EQ(TKRZW_STATUS_DUPLICATION_ERROR, tkrzw_get_last_status_code());
+  EXPECT_TRUE(tkrzw_dbm_check(dbm, "one", 3));
   EXPECT_TRUE(tkrzw_dbm_remove(dbm, "one", 3));
   EXPECT_FALSE(tkrzw_dbm_remove(dbm, "one", 3));
+  EXPECT_FALSE(tkrzw_dbm_check(dbm, "one", -1));
   EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, tkrzw_get_last_status_code());
   TkrzwStatus status = tkrzw_get_last_status();
   EXPECT_EQ(TKRZW_STATUS_NOT_FOUND_ERROR, status.code);
