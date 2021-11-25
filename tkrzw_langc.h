@@ -471,6 +471,7 @@ bool tkrzw_dbm_process(
 
 /**
  * Checks if a record exists or not.
+ * @param dbm The database object.
  * @param key_ptr The key pointer.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
  * @return True if the record exists, or false if not.
