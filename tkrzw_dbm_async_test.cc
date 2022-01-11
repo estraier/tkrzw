@@ -509,4 +509,202 @@ TEST(AsyncDBMTest, StatusFeature) {
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Close());
 }
 
+TEST(AsyncDBMTest, MultiFiles) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  constexpr size_t num_records = 500;
+  struct Config final {
+    std::string path;
+    std::map<std::string, std::string> open_params;
+  };
+  const std::vector<Config> configs = {
+    {"casket-01.tkh", {{"num_buckets", "10000"}}},
+    {"casket-02.tkh", {{"num_buckets", "10000"}}},
+    {"casket-03.tkh", {{"num_buckets", "10000"}}},
+    {"casket-04.tkh", {{"num_buckets", "10000"}}},
+    {"casket-05.tkt", {{"num_buckets", "1000"}, {"max_page_size", "256"}}},
+    {"casket-06.tkt", {{"num_buckets", "1000"}, {"max_page_size", "256"}}},
+    {"casket-07.tkt", {{"num_buckets", "1000"}, {"max_page_size", "256"}}},
+    {"casket-08.tkt", {{"num_buckets", "1000"}, {"max_page_size", "256"}}},
+    {"casket-09.tkmt", {{"num_buckets", "10000"}}},
+    {"casket-10.tkmt", {{"num_buckets", "10000"}}},
+    {"casket-11.tkmb", {}},
+    {"casket-12.tkmb", {}},
+  };
+  struct Database {
+    std::shared_ptr<tkrzw::PolyDBM> dbm;
+    std::shared_ptr<tkrzw::AsyncDBM> async;
+  };
+  std::vector<Database> dbs;
+  dbs.resize(configs.size());
+  for (size_t db_index = 0; db_index < configs.size(); db_index++) {
+    auto config = configs[db_index];
+    std::string path;
+    if (!config.path.empty()) {
+      path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    }
+    auto& db = dbs[db_index];
+    db.dbm.reset(new tkrzw::PolyDBM);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, config.open_params));
+    db.async.reset(new tkrzw::AsyncDBM(db.dbm.get(), 2));
+  }
+  for (size_t rec_index = 0; rec_index < num_records; rec_index++) {
+    const std::string key = tkrzw::ToString(rec_index);
+    const std::string value = tkrzw::ToString(rec_index * rec_index);
+    std::vector<std::future<tkrzw::Status>> futures;
+    futures.resize(dbs.size());
+    for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+      futures[db_index] = dbs[db_index].async->Set(key, value);
+    }
+    for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, futures[db_index].get());
+      if (rec_index % 2 == 0) {
+        futures[db_index] = dbs[db_index].async->Remove(key);
+      } else {
+        futures[db_index] = dbs[db_index].async->Append(key, value, ":");
+      }
+    }
+    if (rec_index % 7 == 0) {
+      for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, futures[db_index].get());
+        futures[db_index] = dbs[db_index].async->Synchronize(false);
+      }
+    }
+  }
+  for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+    auto& db = dbs[db_index];
+    db.async = nullptr;
+    EXPECT_EQ(num_records / 2, db.dbm->CountSimple());
+    for (size_t rec_index = 0; rec_index < num_records; rec_index++) {
+      const std::string key = tkrzw::ToString(rec_index);
+      const std::string value = tkrzw::StrCat(rec_index * rec_index, ":", rec_index * rec_index);
+      std::string rec_value;
+      const auto status = db.dbm->Get(key, &rec_value);
+      if (rec_index % 2 == 0) {
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
+      } else {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, status);
+        EXPECT_EQ(value, rec_value);
+      }
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->Close());
+    db.dbm = nullptr;
+  }
+  for (size_t db_index = 0; db_index < configs.size(); db_index++) {
+    auto config = configs[db_index];
+    std::string path;
+    if (!config.path.empty()) {
+      path = tkrzw::JoinPath(tmp_dir.Path(), config.path);
+    }
+    auto& db = dbs[db_index];
+    db.dbm.reset(new tkrzw::PolyDBM);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->OpenAdvanced(
+        path, false, tkrzw::File::OPEN_DEFAULT, config.open_params));
+    db.async.reset(new tkrzw::AsyncDBM(db.dbm.get(), 2));
+  }
+  for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+    auto& db = dbs[db_index];
+    EXPECT_EQ(num_records / 2, db.dbm->CountSimple());
+    for (size_t rec_index = 0; rec_index < num_records; rec_index++) {
+      const std::string key = tkrzw::ToString(rec_index);
+      const std::string value = tkrzw::StrCat(rec_index * rec_index, ":", rec_index * rec_index);
+      const auto& future = db.async->Get(key).get();
+      if (rec_index % 2 == 0) {
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, future.first);
+      } else {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, future.first);
+        EXPECT_EQ(value, future.second);
+      }
+    }
+    db.async = nullptr;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->Close());
+    db.dbm = nullptr;
+  }
+}
+
+TEST(AsyncDBMTest, ManyFiles) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  constexpr size_t num_files = 100;
+  constexpr size_t num_records = 100;
+  struct Database {
+    std::shared_ptr<tkrzw::PolyDBM> dbm;
+    std::shared_ptr<tkrzw::AsyncDBM> async;
+  };
+  std::vector<Database> dbs;
+  dbs.resize(num_files);
+  for (size_t db_index = 0; db_index < num_files; db_index++) {
+    std::string path = tkrzw::JoinPath(tmp_dir.Path(), tkrzw::SPrintF("casket-%04d", db_index));
+    auto& db = dbs[db_index];
+    db.dbm.reset(new tkrzw::PolyDBM);
+    std::map<std::string, std::string> open_params;
+    switch (db_index % 3) {
+      default:
+        open_params["dbm"] = "HashDBM";
+        open_params["num_buckets"] = "100";
+        break;
+      case 1:
+        open_params["dbm"] = "TreeDBM";
+        open_params["num_buckets"] = "20";
+        open_params["max_page_size"] = "256";
+        open_params["max_cached_pages"] = "8";
+        break;
+      case 2:
+        open_params["dbm"] = "SkipDBM";
+        open_params["step_unit"] = "2";
+        open_params["max_level"] = "5";
+        break;
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->OpenAdvanced(
+        path, true, tkrzw::File::OPEN_TRUNCATE, open_params));
+    db.async.reset(new tkrzw::AsyncDBM(db.dbm.get(), 2));
+  }
+  std::vector<std::future<tkrzw::Status>> futures;
+  for (size_t rec_index = 0; rec_index < num_records; rec_index++) {
+    const std::string key = tkrzw::ToString(rec_index);
+    const std::string value = tkrzw::ToString(rec_index * rec_index);
+    for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+      futures.emplace_back(dbs[db_index].async->Set(key, value));
+    }
+  }
+  for (auto& future : futures) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, future.get());
+  }
+  futures.clear();
+  for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+    futures.emplace_back(dbs[db_index].async->Synchronize(false));
+  }
+  for (auto& future : futures) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, future.get());
+  }
+  futures.clear();
+  for (size_t rec_index = 0; rec_index < num_records; rec_index += 2) {
+    const std::string key = tkrzw::ToString(rec_index);
+    for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+      futures.emplace_back(dbs[db_index].async->Remove(key));
+    }
+  }
+  for (auto& future : futures) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, future.get());
+  }
+  for (size_t db_index = 0; db_index < dbs.size(); db_index++) {
+    auto& db = dbs[db_index];
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.async->Synchronize(false).get());
+    EXPECT_EQ(num_records / 2, db.dbm->CountSimple());
+    for (size_t rec_index = 0; rec_index < num_records; rec_index++) {
+      const std::string key = tkrzw::ToString(rec_index);
+      const std::string value = tkrzw::StrCat(rec_index * rec_index);
+      const auto& future = db.async->Get(key).get();
+      if (rec_index % 2 == 0) {
+        EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, future.first);
+      } else {
+        EXPECT_EQ(tkrzw::Status::SUCCESS, future.first);
+        EXPECT_EQ(value, future.second);
+      }
+    }
+    db.async = nullptr;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, db.dbm->Close());
+    db.dbm = nullptr;
+  }
+}
+
 // END OF FILE
