@@ -1,7 +1,7 @@
 # Makefile for Tkrzw for Windows
 
-PKG_VERSION = 1.0.21
-LIB_VERSION = 1.64.0
+PKG_VERSION = 1.0.22
+LIB_VERSION = 1.65.0
 
 VCPATH = C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133
 SDKPATH = C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0
@@ -286,6 +286,8 @@ check-treedbm-perf :
 	tkrzw_dbm_perf.exe sequence --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 --append
 	tkrzw_dbm_perf.exe sequence --dbm tree --file mmap-para --path casket.tkt \
+	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 --page_update_write
+	tkrzw_dbm_perf.exe sequence --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value
 	tkrzw_dbm_perf.exe sequence --dbm tree --file mmap-para --path casket.tkt \
@@ -297,6 +299,9 @@ check-treedbm-perf :
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value --append
+	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
+	  --iter 20000 --threads 5 --size 8 --max_page_size 200 --max_branches 8 \
+	  --random_key --random_value --page_update_write
 	tkrzw_dbm_perf.exe parallel --dbm tree --file mmap-para --path casket.tkt \
 	  --iter 100000 --threads 1 --size 8 --max_page_size 200 --max_branches 8 \
 	  --random_key --random_value --rebuild
@@ -318,6 +323,10 @@ check-treedbm-perf :
 	  --block_size 512 --direct_io --padding \
 	  --iter 80000 --threads 1 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --iterator --clear --rebuild
+	tkrzw_dbm_perf.exe wicked --dbm tree --file pos-para --path casket.tkt \
+	  --block_size 512 --direct_io --padding \
+	  --iter 80000 --threads 1 --size 8 --max_page_size 1024 --max_branches 8 \
+	  --page_update_write --iterator --clear --rebuild
 	tkrzw_dbm_perf.exe wicked --dbm tree --file pos-para --path casket.tkt \
 	  --block_size 512 --direct_io --padding --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \

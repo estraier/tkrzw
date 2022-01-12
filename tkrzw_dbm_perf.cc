@@ -123,6 +123,7 @@ static void PrintUsageAndDie() {
     TreeDBM::DEFAULT_MAX_BRANCHES);
   P("  --max_cached_pages num : Sets the maximum number of cached pages. (default: %d)\n",
     TreeDBM::DEFAULT_MAX_CACHED_PAGES);
+  P("  --page_update_write : Writes updated pages immediately.\n");
   P("\n");
   P("Options for SkipDBM:\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
@@ -231,8 +232,8 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
               int32_t offset_width, int32_t align_pow, int64_t num_buckets,
               int32_t fbp_cap, int32_t min_read_size, bool cache_buckets,
               int32_t max_page_size, int32_t max_branches, int32_t max_cached_pages,
-              int32_t step_unit, int32_t max_level, int64_t sort_mem_size,
-              bool insert_in_order, int32_t max_cached_records,
+              bool page_update_write, int32_t step_unit, int32_t max_level,
+              int64_t sort_mem_size, bool insert_in_order, int32_t max_cached_records,
               const std::string& poly_params) {
   bool has_error = false;
   int32_t open_options = File::OPEN_DEFAULT;
@@ -323,6 +324,8 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;
+    tuning_params.page_update_mode =
+        page_update_write ? tkrzw::TreeDBM::PAGE_UPDATE_WRITE :tkrzw::TreeDBM::PAGE_UPDATE_NONE;
     const Status status =
         tree_dbm->OpenAdvanced(file_path, writable, open_options, tuning_params);
     if (status != Status::SUCCESS) {
@@ -594,6 +597,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
+    {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
     {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
@@ -642,6 +646,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
+  const bool page_update_write = CheckMap(cmd_args, "--page_update_write");
   const int32_t step_unit = GetIntegerArgument(cmd_args, "--step_unit", 0, -1);
   const int32_t max_level = GetIntegerArgument(cmd_args, "--max_level", 0, -1);
   const int64_t sort_mem_size = GetIntegerArgument(cmd_args, "--sort_mem_size", 0, -1);
@@ -727,7 +732,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                  max_page_size, max_branches, max_cached_pages,
+                  max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
       has_error = true;
@@ -805,7 +810,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                  max_page_size, max_branches, max_cached_pages,
+                  max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
       has_error = true;
@@ -879,7 +884,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                  max_page_size, max_branches, max_cached_pages,
+                  max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
       has_error = true;
@@ -940,7 +945,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
                   offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                  max_page_size, max_branches, max_cached_pages,
+                  max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
       has_error = true;
@@ -1008,6 +1013,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
+    {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
     {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
@@ -1054,6 +1060,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
+  const bool page_update_write = CheckMap(cmd_args, "--page_update_write");
   const int32_t step_unit = GetIntegerArgument(cmd_args, "--step_unit", 0, -1);
   const int32_t max_level = GetIntegerArgument(cmd_args, "--max_level", 0, -1);
   const int64_t sort_mem_size = GetIntegerArgument(cmd_args, "--sort_mem_size", 0, -1);
@@ -1185,7 +1192,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
                 offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                max_page_size, max_branches, max_cached_pages,
+                max_page_size, max_branches, max_cached_pages, page_update_write,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
     has_error = true;
@@ -1251,6 +1258,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
+    {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
     {"--max_cached_records", 1}, {"--reducer", 1},
     {"--cap_rec_num", 1}, {"--cap_mem_size", 1}, {"--params", 1}, {"--ulog", 1},
@@ -1296,6 +1304,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
+  const bool page_update_write = CheckMap(cmd_args, "--page_update_write");
   const int32_t step_unit = GetIntegerArgument(cmd_args, "--step_unit", 0, -1);
   const int32_t max_level = GetIntegerArgument(cmd_args, "--max_level", 0, -1);
   const int64_t sort_mem_size = GetIntegerArgument(cmd_args, "--sort_mem_size", 0, -1);
@@ -1506,7 +1515,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
                 offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
-                max_page_size, max_branches, max_cached_pages,
+                max_page_size, max_branches, max_cached_pages, page_update_write,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
     has_error = true;
@@ -1568,6 +1577,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
     {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
+    {"--page_update_write", 0},
   };
   std::map<std::string, std::vector<std::string>> cmd_args;
   std::string cmd_error;
@@ -1594,6 +1604,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
+  const bool page_update_write = CheckMap(cmd_args, "--page_update_write");
   if (num_iterations < 1) {
     Die("Invalid number of iterations");
   }
@@ -1646,6 +1657,8 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;
+    tuning_params.page_update_mode =
+        page_update_write ? tkrzw::TreeDBM::PAGE_UPDATE_WRITE :tkrzw::TreeDBM::PAGE_UPDATE_NONE;
     const Status status = index_file.Open(file_path, true, File::OPEN_TRUNCATE, tuning_params);
     if (status != Status::SUCCESS) {
       Die("Open failed: ", status);

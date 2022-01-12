@@ -168,6 +168,18 @@ class TreeDBM final : public DBM {
   };
 
   /**
+   * Enumeration for page update modes.
+   */
+  enum PageUpdateMode : int32_t {
+    /** The default behavior: no operation or to succeed the current mode. */
+    PAGE_UPDATE_DEFAULT = 0,
+    /** To do no operation. */
+    PAGE_UPDATE_NONE = 1,
+    /** To write immediately. */
+    PAGE_UPDATE_WRITE = 2,
+  };
+
+  /**
    * Tuning parameters for the database.
    */
   struct TuningParameters : public HashDBM::TuningParameters {
@@ -191,6 +203,13 @@ class TreeDBM final : public DBM {
      * saved as a metadata of the database, it should be set each time when opening the database.
      */
     int32_t max_cached_pages = -1;
+    /**
+     * What to do when each page is updated.
+     * @details By default, updated cached pages are just kept on memory and the updates of each
+     * page are not written in the file until the page is cached out or the database is closed.
+     * PAGE_UPDATE_WRITE improves durability by ensuring that each update is written immediately.
+     */
+    PageUpdateMode page_update_mode = PAGE_UPDATE_DEFAULT;
     /**
      * The comparator of record keys.
      * @details Records are put in the ascending order of this function.  If this is one of

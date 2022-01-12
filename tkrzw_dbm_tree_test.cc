@@ -65,6 +65,7 @@ class TreeDBMTest : public CommonDBMTest {
   void TreeDBMRestoreTest(tkrzw::TreeDBM* dbm);
   void TreeDBMAutoRestoreTest(tkrzw::TreeDBM* dbm);
   void TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm);
+  void TreeDBMPageUpdateTest(tkrzw::TreeDBM* dbm);
   void TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm);
   void TreeDBMUpdateLoggerTest(tkrzw::TreeDBM* dbm);
 };
@@ -161,8 +162,10 @@ void TreeDBMTest::TreeDBMBasicTest(tkrzw::TreeDBM* dbm) {
   const std::vector<tkrzw::HashDBM::RecordCompressionMode> record_comp_modes =
       {tkrzw::HashDBM::RECORD_COMP_NONE, tkrzw::HashDBM::RECORD_COMP_ZSTD};
   const std::vector<int32_t> max_page_size = {100, 200, 400};
-  const std::vector<int32_t> max_branches = {2, 5, 16};
+  const std::vector<int32_t> max_branches = {2, 16};
   const std::vector<int32_t> max_cached_pages = {1, 64, 256};
+  const std::vector<tkrzw::TreeDBM::PageUpdateMode> page_update_modes =
+      {tkrzw::TreeDBM::PAGE_UPDATE_NONE, tkrzw::TreeDBM::PAGE_UPDATE_WRITE};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_comp_mode : record_comp_modes) {
       if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
@@ -171,18 +174,21 @@ void TreeDBMTest::TreeDBMBasicTest(tkrzw::TreeDBM* dbm) {
       for (const auto& max_page_size : max_page_size) {
         for (const auto& max_branches : max_branches) {
           for (const auto& max_cached_pages : max_cached_pages) {
-            tkrzw::TreeDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-            tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-            tuning_params.max_page_size = max_page_size;
-            tuning_params.max_branches = max_branches;
-            tuning_params.max_cached_pages = max_cached_pages;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            BasicTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            for (const auto& page_update_mode : page_update_modes) {
+              tkrzw::TreeDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+              tuning_params.max_page_size = max_page_size;
+              tuning_params.max_branches = max_branches;
+              tuning_params.max_cached_pages = max_cached_pages;
+              tuning_params.page_update_mode = page_update_mode;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              BasicTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -311,6 +317,8 @@ void TreeDBMTest::TreeDBMProcessEachTest(tkrzw::TreeDBM* dbm) {
   const std::vector<int32_t> max_page_size = {100, 200};
   const std::vector<int32_t> max_branches = {2, 16};
   const std::vector<int32_t> max_cached_pages = {64, 256};
+  const std::vector<tkrzw::TreeDBM::PageUpdateMode> page_update_modes =
+      {tkrzw::TreeDBM::PAGE_UPDATE_NONE, tkrzw::TreeDBM::PAGE_UPDATE_WRITE};
   for (const auto& update_mode : update_modes) {
     for (const auto& record_comp_mode : record_comp_modes) {
       if (!tkrzw::HashDBM::CheckRecordCompressionModeIsSupported(record_comp_mode)) {
@@ -319,18 +327,21 @@ void TreeDBMTest::TreeDBMProcessEachTest(tkrzw::TreeDBM* dbm) {
       for (const auto& max_page_size : max_page_size) {
         for (const auto& max_branches : max_branches) {
           for (const auto& max_cached_pages : max_cached_pages) {
-            tkrzw::TreeDBM::TuningParameters tuning_params;
-            tuning_params.update_mode = update_mode;
-            tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
-            tuning_params.record_comp_mode = record_comp_mode;
-            tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
-            tuning_params.max_page_size = max_page_size;
-            tuning_params.max_branches = max_branches;
-            tuning_params.max_cached_pages = max_cached_pages;
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
-                file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
-            ProcessEachTest(dbm);
-            EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            for (const auto& page_update_mode : page_update_modes) {
+              tkrzw::TreeDBM::TuningParameters tuning_params;
+              tuning_params.update_mode = update_mode;
+              tuning_params.record_crc_mode = tkrzw::HashDBM::RECORD_CRC_8;
+              tuning_params.record_comp_mode = record_comp_mode;
+              tuning_params.restore_mode = tkrzw::HashDBM::RESTORE_READ_ONLY;
+              tuning_params.max_page_size = max_page_size;
+              tuning_params.max_branches = max_branches;
+              tuning_params.max_cached_pages = max_cached_pages;
+              tuning_params.page_update_mode = page_update_mode;
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+                  file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+              ProcessEachTest(dbm);
+              EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+            }
           }
         }
       }
@@ -1319,6 +1330,63 @@ void TreeDBMTest::TreeDBMCorruptionTest(tkrzw::TreeDBM* dbm) {
   }
 }
 
+void TreeDBMTest::TreeDBMPageUpdateTest(tkrzw::TreeDBM* dbm) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string orig_file_path = tmp_dir.MakeUniquePath();
+  const std::string copy_file_path = tmp_dir.MakeUniquePath();
+  constexpr int32_t max_records = 512;
+  tkrzw::TreeDBM::TuningParameters tuning_params;
+  tuning_params.num_buckets = 1000;
+  tuning_params.max_page_size = 30;
+  tuning_params.max_branches = 2;
+  tuning_params.max_cached_pages = 1;
+  tuning_params.page_update_mode = tkrzw::TreeDBM::PAGE_UPDATE_WRITE;
+  for (int32_t num_records = 1; num_records <= max_records; num_records *= 2) {
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+        orig_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+    for (int32_t i = 1; i <= num_records; i++) {
+      std::string expr = tkrzw::ToString(i * i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set(expr, expr));
+    }
+    EXPECT_EQ(num_records, dbm->CountSimple());
+    tkrzw::RemoveFile(copy_file_path);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFileData(orig_file_path, copy_file_path));
+    auto copy_dbm = dbm->MakeDBM();
+    EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm->Open(copy_file_path, true));
+    EXPECT_EQ(num_records, copy_dbm->CountSimple());
+    for (int32_t i = 1; i <= num_records; i++) {
+      std::string key = tkrzw::ToString(i * i);
+      std::string value;
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Get(key, &value));
+      EXPECT_EQ(key, value);
+    }
+    EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm->Close());
+    for (int32_t i = 1; i <= num_records; i++) {
+      std::string expr = tkrzw::ToString(i * i);
+      EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Remove(expr));
+    }
+    EXPECT_EQ(0, dbm->CountSimple());
+    tkrzw::RemoveFile(copy_file_path);
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::CopyFileData(orig_file_path, copy_file_path));
+    EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm->Open(copy_file_path, true));
+    EXPECT_EQ(0, copy_dbm->CountSimple());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, copy_dbm->Close());
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+  }
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->OpenAdvanced(
+      orig_file_path, true, tkrzw::File::OPEN_TRUNCATE, tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("one", "first"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("two", "second"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Set("three", "third"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->RebuildAdvanced(tuning_params));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Synchronize(false));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Append("two", "2", ":"));
+  EXPECT_EQ("first", dbm->GetSimple("one"));
+  EXPECT_EQ("second:2", dbm->GetSimple("two"));
+  EXPECT_EQ("third", dbm->GetSimple("three"));
+  EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->Close());
+}
+
 void TreeDBMTest::TreeDBMDirectIOTest(tkrzw::TreeDBM* dbm) {
   tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
   const std::string file_path = tmp_dir.MakeUniquePath();
@@ -1572,6 +1640,11 @@ TEST_F(TreeDBMTest, AutoRestore) {
 TEST_F(TreeDBMTest, Corruption) {
   tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
   TreeDBMCorruptionTest(&dbm);
+}
+
+TEST_F(TreeDBMTest, PageUpdate) {
+  tkrzw::TreeDBM dbm(std::make_unique<tkrzw::MemoryMapParallelFile>());
+  TreeDBMPageUpdateTest(&dbm);
 }
 
 TEST_F(TreeDBMTest, DirectIO) {

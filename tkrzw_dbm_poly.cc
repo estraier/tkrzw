@@ -249,11 +249,19 @@ static void SetTreeTuningParams(
   tuning_params->max_page_size = StrToIntMetric(SearchMap(*params, "max_page_size", "-1"));
   tuning_params->max_branches = StrToIntMetric(SearchMap(*params, "max_branches", "-1"));
   tuning_params->max_cached_pages = StrToIntMetric(SearchMap(*params, "max_cached_pages", "-1"));
+  const std::string page_update_mode = StrLowerCase(SearchMap(*params, "page_update_mode", ""));
+  if (page_update_mode == "page_update_none" || page_update_mode == "none") {
+    tuning_params->page_update_mode = TreeDBM::PAGE_UPDATE_NONE;
+  }
+  if (page_update_mode == "page_update_write" || page_update_mode == "write") {
+    tuning_params->page_update_mode = TreeDBM::PAGE_UPDATE_WRITE;
+  }
   tuning_params->key_comparator =
       GetKeyComparatorByName(SearchMap(*params, "key_comparator", ""));
   params->erase("max_page_size");
   params->erase("max_branches");
   params->erase("max_cached_pages");
+  params->erase("page_update_mode");
   params->erase("key_comparator");
 }
 

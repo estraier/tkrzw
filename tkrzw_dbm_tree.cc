@@ -150,6 +150,7 @@ class TreeDBMImpl final {
   void InitializePageCache();
   Status LoadLeafNode(int64_t id, bool promotion, std::shared_ptr<TreeLeafNode>* node);
   Status SaveLeafNode(TreeLeafNode* node);
+  Status SaveLeafNodeImpl(TreeLeafNode* node);
   Status RemoveLeafNode(TreeLeafNode* node);
   Status FlushLeafCacheAll(bool empty);
   Status FlushLeafCacheOne(bool empty, int32_t slot_index);
@@ -190,6 +191,7 @@ class TreeDBMImpl final {
   int32_t max_page_size_;
   int32_t max_branches_;
   int32_t max_cached_pages_;
+  TreeDBM::PageUpdateMode page_update_mode_;
   LeafSlot leaf_slots_[NUM_PAGE_SLOTS];
   InnerSlot inner_slots_[NUM_PAGE_SLOTS];
   KeyComparator key_comparator_;
@@ -371,6 +373,7 @@ TreeDBMImpl::TreeDBMImpl(std::unique_ptr<File> file)
       max_page_size_(TreeDBM::DEFAULT_MAX_PAGE_SIZE),
       max_branches_(TreeDBM::DEFAULT_MAX_BRANCHES),
       max_cached_pages_(TreeDBM::DEFAULT_MAX_CACHED_PAGES),
+      page_update_mode_(TreeDBM::PAGE_UPDATE_DEFAULT),
       key_comparator_(nullptr), record_comp_(nullptr), link_comp_(nullptr),
       update_logger_(nullptr), mini_opaque_(), reorg_ids_(),
       hash_dbm_(new HashDBM(std::move(file))), proc_clock_(0),
@@ -417,6 +420,11 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
   }
   if (tuning_params.max_cached_pages > 0) {
     max_cached_pages_ = tuning_params.max_cached_pages;
+  }
+  if (tuning_params.page_update_mode == TreeDBM::PAGE_UPDATE_DEFAULT) {
+    page_update_mode_ = TreeDBM::PAGE_UPDATE_NONE;
+  } else {
+    page_update_mode_ = tuning_params.page_update_mode;
   }
   if (tuning_params.key_comparator != nullptr) {
     key_comparator_ = tuning_params.key_comparator;
@@ -564,13 +572,19 @@ Status TreeDBMImpl::Process(
     }
   }
   std::shared_ptr<TreeLeafNode> leaf_node;
-  const Status status = SearchTree(key, &leaf_node);
+  Status status = SearchTree(key, &leaf_node);
   if (status != Status::SUCCESS) {
     return status;
   }
   if (writable) {
     std::lock_guard<SpinSharedMutex> leaf_lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, true);
+    if (leaf_node->dirty && page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+      status = SaveLeafNodeImpl(leaf_node.get());
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
   } else {
     std::shared_lock<SpinSharedMutex> leaf_lock(leaf_node->mutex);
     ProcessImpl(leaf_node.get(), key, proc, false);
@@ -622,6 +636,12 @@ Status TreeDBMImpl::ProcessMulti(
     auto& key_proc = key_proc_pairs[i];
     auto& leaf_node = leaf_nodes[i];
     ProcessImpl(leaf_node.get(), key_proc.first, key_proc.second, writable);
+    if (leaf_node->dirty && page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+      const Status status = SaveLeafNodeImpl(leaf_node.get());
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
   }
   for (auto id_leaf_node = id_leaf_nodes.rbegin();
        id_leaf_node != id_leaf_nodes.rend(); id_leaf_node++) {
@@ -666,6 +686,12 @@ Status TreeDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
       if (!node->records.empty()) {
         const std::string key(node->records.front()->GetKey());
         ProcessImpl(node.get(), key, proc, true);
+        if (node->dirty && page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+          status = SaveLeafNodeImpl(node.get());
+          if (status != Status::SUCCESS) {
+            return status;
+          }
+        }
         return Status(Status::SUCCESS);
       }
     } else {
@@ -722,6 +748,12 @@ Status TreeDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       }
       for (const auto& key : keys) {
         ProcessImpl(node.get(), key, proc, true);
+      }
+      if (node->dirty && page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+        status = SaveLeafNodeImpl(node.get());
+        if (status != Status::SUCCESS) {
+          return status;
+        }
       }
     } else {
       std::shared_lock<SpinSharedMutex> leaf_lock(node->mutex);
@@ -868,6 +900,9 @@ Status TreeDBMImpl::Rebuild(
   }
   if (tuning_params.max_cached_pages > 0) {
     max_cached_pages_ = tuning_params.max_cached_pages;
+  }
+  if (tuning_params.page_update_mode != TreeDBM::PAGE_UPDATE_DEFAULT) {
+    page_update_mode_ = tuning_params.page_update_mode;
   }
   status = hash_dbm_->RebuildAdvanced(hash_params, skip_broken_records, sync_hard);
   return status;
@@ -1286,6 +1321,10 @@ Status TreeDBMImpl::SaveLeafNode(TreeLeafNode* node) {
   if (!node->dirty) {
     return Status(Status::SUCCESS);
   }
+  return SaveLeafNodeImpl(node);
+}
+
+Status TreeDBMImpl::SaveLeafNodeImpl(TreeLeafNode* node) {
   char stack[WRITE_BUFFER_SIZE];
   char* write_buf = node->page_size > WRITE_BUFFER_SIZE ? new char[node->page_size] : stack;
   char* wp = write_buf;
@@ -1693,6 +1732,13 @@ Status TreeDBMImpl::DivideNodes(TreeLeafNode* leaf_node, const std::string& node
     heir_id = inner_node->id;
     child_id = new_inner_node->id;
   }
+  if (page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+    status = SaveLeafNodeImpl(leaf_node);
+    status |= SaveLeafNodeImpl(new_leaf_node.get());
+    if (status != Status::SUCCESS) {
+      return status;
+    }
+  }
   return Status(Status::SUCCESS);
 }
 
@@ -1770,6 +1816,12 @@ Status TreeDBMImpl::MergeNodes(TreeLeafNode* leaf_node, const std::string& node_
       }
     }
     RemoveLeafNode(leaf_node);
+    if (page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+      status = SaveLeafNodeImpl(prev_leaf_node.get());
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
   } else if (next_leaf_node != nullptr) {
     next_leaf_node->records.swap(leaf_node->records);
     next_leaf_node->records.reserve(next_leaf_node->records.size() + leaf_node->records.size());
@@ -1799,6 +1851,12 @@ Status TreeDBMImpl::MergeNodes(TreeLeafNode* leaf_node, const std::string& node_
       }
     }
     RemoveLeafNode(leaf_node);
+    if (page_update_mode_ == TreeDBM::PAGE_UPDATE_WRITE) {
+      status = SaveLeafNodeImpl(next_leaf_node.get());
+      if (status != Status::SUCCESS) {
+        return status;
+      }
+    }
   }
   std::shared_ptr<TreeInnerNode> inner_node = std::move(parent_node);
   while (static_cast<int32_t>(inner_node->links.size()) < max_branches_ / 2) {
