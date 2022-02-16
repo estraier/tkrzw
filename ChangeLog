@@ -1,3 +1,10 @@
+2022-02-17 Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.23
+	- Library version: 1.66.0
+
+	- The C interfaces catches possible exceptions inside.
+
 2022-01-12 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.22

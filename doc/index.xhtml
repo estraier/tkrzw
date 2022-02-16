@@ -2720,7 +2720,7 @@ int main(int argc, char** argv) {
 
 <p>The generic file functions are also useful to handle flat files.  They are wrapper of PolyFile class in C++.  You can use files in the memory mapping I/O mode, the normal I/O mode, and the direct I/O mode with the same interface.  Their names begin with "tkrzw_file_" and they receive the pointer to a TkrzwFile object as the first parameter.</p>
 
-<p>The status of last called database operation or file operation is stored as a thread-local variable.  You can get it with "tkrzw_get_last_status" function.</p>
+<p>The status of the last called database operation or file operation is stored as a thread-local variable.  You can get it with "tkrzw_get_last_status" function.  Exceptions thrown in the internal C++ code are caught implicitly.  Actually, whereas Tkrzw's code doesn't throw exceptions by itself, std::bad_alloc can be thrown by failure of the "new" operator and the "malloc" function.  In such error cases, zero, false, null, and failure values are returned and the status is set to TKRZW_STATUS_SYSTEM_ERROR.</p>
 
 <p>The library header is based on the C99 and C11 standards.  On UNIX-like systems, typically, your program is built like this:</p>
 
