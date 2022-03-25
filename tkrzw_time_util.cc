@@ -67,29 +67,30 @@ int64_t MakeUniversalTime(struct std::tm& cal) {
 }
 
 int32_t GetLocalTimeDifference() {
-#if defined(_SYS_WINDOWS_)
   static std::atomic_int32_t tz_cache(INT32MIN);
   int32_t tz_value = tz_cache.load();
   if (tz_value == INT32MIN) {
     const time_t t = 86400;
-    struct std::tm uts;
+    struct std::tm uts, lts;
+#if defined(_SYS_WINDOWS_)
     GetUniversalCalendar(t, &uts);
-    struct std::tm lts;
     GetLocalCalendar(t, &lts);
-    tz_cache.store(std::mktime(&lts) - std::mktime(&uts));
-    tz_value = tz_cache.load();
-  }
-  return tz_value;
 #else
-  static std::atomic_int32_t tz_cache(INT32MIN);
-  int32_t tz_value = tz_cache.load();
-  if (tz_value == INT32MIN) {
-    tzset();
-    tz_cache.store(-timezone);
+    lts = *localtime(&t);
+    uts = *gmtime(&t);
+#endif
+    int32_t delta = ((lts.tm_hour - uts.tm_hour) * 60 + (lts.tm_min - uts.tm_min))
+                 * 60L + (lts.tm_sec - uts.tm_sec);
+    int dday = lts.tm_mday - uts.tm_mday;
+    if ((dday == 1) || (dday < -1)) {
+      delta += 24L * 60 * 60;
+    } else if ((dday == -1) || (dday > 1)) {
+      delta -= 24L * 60 * 60;
+    }   
+    tz_cache.store(delta);
     tz_value = tz_cache.load();
   }
   return tz_value;
-#endif
 }
 
 int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day) {
