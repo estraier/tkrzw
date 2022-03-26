@@ -54,10 +54,11 @@ int64_t MakeUniversalTime(struct std::tm& cal);
 
 /**
  * Gets the time difference of the local time zone.
+ * @param use_cache If true, the result of the first call is cached and reused for later calls.
  * @return The time difference of the local time zone in seconds, which is positive in the east
  * of the prime meridian and negative in the west.
  */
-int32_t GetLocalTimeDifference();
+int32_t GetLocalTimeDifference(bool use_cache = false);
 
 /**
  * Gets the day of week of a date.

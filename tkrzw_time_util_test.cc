@@ -68,13 +68,14 @@ TEST(ThreadUtilTest, MakeUniversalTime) {
 }
 
 TEST(ThreadUtilTest, GetLocalTimeDifference) {
-  const int32_t td = tkrzw::GetLocalTimeDifference();
+  const int32_t td = tkrzw::GetLocalTimeDifference(true);
   EXPECT_TRUE(td > -86400 && td < 86400);
-  EXPECT_EQ(td, tkrzw::GetLocalTimeDifference());
-  if (td == 32400) {
+  EXPECT_EQ(td, tkrzw::GetLocalTimeDifference(true));
+  EXPECT_EQ(td, tkrzw::GetLocalTimeDifference(false));
+  if (td % 3600 == 0) {
     struct std::tm lts;
     tkrzw::GetLocalCalendar(0, &lts);
-    EXPECT_EQ(9, lts.tm_hour);
+    EXPECT_EQ(td / 3600, lts.tm_hour);
     EXPECT_EQ(0, lts.tm_min);
     EXPECT_EQ(0, lts.tm_sec);
   }

@@ -62,35 +62,34 @@ int64_t MakeUniversalTime(struct std::tm& cal) {
 #if defined(_SYS_LINUX_)
   return timegm(&cal);
 #else
-  return std::mktime(&cal) + GetLocalTimeDifference();
+  return std::mktime(&cal) + GetLocalTimeDifference(true);
 #endif
 }
 
-int32_t GetLocalTimeDifference() {
+int32_t GetLocalTimeDifference(bool use_cache) {
+#if defined(_SYS_LINUX_) || defined(_SYS_MACOSX_)
   static std::atomic_int32_t tz_cache(INT32MIN);
-  int32_t tz_value = tz_cache.load();
+  int32_t tz_value = use_cache ? tz_cache.load() : INT32MIN;
   if (tz_value == INT32MIN) {
-    const time_t t = 86400;
-    struct std::tm uts, lts;
-#if defined(_SYS_WINDOWS_)
-    GetUniversalCalendar(t, &uts);
-    GetLocalCalendar(t, &lts);
-#else
-    lts = *localtime(&t);
-    uts = *gmtime(&t);
-#endif
-    int32_t delta = ((lts.tm_hour - uts.tm_hour) * 60 + (lts.tm_min - uts.tm_min))
-                 * 60L + (lts.tm_sec - uts.tm_sec);
-    int dday = lts.tm_mday - uts.tm_mday;
-    if ((dday == 1) || (dday < -1)) {
-      delta += 24L * 60 * 60;
-    } else if ((dday == -1) || (dday > 1)) {
-      delta -= 24L * 60 * 60;
-    }   
-    tz_cache.store(delta);
+    tzset();
+    tz_cache.store(-timezone);
     tz_value = tz_cache.load();
   }
   return tz_value;
+#else
+  static std::atomic_int32_t tz_cache(INT32MIN);
+  int32_t tz_value = use_cache ? tz_cache.load() : INT32MIN;
+  if (tz_value == INT32MIN) {
+    const time_t t = 86400;
+    struct std::tm uts;
+    GetUniversalCalendar(t, &uts);
+    struct std::tm lts;
+    GetLocalCalendar(t, &lts);
+    tz_cache.store(std::mktime(&lts) - std::mktime(&uts));
+    tz_value = tz_cache.load();
+  }
+  return tz_value;
+#endif
 }
 
 int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day) {
@@ -107,7 +106,7 @@ size_t FormatDateSimple(char* result, int64_t wtime, int32_t td) {
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   struct std::tm uts;
   GetUniversalCalendar(static_cast<time_t>(wtime + td), &uts);
@@ -124,7 +123,7 @@ size_t FormatDateSimpleWithFrac(char* result, double wtime, int32_t td, int32_t 
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   double integ, frac;
   frac = std::modf(wtime, &integ);
@@ -156,7 +155,7 @@ size_t FormatDateW3CDTF(char* result, int64_t wtime, int32_t td) {
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   struct std::tm uts;
   GetUniversalCalendar(static_cast<time_t>(wtime + td), &uts);
@@ -187,7 +186,7 @@ size_t FormatDateW3CDTFWithFrac(char* result, double wtime, int32_t td, int32_t 
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   double integ, frac;
   frac = std::modf(wtime, &integ);
@@ -233,7 +232,7 @@ size_t FormatDateRFC1123(char* result, int64_t wtime, int32_t td) {
     wtime = GetWallTime();
   }
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   struct std::tm uts;
   GetUniversalCalendar(static_cast<time_t>(wtime + td), &uts);
@@ -497,7 +496,7 @@ double ParseDateStr(std::string_view str) {
 
 double ParseDateStrYYYYMMDD(std::string_view str, int32_t td) {
   if (td == INT32MIN) {
-    td = GetLocalTimeDifference();
+    td = GetLocalTimeDifference(true);
   }
   char buf[16];
   char* wp = buf;
