@@ -26,6 +26,11 @@ Then, run these commands.  The files are installed under "/usr/local".
   make check
   sudo make install
 
+On FreeBSD tkrzw compiles and runs on LLVM, even tough it has not 
+been extensively tested. Like many *BSD platforms on FreeBSD "make" 
+defaults to bsdmake, so you might need to replace "make" with 
+"gmake" in the above instructions.
+
 On Windows, Visual Studio 2019 and its C++ components are required.
 Open the "x86 Native Tools Command Prompt" and then run the following
 commands.  The files are installed under "C:\Program Files\tkrzw".
