@@ -234,6 +234,8 @@ $ sudo make install
 
 <p>"make check" is just for testing and it can take several minutes.  You can omit it.  If you build binary packages on resource-limited systems, use "make check-light" instead.  If you want to install the files under "/usr", specify "--prefix=/usr" with the configure script.</p>
 
+<p>On some UNIX-like systems including FreeBSD and Solaris, "make" defaults to bsdmake or other non-GNU make, so you might need to replace "make" with "gmake" in the above instructions.</p>
+
 <p>By default, the library and related files are installed under "/usr/local".</p>
 
 <pre><code class="language-shell-session"><![CDATA[/usr/local/lib/libtkrzw.a
