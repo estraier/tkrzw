@@ -18,7 +18,7 @@
 
 namespace tkrzw {
 
-#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY) && !defined(_SYS_FREEBSD_)
+#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
 
 inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
                           const void* needle, size_t needlelen) {
