@@ -2242,7 +2242,7 @@ fi
 if test "$enable_debug" = "yes"
 then
   MYCFLAGS="-std=c11 -Wall -pedantic -fPIC -fsigned-char -g -O0"
-  MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -fPIC -fsigned-char -g -O0"
+  MYCXXFLAGS="-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wsuggest-override -fPIC -fsigned-char -g -O0"
   MYCPPFLAGS="$MYCPPFLAGS -UNDEBUG -D_TKRZW_DEBUG"
   MYCPPFLAGS="$MYCPPFLAGS -I/usr/local/include"
   MYLDFLAGS="$MYLDFLAGS -L/usr/local/lib"

@@ -818,7 +818,7 @@ Status TinyDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
   class ProcWrapper final : public DBM::RecordProcessor {
    public:
     explicit ProcWrapper(DBM::RecordProcessor* proc) : proc_(proc) {}
-    std::string_view ProcessFull(std::string_view key, std::string_view value) {
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       value_ = proc_->ProcessFull(key, value);
       return value_;
     }

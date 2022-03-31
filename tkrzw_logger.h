@@ -287,7 +287,7 @@ class BaseLogger : public Logger {
    * @param level The log level.
    * @param message The message to write.
    */
-  virtual void Log(Level level, std::string_view message) {
+  void Log(Level level, std::string_view message) override {
     if (level < min_level_) {
       return;
     }
@@ -378,7 +378,7 @@ class StreamLogger : public BaseLogger {
    * Writes a log into the media.
    * @param raw_data Formatted log data.
    */
-  virtual void WriteRaw(std::string_view raw_data) {
+  void WriteRaw(std::string_view raw_data) override {
     std::lock_guard lock(mutex_);
     if (stream_ == nullptr) {
       return;
