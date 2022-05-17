@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
   // Creates the database manager.
   HashDBM dbm;
 
-  // Prepare an index for divisions and their members.
+  // Prepares an index for divisions and their members.
   DivisionIndex division_index;
 
   // Opens a new database,
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   // As the database is empty at this point, there's no effect here.
   LoadIndexRecords(&dbm, &division_index);
 
-  // Register employee records.
+  // Registers employee records.
   const std::vector<Employee> employees = {
     {10001, "Anne", 301}, {10002, "Marilla", 301}, {10003, "Matthew", 301},
     {10004, "Diana", 401},

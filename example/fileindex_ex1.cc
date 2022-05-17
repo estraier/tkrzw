@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
   // Creates the database manager.
   HashDBM dbm;
 
-  // Prepare an index for divisions and their members.
+  // Prepares an index for divisions and their members.
   FileIndex division_index;
 
   // Opens a new database,
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   Status status = division_index.Open(
       "casket-division-index.tkt", true, File::OPEN_TRUNCATE, division_index_params);
 
-  // Register employee records.
+  // Registers employee records.
   const std::vector<Employee> employees = {
     {10001, "Anne", 301}, {10002, "Marilla", 301}, {10003, "Matthew", 301},
     {10004, "Diana", 401},
