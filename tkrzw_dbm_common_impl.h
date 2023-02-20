@@ -119,7 +119,8 @@ Status SearchDBMForwardMatch(
 /**
  * Searches a database and get keys which match a regular expression.
  * @param dbm The DBM object of the database.
- * @param pattern The regular expression pattern for partial matching.
+ * @param pattern The regular expression pattern for partial matching.  Leading "(?i)" makes the
+ * pattern case-insensitive.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
  * @return The result status.
@@ -237,7 +238,8 @@ Status SearchTextFile(
 /**
  * Searches a text file and get lines which match a regular expression.
  * @param file The file to search.
- * @param pattern The regular expression pattern for partial matching.
+ * @param pattern The regular expression pattern for partial matching.  Leading "(?i)" makes the
+ * pattern case-insensitive.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
  * @return The result status.

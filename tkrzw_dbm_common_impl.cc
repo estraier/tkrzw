@@ -148,7 +148,14 @@ Status SearchDBMRegex(
   assert(dbm != nullptr && matched != nullptr);
   std::unique_ptr<std::regex> regex;
   try {
-    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
+    std::regex_constants::syntax_option_type options =
+        std::regex_constants::ECMAScript | std::regex_constants::optimize;
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
+        pattern[2] == 'i' && pattern[3] == ')') {
+      options |= std::regex_constants::icase;
+      pattern = pattern.substr(4);
+    }
+    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end(), options);
   } catch (const std::regex_error& err) {
     return Status(Status::INVALID_ARGUMENT_ERROR, StrCat("invalid regex: ", err.what()));
   }
@@ -504,7 +511,14 @@ Status SearchTextFileRegex(
   }
   std::unique_ptr<std::regex> regex;
   try {
-    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end());
+    std::regex_constants::syntax_option_type options =
+        std::regex_constants::ECMAScript | std::regex_constants::optimize;
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
+        pattern[2] == 'i' && pattern[3] == ')') {
+      options |= std::regex_constants::icase;
+      pattern = pattern.substr(4);
+    }
+    regex = std::make_unique<std::regex>(pattern.begin(), pattern.end(), options);
   } catch (const std::regex_error& err) {
     return Status(Status::INVALID_ARGUMENT_ERROR, StrCat("invalid regex: ", err.what()));
   }

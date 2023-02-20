@@ -1,3 +1,11 @@
+2023-02-22 Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.25
+	- Library version: 1.68.0
+
+	- Regex functions support the case-insensitive prefix.
+	- Case-insensitive string search functions are added.
+
 2022-03-26 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.24

@@ -371,6 +371,20 @@ TEST(StrUtilTest, StrContains) {
   EXPECT_FALSE(tkrzw::StrContains("abc", "ac"));
 }
 
+TEST(StrUtilTest, StrCaseContains) {
+  EXPECT_TRUE(tkrzw::StrCaseContains("", ""));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBc", ""));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBc", "A"));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBc", "Ab"));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBc", "Abc"));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBcd", "bC"));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBcd", "Cd"));
+  EXPECT_TRUE(tkrzw::StrCaseContains("aBcd", "D"));
+  EXPECT_FALSE(tkrzw::StrCaseContains("aBc", "aBcd"));
+  EXPECT_FALSE(tkrzw::StrCaseContains("aBc", "xa"));
+  EXPECT_FALSE(tkrzw::StrCaseContains("aBc", "ac"));
+}
+
 TEST(StrUtilTest, StrBeginsWith) {
   EXPECT_TRUE(tkrzw::StrBeginsWith("", ""));
   EXPECT_TRUE(tkrzw::StrBeginsWith("abc", ""));
@@ -613,6 +627,24 @@ TEST_P(StrSearchBatchRandomTest, StrSearchBatchRandom) {
 INSTANTIATE_TEST_SUITE_P(StrSearchBatchRandom, StrSearchBatchRandomTest, Values(
     tkrzw::StrSearchBatchKMP, tkrzw::StrSearchBatchBM, tkrzw::StrSearchBatchRK));
 
+TEST(StrUtilTest, StrCaseSearch) {
+  EXPECT_EQ(0, tkrzw::StrCaseSearch("ABCDEFGHIJ", ""));
+  EXPECT_EQ(0, tkrzw::StrCaseSearch("ABCDEFGHIJ", "A"));
+  EXPECT_EQ(0, tkrzw::StrCaseSearch("ABCDEFGHIJ", "AB"));
+  EXPECT_EQ(1, tkrzw::StrCaseSearch("ABCDEFGHIJ", "B"));
+  EXPECT_EQ(1, tkrzw::StrCaseSearch("ABCDEFGHIJ", "BC"));
+  EXPECT_EQ(2, tkrzw::StrCaseSearch("ABCDEFGHIJ", "cde"));
+  EXPECT_EQ(2, tkrzw::StrCaseSearch("abcdefghij", "CDE"));
+  EXPECT_EQ(9, tkrzw::StrCaseSearch("abcdefghij", "J"));
+  EXPECT_EQ(9, tkrzw::StrCaseSearch("abcdefghij", "j"));
+  EXPECT_EQ(8, tkrzw::StrCaseSearch("abcdefghij", "IJ"));
+  EXPECT_EQ(0, tkrzw::StrCaseSearch("abcdefghij", "ABCDEFGHIJ"));
+  EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "ABCDEFGHIJK"));
+  EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "ABD"));
+  EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "IJK"));
+  EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "X"));
+}
+
 TEST(StrUtilTest, StrStripSpace) {
   EXPECT_EQ("", tkrzw::StrStripSpace(""));
   EXPECT_EQ("ABC", tkrzw::StrStripSpace("  ABC  "));
@@ -777,6 +809,8 @@ TEST(StrUtilTest, StrSearchRegex) {
   EXPECT_EQ(-1, tkrzw::StrSearchRegex("abc", "d"));
   EXPECT_EQ(2, tkrzw::StrSearchRegex("abcdabcd", "c"));
   EXPECT_EQ(3, tkrzw::StrSearchRegex("あいうえお", "いうえ"));
+  EXPECT_EQ(-1, tkrzw::StrSearchRegex("abcd", "BC"));
+  EXPECT_EQ(1, tkrzw::StrSearchRegex("abcd", "(?i)BC"));
 }
 
 TEST(StrUtilTest, StrReplaceRegex) {
@@ -790,6 +824,8 @@ TEST(StrUtilTest, StrReplaceRegex) {
   EXPECT_EQ("a[bc]D[ef]g", tkrzw::StrReplaceRegex("abcdefg", "(bc)d(ef)", "[$1]D[$2]"));
   EXPECT_EQ("あ[いう]エ[おか]き", tkrzw::StrReplaceRegex(
       "あいうえおかき", "(いう)え(おか)", "[$1]エ[$2]"));
+  EXPECT_EQ("abcd", tkrzw::StrReplaceRegex("abcd", "BC", "*"));
+  EXPECT_EQ("a*d", tkrzw::StrReplaceRegex("abcd", "(?i)BC", "*"));
 }
 
 TEST(StrUtilTest, ConvertUTF8AndUCS4) {
