@@ -274,6 +274,12 @@ Status SearchDBMModal(
     status = SearchDBMEditDistance(dbm, pattern, matched, capacity);
   } else if (mode == "editbin") {
     status = SearchDBMEditDistanceBinary(dbm, pattern, matched, capacity);
+  } else if (mode == "containcase") {
+    status = SearchDBM(dbm, pattern, matched, capacity, StrCaseContains);
+  } else if (mode == "containword") {
+    status = SearchDBM(dbm, pattern, matched, capacity, StrWordContains);
+  } else if (mode == "containcaseword") {
+    status = SearchDBM(dbm, pattern, matched, capacity, StrCaseWordContains);
   } else if (mode == "upper") {
     status = SearchDBMOrder(dbm, pattern, true, false, matched, capacity);
   } else if (mode == "upperinc") {
@@ -618,6 +624,12 @@ Status SearchTextFileModal(
     status = SearchTextFileEditDistance(file, pattern, matched, capacity);
   } else if (mode == "editbin") {
     status = SearchTextFileEditDistanceBinary(file, pattern, matched, capacity);
+  } else if (mode == "containcase") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrCaseContains);
+  } else if (mode == "containword") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrWordContains);
+  } else if (mode == "containcaseword") {
+    status = SearchTextFile(file, pattern, matched, capacity, StrCaseWordContains);
   } else {
     status = Status(Status::INVALID_ARGUMENT_ERROR, "unknown mode");
   }

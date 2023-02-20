@@ -212,6 +212,22 @@ TEST(DBMCommonImplTest, SearchDBMModal) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "editbin", "10", &keys, 2));
     EXPECT_THAT(keys, ElementsAre("10", "1"));
   }
+
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containcase", "1", &keys));
+    EXPECT_EQ(20, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containword", "1", &keys));
+    EXPECT_EQ(1, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containcaseword", "1", &keys));
+    EXPECT_EQ(1, keys.size());
+  }
   {
     std::vector<std::string> keys;
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "upper", "10", &keys, 3));
@@ -297,6 +313,24 @@ TEST(DBMCommonImplTest, SearchTextModal) {
     EXPECT_EQ(tkrzw::Status::SUCCESS,
               tkrzw::SearchTextFileModal(&file, "editbin", "10", &lines, 3));
     EXPECT_THAT(lines, ElementsAre("10", "1", "100"));
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containcase", "1", &lines));
+    EXPECT_EQ(20, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containword", "1", &lines));
+    EXPECT_EQ(1, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containcaseword", "1", &lines));
+    EXPECT_EQ(1, lines.size());
   }
   {
     std::vector<std::string> lines;

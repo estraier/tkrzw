@@ -158,9 +158,10 @@ Status SearchDBMEditDistanceBinary(
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
  * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
- * keys whose edit distance to the binary pattern is the least.  Ordered databases support
- * "upper" and "lower" which extract keys whose positions are upper/lower than the pattern.
- * "upperinc" and "lowerinc" are their inclusive versions.
+ * keys whose edit distance to the binary pattern is the least.  "containcase", "containword",
+ * and "containcaseword" extract keys considering case and word boundary.  Ordered databases
+ * support "upper" and "lower" which extract keys whose positions are upper/lower than the
+ * pattern.  "upperinc" and "lowerinc" are their inclusive versions.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
@@ -276,7 +277,8 @@ Status SearchTextFileEditDistanceBinary(
  * extracts keys beginning with the pattern.  "end" extracts keys ending with the pattern.
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
  * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
- * keys whose edit distance to the binary pattern is the least.
+ * keys whose edit distance to the binary pattern is the least.  "containcase", "containword",
+ * and "containcaseword" extract keys considering case and word boundary.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.

@@ -6,6 +6,7 @@
 	- Regex functions support the case-insensitive prefix.
 	- Case-insensitive string search functions are added.
 	- Word string search functions are added.
+	- SearchDBM and SearchTextFile support "containcase" and "containword".
 
 2022-03-26 Mikio Hirabayashi  <hirarin@gmail.com>
 
