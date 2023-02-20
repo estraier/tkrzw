@@ -642,6 +642,14 @@ bool StrCaseContains(std::string_view text, std::string_view pattern) {
   return StrCaseSearch(text, pattern) >= 0;
 }
 
+bool StrWordContains(std::string_view text, std::string_view pattern) {
+  return StrWordSearch(text, pattern) >= 0;
+}
+
+bool StrCaseWordContains(std::string_view text, std::string_view pattern) {
+  return StrCaseWordSearch(text, pattern) >= 0;
+}
+
 bool StrBeginsWith(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return false;
@@ -1172,6 +1180,98 @@ int32_t StrCaseSearch(std::string_view text, std::string_view pattern) {
       }
     }
     if (pi == pattern.size()) {
+      rv = ti;
+      break;
+    }
+  }
+  if (buffer != stack_buffer) {
+    xfree(buffer);
+  }
+  return rv;
+}
+
+int32_t StrWordSearch(std::string_view text, std::string_view pattern) {
+  if (pattern.size() > text.size()) {
+    return -1;
+  }
+  if (pattern.size() == 0) {
+    return 0;
+  }
+  int32_t rv = -1;
+  size_t end = text.size() - pattern.size() + 1;
+  for (size_t ti = 0; ti < end; ti++) {
+    size_t pi = 0;
+    for (; pi < pattern.size(); pi++) {
+      if (text[ti + pi] != pattern[pi]) {
+        break;
+      }
+    }
+    if (pi == pattern.size()) {
+      if (ti != 0) {
+        const char tc = text[ti - 1];
+        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
+          continue;
+        }
+      }
+      if (ti != end - 1) {
+        const char tc = text[ti + pattern.size()];
+        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
+          continue;
+        }
+      }
+      rv = ti;
+      break;
+    }
+  }
+  return rv;
+}
+
+int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern) {
+  if (pattern.size() > text.size()) {
+    return -1;
+  }
+  if (pattern.size() == 0) {
+    return 0;
+  }
+  constexpr size_t stack_buffer_size = 256;
+  char stack_buffer[stack_buffer_size];
+  char* buffer = stack_buffer;
+  if (pattern.size() > stack_buffer_size) {
+    buffer = static_cast<char*>(xmalloc(pattern.size()));
+  }
+  for (size_t pi = 0; pi < pattern.size(); pi++) {
+    char pc = pattern[pi];
+    if (pc >= 'A' && pc <= 'Z') {
+      pc += 'a' - 'A';
+    }
+    buffer[pi] = pc;
+  }
+  int32_t rv = -1;
+  size_t end = text.size() - pattern.size() + 1;
+  for (size_t ti = 0; ti < end; ti++) {
+    size_t pi = 0;
+    for (; pi < pattern.size(); pi++) {
+      char tc = text[ti + pi];
+      if (tc >= 'A' && tc <= 'Z') {
+        tc += 'a' - 'A';
+      }
+      if (tc != buffer[pi]) {
+        break;
+      }
+    }
+    if (pi == pattern.size()) {
+      if (ti != 0) {
+        const char tc = text[ti - 1];
+        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
+          continue;
+        }
+      }
+      if (ti != end - 1) {
+        const char tc = text[ti + pattern.size()];
+        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
+          continue;
+        }
+      }
       rv = ti;
       break;
     }

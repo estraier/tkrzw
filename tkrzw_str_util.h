@@ -342,6 +342,22 @@ bool StrContains(std::string_view text, std::string_view pattern);
 bool StrCaseContains(std::string_view text, std::string_view pattern);
 
 /**
+ * Checks whether a text contains a word surrounded by non-alphanumeric word boundaries.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return True if the text contains the pattern.
+ */
+bool StrWordContains(std::string_view text, std::string_view pattern);
+
+/**
+ * Checks whether a text contains a word in a case-sensitive manner.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return True if the text contains the pattern.
+ */
+bool StrCaseWordContains(std::string_view text, std::string_view pattern);
+
+/**
  * Checks whether a text begins with a pattern.
  * @param text The text to search.
  * @param pattern The pattern to search for.
@@ -520,6 +536,22 @@ std::vector<std::vector<int32_t>> StrSearchBatchRK(
  * @return The index of the first matched position, or -1 if there's no matches.
  */
 int32_t StrCaseSearch(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a word surrounded by non-alphanumeric word boundaries.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrWordSearch(std::string_view text, std::string_view pattern);
+
+/**
+ * Searches a text for a word surrounded in a case-insensitive manner.
+ * @param text The text to search.
+ * @param pattern The pattern to search for.
+ * @return The index of the first matched position, or -1 if there's no matches.
+ */
+int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern);
 
 /**
  * Removes space characters at the head or the tail of a string.

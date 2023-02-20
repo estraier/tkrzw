@@ -385,6 +385,38 @@ TEST(StrUtilTest, StrCaseContains) {
   EXPECT_FALSE(tkrzw::StrCaseContains("aBc", "ac"));
 }
 
+TEST(StrUtilTest, StrWordContains) {
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", ""));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", "hop"));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", "step"));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", "jump"));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", "hop step"));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump", "hop step jump"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "ho"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "op"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "ste"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "tep"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "ump"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "jumper"));
+  EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "p s"));
+}
+
+TEST(StrUtilTest, StrCaseWordContains) {
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", ""));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", "hoP"));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", "stEp"));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", "jump"));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", "HOP STEP"));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP", "Hop step jump"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "ho"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "op"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "ste"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "tep"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "ump"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "jumper"));
+  EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "p s"));
+}
+
 TEST(StrUtilTest, StrBeginsWith) {
   EXPECT_TRUE(tkrzw::StrBeginsWith("", ""));
   EXPECT_TRUE(tkrzw::StrBeginsWith("abc", ""));
@@ -643,6 +675,38 @@ TEST(StrUtilTest, StrCaseSearch) {
   EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "ABD"));
   EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "IJK"));
   EXPECT_EQ(-1, tkrzw::StrCaseSearch("abcdefghij", "X"));
+}
+
+TEST(StrUtilTest, StrWordSearch) {
+  EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", ""));
+  EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", "hop"));
+  EXPECT_EQ(4, tkrzw::StrWordSearch("hop step jump", "step"));
+  EXPECT_EQ(9, tkrzw::StrWordSearch("hop step jump", "jump"));
+  EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", "hop step"));
+  EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", "hop step jump"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "ho"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "op"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "ste"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "tep"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "ump"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "jumper"));
+  EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "p s"));
+}
+
+TEST(StrUtilTest, StrCaseWordSearch) {
+  EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", ""));
+  EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", "hoP"));
+  EXPECT_EQ(4, tkrzw::StrCaseWordSearch("hOp sTep jumP", "stEp"));
+  EXPECT_EQ(9, tkrzw::StrCaseWordSearch("hOp sTep jumP", "jump"));
+  EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", "HOP STEP"));
+  EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", "Hop step jump"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "ho"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "op"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "ste"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "tep"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "ump"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "jumper"));
+  EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "p s"));
 }
 
 TEST(StrUtilTest, StrStripSpace) {
