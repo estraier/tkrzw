@@ -148,9 +148,8 @@ Status SearchDBMRegex(
   assert(dbm != nullptr && matched != nullptr);
   std::unique_ptr<std::regex> regex;
   try {
-    std::regex_constants::syntax_option_type options
-        = static_cast<std::regex_constants::syntax_option_type>(0);
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+    std::regex_constants::syntax_option_type options = std::regex_constants::optimize;
+    if (pattern.size() >= 2 && pattern[0] == '(' && pattern[1] == '?') {
       bool ended = false;
       size_t pos = 2;
       while (!ended && pos < pattern.size()) {
@@ -542,9 +541,8 @@ Status SearchTextFileRegex(
   }
   std::unique_ptr<std::regex> regex;
   try {
-    std::regex_constants::syntax_option_type options
-        = static_cast<std::regex_constants::syntax_option_type>(0);
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+    std::regex_constants::syntax_option_type options = std::regex_constants::optimize;
+    if (pattern.size() >= 2 && pattern[0] == '(' && pattern[1] == '?') {
       bool ended = false;
       size_t pos = 2;
       while (!ended && pos < pattern.size()) {

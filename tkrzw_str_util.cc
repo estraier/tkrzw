@@ -1638,7 +1638,7 @@ int32_t StrSearchRegex(std::string_view text, std::string_view pattern) {
   try {
     std::regex_constants::syntax_option_type options
         = static_cast<std::regex_constants::syntax_option_type>(0);
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+    if (pattern.size() >= 2 && pattern[0] == '(' && pattern[1] == '?') {
       bool ended = false;
       size_t pos = 2;
       while (!ended && pos < pattern.size()) {
@@ -1685,7 +1685,7 @@ std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
   try {
     std::regex_constants::syntax_option_type options
         = static_cast<std::regex_constants::syntax_option_type>(0);
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+    if (pattern.size() >= 2 && pattern[0] == '(' && pattern[1] == '?') {
       bool ended = false;
       size_t pos = 2;
       while (!ended && pos < pattern.size()) {
