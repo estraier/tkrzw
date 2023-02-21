@@ -55,6 +55,10 @@ inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
 
 #endif
 
+inline bool tkrzw_isalnum(char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
 int64_t StrToInt(std::string_view str, int64_t defval) {
   const unsigned char* rp = reinterpret_cast<const unsigned char*>(str.data());
   const unsigned char* ep = rp + str.size();
@@ -1207,17 +1211,12 @@ int32_t StrWordSearch(std::string_view text, std::string_view pattern) {
       }
     }
     if (pi == pattern.size()) {
-      if (ti != 0) {
-        const char tc = text[ti - 1];
-        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
-          continue;
-        }
+      if (ti != 0 && tkrzw_isalnum(text[ti - 1]) && tkrzw_isalnum(text[ti])) {
+        continue;
       }
-      if (ti != end - 1) {
-        const char tc = text[ti + pattern.size()];
-        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
-          continue;
-        }
+      if (ti != end - 1 && tkrzw_isalnum(text[ti + pattern.size()]) &&
+          tkrzw_isalnum(text[ti + pattern.size() - 1])) {
+        continue;
       }
       rv = ti;
       break;
@@ -1260,17 +1259,12 @@ int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern) {
       }
     }
     if (pi == pattern.size()) {
-      if (ti != 0) {
-        const char tc = text[ti - 1];
-        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
-          continue;
-        }
+      if (ti != 0 && tkrzw_isalnum(text[ti - 1]) && tkrzw_isalnum(text[ti])) {
+        continue;
       }
-      if (ti != end - 1) {
-        const char tc = text[ti + pattern.size()];
-        if ((tc >= '0' && tc <= '9') || (tc >= 'a' && tc <= 'z') || (tc >= 'A' && tc <= 'Z')) {
-          continue;
-        }
+      if (ti != end - 1 && tkrzw_isalnum(text[ti + pattern.size()]) &&
+          tkrzw_isalnum(text[ti + pattern.size() - 1])) {
+        continue;
       }
       rv = ti;
       break;

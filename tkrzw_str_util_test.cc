@@ -684,6 +684,7 @@ TEST(StrUtilTest, StrWordSearch) {
   EXPECT_EQ(9, tkrzw::StrWordSearch("hop step jump", "jump"));
   EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", "hop step"));
   EXPECT_EQ(0, tkrzw::StrWordSearch("hop step jump", "hop step jump"));
+  EXPECT_EQ(3, tkrzw::StrWordSearch("hop step jump", " step "));
   EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "ho"));
   EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "op"));
   EXPECT_EQ(-1, tkrzw::StrWordSearch("hop step jump", "ste"));
@@ -700,6 +701,7 @@ TEST(StrUtilTest, StrCaseWordSearch) {
   EXPECT_EQ(9, tkrzw::StrCaseWordSearch("hOp sTep jumP", "jump"));
   EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", "HOP STEP"));
   EXPECT_EQ(0, tkrzw::StrCaseWordSearch("hOp sTep jumP", "Hop step jump"));
+  EXPECT_EQ(3, tkrzw::StrCaseWordSearch("hOp sTep jumP", " SteP "));
   EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "ho"));
   EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "op"));
   EXPECT_EQ(-1, tkrzw::StrCaseWordSearch("hOp sTep jumP", "ste"));
