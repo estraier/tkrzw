@@ -635,7 +635,9 @@ std::string StrDecodeURL(std::string_view str);
  * Searches a string for a pattern matching a regular expression.
  * @param text The text to search.
  * @param pattern The regular expression pattern to search for.  Leading "(?i)" makes the pattern
- * case-insensitive.
+ * case-insensitive.  "(?a)" interprets the pattern as the AWK regex.  "(?b)" interprets the
+ * pattern as the basic POSIX regex.  "(?e)" interprets the pattern as the extended POSIX regex.
+ * The default regex format is ECMAScript.
  * @return The position of the first matching pattern.  If there's no matching pattern. -1 is
  * returned.  If the regular expression is invalid, -2 is returned.
  */
@@ -645,7 +647,9 @@ int32_t StrSearchRegex(std::string_view text, std::string_view pattern);
  * Replaces substrings matching a pattern of regular expression.
  * @param text The text to process.
  * @param pattern The regular expression pattern to search for.  Leading "(?i)" makes the pattern
- * case-insensitive.
+ * case-insensitive.  "(?a)" interprets the pattern as the AWK regex.  "(?b)" interprets the
+ * pattern as the basic POSIX regex.  "(?e)" interprets the pattern as the extended POSIX regex.
+ * The default regex format is ECMAScript.
  * @param replace The replacing expression. "$&" means the entire matched pattern.  "$1", "$2",
  * and etc represent n-th bracketed patterns.
  * @return The result string.  If the regular expression is invalid, an empty string is returned.

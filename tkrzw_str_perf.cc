@@ -37,7 +37,7 @@ static void PrintUsageAndDie() {
     " (default: 26)\n");
   P("  --whole num : The maximum number of results to get. 0 means the first only."
     " (default: 0)\n");
-  P("  --batch num : The number of patterns in a batch. 0 menas no batching. (default: 0)\n");
+  P("  --batch num : The number of patterns in a batch. 0 means no batching. (default: 0)\n");
   P("\n");
   P("Options of the hash subcommand:\n");
   P("  --iter num : The number of iterations. (default: 10000)\n");
