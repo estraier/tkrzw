@@ -166,6 +166,9 @@ Status SearchDBMRegex(
           case 'i':
             options |= std::regex_constants::icase;
             break;
+          case 'l':
+            options |= std::regex_constants::egrep;
+            break;
           case ')':
             ended = true;
             break;
@@ -558,6 +561,9 @@ Status SearchTextFileRegex(
             break;
           case 'i':
             options |= std::regex_constants::icase;
+            break;
+          case 'l':
+            options |= std::regex_constants::egrep;
             break;
           case ')':
             ended = true;

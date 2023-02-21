@@ -1649,6 +1649,9 @@ int32_t StrSearchRegex(std::string_view text, std::string_view pattern) {
           case 'i':
             options |= std::regex_constants::icase;
             break;
+          case 'l':
+            options |= std::regex_constants::egrep;
+            break;
           case ')':
             ended = true;
             break;
@@ -1695,6 +1698,9 @@ std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
             break;
           case 'i':
             options |= std::regex_constants::icase;
+            break;
+          case 'l':
+            options |= std::regex_constants::egrep;
             break;
           case ')':
             ended = true;

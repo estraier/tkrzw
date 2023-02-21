@@ -119,8 +119,10 @@ Status SearchDBMForwardMatch(
 /**
  * Searches a database and get keys which match a regular expression.
  * @param dbm The DBM object of the database.
- * @param pattern The regular expression pattern for partial matching.  Leading "(?i)" makes the
- * pattern case-insensitive.
+ * @param pattern The regular expression pattern to search for.  Leading "(?i)" makes the pattern
+ * case-insensitive.  Other options "a" (AWK regex), "b" (basic POSIX regex), "e" (extended POSIX
+ * regex), and "l" (egrep) are available in addition to "i".  The default regex format is
+ * ECMAScript.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
  * @return The result status.
@@ -239,8 +241,10 @@ Status SearchTextFile(
 /**
  * Searches a text file and get lines which match a regular expression.
  * @param file The file to search.
- * @param pattern The regular expression pattern for partial matching.  Leading "(?i)" makes the
- * pattern case-insensitive.
+ * @param pattern The regular expression pattern to search for.  Leading "(?i)" makes the pattern
+ * case-insensitive.  Other options "a" (AWK regex), "b" (basic POSIX regex), "e" (extended POSIX
+ * regex), and "l" (egrep) are available in addition to "i".  The default regex format is
+ * ECMAScript.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
  * @return The result status.

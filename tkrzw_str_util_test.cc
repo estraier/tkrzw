@@ -892,6 +892,7 @@ TEST(StrUtilTest, StrReplaceRegex) {
   EXPECT_EQ("a[bc]d", tkrzw::StrReplaceRegex("abcd", "bc", "[$&]"));
   EXPECT_EQ("a[]d", tkrzw::StrReplaceRegex("abcd", "bc", "[$3]"));
   EXPECT_EQ("a[bc]D[ef]g", tkrzw::StrReplaceRegex("abcdefg", "(bc)d(ef)", "[$1]D[$2]"));
+  EXPECT_EQ("xxxdex", tkrzw::StrReplaceRegex("abcdef", "([a-c]|f)", "x"));
   EXPECT_EQ("あ[いう]エ[おか]き", tkrzw::StrReplaceRegex(
       "あいうえおかき", "(いう)え(おか)", "[$1]エ[$2]"));
   EXPECT_EQ("abcd", tkrzw::StrReplaceRegex("abcd", "BC", "*"));
