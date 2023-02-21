@@ -1636,11 +1636,37 @@ std::string StrDecodeURL(std::string_view str) {
 int32_t StrSearchRegex(std::string_view text, std::string_view pattern) {
   int32_t pos = -1;
   try {
-    std::regex_constants::syntax_option_type options = std::regex_constants::ECMAScript;
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
-        pattern[2] == 'i' && pattern[3] == ')') {
-      options |= std::regex_constants::icase;
-      pattern = pattern.substr(4);
+    std::regex_constants::syntax_option_type options
+        = static_cast<std::regex_constants::syntax_option_type>(0);
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+      bool ended = false;
+      size_t pos = 2;
+      while (!ended && pos < pattern.size()) {
+        switch (pattern[pos]) {
+          case 'a':
+            options |= std::regex_constants::awk;
+            break;
+          case 'b':
+            options |= std::regex_constants::basic;
+            break;
+          case 'e':
+            options |= std::regex_constants::extended;
+            break;
+          case 'i':
+            options |= std::regex_constants::icase;
+            break;
+          case ')':
+            ended = true;
+            break;
+          default:
+            throw std::regex_error(std::regex_constants::error_complexity);
+        }
+        pos++;
+      }
+      if (!ended) {
+        throw std::regex_error(std::regex_constants::error_complexity);
+      }
+      pattern = pattern.substr(pos);
     }
     std::regex regex(pattern.begin(), pattern.end(), options);
     std::match_results<std::string_view::const_iterator> matched;
@@ -1657,11 +1683,37 @@ std::string StrReplaceRegex(std::string_view text, std::string_view pattern,
                             std::string_view replace) {
   std::string result;
   try {
-    std::regex_constants::syntax_option_type options = std::regex_constants::ECMAScript;
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
-        pattern[2] == 'i' && pattern[3] == ')') {
-      options |= std::regex_constants::icase;
-      pattern = pattern.substr(4);
+    std::regex_constants::syntax_option_type options
+        = static_cast<std::regex_constants::syntax_option_type>(0);
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+      bool ended = false;
+      size_t pos = 2;
+      while (!ended && pos < pattern.size()) {
+        switch (pattern[pos]) {
+          case 'a':
+            options |= std::regex_constants::awk;
+            break;
+          case 'b':
+            options |= std::regex_constants::basic;
+            break;
+          case 'e':
+            options |= std::regex_constants::extended;
+            break;
+          case 'i':
+            options |= std::regex_constants::icase;
+            break;
+          case ')':
+            ended = true;
+            break;
+          default:
+            throw std::regex_error(std::regex_constants::error_complexity);
+        }
+        pos++;
+      }
+      if (!ended) {
+        throw std::regex_error(std::regex_constants::error_complexity);
+      }
+      pattern = pattern.substr(pos);
     }
     std::regex regex(pattern.begin(), pattern.end(), options);
     std::regex_replace(std::back_inserter(result), text.begin(), text.end(), regex,

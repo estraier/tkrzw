@@ -875,6 +875,10 @@ TEST(StrUtilTest, StrSearchRegex) {
   EXPECT_EQ(3, tkrzw::StrSearchRegex("あいうえお", "いうえ"));
   EXPECT_EQ(-1, tkrzw::StrSearchRegex("abcd", "BC"));
   EXPECT_EQ(1, tkrzw::StrSearchRegex("abcd", "(?i)BC"));
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("abcde", "(?ei)^A(b|c).+[E-F]$"));
+  EXPECT_EQ(0, tkrzw::StrSearchRegex("abcde", "(?bi)^A\\(b\\).\\{1,3\\}[E-F]$"));
+  EXPECT_EQ(-2, tkrzw::StrSearchRegex("abcde", "(?ii"));
+  EXPECT_EQ(-2, tkrzw::StrSearchRegex("abcde", "(?ixyz)"));
 }
 
 TEST(StrUtilTest, StrReplaceRegex) {
@@ -890,6 +894,10 @@ TEST(StrUtilTest, StrReplaceRegex) {
       "あいうえおかき", "(いう)え(おか)", "[$1]エ[$2]"));
   EXPECT_EQ("abcd", tkrzw::StrReplaceRegex("abcd", "BC", "*"));
   EXPECT_EQ("a*d", tkrzw::StrReplaceRegex("abcd", "(?i)BC", "*"));
+  EXPECT_EQ("X-b", tkrzw::StrReplaceRegex("abcde", "(?ei)^A(b|c).+[E-F]$", "X-$1"));
+  EXPECT_EQ("X-b", tkrzw::StrReplaceRegex("abcde", "(?bi)^A\\(b\\).\\{1,3\\}[E-F]$", "X-$1"));
+  EXPECT_EQ("", tkrzw::StrReplaceRegex("abcde", "(?ii", "*"));
+  EXPECT_EQ("", tkrzw::StrReplaceRegex("abcde", "(?ixyz)", "*"));
 }
 
 TEST(StrUtilTest, ConvertUTF8AndUCS4) {

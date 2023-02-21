@@ -148,12 +148,37 @@ Status SearchDBMRegex(
   assert(dbm != nullptr && matched != nullptr);
   std::unique_ptr<std::regex> regex;
   try {
-    std::regex_constants::syntax_option_type options =
-        std::regex_constants::ECMAScript | std::regex_constants::optimize;
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
-        pattern[2] == 'i' && pattern[3] == ')') {
-      options |= std::regex_constants::icase;
-      pattern = pattern.substr(4);
+    std::regex_constants::syntax_option_type options
+        = static_cast<std::regex_constants::syntax_option_type>(0);
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+      bool ended = false;
+      size_t pos = 2;
+      while (!ended && pos < pattern.size()) {
+        switch (pattern[pos]) {
+          case 'a':
+            options |= std::regex_constants::awk;
+            break;
+          case 'b':
+            options |= std::regex_constants::basic;
+            break;
+          case 'e':
+            options |= std::regex_constants::extended;
+            break;
+          case 'i':
+            options |= std::regex_constants::icase;
+            break;
+          case ')':
+            ended = true;
+            break;
+          default:
+            throw std::regex_error(std::regex_constants::error_complexity);
+        }
+        pos++;
+      }
+      if (!ended) {
+        throw std::regex_error(std::regex_constants::error_complexity);
+      }
+      pattern = pattern.substr(pos);
     }
     regex = std::make_unique<std::regex>(pattern.begin(), pattern.end(), options);
   } catch (const std::regex_error& err) {
@@ -517,12 +542,37 @@ Status SearchTextFileRegex(
   }
   std::unique_ptr<std::regex> regex;
   try {
-    std::regex_constants::syntax_option_type options =
-        std::regex_constants::ECMAScript | std::regex_constants::optimize;
-    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?' &&
-        pattern[2] == 'i' && pattern[3] == ')') {
-      options |= std::regex_constants::icase;
-      pattern = pattern.substr(4);
+    std::regex_constants::syntax_option_type options
+        = static_cast<std::regex_constants::syntax_option_type>(0);
+    if (pattern.size() >= 4 && pattern[0] == '(' && pattern[1] == '?') {
+      bool ended = false;
+      size_t pos = 2;
+      while (!ended && pos < pattern.size()) {
+        switch (pattern[pos]) {
+          case 'a':
+            options |= std::regex_constants::awk;
+            break;
+          case 'b':
+            options |= std::regex_constants::basic;
+            break;
+          case 'e':
+            options |= std::regex_constants::extended;
+            break;
+          case 'i':
+            options |= std::regex_constants::icase;
+            break;
+          case ')':
+            ended = true;
+            break;
+          default:
+            throw std::regex_error(std::regex_constants::error_complexity);
+        }
+        pos++;
+      }
+      if (!ended) {
+        throw std::regex_error(std::regex_constants::error_complexity);
+      }
+      pattern = pattern.substr(pos);
     }
     regex = std::make_unique<std::regex>(pattern.begin(), pattern.end(), options);
   } catch (const std::regex_error& err) {
