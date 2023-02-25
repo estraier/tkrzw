@@ -570,7 +570,7 @@ std::string StrLowerCase(std::string_view str) {
   std::string converted;
   converted.reserve(str.size());
   for (int32_t c : str) {
-    if (c >= 'A' && c <= 'Z') {
+    if (c <= 'Z' && c >= 'A') {
       c += 'a' - 'A';
     }
     converted.push_back(c);
@@ -582,7 +582,7 @@ void StrLowerCase(std::string* str) {
   assert(str != nullptr);
   for (auto it = str->begin(); it != str->end(); ++it) {
     int32_t c = *it;
-    if (c >= 'A' && c <= 'Z') {
+    if (c <= 'Z' && c >= 'A') {
       *it = c + ('a' - 'A');
     }
   }
@@ -690,6 +690,61 @@ bool StrCaseWordContainsBatch(std::string_view text, const std::vector<std::stri
   return false;
 }
 
+bool StrCaseWordContainsBatchLower(
+    std::string_view text, const std::vector<std::string>& patterns) {
+  constexpr size_t STACK_BUFFER_SIZE = 512;
+  char stack_buffer[STACK_BUFFER_SIZE];
+  char* buffer = stack_buffer;
+  if (text.size() > STACK_BUFFER_SIZE) {
+    buffer = static_cast<char*>(xmalloc(text.size()));
+  }
+  char* wp = buffer;
+  const char* rp = text.data();
+  const char* ep = rp + text.size();
+  while (rp < ep) {
+    const char c = *(rp++);
+    if (c <= 'Z' && c >= 'A') {
+      *(wp++) = c + 'a' - 'A';
+    } else {
+      *(wp++) = c;
+    }
+  }
+  for (const auto& pattern : patterns) {
+    if (pattern.size() == 0) {
+      if (buffer != stack_buffer) {
+        xfree(buffer);
+      }
+      return true;
+    }
+    rp = buffer;
+    size_t size = text.size();
+    while (size > 0) {
+      const char* pv =
+          (const char*)tkrzw_memmem((void*)rp, size, pattern.data(), pattern.size());
+      if (!pv) break;
+      if (pv != buffer && tkrzw_isalnum(*(pv - 1)) && tkrzw_isalnum(*pv)) {
+        rp = pv + 1;
+        size = text.size() - (rp - buffer);
+        continue;
+      }
+      if (pv + pattern.size() != rp + size &&
+          tkrzw_isalnum(*(pv + pattern.size())) && tkrzw_isalnum(*(pv + pattern.size() - 1))) {
+        rp = pv + 1;
+        size = text.size() - (rp - buffer);
+        continue;
+      }
+      if (buffer != stack_buffer) {
+        xfree(buffer);
+      }
+      return true;
+    }
+  }
+  if (buffer != stack_buffer) {
+    xfree(buffer);
+  }
+  return false;
+}
+
 bool StrBeginsWith(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return false;
@@ -709,11 +764,11 @@ int32_t StrCaseCompare(std::string_view a, std::string_view b) {
   const int32_t length = std::min(a.size(), b.size());
   for (int32_t i = 0; i < length; i++) {
     int32_t ac = static_cast<unsigned char>(a[i]);
-    if (ac >= 'A' && ac <= 'Z') {
+    if (ac <= 'Z' && ac >= 'A') {
       ac += 'a' - 'A';
     }
     int32_t bc = static_cast<unsigned char>(b[i]);
-    if (bc >= 'A' && bc <= 'Z') {
+    if (bc <= 'Z' && bc >= 'A') {
       bc += 'a' - 'A';
     }
     if (ac != bc) {
@@ -1193,15 +1248,15 @@ int32_t StrCaseSearch(std::string_view text, std::string_view pattern) {
   if (pattern.size() == 0) {
     return 0;
   }
-  constexpr size_t stack_buffer_size = 256;
-  char stack_buffer[stack_buffer_size];
+  constexpr size_t STACK_BUFFER_SIZE = 512;
+  char stack_buffer[STACK_BUFFER_SIZE];
   char* buffer = stack_buffer;
-  if (pattern.size() > stack_buffer_size) {
+  if (pattern.size() > STACK_BUFFER_SIZE) {
     buffer = static_cast<char*>(xmalloc(pattern.size()));
   }
   for (size_t pi = 0; pi < pattern.size(); pi++) {
     char pc = pattern[pi];
-    if (pc >= 'A' && pc <= 'Z') {
+    if (pc <= 'Z' && pc >= 'A') {
       pc += 'a' - 'A';
     }
     buffer[pi] = pc;
@@ -1212,7 +1267,7 @@ int32_t StrCaseSearch(std::string_view text, std::string_view pattern) {
     size_t pi = 0;
     for (; pi < pattern.size(); pi++) {
       char tc = text[ti + pi];
-      if (tc >= 'A' && tc <= 'Z') {
+      if (tc <= 'Z' && tc >= 'A') {
         tc += 'a' - 'A';
       }
       if (tc != buffer[pi]) {
@@ -1268,15 +1323,15 @@ int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern) {
   if (pattern.size() == 0) {
     return 0;
   }
-  constexpr size_t stack_buffer_size = 256;
-  char stack_buffer[stack_buffer_size];
+  constexpr size_t STACK_BUFFER_SIZE = 512;
+  char stack_buffer[STACK_BUFFER_SIZE];
   char* buffer = stack_buffer;
-  if (pattern.size() > stack_buffer_size) {
+  if (pattern.size() > STACK_BUFFER_SIZE) {
     buffer = static_cast<char*>(xmalloc(pattern.size()));
   }
   for (size_t pi = 0; pi < pattern.size(); pi++) {
     char pc = pattern[pi];
-    if (pc >= 'A' && pc <= 'Z') {
+    if (pc <= 'Z' && pc >= 'A') {
       pc += 'a' - 'A';
     }
     buffer[pi] = pc;
@@ -1287,7 +1342,7 @@ int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern) {
     size_t pi = 0;
     for (; pi < pattern.size(); pi++) {
       char tc = text[ti + pi];
-      if (tc >= 'A' && tc <= 'Z') {
+      if (tc <= 'Z' && tc >= 'A') {
         tc += 'a' - 'A';
       }
       if (tc != buffer[pi]) {

@@ -399,6 +399,7 @@ TEST(StrUtilTest, StrWordContains) {
   EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "ump"));
   EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "jumper"));
   EXPECT_FALSE(tkrzw::StrWordContains("hop step jump", "p s"));
+  EXPECT_TRUE(tkrzw::StrWordContains("hop step jump st", "st"));
 }
 
 TEST(StrUtilTest, StrCaseWordContains) {
@@ -415,6 +416,7 @@ TEST(StrUtilTest, StrCaseWordContains) {
   EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "ump"));
   EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "jumper"));
   EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "p s"));
+  EXPECT_TRUE(tkrzw::StrCaseWordContains("hOp sTep jumP ST", "st"));
 }
 
 TEST(StrUtilTest, StrContainsBatch) {
@@ -442,6 +444,7 @@ TEST(StrUtilTest, StrWordContainsBatch) {
   EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"abc def"})));
   EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"bc", "123"})));
   EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def ab", std::vector<std::string>({"ab", "123"})));
 }
 
 TEST(StrUtilTest, StrCaseWordContainsBatch) {
@@ -459,6 +462,31 @@ TEST(StrUtilTest, StrCaseWordContainsBatch) {
       "aBc DeF", std::vector<std::string>({"bc", "123"})));
   EXPECT_FALSE(tkrzw::StrCaseWordContainsBatch(
       "aBc DeF", std::vector<std::string>({"ab", "123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF Ab", std::vector<std::string>({"AB", "123"})));
+}
+
+TEST(StrUtilTest, StrCaseWordContainsBatchLower) {
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatchLower("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"123", "abc"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"123", "def"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"abc def"})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"bc", "123"})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF", std::vector<std::string>({"ab", "123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF Ab", std::vector<std::string>({"ab", "123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF Ab", std::vector<std::string>({"ab", "123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatchLower(
+      "aBc DeF Ab-", std::vector<std::string>({"ab", "123"})));
 }
 
 TEST(StrUtilTest, StrBeginsWith) {

@@ -390,6 +390,15 @@ bool StrWordContainsBatch(std::string_view text, const std::vector<std::string>&
 bool StrCaseWordContainsBatch(std::string_view text, const std::vector<std::string>& patterns);
 
 /**
+ * Checks a text contains at least one of lowercase words in a case-sensitive manner.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.  Each must be lowercased.
+ * @return True if the text contains at least one of patterns.
+ */
+bool StrCaseWordContainsBatchLower(
+    std::string_view text, const std::vector<std::string>& patterns);
+
+/**
  * Checks whether a text begins with a pattern.
  * @param text The text to search.
  * @param pattern The pattern to search for.
