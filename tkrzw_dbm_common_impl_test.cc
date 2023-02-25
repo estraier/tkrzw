@@ -228,6 +228,28 @@ TEST(DBMCommonImplTest, SearchDBMModal) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containcaseword", "1", &keys));
     EXPECT_EQ(1, keys.size());
   }
+
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "contain*", "2\n3", &keys));
+    EXPECT_EQ(36, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containcase*", "2\n3", &keys));
+    EXPECT_EQ(36, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "containword*", "2\n3", &keys));
+    EXPECT_EQ(2, keys.size());
+  }
+  {
+    std::vector<std::string> keys;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchDBMModal(&dbm, "containcaseword*", "2\n3", &keys));
+    EXPECT_EQ(2, keys.size());
+  }
   {
     std::vector<std::string> keys;
     EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::SearchDBMModal(&dbm, "upper", "10", &keys, 3));
@@ -331,6 +353,30 @@ TEST(DBMCommonImplTest, SearchTextModal) {
     EXPECT_EQ(tkrzw::Status::SUCCESS,
               tkrzw::SearchTextFileModal(&file, "containcaseword", "1", &lines));
     EXPECT_EQ(1, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "contain*", "2\n3", &lines));
+    EXPECT_EQ(36, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containcase*", "2\n3", &lines));
+    EXPECT_EQ(36, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containword*", "2\n3", &lines));
+    EXPECT_EQ(2, lines.size());
+  }
+  {
+    std::vector<std::string> lines;
+    EXPECT_EQ(tkrzw::Status::SUCCESS,
+              tkrzw::SearchTextFileModal(&file, "containcaseword*", "2\n3", &lines));
+    EXPECT_EQ(2, lines.size());
   }
   {
     std::vector<std::string> lines;

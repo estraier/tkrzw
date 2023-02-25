@@ -87,6 +87,19 @@ Status SearchDBM(
     bool (*matcher)(std::string_view, std::string_view) = StrContains);
 
 /**
+ * Searches a database and get keys which match a lambda function.
+ * @param dbm The DBM object of the database.
+ * @param matcher A matching function which takes a candidate.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @return The result status.
+ * @details This scans the whole database so it can take long time.
+ */
+Status SearchDBMLambda(
+    DBM* dbm, std::function<bool(std::string_view)> matcher,
+    std::vector<std::string>* matched, size_t capacity = 0);
+
+/**
  * Searches an ordered database and get keys which match a boundary condition.
  * @param dbm The DBM object of the database.
  * @param pattern The boundary pattern of the origin.
@@ -161,9 +174,11 @@ Status SearchDBMEditDistanceBinary(
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
  * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
  * keys whose edit distance to the binary pattern is the least.  "containcase", "containword",
- * and "containcaseword" extract keys considering case and word boundary.  Ordered databases
- * support "upper" and "lower" which extract keys whose positions are upper/lower than the
- * pattern.  "upperinc" and "lowerinc" are their inclusive versions.
+ * and "containcaseword" extract keys considering case and word boundary.  "contain*",
+ * "containcase*", "containword*", and "containcaseword*" take a null-code-separatable pattern and
+ * do batch operations for each element.  Ordered databases support "upper" and "lower" which
+ * extract keys whose positions are upper/lower than the pattern.  "upperinc" and "lowerinc" are
+ * their inclusive versions.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
@@ -239,6 +254,18 @@ Status SearchTextFile(
     bool (*matcher)(std::string_view, std::string_view) = StrContains);
 
 /**
+ * Searches a text file and get lines which match a lambda function.
+ * @param file The file to search.
+ * @param matcher A matching function which takes a candidate.
+ * @param matched A vector to contain the result.
+ * @param capacity The maximum records to obtain.  0 means unlimited.
+ * @return The result status.
+ */
+Status SearchTextFileLambda(
+    File* file, std::function<bool(std::string_view)> matcher,
+    std::vector<std::string>* matched, size_t capacity = 0);
+
+/**
  * Searches a text file and get lines which match a regular expression.
  * @param file The file to search.
  * @param pattern The regular expression pattern to search for.  Leading "(?i)" makes the pattern
@@ -282,7 +309,9 @@ Status SearchTextFileEditDistanceBinary(
  * "regex" extracts keys partially matches the pattern of a regular expression.  "edit"
  * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
  * keys whose edit distance to the binary pattern is the least.  "containcase", "containword",
- * and "containcaseword" extract keys considering case and word boundary.
+ * and "containcaseword" extract keys considering case and word boundary.  "contain*",
+ * "containcase*", "containword*", and "containcaseword*" take a line-separatable pattern and
+ * do batch operations for each elements.
  * @param pattern The pattern for matching.
  * @param matched A vector to contain the result.
  * @param capacity The maximum records to obtain.  0 means unlimited.
