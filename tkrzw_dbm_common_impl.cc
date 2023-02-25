@@ -354,8 +354,13 @@ Status SearchDBMModal(
     status = SearchDBMLambda(dbm, matcher, matched, capacity);
   } else if (mode == "containcaseword*") {
     const auto& patterns = StrSplit(pattern, '\n', true);
+    std::vector<std::string> lower_patterns;
+    lower_patterns.reserve(patterns.size());
+    for (const auto& pattern : patterns) {
+      lower_patterns.emplace_back(StrLowerCase(pattern));
+    }
     auto matcher = [=](std::string_view text) -> bool {
-      return StrCaseWordContainsBatch(text, patterns);
+      return StrCaseWordContainsBatchLower(text, lower_patterns);
     };
     status = SearchDBMLambda(dbm, matcher, matched, capacity);
   } else if (mode == "upper") {
@@ -782,8 +787,13 @@ Status SearchTextFileModal(
     status = SearchTextFileLambda(file, matcher, matched, capacity);
   } else if (mode == "containcaseword*") {
     const auto& patterns = StrSplit(pattern, '\n', true);
+    std::vector<std::string> lower_patterns;
+    lower_patterns.reserve(patterns.size());
+    for (const auto& pattern : patterns) {
+      lower_patterns.emplace_back(StrLowerCase(pattern));
+    }
     auto matcher = [=](std::string_view text) -> bool {
-      return StrCaseWordContainsBatch(text, patterns);
+      return StrCaseWordContainsBatchLower(text, lower_patterns);
     };
     status = SearchTextFileLambda(file, matcher, matched, capacity);
   } else {
