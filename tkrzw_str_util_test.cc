@@ -444,6 +444,17 @@ TEST(StrUtilTest, StrWordContainsBatch) {
   EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
 }
 
+TEST(StrUtilTest, StrWordContainsBatch) {
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "abc"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "def"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"abc def"})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"bc", "123"})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
+}
+
 TEST(StrUtilTest, StrBeginsWith) {
   EXPECT_TRUE(tkrzw::StrBeginsWith("", ""));
   EXPECT_TRUE(tkrzw::StrBeginsWith("abc", ""));
