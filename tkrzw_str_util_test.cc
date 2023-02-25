@@ -444,15 +444,21 @@ TEST(StrUtilTest, StrWordContainsBatch) {
   EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
 }
 
-TEST(StrUtilTest, StrWordContainsBatch) {
-  EXPECT_FALSE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({})));
-  EXPECT_TRUE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({""})));
-  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123"})));
-  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "abc"})));
-  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "def"})));
-  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"abc def"})));
-  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"bc", "123"})));
-  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
+TEST(StrUtilTest, StrCaseWordContainsBatch) {
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatch("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatch("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"123", "AbC"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"123", "dEf"})));
+  EXPECT_TRUE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"AbC def"})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"bc", "123"})));
+  EXPECT_FALSE(tkrzw::StrCaseWordContainsBatch(
+      "aBc DeF", std::vector<std::string>({"ab", "123"})));
 }
 
 TEST(StrUtilTest, StrBeginsWith) {
