@@ -417,6 +417,33 @@ TEST(StrUtilTest, StrCaseWordContains) {
   EXPECT_FALSE(tkrzw::StrCaseWordContains("hOp sTep jumP", "p s"));
 }
 
+TEST(StrUtilTest, StrContainsBatch) {
+  EXPECT_FALSE(tkrzw::StrContainsBatch("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrContainsBatch("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrContainsBatch("abcdef", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrContainsBatch("abcdef", std::vector<std::string>({"123", "abc"})));
+  EXPECT_TRUE(tkrzw::StrContainsBatch("abcdef", std::vector<std::string>({"bcd", "123"})));
+}
+
+TEST(StrUtilTest, StrCaseContainsBatch) {
+  EXPECT_FALSE(tkrzw::StrCaseContainsBatch("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrCaseContainsBatch("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrCaseContainsBatch("AbCdEf", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrCaseContainsBatch("AbCdEf", std::vector<std::string>({"123", "aBc"})));
+  EXPECT_TRUE(tkrzw::StrCaseContainsBatch("AbCdEf", std::vector<std::string>({"BcD", "123"})));
+}
+
+TEST(StrUtilTest, StrWordContainsBatch) {
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("", std::vector<std::string>({""})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "abc"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"123", "def"})));
+  EXPECT_TRUE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"abc def"})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"bc", "123"})));
+  EXPECT_FALSE(tkrzw::StrWordContainsBatch("abc def", std::vector<std::string>({"ab", "123"})));
+}
+
 TEST(StrUtilTest, StrBeginsWith) {
   EXPECT_TRUE(tkrzw::StrBeginsWith("", ""));
   EXPECT_TRUE(tkrzw::StrBeginsWith("abc", ""));

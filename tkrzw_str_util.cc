@@ -654,6 +654,42 @@ bool StrCaseWordContains(std::string_view text, std::string_view pattern) {
   return StrCaseWordSearch(text, pattern) >= 0;
 }
 
+bool StrContainsBatch(std::string_view text, const std::vector<std::string>& patterns) {
+  for (const auto& pattern : patterns) {
+    if (tkrzw_memmem(text.data(), text.size(), pattern.data(), pattern.size()) != nullptr) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool StrCaseContainsBatch(std::string_view text, const std::vector<std::string>& patterns) {
+  for (const auto& pattern : patterns) {
+    if (StrCaseSearch(text, pattern) >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool StrWordContainsBatch(std::string_view text, const std::vector<std::string>& patterns) {
+  for (const auto& pattern : patterns) {
+    if (StrWordSearch(text, pattern) >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool StrCaseWordContainsBatch(std::string_view text, const std::vector<std::string>& patterns) {
+  for (const auto& pattern : patterns) {
+    if (StrCaseWordSearch(text, pattern) >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool StrBeginsWith(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return false;

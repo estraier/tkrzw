@@ -358,6 +358,38 @@ bool StrWordContains(std::string_view text, std::string_view pattern);
 bool StrCaseWordContains(std::string_view text, std::string_view pattern);
 
 /**
+ * Checks a text contains at least one of patterns.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @return True if the text contains at least one of patterns.
+ */
+bool StrContainsBatch(std::string_view text, const std::vector<std::string>& patterns);
+
+/**
+ * Checks a text contains at least one of patterns in a case-sensitive manner.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @return True if the text contains at least one of patterns.
+ */
+bool StrCaseContainsBatch(std::string_view text, const std::vector<std::string>& patterns);
+
+/**
+ * Checks a text contains at least one of words surrounded by non-alphanumeric word boundaries.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @return True if the text contains at least one of patterns.
+ */
+bool StrWordContainsBatch(std::string_view text, const std::vector<std::string>& patterns);
+
+/**
+ * Checks a text contains at least one of words in a case-sensitive manner.
+ * @param text The text to search.
+ * @param patterns The patterns to search for.
+ * @return True if the text contains at least one of patterns.
+ */
+bool StrCaseWordContainsBatch(std::string_view text, const std::vector<std::string>& patterns);
+
+/**
  * Checks whether a text begins with a pattern.
  * @param text The text to search.
  * @param pattern The pattern to search for.
