@@ -134,7 +134,7 @@ extern const char* const TKRZW_ANY_DATA;
  * of the return value is to be stored.
  */
 typedef const char* (*tkrzw_record_processor)(
-    void* arg, const char*, int32_t, const char*, int32_t, int32_t*);
+    void*, const char*, int32_t, const char*, int32_t, int32_t*);
 
 /** The special string indicating no operation. */
 extern const char* const TKRZW_REC_PROC_NOOP;
