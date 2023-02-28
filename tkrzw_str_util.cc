@@ -1245,7 +1245,7 @@ int32_t StrCaseSearch(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return -1;
   }
-  if (pattern.size() == 0) {
+  if (pattern.empty()) {
     return 0;
   }
   constexpr size_t STACK_BUFFER_SIZE = 512;
@@ -1289,38 +1289,37 @@ int32_t StrWordSearch(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return -1;
   }
-  if (pattern.size() == 0) {
+  if (pattern.empty()) {
     return 0;
   }
-  int32_t rv = -1;
-  size_t end = text.size() - pattern.size() + 1;
-  for (size_t ti = 0; ti < end; ti++) {
-    size_t pi = 0;
-    for (; pi < pattern.size(); pi++) {
-      if (text[ti + pi] != pattern[pi]) {
-        break;
-      }
+  const char* rp = text.data();
+  size_t size = text.size();
+  while (size > 0) {
+    const char* pv =
+        (const char*)tkrzw_memmem((void*)rp, size, pattern.data(), pattern.size());
+    if (!pv) break;
+    if (pv != text.data() && tkrzw_isalnum(*(pv - 1)) && tkrzw_isalnum(*pv)) {
+      rp = pv + 1;
+      size = text.size() - (rp - text.data());
+      continue;
     }
-    if (pi == pattern.size()) {
-      if (ti != 0 && tkrzw_isalnum(text[ti - 1]) && tkrzw_isalnum(text[ti])) {
-        continue;
-      }
-      if (ti != end - 1 && tkrzw_isalnum(text[ti + pattern.size()]) &&
-          tkrzw_isalnum(text[ti + pattern.size() - 1])) {
-        continue;
-      }
-      rv = ti;
-      break;
+    if (pv + pattern.size() != rp + size &&
+        tkrzw_isalnum(*(pv + pattern.size())) && tkrzw_isalnum(*(pv + pattern.size() - 1))) {
+      rp = pv + 1;
+      size = text.size() - (rp - text.data());
+      continue;
     }
+
+    return pv - text.data();
   }
-  return rv;
+  return -1;
 }
 
 int32_t StrCaseWordSearch(std::string_view text, std::string_view pattern) {
   if (pattern.size() > text.size()) {
     return -1;
   }
-  if (pattern.size() == 0) {
+  if (pattern.empty()) {
     return 0;
   }
   constexpr size_t STACK_BUFFER_SIZE = 512;
