@@ -462,8 +462,9 @@ bool tkrzw_dbm_close(TkrzwDBM* dbm);
  * @param writable True if the processor can edit the record.
  * @return True on success or false on failure.
  * @details If the specified record exists, the value is given to the callback function.  If it
- * doesn't exist, NULL is given instead.  If the callback function returns TKRZW_REC_PROC_NOOP,
- * TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose ownership is not taken.
+ * doesn't exist, NULL is given instead.  The callback function returns TKRZW_REC_PROC_NOOP to
+ * keep the current value, TKRZW_REC_PROC_REMOVE to remove the record, or a string pointer to a
+ * new value to set.  The ownership of the return value is not taken.
  */
 bool tkrzw_dbm_process(
     TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, tkrzw_record_processor proc,
@@ -691,8 +692,9 @@ int64_t tkrzw_dbm_increment(
  * @param writable True if the processors can edit the records.
  * @return True on success or false on failure.
  * @details If the specified record exists, the value is given to the callback function.  If it
- * doesn't exist, NULL is given instead.  If the callback function returns TKRZW_REC_PROC_NOOP,
- * TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose ownership is not taken.
+ * doesn't exist, NULL is given instead.  The callback function returns TKRZW_REC_PROC_NOOP
+ * to keep the current value, TKRZW_REC_PROC_REMOVE to remove the record, or a string pointer to a
+ * new value to set.  The ownership of the return value is not taken.
  */
 bool tkrzw_dbm_process_multi(
     TkrzwDBM* dbm, TkrzwKeyProcPair* key_proc_pairs, int32_t num_pairs, bool writable);
@@ -786,8 +788,9 @@ bool tkrzw_dbm_push_last(TkrzwDBM* dbm, const char* value_ptr, int32_t value_siz
  * @param proc_arg An arbitrary data which is given to the callback function.
  * @param writable True if the processor can edit the record.
  * @details If the specified record exists, the value is given to the callback function.  If it
- * doesn't exist, NULL is given instead.  If the callback function returns TKRZW_REC_PROC_NOOP,
- * TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose ownership is not taken.
+ * doesn't exist, NULL is given instead.  The callback function returns TKRZW_REC_PROC_NOOP to
+ * keep the current value, TKRZW_REC_PROC_REMOVE to remove the record, or a string pointer to a
+ * new value to set.  The ownership of the return value is not taken.
  */
 bool tkrzw_dbm_process_each(
     TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable);
@@ -1052,10 +1055,10 @@ bool tkrzw_dbm_iter_previous(TkrzwDBMIter* iter);
  * @param writable True if the processor can edit the record.
  * @return True on success or false on failure.
  * @details If the current record exists, the callback function is called.  Otherwise, this
- * method fails and the callback is not called.  If the callback function returns
- * TKRZW_REC_PROC_NOOP, TKRZW_REC_PROC_REMOVE, or a string pointer to a new value, whose
- * ownership is not taken.  If the current record is removed, the iterator is moved to the next
- * record.
+ * method fails and the callback is not called.  The callback function returns TKRZW_REC_PROC_NOOP
+ * to keep the current value, TKRZW_REC_PROC_REMOVE to remove the record, or a string pointer to a
+ * new value to set.  The ownership of the return value is not taken.  If the current record is
+ * removed, the iterator is moved to the next record.
  */
 bool tkrzw_dbm_iter_process(
     TkrzwDBMIter* iter, tkrzw_record_processor proc, void* proc_arg, bool writable);
