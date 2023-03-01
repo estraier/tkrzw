@@ -376,6 +376,9 @@ TEST(LangCTest, Basic) {
 
 const char* proc_increment(void* arg, const char* key_ptr, int32_t key_size,
                            const char* value_ptr, int32_t value_size, int32_t* new_value_size) {
+  if (key_ptr == nullptr) {
+    return TKRZW_REC_PROC_NOOP;
+  }
   std::string* new_value = (std::string*)arg;
   int64_t num_value = 0;
   if (value_ptr != nullptr) {

@@ -89,6 +89,35 @@ struct RecordProcessorWrapper : public DBM::RecordProcessor {
   }
 };
 
+struct RecordProcessorEachWrapper : public DBM::RecordProcessor {
+ public:
+  tkrzw_record_processor proc = nullptr;
+  void* arg = nullptr;
+  std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+    int32_t new_value_size = 0;
+    const char* new_value_ptr =
+        proc(arg, key.data(), key.size(), value.data(), value.size(), &new_value_size);
+    if (new_value_ptr == TKRZW_REC_PROC_NOOP) {
+      return NOOP;
+    }
+    if (new_value_ptr == TKRZW_REC_PROC_REMOVE) {
+      return REMOVE;
+    }
+    return std::string_view(new_value_ptr, new_value_size);
+  }
+  std::string_view ProcessEmpty(std::string_view key) override {
+    int32_t new_value_size = 0;
+    const char* new_value_ptr = proc(arg, nullptr, -1, nullptr, -1, &new_value_size);
+    if (new_value_ptr == TKRZW_REC_PROC_NOOP) {
+      return NOOP;
+    }
+    if (new_value_ptr == TKRZW_REC_PROC_REMOVE) {
+      return REMOVE;
+    }
+    return std::string_view(new_value_ptr, new_value_size);
+  }
+};
+
 void tkrzw_set_last_status(int32_t code, const char* message) {
   if (message == nullptr) {
     last_status.Set(Status::Code(code));
@@ -1125,7 +1154,7 @@ bool tkrzw_dbm_process_each(
   assert(dbm != nullptr && proc != nullptr);
   try {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-    RecordProcessorWrapper xproc;
+    RecordProcessorEachWrapper xproc;
     xproc.proc = proc;
     xproc.arg = proc_arg;
     last_status = xdbm->ProcessEach(&xproc, writable);
