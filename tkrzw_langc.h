@@ -790,7 +790,9 @@ bool tkrzw_dbm_push_last(TkrzwDBM* dbm, const char* value_ptr, int32_t value_siz
  * @details If the specified record exists, the value is given to the callback function.  If it
  * doesn't exist, NULL is given instead.  The callback function returns TKRZW_REC_PROC_NOOP to
  * keep the current value, TKRZW_REC_PROC_REMOVE to remove the record, or a string pointer to a
- * new value to set.  The ownership of the return value is not taken.
+ * new value to set.  The ownership of the return value is not taken.  It is also called once
+ * before the iteration and once after the iteration with both the key and the value being
+ * TKRZW_REC_PROC_NOOP.
  */
 bool tkrzw_dbm_process_each(
     TkrzwDBM* dbm, tkrzw_record_processor proc, void* proc_arg, bool writable);
