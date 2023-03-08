@@ -139,7 +139,7 @@ class DummyCompressor : public Compressor {
 };
 
 /**
- * Complessor implemeted with ZLib.
+ * Compressor implemeted with ZLib.
  */
 class ZLibCompressor final : public Compressor {
  public:
@@ -212,7 +212,7 @@ class ZLibCompressor final : public Compressor {
 };
 
 /**
- * Complessor implemeted with ZStd.
+ * Compressor implemeted with ZStd.
  */
 class ZStdCompressor final : public Compressor {
  public:
@@ -271,7 +271,7 @@ class ZStdCompressor final : public Compressor {
 };
 
 /**
- * Complessor implemeted with LZ4.
+ * Compressor implemeted with LZ4.
  */
 class LZ4Compressor final : public Compressor {
  public:
@@ -329,7 +329,7 @@ class LZ4Compressor final : public Compressor {
 };
 
 /**
- * Complessor implemeted with LZMA.
+ * Compressor implemeted with LZMA.
  */
 class LZMACompressor final : public Compressor {
  public:
