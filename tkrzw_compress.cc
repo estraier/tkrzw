@@ -16,6 +16,8 @@
 #include "tkrzw_compress.h"
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
+#include "tkrzw_sys_compressor_aes.h"
+#include "tkrzw_thread_util.h"
 
 #if _TKRZW_COMP_ZLIB
 extern "C" {
@@ -438,6 +440,141 @@ char* LZMACompressor::Decompress(const void* buf, size_t size, size_t* sp) {
 
 std::unique_ptr<Compressor> LZMACompressor::MakeCompressor() const {
   return std::make_unique<LZMACompressor>(level_, metadata_mode_);
+}
+
+AESCompressor::AESCompressor(std::string_view key, uint32_t rnd_seed) {
+  key_ = key;
+  char bin_key[32];
+  size_t key_size = 0;
+  std::memset(bin_key, 0, 32);
+  if (key.size() <= 32) {
+    std::memcpy(bin_key, key.data(), key.size());
+    const size_t rem_size = key.size() % 16;
+    if (rem_size > 0) {
+      key_size = key.size() + 16 - rem_size;
+    }
+  } else {
+    for (size_t i = 0; i < key.size(); i++) {
+      bin_key[i % 32] ^= *(unsigned char*)(key.data() + i);
+    }
+    key_size = 32;
+  }
+  rnd_seed_ = rnd_seed;
+  if (rnd_seed == 0) {
+    rnd_seed = std::random_device()();
+  }
+  rnd_gen_ = new std::mt19937(rnd_seed);
+  rnd_dist_ = new std::uniform_int_distribution<uint64_t>;
+  rnd_mutex_ = new SpinMutex;
+  enc_rk_ = new uint32_t[64];
+  dec_rk_ = new uint32_t[64];
+  enc_rounds_ = AESKeySetupEnc(enc_rk_, (uint8_t*)bin_key, key_size * 8);
+  dec_rounds_ = AESKeySetupDec(dec_rk_, (uint8_t*)bin_key, key_size * 8);
+  
+  std::cout << "ROUND:" << key_.size() << ":" << enc_rounds_ << std::endl;
+
+}
+
+AESCompressor::~AESCompressor() {
+  delete[] dec_rk_;
+  delete[] enc_rk_;
+  delete (SpinMutex*)rnd_mutex_;
+  delete (std::uniform_int_distribution<uint64_t>*)rnd_dist_;
+  delete (std::mt19937*)rnd_gen_;
+}
+
+bool AESCompressor::IsSupported() const {
+  return true;
+}
+
+char* AESCompressor::Compress(const void* buf, size_t size, size_t* sp) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
+  char* res_buf = (char*)xmalloc(size + 32);
+  char* wp = res_buf;
+  const char* rp = (const char*)buf;
+  *(wp++) = size % 16;
+  ((SpinMutex*)rnd_mutex_)->lock();
+  uint64_t iv1 = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
+      *(std::mt19937*)rnd_gen_);
+  uint64_t iv2 = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
+      *(std::mt19937*)rnd_gen_);
+  ((SpinMutex*)rnd_mutex_)->unlock();
+  char ivbuf[16];
+  WriteFixNum(ivbuf, iv1, 8);
+  WriteFixNum(ivbuf + 8, iv2, 8);
+  AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)ivbuf, (uint8_t*)wp);
+  wp += 16;
+  int32_t round = 0;
+  while (size >= 16) {
+    char xbuf[16];
+    const char* pp = round > 0 ? rp - 16 : ivbuf;
+    AESBlockXOR(rp, pp, xbuf);
+    AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)xbuf, (uint8_t*)wp);
+    wp += 16;
+    rp += 16;
+    size -= 16;
+    round++;
+  }
+  if (size > 0) {
+    char xbuf[16];
+    std::memset(xbuf, 0, 16);
+    const char* pp = round > 0 ? rp - 16 : ivbuf;
+    AESBlockXORSized(rp, pp, xbuf, size);
+    AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)xbuf, (uint8_t*)wp);
+    wp += 16;
+  }
+  *sp = wp - res_buf;
+  return res_buf;
+}
+
+char* AESCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
+  if (size < 17) {
+    return nullptr;
+  }
+  const char* rp = (const char*)buf;
+  const size_t rem_size = *(const unsigned char*)rp;
+  if (rem_size >= 16) {
+    return nullptr;
+  }
+  rp++;
+  size--;
+  if (size % 16 != 0) {
+    return nullptr;
+  }
+  char ivbuf[16];
+  AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)ivbuf);
+  rp += 16;
+  size -= 16;
+  if (rem_size > 0) {
+    size = size - 16 + rem_size;
+  }
+  char* res_buf = (char*)xmalloc(size + 1);
+  char* wp = res_buf;
+  int32_t round = 0;
+  while (size >= 16) {
+    char xbuf[16];
+    AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)xbuf);
+    const char* pp = round > 0 ? wp - 16 : ivbuf;
+    AESBlockXOR(xbuf, pp, wp);
+    wp += 16;
+    rp += 16;
+    size -= 16;
+    round++;
+  }
+  if (size > 0) {
+    char xbuf[16];
+    AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)xbuf);
+    const char* pp = round > 0 ? wp - 16 : ivbuf;
+    AESBlockXORSized(xbuf, pp, wp, size);
+    wp += size;
+  }
+  *sp = wp - res_buf;
+  return res_buf;
+}
+
+std::unique_ptr<Compressor> AESCompressor::MakeCompressor() const {
+  return std::make_unique<AESCompressor>(key_, rnd_seed_);
 }
 
 }  // namespace tkrzw

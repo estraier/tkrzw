@@ -39,7 +39,10 @@ void CompressorTest::BasicTest(tkrzw::Compressor* compressor) {
     EXPECT_EQ(nullptr, compressor->Decompress("", 0, &size));
     return;
   }
-  std::vector<std::string> inputs = {"", "a", "abc", "aaaaa", "a\0b\0c\xFF"};
+  std::vector<std::string> inputs = {"", "a", "abc", "aaaaa", "a\0b\0c\xFF",
+    "01234567890ABCDE", "01234567890ABCEF", "01234567890ABCEFXYZ",
+    "01234567890ABCEF01234567890abcdeXYZ", "私", "ABこれ", "私の名前は中野です",
+  };
   for (int32_t size = 16; size <= 262144; size *= 2) {
     inputs.emplace_back(std::string(size, 'z'));
     std::string cycle_str;
@@ -139,6 +142,32 @@ TEST_F(CompressorTest, LZMACompressorFast) {
 TEST_F(CompressorTest, LZMACompressorSlow) {
   tkrzw::LZMACompressor compressor(9, tkrzw::LZMACompressor::METADATA_SHA256);
   BasicTest(&compressor);
+}
+
+TEST_F(CompressorTest, AESCompressorDefault) {
+  tkrzw::AESCompressor compressor("hello", 19780211);
+  BasicTest(&compressor);
+  /*
+  tkrzw::AESCompressor compressor("hello", 123);
+  std::string inputs[] = {
+    "", "012", "01234567890ABCDE", "01234567890ABCEF", "01234567890ABCEFxyz",
+    "01234567890ABCEF01234567890abcdeXYZ", "私", "ABこれ", "私の名前は中野ですよ。",
+  };
+  for (const auto& input : inputs) {
+    std::cout << "ORIG:" << input << std::endl;
+    size_t encsize = 0;
+    char* encdata = compressor.Compress(input.data(), input.size(), &encsize);
+    std::cout << "ES:" << encsize << std::endl;
+    std::cout << "ENC:" << std::string_view(encdata, encsize) << std::endl;
+    size_t decsize = 0;
+    char* decdata = compressor.Decompress(encdata, encsize, &decsize);
+    std::cout << "DS:" << decsize << std::endl;
+    std::cout << "DEC:" << std::string_view(decdata, decsize) << std::endl;
+    EXPECT_EQ(input, std::string_view(decdata, decsize));
+    tkrzw::xfree(decdata);
+    tkrzw::xfree(encdata);
+  }
+  */
 }
 
 // END OF FILE
