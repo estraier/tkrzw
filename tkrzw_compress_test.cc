@@ -144,11 +144,11 @@ TEST_F(CompressorTest, LZMACompressorSlow) {
   BasicTest(&compressor);
 }
 
-TEST_F(CompressorTest, AESCompressorDefault) {
-  tkrzw::AESCompressor compressor("hello", 19780211);
-  BasicTest(&compressor);
-  /*
-  tkrzw::AESCompressor compressor("hello", 123);
+TEST_F(CompressorTest, RC4CompressorDefault) {
+  tkrzw::RC4Compressor compressor("hello", 19780211);
+
+
+
   std::string inputs[] = {
     "", "012", "01234567890ABCDE", "01234567890ABCEF", "01234567890ABCEFxyz",
     "01234567890ABCEF01234567890abcdeXYZ", "私", "ABこれ", "私の名前は中野ですよ。",
@@ -167,7 +167,12 @@ TEST_F(CompressorTest, AESCompressorDefault) {
     tkrzw::xfree(decdata);
     tkrzw::xfree(encdata);
   }
-  */
+
+}
+
+TEST_F(CompressorTest, AESCompressorDefault) {
+  tkrzw::AESCompressor compressor("hello", 19780211);
+  BasicTest(&compressor);
 }
 
 // END OF FILE

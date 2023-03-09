@@ -16,7 +16,7 @@
 #include "tkrzw_compress.h"
 #include "tkrzw_hash_util.h"
 #include "tkrzw_lib_common.h"
-#include "tkrzw_sys_compressor_aes.h"
+#include "tkrzw_sys_compress_aes.h"
 #include "tkrzw_thread_util.h"
 
 #if _TKRZW_COMP_ZLIB
@@ -442,6 +442,63 @@ std::unique_ptr<Compressor> LZMACompressor::MakeCompressor() const {
   return std::make_unique<LZMACompressor>(level_, metadata_mode_);
 }
 
+RC4Compressor::RC4Compressor(std::string_view key, uint32_t rnd_seed) {
+  key_ = key;
+  rnd_seed_ = rnd_seed;
+  if (rnd_seed == 0) {
+    rnd_seed = std::random_device()();
+  }
+  rnd_gen_ = new std::mt19937(rnd_seed);
+  rnd_dist_ = new std::uniform_int_distribution<uint32_t>;
+  rnd_mutex_ = new SpinMutex;
+}
+
+RC4Compressor::~RC4Compressor() {
+  delete (SpinMutex*)rnd_mutex_;
+  delete (std::uniform_int_distribution<uint32_t>*)rnd_dist_;
+  delete (std::mt19937*)rnd_gen_;
+}
+
+bool RC4Compressor::IsSupported() const {
+  return true;
+}
+
+char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
+  char* res_buf = (char*)xmalloc(size + 4);
+  char* wp = res_buf;
+  const char* rp = (const char*)buf;
+  ((SpinMutex*)rnd_mutex_)->lock();
+  uint32_t iv = (*((std::uniform_int_distribution<uint32_t>*)rnd_dist_))(
+      *(std::mt19937*)rnd_gen_);
+  ((SpinMutex*)rnd_mutex_)->unlock();
+  WriteFixNum(wp, iv, 4);
+  wp += 4;
+  std::memcpy(wp, rp, size);
+  wp += size;
+  *sp = wp - res_buf;
+  return res_buf;
+}
+
+char* RC4Compressor::Decompress(const void* buf, size_t size, size_t* sp) {
+  assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
+  if (size < 4) {
+    return nullptr;
+  }
+  char* res_buf = (char*)xmalloc(size + 4);
+  char* wp = res_buf;
+  const char* rp = (const char*)buf;
+  rp += 4;
+  size -= 4;
+  std::memcpy(wp, rp, size);
+  *sp = size;
+  return res_buf;
+}
+
+std::unique_ptr<Compressor> RC4Compressor::MakeCompressor() const {
+  return std::make_unique<RC4Compressor>(key_, rnd_seed_);
+}
+
 AESCompressor::AESCompressor(std::string_view key, uint32_t rnd_seed) {
   key_ = key;
   char bin_key[32];
@@ -470,9 +527,6 @@ AESCompressor::AESCompressor(std::string_view key, uint32_t rnd_seed) {
   dec_rk_ = new uint32_t[64];
   enc_rounds_ = AESKeySetupEnc(enc_rk_, (uint8_t*)bin_key, key_size * 8);
   dec_rounds_ = AESKeySetupDec(dec_rk_, (uint8_t*)bin_key, key_size * 8);
-  
-  std::cout << "ROUND:" << key_.size() << ":" << enc_rounds_ << std::endl;
-
 }
 
 AESCompressor::~AESCompressor() {

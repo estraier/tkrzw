@@ -402,6 +402,73 @@ class LZMACompressor final : public Compressor {
 };
 
 /**
+ * Compressor implemeted with RC4 encryption.
+ */
+class RC4Compressor final : public Compressor {
+ public:
+  /**
+   * Constructor.
+   * @param key The encription key.
+   * @param rnd_seed The random seed to make initialization vectors for encoding.  If it is zero,
+   * a real random device generates the seed.
+   */
+  explicit RC4Compressor(std::string_view key, uint32_t rnd_seed = 0);
+
+  /**
+   * Destructor.
+   */
+  virtual ~RC4Compressor();
+
+  /**
+   * Checks whether the implementation is actually supported.
+   * @return True if the implementation is actually supported.
+   */
+  bool IsSupported() const override;
+
+  /**
+   * Compresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return The pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Compress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Decompresses a serial data.
+   * @param buf the input buffer.
+   * @param size the size of the input buffer.
+   * @param sp the pointer to the variable into which the size of the region of the return
+   * value is assigned.
+   * @return The pointer to the result data, or nullptr on failure.
+   * @details Because the region of the return value is allocated with the xmalloc function,
+   * it should be released with the xfree function.
+   */
+  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+
+  /**
+   * Makes a new Compressor object of the same concrete class.
+   * @return The new Compressor object.
+   */
+  std::unique_ptr<Compressor> MakeCompressor() const override;
+
+ private:
+  /** The encription key. */
+  std::string key_;
+  /** The random seed. */
+  uint32_t rnd_seed_;
+  /** The random generator. */
+  void* rnd_gen_;
+  /** The random distribution. */
+  void* rnd_dist_;
+  /** The mutext for random generator. */
+  void* rnd_mutex_;
+};
+
+/**
  * Compressor implemeted with AES encryption.
  */
 class AESCompressor final : public Compressor {
