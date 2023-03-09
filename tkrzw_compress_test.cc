@@ -146,28 +146,7 @@ TEST_F(CompressorTest, LZMACompressorSlow) {
 
 TEST_F(CompressorTest, RC4CompressorDefault) {
   tkrzw::RC4Compressor compressor("hello", 19780211);
-
-
-
-  std::string inputs[] = {
-    "", "012", "01234567890ABCDE", "01234567890ABCEF", "01234567890ABCEFxyz",
-    "01234567890ABCEF01234567890abcdeXYZ", "私", "ABこれ", "私の名前は中野ですよ。",
-  };
-  for (const auto& input : inputs) {
-    std::cout << "ORIG:" << input << std::endl;
-    size_t encsize = 0;
-    char* encdata = compressor.Compress(input.data(), input.size(), &encsize);
-    std::cout << "ES:" << encsize << std::endl;
-    std::cout << "ENC:" << std::string_view(encdata, encsize) << std::endl;
-    size_t decsize = 0;
-    char* decdata = compressor.Decompress(encdata, encsize, &decsize);
-    std::cout << "DS:" << decsize << std::endl;
-    std::cout << "DEC:" << std::string_view(decdata, decsize) << std::endl;
-    EXPECT_EQ(input, std::string_view(decdata, decsize));
-    tkrzw::xfree(decdata);
-    tkrzw::xfree(encdata);
-  }
-
+  BasicTest(&compressor);
 }
 
 TEST_F(CompressorTest, AESCompressorDefault) {

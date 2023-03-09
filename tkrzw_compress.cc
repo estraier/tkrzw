@@ -443,19 +443,22 @@ std::unique_ptr<Compressor> LZMACompressor::MakeCompressor() const {
 }
 
 RC4Compressor::RC4Compressor(std::string_view key, uint32_t rnd_seed) {
+  if (key.empty()) {
+    key = std::string_view("\0", 1);
+  }
   key_ = key;
   rnd_seed_ = rnd_seed;
   if (rnd_seed == 0) {
     rnd_seed = std::random_device()();
   }
   rnd_gen_ = new std::mt19937(rnd_seed);
-  rnd_dist_ = new std::uniform_int_distribution<uint32_t>;
+  rnd_dist_ = new std::uniform_int_distribution<uint64_t>;
   rnd_mutex_ = new SpinMutex;
 }
 
 RC4Compressor::~RC4Compressor() {
   delete (SpinMutex*)rnd_mutex_;
-  delete (std::uniform_int_distribution<uint32_t>*)rnd_dist_;
+  delete (std::uniform_int_distribution<uint64_t>*)rnd_dist_;
   delete (std::mt19937*)rnd_gen_;
 }
 
@@ -465,33 +468,90 @@ bool RC4Compressor::IsSupported() const {
 
 char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  char* res_buf = (char*)xmalloc(size + 4);
+  char* res_buf = (char*)xmalloc(size + 8);
   char* wp = res_buf;
-  const char* rp = (const char*)buf;
   ((SpinMutex*)rnd_mutex_)->lock();
-  uint32_t iv = (*((std::uniform_int_distribution<uint32_t>*)rnd_dist_))(
+  uint64_t iv = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
       *(std::mt19937*)rnd_gen_);
   ((SpinMutex*)rnd_mutex_)->unlock();
-  WriteFixNum(wp, iv, 4);
-  wp += 4;
-  std::memcpy(wp, rp, size);
-  wp += size;
+  WriteFixNum(wp, iv, 8);
+  const char* ivp = wp;
+  wp += 8;
+  const size_t vkey_size = key_.size() + 8;
+  uint32_t sbox[0x100], kbox[0x100];
+  for (int32_t i = 0; i < 0x100; i++) {
+    sbox[i] = i;
+    const int32_t vidx = i % vkey_size;
+    if (vidx < key_.size()) {
+      kbox[i] = ((uint8_t*)key_.data())[vidx];
+    } else {
+      kbox[i] = *(ivp + vidx - key_.size());
+    }
+  }
+  uint32_t sidx = 0;
+  for (int32_t i = 0; i < 0x100; i++) {
+    sidx = (sidx + sbox[i] + kbox[i]) & 0xff;
+    const uint32_t swap = sbox[i];
+    sbox[i] = sbox[sidx];
+    sbox[sidx] = swap;
+  }
+  const char* rp = (const char*)buf;
+  const char* ep = rp + size;
+  uint32_t x = 0;
+  uint32_t y = 0;
+  while (rp < ep) {
+    x = (x + 1) & 0xff;
+    y = (y + sbox[x]) & 0xff;
+    const uint32_t swap = sbox[x];
+    sbox[x] = sbox[y];
+    sbox[y] = swap;
+    *(wp++) = *(rp++) ^ sbox[(sbox[x] + sbox[y]) & 0xff];
+  }
   *sp = wp - res_buf;
   return res_buf;
 }
 
 char* RC4Compressor::Decompress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  if (size < 4) {
+  if (size < 8) {
     return nullptr;
   }
-  char* res_buf = (char*)xmalloc(size + 4);
-  char* wp = res_buf;
   const char* rp = (const char*)buf;
-  rp += 4;
-  size -= 4;
-  std::memcpy(wp, rp, size);
-  *sp = size;
+  const char* ivp = rp;
+  rp += 8;
+  size -= 8;
+  const size_t vkey_size = key_.size() + 8;
+  uint32_t sbox[0x100], kbox[0x100];
+  for (int32_t i = 0; i < 0x100; i++) {
+    sbox[i] = i;
+    const int32_t vidx = i % vkey_size;
+    if (vidx < key_.size()) {
+      kbox[i] = ((uint8_t*)key_.data())[vidx];
+    } else {
+      kbox[i] = *(ivp + vidx - key_.size());
+    }
+  }
+  uint32_t sidx = 0;
+  for (int32_t i = 0; i < 0x100; i++) {
+    sidx = (sidx + sbox[i] + kbox[i]) & 0xff;
+    const uint32_t swap = sbox[i];
+    sbox[i] = sbox[sidx];
+    sbox[sidx] = swap;
+  }
+  char* res_buf = (char*)xmalloc(size + 1);
+  char* wp = res_buf;
+  const char* ep = rp + size;
+  uint32_t x = 0;
+  uint32_t y = 0;
+  while (rp < ep) {
+    x = (x + 1) & 0xff;
+    y = (y + sbox[x]) & 0xff;
+    const uint32_t swap = sbox[x];
+    sbox[x] = sbox[y];
+    sbox[y] = swap;
+    *(wp++) = *(rp++) ^ sbox[(sbox[x] + sbox[y]) & 0xff];
+  }
+  *sp = wp - res_buf;
   return res_buf;
 }
 
