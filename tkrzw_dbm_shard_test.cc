@@ -153,7 +153,8 @@ TEST_F(ShardDBMTest, ShardBasic) {
     {"TreeDBM", "casket",
      {{"dbm", "tree"}, {"key_comparator", "decimal"}}, {}, {{"max_page_size", "512"}}},
     {"TreeDBM", "casket.tkt",
-     {{"update_mode", "update_appending"}, {"key_comparator", "realnumber"}}, {}, {}},
+     {{"update_mode", "update_appending"}, {"record_comp_mode", "aes"}, {"cipher_key", "abc"},
+      {"key_comparator", "realnumber"}}, {}, {{"cipher_key", "abc"}}},
     {"SkipDBM", "casket",
      {{"dbm", "skip"}, {"step_unit", "3"}}, {{"reducer", "last"}}, {{"max_level", "5"}}},
     {"SkipDBM", "casket.tks",
@@ -264,7 +265,7 @@ TEST_F(ShardDBMTest, ShardBasic) {
           config.class_name == "SkipDBM") {
         const std::string restore_path = tmp_dir.MakeUniquePath("restore-", config.path);
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::ShardDBM::RestoreDatabase(
-            path, restore_path, config.class_name, -1));
+            path, restore_path, config.class_name, -1, "abc"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
             restore_path, false, tkrzw::File::OPEN_DEFAULT, config.open_params));
         EXPECT_TRUE(dbm.IsHealthy());

@@ -941,7 +941,7 @@ Status ShardDBM::GetNumberOfShards(const std::string& path, int32_t* num_shards)
 
 Status ShardDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path,
-    const std::string& class_name, int64_t end_offset) {
+    const std::string& class_name, int64_t end_offset, std::string_view cipher_key) {
   int32_t num_shards = 0;
   Status status = GetNumberOfShards(old_file_path, &num_shards);
   if (status != Status::SUCCESS) {
@@ -950,7 +950,8 @@ Status ShardDBM::RestoreDatabase(
   for (int32_t i = 0; i < num_shards; i++) {
     const std::string old_join_path = old_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
     const std::string new_join_path = new_file_path + SPrintF("-%05d-of-%05d", i, num_shards);
-    status |= PolyDBM::RestoreDatabase(old_join_path, new_join_path, class_name, end_offset);
+    status |= PolyDBM::RestoreDatabase(old_join_path, new_join_path, class_name,
+                                       end_offset, cipher_key);
   }
   return status;
 }

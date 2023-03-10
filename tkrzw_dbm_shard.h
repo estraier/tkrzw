@@ -559,11 +559,13 @@ class ShardDBM final : public ParamDBM {
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
    * 0 means the size when the database is synched or closed properly.  Using a positive value
    * is not meaningful if the number of shards is more than one.
+   * @param cipher_key The encryption key for cipher compressors.
    * @return The result status.
    */
   static Status RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path,
-    const std::string& class_name = "", int64_t end_offset = -1);
+    const std::string& class_name = "", int64_t end_offset = -1,
+    std::string_view cipher_key = "");
 
   /**
    * Renames all files of a database to ones of another name.

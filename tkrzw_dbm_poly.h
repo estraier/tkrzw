@@ -297,7 +297,7 @@ class PolyDBM final : public ParamDBM {
    *   - record_comp_mode (string): How to compress the record data: "RECORD_COMP_NONE" to
    *     do no compression, "RECORD_COMP_ZLIB" to compress with ZLib, "RECORD_COMP_ZSTD" to
    *     compress with ZStd, "RECORD_COMP_LZ4" to compress with LZ4, "RECORD_COMP_LZMA" to
-   *     compress with LZMA,  "RECORD_COMP_RC4" to cipher with RC4, "RECORD_COMP_AES" to cipher
+   *     compress with LZMA, "RECORD_COMP_RC4" to cipher with RC4, "RECORD_COMP_AES" to cipher
    *     with AES.
    *   - offset_width (int): The width to represent the offset of records.
    *   - align_pow (int): The power to align records.
