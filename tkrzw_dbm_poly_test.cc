@@ -165,7 +165,8 @@ TEST_F(PolyDBMTest, PolyBasic) {
       {"num_buckets", "100"}, {"min_read_size", "512"}, {"cache_buckets", "true"}}, {}, {}},
     {"TreeDBM", "casket",
      {{"dbm", "tree"}, {"file", "pos-para"}, {"record_crc_mode", "16"},
-      {"key_comparator", "decimal"}}, {}, {{"max_page_size", "512"}}},
+      {"record_comp_mode", "rc4"}, {"cipher_key", "abc"}, {"key_comparator", "decimal"}},
+     {}, {{"cipher_key", "abc"}, {"max_page_size", "512"}}},
     {"TreeDBM", "casket.tkt",
      {{"file", "pos-atom"}, {"block_size", "512"}, {"access_options", "direct:padding"},
       {"update_mode", "update_appending"}, {"restore_mode", "sync"},
@@ -283,7 +284,7 @@ TEST_F(PolyDBMTest, PolyBasic) {
           !tkrzw::CheckMap(config.open_params, "block_size")) {
         const std::string restore_path = tmp_dir.MakeUniquePath("restore-", config.path);
         EXPECT_EQ(tkrzw::Status::SUCCESS, tkrzw::PolyDBM::RestoreDatabase(
-            path, restore_path, config.class_name, -1));
+            path, restore_path, config.class_name, -1, "abc"));
         EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.OpenAdvanced(
             restore_path, false, tkrzw::File::OPEN_DEFAULT, config.open_params));
         EXPECT_TRUE(dbm.IsHealthy());

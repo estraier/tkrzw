@@ -297,7 +297,8 @@ class PolyDBM final : public ParamDBM {
    *   - record_comp_mode (string): How to compress the record data: "RECORD_COMP_NONE" to
    *     do no compression, "RECORD_COMP_ZLIB" to compress with ZLib, "RECORD_COMP_ZSTD" to
    *     compress with ZStd, "RECORD_COMP_LZ4" to compress with LZ4, "RECORD_COMP_LZMA" to
-   *     compress with LZMA.
+   *     compress with LZMA,  "RECORD_COMP_RC4" to cipher with RC4, "RECORD_COMP_AES" to cipher
+   *     with AES.
    *   - offset_width (int): The width to represent the offset of records.
    *   - align_pow (int): The power to align records.
    *   - num_buckets (int): The number of buckets for hashing.
@@ -309,6 +310,7 @@ class PolyDBM final : public ParamDBM {
    *   - fbp_capacity (int): The capacity of the free block pool.
    *   - min_read_size (int): The minimum reading size to read a record.
    *   - cache_buckets (bool): True to cache the hash buckets on memory.
+   *   - cipher_key (string): The encryption key for cipher compressors.
    * @details For TreeDBM, all optional parameters for HashDBM are available.  In addition,
    * these optional parameters are supported.
    *   - max_page_size (int): The maximum size of a page.
@@ -615,11 +617,13 @@ class PolyDBM final : public ParamDBM {
    * the file extension.
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
    * 0 means the size when the database is synched or closed properly.
+   * @param cipher_key The encryption key for cipher compressors.
    * @return The result status.
    */
   static Status RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path,
-    const std::string& class_name = "", int64_t end_offset = -1);
+    const std::string& class_name = "", int64_t end_offset = -1,
+    std::string_view cipher_key = "");
 
  private:
   /** The internal database object. */

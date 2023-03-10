@@ -199,6 +199,14 @@ static void SetHashTuningParams(
       record_comp_mode == "lzma" || record_comp_mode == "xz") {
     tuning_params->record_comp_mode = HashDBM::RECORD_COMP_LZMA;
   }
+  if (record_comp_mode == "record_comp_rc4" || record_comp_mode == "comp_rc4" ||
+      record_comp_mode == "rc4" || record_comp_mode == "arcfour") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_RC4;
+  }
+  if (record_comp_mode == "record_comp_aes" || record_comp_mode == "comp_aes" ||
+      record_comp_mode == "aes" || record_comp_mode == "rijndael") {
+    tuning_params->record_comp_mode = HashDBM::RECORD_COMP_AES;
+  }
   tuning_params->offset_width = StrToIntMetric(SearchMap(*params, "offset_width", "-1"));
   tuning_params->align_pow = StrToIntMetric(SearchMap(*params, "align_pow", "-1"));
   tuning_params->num_buckets = StrToIntMetric(SearchMap(*params, "num_buckets", "-1"));
@@ -231,6 +239,7 @@ static void SetHashTuningParams(
   tuning_params->fbp_capacity = StrToIntMetric(SearchMap(*params, "fbp_capacity", "-1"));
   tuning_params->min_read_size = StrToIntMetric(SearchMap(*params, "min_read_size", "-1"));
   tuning_params->cache_buckets = StrToBool(SearchMap(*params, "cache_buckets", "false"));
+  tuning_params->cipher_key = SearchMap(*params, "cipher_key", "");
   params->erase("update_mode");
   params->erase("record_crc_mode");
   params->erase("record_comp_mode");
@@ -241,6 +250,7 @@ static void SetHashTuningParams(
   params->erase("fbp_capacity");
   params->erase("min_read_size");
   params->erase("cache_buckets");
+  params->erase("cipher_key");
 }
 
 static void SetTreeTuningParams(
@@ -848,15 +858,15 @@ DBM* PolyDBM::GetInternalDBM() const {
 
 Status PolyDBM::RestoreDatabase(
     const std::string& old_file_path, const std::string& new_file_path,
-    const std::string& class_name, int64_t end_offset) {
+    const std::string& class_name, int64_t end_offset, std::string_view cipher_key) {
   std::string mod_class_name = StrLowerCase(class_name);
   if (mod_class_name.empty()) {
     mod_class_name = GuessClassNameFromPath(old_file_path);
   }
   if (mod_class_name == "hash" || mod_class_name == "hashdbm") {
-    return HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
+    return HashDBM::RestoreDatabase(old_file_path, new_file_path, end_offset, cipher_key);
   } else if (mod_class_name == "tree" || mod_class_name == "treedbm") {
-    return TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset);
+    return TreeDBM::RestoreDatabase(old_file_path, new_file_path, end_offset, cipher_key);
   } else if (mod_class_name == "skip" || mod_class_name == "skipdbm") {
     return SkipDBM::RestoreDatabase(old_file_path, new_file_path);
   }

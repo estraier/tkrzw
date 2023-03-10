@@ -223,6 +223,8 @@ check-hashdbm-perf :
 	tkrzw_dbm_perf.exe wicked --dbm hash --file pos-atom --path casket.tkh \
 	  --block_size 512 --direct_io --padding --pagecache \
 	  --iter 10000 --threads 4 --size 100 --buckets 100000 --iterator --clear --rebuild --validate
+	tkrzw_dbm_perf.exe wicked --path casket.tkh --record_comp rc4 --cipher_key abc \
+	  --iter 10000 --threads 4 --size 100 --buckets 100000 --iterator --clear --rebuild --validate
 
 check-hashdbm-util :
 	-del casket* /F /Q > NUL: 2>&1
@@ -348,6 +350,8 @@ check-treedbm-perf :
 	  --block_size 512 --direct_io --padding --pagecache --align_pow 9 \
 	  --iter 40000 --threads 5 --size 8 --max_page_size 1024 --max_branches 8 \
 	  --append --record_crc 32 --iterator --clear --rebuild --validate
+	tkrzw_dbm_perf.exe wicked --path casket.tkt --record_comp aes --cipher_key abc \
+	  --iter 10000 --threads 4 --size 100 --buckets 100000 --iterator --clear --rebuild --validate
 
 check-treedbm-util :
 	-del casket* /F /Q > NUL: 2>&1
@@ -550,6 +554,9 @@ check-polydbm-perf :
 	tkrzw_dbm_perf.exe wicked --dbm poly --path casket \
 	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
 	  --params "dbm=hash,file=pos-atom,num_buckets=100000,fbp_capacity=0"
+	tkrzw_dbm_perf.exe wicked --dbm poly --path casket \
+	  --iter 20000 --threads 5 --size 8 --iterator --clear --rebuild \
+	  --params "dbm=hash,file=pos-atom,num_buckets=100000,record_comp_mode=aes,cipher_key=abc"
 
 check-polydbm-util :
 	-del casket* /F /Q > NUL: 2>&1
