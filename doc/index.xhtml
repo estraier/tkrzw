@@ -2904,6 +2904,7 @@ int main(int argc, char** argv) {
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583 or -1)</dd>
+<dd><code>--cipher_key <var>str</var></code> : Sets the encryption key for cipher compressors. (default: empty)</dd>
 <dt>Tuning options for TreeDBM:</dt>
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
@@ -2912,6 +2913,7 @@ int main(int argc, char** argv) {
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 10 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101 or -1)</dd>
+<dd><code>--cipher_key <var>str</var></code> : Sets the encryption key for cipher compressors. (default: empty)</dd>
 <dd><code>--max_page_size <var>num</var></code> : Sets the maximum size of a page. (default: 8130 or -1)</dd>
 <dd><code>--max_branches <var>num</var></code> : Sets the maximum number of branches of inner nodes. (default: 256 or -1)</dd>
 <dd><code>--comparator <var>func</var></code> : Sets the key comparator: lex, lexcase, dec, hex, real. (default: lex)</dd>
@@ -3023,6 +3025,7 @@ applet  A small application.
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--min_read_size <var>num</var></code> : Sets the minimum reading size to read a record. (default: -1)</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
+<dd><code>--cipher_key <var>str</var></code> : Sets the encryption key for cipher compressors. (default: empty)</dd>
 <dt>Options for TreeDBM:</dt>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
@@ -3032,6 +3035,7 @@ applet  A small application.
 <dd><code>--fbp_cap <var>num</var></code> : Sets the capacity of the free block pool. (default: 2048)</dd>
 <dd><code>--min_read_size <var>num</var></code> : Sets the minimum reading size to read a record. (default: -1)</dd>
 <dd><code>--cache_buckets</code> : Caches the hash buckets on memory.</dd>
+<dd><code>--cipher_key <var>str</var></code> : Sets the encryption key for cipher compressors. (default: empty)</dd>
 <dd><code>--max_page_size <var>num</var></code> : Sets the maximum size of a page. (default: 8130)</dd>
 <dd><code>--max_branches <var>num</var></code> : Sets the maximum number of branches of inner nodes. (default: 256)</dd>
 <dd><code>--max_cached_pages <var>num</var></code> : Sets the maximum number of cached pages. (default: 10000)</dd>

@@ -101,6 +101,7 @@ static void PrintUsageAndDie() {
     HashDBM::DEFAULT_FBP_CAPACITY);
   P("  --min_read_size num : Sets the minimum reading size to read a record. (default: -1)\n");
   P("  --cache_buckets : Caches the hash buckets on memory.\n");
+  P("  --cipher_key str : Sets the encryption key for cipher compressors. (default: empty)\n");
   P("\n");
   P("Options for TreeDBM and FileIndex:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
@@ -117,6 +118,7 @@ static void PrintUsageAndDie() {
     TreeDBM::DEFAULT_FBP_CAPACITY);
   P("  --min_read_size num : Sets the minimum reading size to read a record. (default: -1)\n");
   P("  --cache_buckets : Caches the hash buckets on memory.\n");
+  P("  --cipher_key str : Sets the encryption key for cipher compressors. (default: empty)\n");
   P("  --max_page_size num : Sets the maximum size of a page. (default: %d)\n",
     TreeDBM::DEFAULT_MAX_PAGE_SIZE);
   P("  --max_branches num : Sets the maximum number of branches of inner nodes. (default: %d)\n",
@@ -230,7 +232,8 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
               bool with_no_wait, bool with_no_lock, bool with_sync_hard,
               bool is_append, int32_t record_crc, const std::string& record_comp,
               int32_t offset_width, int32_t align_pow, int64_t num_buckets,
-              int32_t fbp_cap, int32_t min_read_size, bool cache_buckets,
+              int32_t fbp_cap, int32_t min_read_size,
+              bool cache_buckets, const std::string cipher_key,
               int32_t max_page_size, int32_t max_branches, int32_t max_cached_pages,
               bool page_update_write, int32_t step_unit, int32_t max_level,
               int64_t sort_mem_size, bool insert_in_order, int32_t max_cached_records,
@@ -286,6 +289,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.min_read_size = min_read_size;
     tuning_params.cache_buckets = cache_buckets;
+    tuning_params.cipher_key = cipher_key;
     const Status status =
         hash_dbm->OpenAdvanced(file_path, writable, open_options, tuning_params);
     if (status != Status::SUCCESS) {
@@ -329,6 +333,7 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
     tuning_params.fbp_capacity = fbp_cap;
     tuning_params.min_read_size = min_read_size;
     tuning_params.cache_buckets = cache_buckets;
+    tuning_params.cipher_key = cipher_key;
     tuning_params.max_page_size = max_page_size;
     tuning_params.max_branches = max_branches;
     tuning_params.max_cached_pages = max_cached_pages;
@@ -603,7 +608,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--append", 0}, {"--record_crc", 1}, {"--record_comp", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
+    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0}, {"--cipher_key", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -651,6 +656,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const int32_t min_read_size = GetIntegerArgument(cmd_args, "--min_read_size", 0, -1);
   const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
+  const std::string cipher_key = GetStringArgument(cmd_args, "--cipher_key", 0, "");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -739,7 +745,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (is_set_only) {
     if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
-                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  cache_buckets, cipher_key,
                   max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -817,7 +824,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (is_get_only) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
-                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  cache_buckets, cipher_key,
                   max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -891,7 +899,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (is_iter_only) {
     if (!SetUpDBM(dbm.get(), false, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
-                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  cache_buckets, cipher_key,
                   max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -952,7 +961,8 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
   if (is_remove_only) {
     if (!SetUpDBM(dbm.get(), true, false, file_path, with_no_wait, with_no_lock, with_sync_hard,
                   is_append, record_crc, record_comp,
-                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                  offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                  cache_buckets, cipher_key,
                   max_page_size, max_branches, max_cached_pages, page_update_write,
                   step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                   poly_params)) {
@@ -1019,7 +1029,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--append", 0}, {"--record_crc", 1}, {"--record_comp", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
+    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0}, {"--cipher_key", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -1065,6 +1075,7 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const int32_t min_read_size = GetIntegerArgument(cmd_args, "--min_read_size", 0, -1);
   const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
+  const std::string cipher_key = GetStringArgument(cmd_args, "--cipher_key", 0, "");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -1199,7 +1210,8 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
-                offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                cache_buckets, cipher_key,
                 max_page_size, max_branches, max_cached_pages, page_update_write,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
@@ -1264,7 +1276,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
     {"--sync_io", 0}, {"--padding", 0}, {"--pagecache", 0},
     {"--append", 0}, {"--record_crc", 1}, {"--record_comp", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
+    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0}, {"--cipher_key", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--page_update_write", 0},
     {"--step_unit", 1}, {"--max_level", 1}, {"--sort_mem_size", 1}, {"--insert_in_order", 0},
@@ -1309,6 +1321,7 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const int32_t min_read_size = GetIntegerArgument(cmd_args, "--min_read_size", 0, -1);
   const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
+  const std::string cipher_key = GetStringArgument(cmd_args, "--cipher_key", 0, "");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);
@@ -1522,7 +1535,8 @@ static int32_t ProcessWicked(int32_t argc, const char** args) {
   };
   if (!SetUpDBM(dbm.get(), true, true, file_path, with_no_wait, with_no_lock, with_sync_hard,
                 is_append, record_crc, record_comp,
-                offset_width, align_pow, num_buckets, fbp_cap, min_read_size, cache_buckets,
+                offset_width, align_pow, num_buckets, fbp_cap, min_read_size,
+                cache_buckets, cipher_key,
                 max_page_size, max_branches, max_cached_pages, page_update_write,
                 step_unit, max_level, sort_mem_size, insert_in_order, max_cached_records,
                 poly_params)) {
@@ -1583,7 +1597,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
     {"--path", 1},
     {"--append", 0}, {"--record_crc", 1}, {"--record_comp", 1},
     {"--offset_width", 1}, {"--align_pow", 1}, {"--buckets", 1},
-    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0},
+    {"--fbp_cap", 1}, {"--min_read_size", 1}, {"--cache_buckets", 0}, {"--cipher_key", 1},
     {"--max_page_size", 1}, {"--max_branches", 1}, {"--max_cached_pages", 1},
     {"--page_update_write", 0},
   };
@@ -1609,6 +1623,7 @@ static int32_t ProcessIndex(int32_t argc, const char** args) {
   const int32_t fbp_cap = GetIntegerArgument(cmd_args, "--fbp_cap", 0, -1);
   const int32_t min_read_size = GetIntegerArgument(cmd_args, "--min_read_size", 0, -1);
   const int32_t cache_buckets = CheckMap(cmd_args, "--cache_buckets") ? 1 : 0;
+  const std::string cipher_key = GetStringArgument(cmd_args, "--cipher_key", 0, "");
   const int32_t max_page_size = GetIntegerArgument(cmd_args, "--max_page_size", 0, -1);
   const int32_t max_branches = GetIntegerArgument(cmd_args, "--max_branches", 0, -1);
   const int32_t max_cached_pages = GetIntegerArgument(cmd_args, "--max_cached_pages", 0, -1);

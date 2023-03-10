@@ -595,10 +595,12 @@ class TreeDBM final : public DBM {
    * 0 means the size when the database is synched or closed properly.  INT64MIN and INT64MAX
    * mean to omit restore of the underlying hash database.  Then, INT64MIN is unlimited and
    * INT64MAX means synched restoration.
+   * @param cipher_key The encryption key for cipher compressors.
    * @return The result status.
    */
   static Status RestoreDatabase(
-      const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset);
+      const std::string& old_file_path, const std::string& new_file_path,
+      int64_t end_offset, std::string_view cipher_key = "");
 
  private:
   /** Pointer to the actual implementation. */

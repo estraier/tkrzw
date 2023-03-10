@@ -442,7 +442,7 @@ Status TreeDBMImpl::Open(const std::string& path, bool writable,
     const int64_t end_offset =
         tuning_params.restore_mode == HashDBM::RESTORE_SYNC ? INT64MAX : INT64MIN;
     RemoveFile(tmp_path);
-    status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset);
+    status = TreeDBM::RestoreDatabase(norm_path, tmp_path, end_offset, tuning_params.cipher_key);
     if (status != Status::SUCCESS) {
       RemoveFile(tmp_path);
       return status;
@@ -2760,20 +2760,24 @@ Status TreeDBM::ParseMetadata(
 }
 
 Status TreeDBM::RestoreDatabase(
-    const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
+    const std::string& old_file_path, const std::string& new_file_path,
+    int64_t end_offset, std::string_view cipher_key) {
   std::string tmp_file_path = old_file_path;
   if (end_offset == INT64MIN || end_offset == INT64MAX) {
     end_offset = end_offset == INT64MIN ? -1 : 0;
   } else {
     tmp_file_path = new_file_path + ".tmp.restore";
-    const Status status = HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset);
+    const Status status =
+        HashDBM::RestoreDatabase(old_file_path, tmp_file_path, end_offset, cipher_key);
     if (status != Status::SUCCESS) {
       RemoveFile(tmp_file_path);
       return status;
     }
   }
+  HashDBM::TuningParameters hash_params;
+  hash_params.cipher_key = cipher_key;
   HashDBM tmp_dbm;
-  Status status = tmp_dbm.Open(tmp_file_path, false);
+  Status status = tmp_dbm.OpenAdvanced(tmp_file_path, false, File::OPEN_DEFAULT, hash_params);
   if (status != Status::SUCCESS) {
     RemoveFile(tmp_file_path);
     return status;
@@ -2799,6 +2803,10 @@ Status TreeDBM::RestoreDatabase(
     record_comp_mode = HashDBM::RECORD_COMP_LZ4;
   } else if (record_comp_expr == "lzma") {
     record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+  } else if (record_comp_expr == "rc4") {
+    record_comp_mode = HashDBM::RECORD_COMP_RC4;
+  } else if (record_comp_expr == "aes") {
+    record_comp_mode = HashDBM::RECORD_COMP_AES;
   }
   int32_t offset_width = StrToInt(SearchMap(meta_map, "offset_width", "-1"));
   int32_t align_pow = StrToInt(SearchMap(meta_map, "align_pow", "-1"));
@@ -2835,6 +2843,7 @@ Status TreeDBM::RestoreDatabase(
   params.offset_width = offset_width;
   params.align_pow = align_pow;
   params.num_buckets = num_buckets;
+  params.cipher_key = cipher_key;
   params.max_page_size = max_page_size;
   params.max_branches = max_branches;
   TreeDBM new_dbm;

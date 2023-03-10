@@ -203,6 +203,7 @@ class HashDBMImpl final {
   FreeBlockPool fbp_;
   int32_t min_read_size_;
   bool cache_buckets_;
+  std::string cipher_key_;
   std::unique_ptr<File> file_;
   SpinSharedMutex mutex_;
   HashMutex<SpinSharedMutex> record_mutex_;
@@ -238,7 +239,8 @@ HashDBMImpl::HashDBMImpl(std::unique_ptr<File> file)
       num_records_(0), eff_data_size_(0), file_size_(0), timestamp_(0),
       db_type_(0), opaque_(),
       record_base_(0), iterators_(),
-      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0), cache_buckets_(false),
+      fbp_(HashDBM::DEFAULT_FBP_CAPACITY), min_read_size_(0),
+      cache_buckets_(false), cipher_key_(),
       file_(std::move(file)),
       mutex_(), record_mutex_(RECORD_MUTEX_NUM_SLOTS, 1, PrimaryHash),
       rebuild_mutex_() {}
@@ -336,7 +338,7 @@ Status HashDBMImpl::Open(const std::string& path, bool writable,
       const std::string tmp_path = path_ + ".tmp.restore";
       const int64_t end_offset = restore_mode == HashDBM::RESTORE_SYNC ? 0 : -1;
       RemoveFile(tmp_path);
-      status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset);
+      status = HashDBM::RestoreDatabase(path_, tmp_path, end_offset, cipher_key_);
       if (status != Status::SUCCESS) {
         RemoveFile(tmp_path);
         return status;
@@ -669,6 +671,7 @@ Status HashDBMImpl::Clear() {
   const int64_t num_buckets = num_buckets_;
   const int32_t min_read_size = min_read_size_;
   const bool cache_buckets = cache_buckets_;
+  const std::string cipher_key = cipher_key_;
   const uint32_t db_type = db_type_;
   const std::string opaque = opaque_;
   CancelIterators();
@@ -680,6 +683,7 @@ Status HashDBMImpl::Clear() {
   num_buckets_ = num_buckets;
   min_read_size_ = min_read_size;
   cache_buckets_ = cache_buckets;
+  cipher_key_ = cipher_key;
   db_type_ = db_type;
   opaque_ = opaque;
   status |= OpenImpl(true);
@@ -1161,6 +1165,7 @@ void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
     min_read_size_ = std::max(HashDBM::DEFAULT_MIN_READ_SIZE, 1 << align_pow_);
   }
   cache_buckets_ = tuning_params.cache_buckets > 0;
+  cipher_key_ = tuning_params.cipher_key;
 }
 
 Status HashDBMImpl::OpenImpl(bool writable) {
@@ -1257,6 +1262,7 @@ Status HashDBMImpl::CloseImpl() {
   fbp_.Clear();
   min_read_size_ = 0;
   cache_buckets_ = false;
+  cipher_key_.clear();
   return status;
 }
 
@@ -1307,7 +1313,7 @@ Status HashDBMImpl::LoadMetadata() {
     return status;
   }
   crc_width_ = HashDBM::GetCRCWidthFromStaticFlags(static_flags_);
-  compressor_ = HashDBM::MakeCompressorFromStaticFlags(static_flags_);
+  compressor_ = HashDBM::MakeCompressorFromStaticFlags(static_flags_, cipher_key_);
   num_records_.store(num_records);
   eff_data_size_.store(eff_data_size);
   if (pkg_major_version_ < 1 && pkg_minor_version_ < 1) {
@@ -1696,6 +1702,8 @@ Status HashDBMImpl::RebuildImpl(
       tuning_params.min_read_size : min_read_size_;
   tmp_tuning_params.cache_buckets = tuning_params.cache_buckets >= 0 ?
       tuning_params.cache_buckets : cache_buckets_;
+  tmp_tuning_params.cipher_key = tuning_params.cipher_key.empty() ?
+      cipher_key_ : tuning_params.cipher_key;
   HashDBM tmp_dbm(file_->MakeFile());
   auto CleanUp = [&]() {
     tmp_dbm.Close();
@@ -1813,6 +1821,9 @@ Status HashDBMImpl::RebuildImpl(
     if (tuning_params.cache_buckets >= 0) {
       cache_buckets_ = tuning_params.cache_buckets > 0;
     }
+    if (!tuning_params.cipher_key.empty()) {
+      cipher_key_ = tuning_params.cipher_key;
+    }
     status |= OpenImpl(true);
     db_type_ = db_type;
     opaque_ = opaque;
@@ -1889,7 +1900,7 @@ Status HashDBMImpl::ImportFromFileForwardImpl(
     record_base = tmp_record_base;
   }
   const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
-  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
+  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags, cipher_key_);
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -1942,7 +1953,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     record_base = tmp_record_base;
   }
   const int32_t crc_width = HashDBM::GetCRCWidthFromStaticFlags(static_flags);
-  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
+  auto compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags, cipher_key_);
   if (end_offset == 0) {
     if (last_sync_size < record_base || last_sync_size % (1 << align_pow) != 0) {
       end_offset = -1;
@@ -2763,7 +2774,8 @@ int32_t HashDBM::GetCRCWidthFromStaticFlags(int32_t static_flags) {
   return 0;
 }
 
-std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(int32_t static_flags) {
+std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(
+    int32_t static_flags, std::string_view cipher_key) {
   switch (static_flags & STATIC_FLAG_RECORD_COMP_EXTRA) {
     case STATIC_FLAG_RECORD_COMP_ZLIB:
       return std::make_unique<ZLibCompressor>();
@@ -2774,9 +2786,9 @@ std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(int32_t stati
     case STATIC_FLAG_RECORD_COMP_LZMA:
       return std::make_unique<LZMACompressor>();
     case STATIC_FLAG_RECORD_COMP_RC4:
-      return std::make_unique<RC4Compressor>("", 1);
+      return std::make_unique<RC4Compressor>(cipher_key, 0);
     case STATIC_FLAG_RECORD_COMP_AES:
-      return std::make_unique<AESCompressor>("", 1);
+      return std::make_unique<AESCompressor>(cipher_key, 0);
   }
   return nullptr;
 }
@@ -2808,7 +2820,8 @@ bool HashDBM::CheckRecordCompressionModeIsSupported(RecordCompressionMode mode) 
 }
 
 Status HashDBM::RestoreDatabase(
-    const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset) {
+    const std::string& old_file_path, const std::string& new_file_path,
+    int64_t end_offset, std::string_view cipher_key) {
   PositionalParallelFile old_file;
   Status status = old_file.Open(old_file_path, false);
   if (status != Status::SUCCESS) {
@@ -2855,7 +2868,7 @@ Status HashDBM::RestoreDatabase(
       break;
   }
   {
-    auto tmp_compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags);
+    auto tmp_compressor = HashDBM::MakeCompressorFromStaticFlags(static_flags, cipher_key);
     if (tmp_compressor != nullptr) {
       const auto& comp_type = tmp_compressor->GetType();
       if (comp_type == typeid(ZLibCompressor)) {
@@ -2909,7 +2922,7 @@ Status HashDBM::RestoreDatabase(
         record_crc_mode = RECORD_CRC_32;
         break;
     }
-    auto old_compressor = HashDBM::MakeCompressorFromStaticFlags(old_static_flags);
+    auto old_compressor = HashDBM::MakeCompressorFromStaticFlags(old_static_flags, cipher_key);
     if (old_compressor != nullptr) {
       const auto& comp_type = old_compressor->GetType();
       if (comp_type == typeid(ZLibCompressor)) {
@@ -2950,6 +2963,7 @@ Status HashDBM::RestoreDatabase(
   tuning_params.align_pow = align_pow;
   tuning_params.num_buckets = num_buckets;
   tuning_params.restore_mode = HashDBM::RESTORE_READ_ONLY;
+  tuning_params.cipher_key = cipher_key;
   HashDBM new_dbm(std::move(new_file));
   status = new_dbm.OpenAdvanced(new_file_path, true, File::OPEN_DEFAULT, tuning_params);
   if (status != Status::SUCCESS) {

@@ -307,6 +307,14 @@ class HashDBM final : public DBM {
      * saved as a metadata of the database, it should be set each time when opening the database.
      */
     int32_t cache_buckets = -1;
+    /**
+     * The encryption key for cipher compressors.
+     * @details This key is passed as-is as a binary data to the cipher compressor.  The database
+     * doesn't check whether the key is valid or not.  Thus, a wrong key produces invalid record
+     * values.  As this parameter is not saved as a metadata of the database, it should be set
+     * each time when opening the database.
+     */
+    std::string cipher_key = "";
 
     /**
      * Constructor
@@ -822,9 +830,11 @@ class HashDBM final : public DBM {
   /**
    * Makes the compressor from the static flags.
    * @param static_flags The static flags.
+   * @param cipher_key The encryption key for cipher compressors.
    * @return The compressor object or nullptr for no compression.
    */
-  static std::unique_ptr<Compressor> MakeCompressorFromStaticFlags(int32_t static_flags);
+  static std::unique_ptr<Compressor> MakeCompressorFromStaticFlags(
+      int32_t static_flags, std::string_view cipher_key = "");
 
   /**
    * Checks whether a record compression mode is supported on the platform.
@@ -839,10 +849,12 @@ class HashDBM final : public DBM {
    * @param new_file_path The path of the new database to be created.
    * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
    * 0 means the size when the database is synched or closed properly.
+   * @param cipher_key The encryption key for cipher compressors.
    * @return The result status.
    */
   static Status RestoreDatabase(
-      const std::string& old_file_path, const std::string& new_file_path, int64_t end_offset);
+      const std::string& old_file_path, const std::string& new_file_path,
+      int64_t end_offset, std::string_view cipher_key = "");
 
  private:
   /** Pointer to the actual implementation. */

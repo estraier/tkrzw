@@ -367,6 +367,19 @@ check-hashdbm-util :
 	  --block_size 8192 --padding casket.tkh saitama
 	$(RUNENV) ./tkrzw_dbm_util list --dbm hash --file pos-para \
 	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkh
+	$(RUNENV) ./tkrzw_dbm_util create --record_comp rc4 --cipher_key abc --buckets 10 casket-rc4.tkh
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-rc4.tkh one first
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-rc4.tkh two second
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-rc4.tkh one
+	$(RUNENV) ./tkrzw_dbm_util rebuild --cipher_key abc casket-rc4.tkh
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-rc4.tkh two
+	$(RUNENV) ./tkrzw_dbm_util restore --cipher_key abc casket-rc4.tkh casket-rc4-new.tkh
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-rc4-new.tkh one
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-rc4-new.tkh three third
+	$(RUNENV) ./tkrzw_dbm_util merge --cipher_key abc casket-rc4.tkh casket-rc4-new.tkh
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-rc4.tkh three
+	$(RUNENV) ./tkrzw_dbm_util remove --cipher_key abc casket-rc4.tkh two
+	$(RUNENV) ./tkrzw_dbm_util list --cipher_key abc casket-rc4.tkh
 
 check-treedbm-perf :
 	rm -Rf casket*
@@ -476,6 +489,19 @@ check-treedbm-util :
 	  --block_size 8192 --padding casket.tkt saitama
 	$(RUNENV) ./tkrzw_dbm_util list --dbm tree --file pos-atom \
 	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkt
+	$(RUNENV) ./tkrzw_dbm_util create --record_comp rc4 --cipher_key abc --buckets 10 casket-aes.tkt
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-aes.tkt one first
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-aes.tkt two second
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-aes.tkt one
+	$(RUNENV) ./tkrzw_dbm_util rebuild --cipher_key abc casket-aes.tkt
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-aes.tkt two
+	$(RUNENV) ./tkrzw_dbm_util restore --cipher_key abc casket-aes.tkt casket-aes-new.tkt
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-aes-new.tkt one
+	$(RUNENV) ./tkrzw_dbm_util set --cipher_key abc casket-aes-new.tkt three third
+	$(RUNENV) ./tkrzw_dbm_util merge --cipher_key abc casket-aes.tkt casket-aes-new.tkt
+	$(RUNENV) ./tkrzw_dbm_util get --cipher_key abc casket-aes.tkt three
+	$(RUNENV) ./tkrzw_dbm_util remove --cipher_key abc casket-aes.tkt two
+	$(RUNENV) ./tkrzw_dbm_util list --cipher_key abc casket-aes.tkt
 
 check-skipdbm-perf :
 	rm -Rf casket*

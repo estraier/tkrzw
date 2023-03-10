@@ -278,6 +278,19 @@ check-hashdbm-util :
 	  --block_size 8192 --padding casket.tkh saitama
 	tkrzw_dbm_util.exe list --dbm hash --file pos-para \
 	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkh
+	tkrzw_dbm_util.exe create --record_comp rc4 --cipher_key abc --buckets 10 casket-rc4.tkh
+	tkrzw_dbm_util.exe set --cipher_key abc casket-rc4.tkh one first
+	tkrzw_dbm_util.exe set --cipher_key abc casket-rc4.tkh two second
+	tkrzw_dbm_util.exe get --cipher_key abc casket-rc4.tkh one
+	tkrzw_dbm_util.exe rebuild --cipher_key abc casket-rc4.tkh
+	tkrzw_dbm_util.exe get --cipher_key abc casket-rc4.tkh two
+	tkrzw_dbm_util.exe restore --cipher_key abc casket-rc4.tkh casket-rc4-new.tkh
+	tkrzw_dbm_util.exe get --cipher_key abc casket-rc4-new.tkh one
+	tkrzw_dbm_util.exe set --cipher_key abc casket-rc4-new.tkh three third
+	tkrzw_dbm_util.exe merge --cipher_key abc casket-rc4.tkh casket-rc4-new.tkh
+	tkrzw_dbm_util.exe get --cipher_key abc casket-rc4.tkh three
+	tkrzw_dbm_util.exe remove --cipher_key abc casket-rc4.tkh two
+	tkrzw_dbm_util.exe list --cipher_key abc casket-rc4.tkh
 
 check-treedbm-perf :
 	-del casket* /F /Q > NUL: 2>&1
@@ -390,6 +403,19 @@ check-treedbm-util :
 	  --block_size 8192 --padding casket.tkt saitama
 	tkrzw_dbm_util.exe list --dbm tree --file pos-atom \
 	  --no_lock --alloc_init 1 --alloc_inc 1.2 --block_size 8192 --padding casket.tkt
+	tkrzw_dbm_util.exe create --record_comp rc4 --cipher_key abc --buckets 10 casket-aes.tkt
+	tkrzw_dbm_util.exe set --cipher_key abc casket-aes.tkt one first
+	tkrzw_dbm_util.exe set --cipher_key abc casket-aes.tkt two second
+	tkrzw_dbm_util.exe get --cipher_key abc casket-aes.tkt one
+	tkrzw_dbm_util.exe rebuild --cipher_key abc casket-aes.tkt
+	tkrzw_dbm_util.exe get --cipher_key abc casket-aes.tkt two
+	tkrzw_dbm_util.exe restore --cipher_key abc casket-aes.tkt casket-aes-new.tkt
+	tkrzw_dbm_util.exe get --cipher_key abc casket-aes-new.tkt one
+	tkrzw_dbm_util.exe set --cipher_key abc casket-aes-new.tkt three third
+	tkrzw_dbm_util.exe merge --cipher_key abc casket-aes.tkt casket-aes-new.tkt
+	tkrzw_dbm_util.exe get --cipher_key abc casket-aes.tkt three
+	tkrzw_dbm_util.exe remove --cipher_key abc casket-aes.tkt two
+	tkrzw_dbm_util.exe list --cipher_key abc casket-aes.tkt
 
 check-skipdbm-perf :
 	-del casket* /F /Q > NUL: 2>&1
