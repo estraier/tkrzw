@@ -494,6 +494,22 @@ static int32_t ProcessCompress(int32_t argc, const char** args) {
   if (lzma_slow.IsSupported()) {
     test_sets.emplace_back(std::make_pair(&lzma_slow, "lzma-slow"));
   }
+  tkrzw::RC4Compressor rc4("abc", 1);
+  if (rc4.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&rc4, "rc4"));
+  }
+  tkrzw::AESCompressor aes_128(std::string("a", 16), 1);
+  if (rc4.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&aes_128, "aes-128"));
+  }
+  tkrzw::AESCompressor aes_192(std::string("a", 24), 1);
+  if (rc4.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&aes_192, "aes-192"));
+  }
+  tkrzw::AESCompressor aes_256(std::string("a", 32), 1);
+  if (rc4.IsSupported()) {
+    test_sets.emplace_back(std::make_pair(&aes_256, "aes-256"));
+  }
   for (const auto& test_set : test_sets) {
     tkrzw::Compressor* compressor = test_set.first;
     std::vector<std::string_view> comp_values;
