@@ -1769,19 +1769,22 @@ bool tkrzw_dbm_iter_step(
 
 bool tkrzw_dbm_restore_database(
     const char* old_file_path, const char* new_file_path,
-    const char* class_name, int64_t end_offset) {
+    const char* class_name, int64_t end_offset, const char* cipher_key) {
   assert(old_file_path != nullptr && new_file_path != nullptr);
   try {
     if (class_name == nullptr) {
       class_name = "";
     }
+    if (cipher_key == nullptr) {
+      cipher_key = "";
+    }
     int32_t num_shards = 0;
     if (ShardDBM::GetNumberOfShards(old_file_path, &num_shards) == Status::SUCCESS) {
       last_status = ShardDBM::RestoreDatabase(
-          old_file_path, new_file_path, class_name, end_offset);
+          old_file_path, new_file_path, class_name, end_offset, cipher_key);
     } else {
       last_status = PolyDBM::RestoreDatabase(
-          old_file_path, new_file_path, class_name, end_offset);
+          old_file_path, new_file_path, class_name, end_offset, cipher_key);
     }
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {

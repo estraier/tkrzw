@@ -1145,11 +1145,13 @@ bool tkrzw_dbm_iter_step(
  * @param end_offset The exclusive end offset of records to read.  Negative means unlimited.
  * 0 means the size when the database is synched or closed properly.  Using a positive value
  * is not meaningful if the number of shards is more than one.
+ * @param cipher_key The encryption key for cipher compressors.  If it is NULL, an empty key is
+ * used.
  * @return True on success or false on failure.
  */
 bool tkrzw_dbm_restore_database(
     const char* old_file_path, const char* new_file_path,
-    const char* class_name, int64_t end_offset);
+    const char* class_name, int64_t end_offset, const char* cipher_key);
 
 /**
  * Creates an asynchronous database adapter.
