@@ -3342,7 +3342,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <li><strong>LZMA</strong> : A library known for the best compression.  Though compression ratio is better than ZLib and ZStd, the processing speed is much slower.</li>
 </ul>
 
-<p>If you tune the database to enable one of those algorithms, record data stored in the database is compressed.  When you retrieve the record, the data is decompressed automatically.  In HashDBM, compression is done for each record and only the record value is compressed.  Thus, compression is useful only if the record value is large.  In TreeDBM, compression is done for each page which includes multiple records.  Thus, compression is more useful in TreeDBM.</p>
+<p>You can enable a compressor by setting RECORD_COMP_ZLIB etc to record_comp_mode of TuningParameters.  If a compressor is enabled, record data stored in the database is compressed automatically.  When you retrieve the record, the data is decompressed automatically.  In HashDBM, compression is done for each record and only the record value is compressed.  Thus, compression is useful only if the record value is large.  In TreeDBM, compression is done for each page which includes multiple records.  Thus, compression is more useful in TreeDBM.</p>
 
 <p>Which algorithm is the best suited should be determined according to the data size, the data content, and the access pattern.  However, ZStd is the one you should try first.  If ZStd is not available on your platform, you use ZLib instead.  If you prefer faster speed, try LZ4.  If the database is almost read-only for archival usage, try LZMA.</p>
 
@@ -3402,6 +3402,55 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <td class="num">31,802 QPS</td>
 <td class="num">795,360 QPS</td>
 <td class="num">13.58 MB</td>
+</tr>
+</table>
+
+<h3 id="tips_encryption">Data Encryption for HashDBM and TreeDBM</h3>
+
+<p>Data encryption is also supported in the same mechanism as data compression.  As with the compressors, HashDBM encrypts only the value of each record and TreeDBM encrypts the keys and values of multiple records in each page.  Therefore, if you want to encrypt the key too, you should use TreeDBM.</p>
+
+<p>Available algorithms are RC4 and AES.  Both use a private key and an initial vector (IV) to encrypt each record.  You set the private key when you open a database.  A unique IV is generated for each record and stored with the record data.  RC4 (aka. ArcFour) is a streaming encryption algorithm.  It uses 6-bit IV.  AES (aka. Rijndael) is a block encryption algorithm.  It uses 16-bit IV and padding data.  In terms of space efficiency, RC4 is better than AES.  In terms of time efficiency, it depends.  If the length of the data to compress is longer than 3000 bytes, RC4 is faster.  In terms of cipher strength, AES is better.</p>
+
+<p>You can enable a compressor by setting RECORD_COMP_RC4 or RECORD_COMP_AES to record_comp_mode of TuningParameters.  You should also set a cipher key to cipher_key of TuningParameters.  If a cipherer is enabled, record data stored in the database is encrypted automatically.  When you retrieve the record, the data is decrypted automatically.  Note that the cipher key is not stored database and you must set the cipher key every time you open the database.</p>
+
+<p>To check performance, let's write and read 1 million records in HashDBM and TreeDBM.  The key is a 8-byte numeric string like "00000001" and "00000002".  The value is a 100-byte semi-random alphabet strings like "cvexgzibb...".</p>
+
+<table>
+<tr>
+<th>class</th>
+<th>Hash-Set</th>
+<th>Hash-Get</th>
+<th>Hash Size</th>
+<th>Tree-Set</th>
+<th>Tree-Get</th>
+<th>Tree Size</th>
+</tr>
+<tr>
+<td>Raw</td>
+<td class="num">1,515,645 QPS</td>
+<td class="num">1,950,478 QPS</td>
+<td class="num">114.63 MB</td>
+<td class="num">1,399,361 QPS</td>
+<td class="num">1,658,892 QPS</td>
+<td class="num">106.49 MB</td>
+</tr>
+<tr>
+<td>RC4</td>
+<td class="num">342,577 QPS</td>
+<td class="num">2,041,478 QPS</td>
+<td class="num">120.35 MB</td>
+<td class="num">1,100,026 QPS</td>
+<td class="num">1,187,321 QPS</td>
+<td class="num">106.65 MB</td>
+</tr>
+<tr>
+<td>AES</td>
+<td class="num">915,297 QPS</td>
+<td class="num">2,055,004 QPS</td>
+<td class="num">143.24 MB</td>
+<td class="num">1,001,877 QPS</td>
+<td class="num">1,045,518 QPS</td>
+<td class="num">107.29 MB</td>
 </tr>
 </table>
 
