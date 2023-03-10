@@ -468,16 +468,17 @@ bool RC4Compressor::IsSupported() const {
 
 char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  char* res_buf = (char*)xmalloc(size + 8);
+  constexpr size_t ivsize = 6;
+  char* res_buf = (char*)xmalloc(size + ivsize);
   char* wp = res_buf;
   ((SpinMutex*)rnd_mutex_)->lock();
   uint64_t iv = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
       *(std::mt19937*)rnd_gen_);
   ((SpinMutex*)rnd_mutex_)->unlock();
-  WriteFixNum(wp, iv, 8);
+  WriteFixNum(wp, iv, ivsize);
   const char* ivp = wp;
-  wp += 8;
-  const size_t vkey_size = key_.size() + 8;
+  wp += ivsize;
+  const size_t vkey_size = key_.size() + ivsize;
   uint32_t sbox[0x100], kbox[0x100];
   for (int32_t i = 0; i < 0x100; i++) {
     sbox[i] = i;
@@ -513,14 +514,15 @@ char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
 
 char* RC4Compressor::Decompress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  if (size < 8) {
+  constexpr size_t ivsize = 6;
+  if (size < ivsize) {
     return nullptr;
   }
   const char* rp = (const char*)buf;
   const char* ivp = rp;
-  rp += 8;
-  size -= 8;
-  const size_t vkey_size = key_.size() + 8;
+  rp += ivsize;
+  size -= ivsize;
+  const size_t vkey_size = key_.size() + ivsize;
   uint32_t sbox[0x100], kbox[0x100];
   for (int32_t i = 0; i < 0x100; i++) {
     sbox[i] = i;
