@@ -117,8 +117,8 @@ static void PrintUsageAndDie() {
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
   P("  --append : Uses appending rather than pre-defined ones.\n");
   P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
-  P("  --record_comp str : The record compression mode: default, none, zlib, zstd, lz4, lzma."
-    " (default: none or default)\n");
+  P("  --record_comp str : The record compression mode:"
+    " default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d or -1)\n",
     HashDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d or -1)\n",
@@ -130,8 +130,8 @@ static void PrintUsageAndDie() {
   P("  --in_place : Uses in-place rather than pre-defined ones.\n");
   P("  --append : Uses appending rather than pre-defined ones.\n");
   P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
-  P("  --record_comp str : The record compression mode: default, none, zlib, zstd, lz4, lzma."
-    " (default: none or default)\n");
+  P("  --record_comp str : The record compression mode:"
+    " default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d or -1)\n",
     TreeDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d or -1)\n",
@@ -324,6 +324,10 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -363,6 +367,10 @@ bool OpenDBM(DBM* dbm, const std::string& path, bool writable, bool create, bool
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -465,6 +473,10 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -503,6 +515,10 @@ bool RebuildDBM(DBM* dbm, bool is_in_place, bool is_append,
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;

@@ -1053,7 +1053,7 @@ int main(int argc, char** argv) {
 
 <p>The magic data and the package version data are used for identifying the kind of the file.  The two figures of the cyclic magic data are used to check consistency of the meta data.  The version data indicates the version of the Tkrzw package when the file is created.</p>
 
-<p>The static flags specifies flags which are not changed during lifetime of the database.  The first bit and the second bit represent the update mode.  0x1 means the in-place update mode.  0x2 means the appending update mode.  0x0 and 0x3 are invalid.  The third bit and the fourth bit represent the record CRC mode. 0x0 means no CRC.  0x1 means CRC-8.  0x2 means CRC-16.  0x3 means CRC-32.  The fifth bit, the sixth, and the seventh bit represent compression mode.  0x0 means no compression.  0x1 means ZLib.  0x2 means ZStd.  0x3 means LZ4.  0x4 means LZMA.  0x7 means other compressors or cipherers.</p>
+<p>The static flags specifies flags which are not changed during lifetime of the database.  The first bit and the second bit represent the update mode.  0x1 means the in-place update mode.  0x2 means the appending update mode.  0x0 and 0x3 are invalid.  The third bit and the fourth bit represent the record CRC mode. 0x0 means no CRC.  0x1 means CRC-8.  0x2 means CRC-16.  0x3 means CRC-32.  The fifth bit, the sixth, and the seventh bit represent compression mode.  0x0 means no compression.  0x1 means ZLib.  0x2 means ZStd.  0x3 means LZ4.  0x4 means LZMA.  0x5 means RC4.  0x6 means AES.</p>
 
 <p>The offset width specifies how many bytes are used to store an offset value.  Given the offset width W, the maximum value is 2^(W*8).  So, W=3 sets the maximum value 16,777,216 and W=4 sets it 4,294,967,296.  The offset width affects the size of the buckets and the footprint of each record.  The alignment power specifies the alignment of the offset value.  Given the alignment power P, the alignment is 2^P.  So, P=2 sets the alignment 4 and P=3 sets it 8.  The alignment affects the size of space for each record.  The maximum database size is determined as 2^(W*8+P).   The default value of the offset width is 4 and the default value of the alignment power is 3.  So, the maximum database size is 32GiB by default.</p>
 
@@ -2900,7 +2900,7 @@ int main(int argc, char** argv) {
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses the appending mode rather than the in-place mode.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
-<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583 or -1)</dd>
@@ -2908,7 +2908,7 @@ int main(int argc, char** argv) {
 <dd><code>--in_place</code> : Uses in-place rather than pre-defined ones.</dd>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
-<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4 or -1)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 10 or -1)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 131101 or -1)</dd>
@@ -3016,7 +3016,7 @@ applet  A small application.
 <dt>Options for HashDBM:</dt>
 <dd><code>--append</code> : Uses appending rather than pre-defined ones.</dd>
 <dd><code>--record_crc <var>num</var></code> : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)</dd>
-<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma. (default: none or default)</dd>
+<dd><code>--record_comp <var>str</var></code> : The record compression mode: default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)</dd>
 <dd><code>--offset_width <var>num</var></code> : The width to represent the offset of records. (default: 4)</dd>
 <dd><code>--align_pow <var>num</var></code> : Sets the power to align records. (default: 3)</dd>
 <dd><code>--buckets <var>num</var></code> : Sets the number of buckets for hashing. (default: 1048583)</dd>

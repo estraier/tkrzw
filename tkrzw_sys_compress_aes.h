@@ -767,14 +767,14 @@ inline int32_t AESKeySetupEnc(uint32_t* rk, const uint8_t* key, int32_t key_bits
 
 inline int32_t AESKeySetupDec(uint32_t* rk, const uint8_t* key, int32_t key_bits) {
   uint32_t temp = 0;
-  int32_t Nr = AESKeySetupEnc(rk, key, key_bits);
-  for (int i = 0, j = 4 * Nr; i < j; i += 4, j -= 4) {
+  const int32_t num_rounds = AESKeySetupEnc(rk, key, key_bits);
+  for (int32_t i = 0, j = 4 * num_rounds; i < j; i += 4, j -= 4) {
     temp = rk[i]; rk[i] = rk[j]; rk[j] = temp;
     temp = rk[i + 1]; rk[i + 1] = rk[j + 1]; rk[j + 1] = temp;
     temp = rk[i + 2]; rk[i + 2] = rk[j + 2]; rk[j + 2] = temp;
     temp = rk[i + 3]; rk[i + 3] = rk[j + 3]; rk[j + 3] = temp;
   }
-  for (int i = 1; i < Nr; i++) {
+  for (int32_t i = 1; i < num_rounds; i++) {
     rk += 4;
     rk[0] = aes_td0[aes_te4[(rk[0] >> 24)] & 0xff] ^
         aes_td1[aes_te4[(rk[0] >> 16) & 0xff] & 0xff] ^
@@ -793,10 +793,10 @@ inline int32_t AESKeySetupDec(uint32_t* rk, const uint8_t* key, int32_t key_bits
         aes_td2[aes_te4[(rk[3] >> 8) & 0xff] & 0xff] ^
         aes_td3[aes_te4[(rk[3]) & 0xff] & 0xff];
   }
-  return Nr;
+  return num_rounds;
 }
 
-inline void AESEncrypt(const uint32_t* rk, int Nr, const uint8_t* pt, uint8_t* ct) {
+inline void AESEncrypt(const uint32_t* rk, int32_t num_rounds, const uint8_t* pt, uint8_t* ct) {
   uint32_t s0 = AES_GETU32(pt) ^ rk[0];
   uint32_t s1 = AES_GETU32(pt +  4) ^ rk[1];
   uint32_t s2 = AES_GETU32(pt +  8) ^ rk[2];
@@ -873,7 +873,7 @@ inline void AESEncrypt(const uint32_t* rk, int Nr, const uint8_t* pt, uint8_t* c
       aes_te2[(s0 >> 8) & 0xff] ^ aes_te3[s1 & 0xff] ^ rk[38];
   t3 = aes_te0[s3 >> 24] ^ aes_te1[(s0 >> 16) & 0xff] ^
       aes_te2[(s1 >> 8) & 0xff] ^ aes_te3[s2 & 0xff] ^ rk[39];
-  if (Nr > 10) {
+  if (num_rounds > 10) {
     s0 = aes_te0[t0 >> 24] ^ aes_te1[(t1 >> 16) & 0xff] ^
         aes_te2[(t2 >> 8) & 0xff] ^ aes_te3[t3 & 0xff] ^ rk[40];
     s1 = aes_te0[t1 >> 24] ^ aes_te1[(t2 >> 16) & 0xff] ^
@@ -890,7 +890,7 @@ inline void AESEncrypt(const uint32_t* rk, int Nr, const uint8_t* pt, uint8_t* c
         aes_te2[(s0 >> 8) & 0xff] ^ aes_te3[s1 & 0xff] ^ rk[46];
     t3 = aes_te0[s3 >> 24] ^ aes_te1[(s0 >> 16) & 0xff] ^
         aes_te2[(s1 >> 8) & 0xff] ^ aes_te3[s2 & 0xff] ^ rk[47];
-    if (Nr > 12) {
+    if (num_rounds > 12) {
       s0 = aes_te0[t0 >> 24] ^ aes_te1[(t1 >> 16) & 0xff] ^
           aes_te2[(t2 >> 8) & 0xff] ^ aes_te3[t3 & 0xff] ^ rk[48];
       s1 = aes_te0[t1 >> 24] ^ aes_te1[(t2 >> 16) & 0xff] ^
@@ -909,7 +909,7 @@ inline void AESEncrypt(const uint32_t* rk, int Nr, const uint8_t* pt, uint8_t* c
           aes_te2[(s1 >> 8) & 0xff] ^ aes_te3[s2 & 0xff] ^ rk[55];
     }
   }
-  rk += Nr << 2;
+  rk += num_rounds << 2;
   s0 = (aes_te4[(t0 >> 24)] & 0xff000000) ^ (aes_te4[(t1 >> 16) & 0xff] & 0x00ff0000) ^
       (aes_te4[(t2 >> 8) & 0xff] & 0x0000ff00) ^ (aes_te4[(t3) & 0xff] & 0x000000ff) ^ rk[0];
   AES_PUTU32(ct, s0);
@@ -924,7 +924,7 @@ inline void AESEncrypt(const uint32_t* rk, int Nr, const uint8_t* pt, uint8_t* c
   AES_PUTU32(ct + 12, s3);
 }
 
-inline void AESDecrypt(const uint32_t* rk, int32_t Nr, const uint8_t* ct, uint8_t* pt) {
+inline void AESDecrypt(const uint32_t* rk, int32_t num_rounds, const uint8_t* ct, uint8_t* pt) {
   uint32_t s0 = AES_GETU32(ct) ^ rk[0];
   uint32_t s1 = AES_GETU32(ct + 4) ^ rk[1];
   uint32_t s2 = AES_GETU32(ct + 8) ^ rk[2];
@@ -1001,7 +1001,7 @@ inline void AESDecrypt(const uint32_t* rk, int32_t Nr, const uint8_t* ct, uint8_
       aes_td2[(s0 >> 8) & 0xff] ^ aes_td3[s3 & 0xff] ^ rk[38];
   t3 = aes_td0[s3 >> 24] ^ aes_td1[(s2 >> 16) & 0xff] ^
       aes_td2[(s1 >> 8) & 0xff] ^ aes_td3[s0 & 0xff] ^ rk[39];
-  if (Nr > 10) {
+  if (num_rounds > 10) {
     s0 = aes_td0[t0 >> 24] ^ aes_td1[(t3 >> 16) & 0xff] ^
         aes_td2[(t2 >> 8) & 0xff] ^ aes_td3[t1 & 0xff] ^ rk[40];
     s1 = aes_td0[t1 >> 24] ^ aes_td1[(t0 >> 16) & 0xff] ^
@@ -1018,7 +1018,7 @@ inline void AESDecrypt(const uint32_t* rk, int32_t Nr, const uint8_t* ct, uint8_
         aes_td2[(s0 >> 8) & 0xff] ^ aes_td3[s3 & 0xff] ^ rk[46];
     t3 = aes_td0[s3 >> 24] ^ aes_td1[(s2 >> 16) & 0xff] ^
         aes_td2[(s1 >> 8) & 0xff] ^ aes_td3[s0 & 0xff] ^ rk[47];
-    if (Nr > 12) {
+    if (num_rounds > 12) {
       s0 = aes_td0[t0 >> 24] ^ aes_td1[(t3 >> 16) & 0xff] ^
           aes_td2[(t2 >> 8) & 0xff] ^ aes_td3[t1 & 0xff] ^ rk[48];
       s1 = aes_td0[t1 >> 24] ^ aes_td1[(t0 >> 16) & 0xff] ^
@@ -1037,7 +1037,7 @@ inline void AESDecrypt(const uint32_t* rk, int32_t Nr, const uint8_t* ct, uint8_
           aes_td2[(s1 >> 8) & 0xff] ^ aes_td3[s0 & 0xff] ^ rk[55];
     }
   }
-  rk += Nr << 2;
+  rk += num_rounds << 2;
   s0 = (aes_td4[(t0 >> 24)] & 0xff000000) ^ (aes_td4[(t3 >> 16) & 0xff] & 0x00ff0000) ^
       (aes_td4[(t2 >> 8) & 0xff] & 0x0000ff00) ^ (aes_td4[(t1) & 0xff] & 0x000000ff) ^ rk[0];
   AES_PUTU32(pt, s0);

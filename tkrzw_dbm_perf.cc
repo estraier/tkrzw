@@ -89,8 +89,8 @@ static void PrintUsageAndDie() {
   P("Options for HashDBM:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
   P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
-  P("  --record_comp str : The record compression mode: default, none, zlib, zstd, lz4, lzma."
-    " (default: none or default)\n");
+  P("  --record_comp str : The record compression mode:"
+    " default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
     HashDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d)\n",
@@ -105,8 +105,8 @@ static void PrintUsageAndDie() {
   P("Options for TreeDBM and FileIndex:\n");
   P("  --append : Uses the appending mode rather than the in-place mode.\n");
   P("  --record_crc num : The record CRC mode: -1, 0, 8, 16, 32. (default: 0 or -1)\n");
-  P("  --record_comp str : The record compression mode: default, none, zlib, zstd, lz4, lzma."
-    " (default: none or default)\n");
+  P("  --record_comp str : The record compression mode:"
+    " default, none, zlib, zstd, lz4, lzma, rc4, aes. (default: none or default)\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
     TreeDBM::DEFAULT_OFFSET_WIDTH);
   P("  --align_pow num : Sets the power to align records. (default: %d)\n",
@@ -274,6 +274,10 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;
@@ -313,6 +317,10 @@ bool SetUpDBM(DBM* dbm, bool writable, bool initialize, const std::string& file_
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZ4;
     } else if (record_comp == "lzma") {
       tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_LZMA;
+    } else if (record_comp == "rc4") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_RC4;
+    } else if (record_comp == "aes") {
+      tuning_params.record_comp_mode = tkrzw::HashDBM::RECORD_COMP_AES;
     }
     tuning_params.offset_width = offset_width;
     tuning_params.align_pow = align_pow;

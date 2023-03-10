@@ -74,6 +74,8 @@ enum StaticFlag : uint8_t {
   STATIC_FLAG_RECORD_COMP_ZSTD = 1 << 5,
   STATIC_FLAG_RECORD_COMP_LZ4 = (1 << 4) | (1 << 5),
   STATIC_FLAG_RECORD_COMP_LZMA = 1 << 6,
+  STATIC_FLAG_RECORD_COMP_RC4 = (1 << 6) | (1 << 4),
+  STATIC_FLAG_RECORD_COMP_AES = (1 << 6) | (1 << 5),
   STATIC_FLAG_RECORD_COMP_EXTRA = (1 << 4) | (1 << 5) | (1 << 6),
 };
 
@@ -812,6 +814,10 @@ std::vector<std::pair<std::string, std::string>> HashDBMImpl::Inspect() {
         record_comp_mode = "lz4";
       } else if (comp_type == typeid(LZMACompressor)) {
         record_comp_mode = "lzma";
+      } else if (comp_type == typeid(RC4Compressor)) {
+        record_comp_mode = "rc4";
+      } else if (comp_type == typeid(AESCompressor)) {
+        record_comp_mode = "aes";
       } else {
         record_comp_mode = "unknown";
       }
@@ -1131,6 +1137,10 @@ void HashDBMImpl::SetTuning(const HashDBM::TuningParameters& tuning_params) {
     static_flags_ |= STATIC_FLAG_RECORD_COMP_LZ4;
   } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_LZMA) {
     static_flags_ |= STATIC_FLAG_RECORD_COMP_LZMA;
+  } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_RC4) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_RC4;
+  } else if (tuning_params.record_comp_mode == HashDBM::RECORD_COMP_AES) {
+    static_flags_ |= STATIC_FLAG_RECORD_COMP_AES;
   }
   if (tuning_params.offset_width >= 0) {
     offset_width_ =
@@ -1669,6 +1679,10 @@ Status HashDBMImpl::RebuildImpl(
       tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZ4;
     } else if (comp_type == typeid(LZMACompressor)) {
       tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+    } else if (comp_type == typeid(RC4Compressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_RC4;
+    } else if (comp_type == typeid(AESCompressor)) {
+      tmp_tuning_params.record_comp_mode = HashDBM::RECORD_COMP_AES;
     }
   }
   tmp_tuning_params.offset_width = tuning_params.offset_width > 0 ?
@@ -2759,6 +2773,10 @@ std::unique_ptr<Compressor> HashDBM::MakeCompressorFromStaticFlags(int32_t stati
       return std::make_unique<LZ4Compressor>();
     case STATIC_FLAG_RECORD_COMP_LZMA:
       return std::make_unique<LZMACompressor>();
+    case STATIC_FLAG_RECORD_COMP_RC4:
+      return std::make_unique<RC4Compressor>("", 1);
+    case STATIC_FLAG_RECORD_COMP_AES:
+      return std::make_unique<AESCompressor>("", 1);
   }
   return nullptr;
 }
@@ -2776,6 +2794,12 @@ bool HashDBM::CheckRecordCompressionModeIsSupported(RecordCompressionMode mode) 
     }
     case RECORD_COMP_LZMA: {
       return LZMACompressor().IsSupported();
+    }
+    case RECORD_COMP_RC4: {
+      return RC4Compressor("", 1).IsSupported();
+    }
+    case RECORD_COMP_AES: {
+      return AESCompressor("", 1).IsSupported();
     }
     default:
       break;
@@ -2842,6 +2866,10 @@ Status HashDBM::RestoreDatabase(
         record_comp_mode = HashDBM::RECORD_COMP_LZ4;
       } else if (comp_type == typeid(LZMACompressor)) {
         record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+      } else if (comp_type == typeid(RC4Compressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_RC4;
+      } else if (comp_type == typeid(AESCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_AES;
       }
     }
   }
@@ -2892,6 +2920,10 @@ Status HashDBM::RestoreDatabase(
         record_comp_mode = HashDBM::RECORD_COMP_LZ4;
       } else if (comp_type == typeid(LZMACompressor)) {
         record_comp_mode = HashDBM::RECORD_COMP_LZMA;
+      } else if (comp_type == typeid(RC4Compressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_RC4;
+      } else if (comp_type == typeid(AESCompressor)) {
+        record_comp_mode = HashDBM::RECORD_COMP_AES;
       }
     }
     offset_width = old_offset_width;

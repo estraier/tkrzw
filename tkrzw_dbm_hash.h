@@ -207,6 +207,10 @@ class HashDBM final : public DBM {
     RECORD_COMP_LZ4 = 4,
     /** To compress with LZMA. */
     RECORD_COMP_LZMA = 5,
+    /** To cipher with RC4. */
+    RECORD_COMP_RC4 = 6,
+    /** To cipher with AES. */
+    RECORD_COMP_AES = 7,
   };
 
   /**

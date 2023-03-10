@@ -565,10 +565,14 @@ AESCompressor::AESCompressor(std::string_view key, uint32_t rnd_seed) {
   size_t key_size = 0;
   std::memset(bin_key, 0, 32);
   if (key.size() <= 32) {
+    std::memset(bin_key, 0, 32);
     std::memcpy(bin_key, key.data(), key.size());
     const size_t rem_size = key.size() % 16;
     if (rem_size > 0) {
       key_size = key.size() + 16 - rem_size;
+    }
+    if (key_size < 16) {
+      key_size = 16;
     }
   } else {
     for (size_t i = 0; i < key.size(); i++) {
