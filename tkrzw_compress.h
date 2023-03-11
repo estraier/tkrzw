@@ -51,7 +51,7 @@ class Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  virtual char* Compress(const void* buf, size_t size, size_t* sp) = 0;
+  virtual char* Compress(const void* buf, size_t size, size_t* sp) const = 0;
 
   /**
    * Decompresses a serial data.
@@ -63,7 +63,7 @@ class Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  virtual char* Decompress(const void* buf, size_t size, size_t* sp) = 0;
+  virtual char* Decompress(const void* buf, size_t size, size_t* sp) const = 0;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -113,7 +113,7 @@ class DummyCompressor : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -125,7 +125,7 @@ class DummyCompressor : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -184,7 +184,7 @@ class ZLibCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -196,7 +196,7 @@ class ZLibCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -245,7 +245,7 @@ class ZStdCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -257,7 +257,7 @@ class ZStdCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -303,7 +303,7 @@ class LZ4Compressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -315,7 +315,7 @@ class LZ4Compressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -374,7 +374,7 @@ class LZMACompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -386,7 +386,7 @@ class LZMACompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -435,7 +435,7 @@ class RC4Compressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -447,7 +447,7 @@ class RC4Compressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
@@ -502,7 +502,7 @@ class AESCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Compress(const void* buf, size_t size, size_t* sp) override;
+  char* Compress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Decompresses a serial data.
@@ -514,7 +514,7 @@ class AESCompressor final : public Compressor {
    * @details Because the region of the return value is allocated with the xmalloc function,
    * it should be released with the xfree function.
    */
-  char* Decompress(const void* buf, size_t size, size_t* sp) override;
+  char* Decompress(const void* buf, size_t size, size_t* sp) const override;
 
   /**
    * Makes a new Compressor object of the same concrete class.
