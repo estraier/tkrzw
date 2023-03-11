@@ -39,7 +39,8 @@ void CompressorTest::BasicTest(tkrzw::Compressor* compressor) {
     EXPECT_EQ(nullptr, compressor->Decompress("", 0, &size));
     return;
   }
-  std::vector<std::string> inputs = {"", "a", "abc", "aaaaa", "a\0b\0c\xFF",
+  std::vector<std::string> inputs = {
+    "", "a", "abc", "aaaaa", "a\0b\0c\xFF",
     "01234567890ABCDE", "01234567890ABCEF", "01234567890ABCEFXYZ",
     "01234567890ABCEF01234567890abcdeXYZ", "私", "ABこれ", "私の名前は中野です",
   };

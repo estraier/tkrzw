@@ -468,13 +468,13 @@ bool RC4Compressor::IsSupported() const {
 
 char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  constexpr size_t ivsize = 6;
-  char* res_buf = (char*)xmalloc(size + ivsize);
-  char* wp = res_buf;
   ((SpinMutex*)rnd_mutex_)->lock();
   uint64_t iv = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
       *(std::mt19937*)rnd_gen_);
   ((SpinMutex*)rnd_mutex_)->unlock();
+  constexpr size_t ivsize = 6;
+  char* res_buf = (char*)xmalloc(size + ivsize);
+  char* wp = res_buf;
   WriteFixNum(wp, iv, ivsize);
   const char* ivp = wp;
   wp += ivsize;
@@ -609,24 +609,23 @@ bool AESCompressor::IsSupported() const {
 
 char* AESCompressor::Compress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  char* res_buf = (char*)xmalloc(size + 32);
-  char* wp = res_buf;
-  const char* rp = (const char*)buf;
-  *(wp++) = size % 16;
   ((SpinMutex*)rnd_mutex_)->lock();
   uint64_t iv1 = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
       *(std::mt19937*)rnd_gen_);
   uint64_t iv2 = (*((std::uniform_int_distribution<uint64_t>*)rnd_dist_))(
       *(std::mt19937*)rnd_gen_);
   ((SpinMutex*)rnd_mutex_)->unlock();
+  char* res_buf = (char*)xmalloc(size + 32);
+  char* wp = res_buf;
+  const char* rp = (const char*)buf;
   char ivbuf[16];
   WriteFixNum(ivbuf, iv1, 8);
   WriteFixNum(ivbuf + 8, iv2, 8);
   AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)ivbuf, (uint8_t*)wp);
   wp += 16;
+  char xbuf[16];
   int32_t round = 0;
   while (size >= 16) {
-    char xbuf[16];
     const char* pp = round > 0 ? rp - 16 : ivbuf;
     AESBlockXOR(rp, pp, xbuf);
     AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)xbuf, (uint8_t*)wp);
@@ -635,60 +634,46 @@ char* AESCompressor::Compress(const void* buf, size_t size, size_t* sp) {
     size -= 16;
     round++;
   }
-  if (size > 0) {
-    char xbuf[16];
-    std::memset(xbuf, 0, 16);
-    const char* pp = round > 0 ? rp - 16 : ivbuf;
-    AESBlockXORSized(rp, pp, xbuf, size);
-    AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)xbuf, (uint8_t*)wp);
-    wp += 16;
-  }
+  std::memset(xbuf, size, 16);
+  const char* pp = round > 0 ? rp - 16 : ivbuf;
+  AESBlockXORSized(rp, pp, xbuf, size);
+  AESEncrypt(enc_rk_, enc_rounds_, (const uint8_t*)xbuf, (uint8_t*)wp);
+  wp += 16;
   *sp = wp - res_buf;
   return res_buf;
 }
 
 char* AESCompressor::Decompress(const void* buf, size_t size, size_t* sp) {
   assert(buf != nullptr && size <= MAX_MEMORY_SIZE && sp != nullptr);
-  if (size < 17) {
+  if (size < 32 || size % 16 != 0) {
     return nullptr;
   }
   const char* rp = (const char*)buf;
-  const size_t rem_size = *(const unsigned char*)rp;
-  if (rem_size >= 16) {
-    return nullptr;
-  }
-  rp++;
-  size--;
-  if (size % 16 != 0) {
-    return nullptr;
-  }
   char ivbuf[16];
   AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)ivbuf);
   rp += 16;
   size -= 16;
-  if (rem_size > 0) {
-    size = size - 16 + rem_size;
-  }
   char* res_buf = (char*)xmalloc(size + 1);
   char* wp = res_buf;
   int32_t round = 0;
+  size_t rem_size = 0;
   while (size >= 16) {
     char xbuf[16];
     AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)xbuf);
+    rem_size = xbuf[15];
     const char* pp = round > 0 ? wp - 16 : ivbuf;
     AESBlockXOR(xbuf, pp, wp);
     wp += 16;
     rp += 16;
     size -= 16;
+    rem_size = wp[-1] ^ pp[15];
     round++;
   }
-  if (size > 0) {
-    char xbuf[16];
-    AESDecrypt(dec_rk_, dec_rounds_, (const uint8_t*)rp, (uint8_t*)xbuf);
-    const char* pp = round > 0 ? wp - 16 : ivbuf;
-    AESBlockXORSized(xbuf, pp, wp, size);
-    wp += size;
+  if (rem_size > 16) {
+    xfree(res_buf);
+    return nullptr;
   }
+  wp -= 16 - rem_size;
   *sp = wp - res_buf;
   return res_buf;
 }

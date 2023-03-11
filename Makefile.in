@@ -80,7 +80,7 @@ clean :
 	rm -Rf casket*
 
 untabify :
-	ls *.cc *.h *.c *.idl | while read name ; \
+	ls *.cc *.h *.c | while read name ; \
 	  do \
 	    sed -e 's/\t/        /g' -e 's/ *$$//' $$name > $$name~; \
 	    [ -f $$name~ ] && mv -f $$name~ $$name ; \
