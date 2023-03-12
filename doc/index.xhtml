@@ -91,6 +91,7 @@ function modify_title() {
       "Teramachi Kyogoku Rokkaku Zezeura Wakamiya",
       "Tonikaku Kawaii Randoseru Zettai Wasurenai",
       "Triple Kernels Reading Zero Width",
+      "Troubling Kids Ragging Zealous Workers",
       "Tibetan Kind Rangers Zipping Waffles",
       "Tetsuya Komuro Raving Zone Walker",
     ];
@@ -177,6 +178,8 @@ window.onload = function(){
 <p>Each data class has different approaches for durability.  The file database classes support the auto restore feature to recover records after the process crashes.  The file hash/tree databases support the appending update mode, which prevents data corruption of existing records.  The file skip database and all on-memory databases atomically replace the entire database with a completed temporary file, which realizes the strongest durability on a single machine.  All database classes support producing online update logs, which enables online data replication and staged backup.</p>
 
 <p>If the data structure is more complex than key-value pairs, you can treat the value as a serialized text/binary of any data structure.  You can use any serialization format.  To look up records by some properties except for the primary key, you can use secondary indices.  MemIndex and FileIndex classes are useful for the purpose.</p>
+
+<p>HashDBM and TreeDBM supoort automatic data compression and encryption with various algorithms.  If you enable one of them, the record data is stored after being encoded automatically.  Conversely, the record data in the file is loaded after being decoded automatically.  Compression allows you to store large records into smaller files.  Encryption allows you to store secret records in local files safely.</p>
 
 <p>Tkrzw adopts dependency injection for file implementations.  Bundled implementations support memory mapping I/O, normal read/write I/O, and direct block I/O.  You can inject your own implementations to support specific data storages and file systems.  Whereas such file implementations use APIs (system calls) of the underlying operating systems, the upper layer for database algorithms doesn't depend on them so that the maximum portability is achieved.  Tkrzw supports any Unix-like systems and Windows.</p>
 
