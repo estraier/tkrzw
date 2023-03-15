@@ -436,7 +436,7 @@ int64_t tkrzw_future_get_int(TkrzwFuture* future);
  * Opens a database file and makes a database object.
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.
- * @param params Optional parameters in \"key=value,key=value\" format.  The options for the file
+ * @param params Optional parameters in "key=value,key=value" format.  The options for the file
  * opening operation are set by "truncate", "no_create", "no_wait", "no_lock", and "sync_hard".
  * The option for the number of shards is set by "num_shards".  Other options are the same as
  * PolyDBM::OpenAdvanced.
@@ -835,7 +835,7 @@ bool tkrzw_dbm_clear(TkrzwDBM* dbm);
 /**
  * Rebuilds the entire database.
  * @param dbm The database object.
- * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * @param params Optional parameters in "key=value,key=value" format.  The parameters work in
  * the same way as with PolyDBM::RebuildAdvanced.
  * @return True on success or false on failure.
  */
@@ -855,7 +855,7 @@ bool tkrzw_dbm_should_be_rebuilt(TkrzwDBM* dbm);
  * @param proc The callback function to process the file, which is called while the content of
  * the file is synchronized.  If it is NULL, it is ignored.
  * @param proc_arg An arbitrary data which is given to the callback function.
- * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * @param params Optional parameters in "key=value,key=value" format.  The parameters work in
  * the same way as with PolyDBM::OpenAdvanced.
  * @return True on success or false on failure.
  */
@@ -1400,7 +1400,7 @@ TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async);
 /**
  * Rebuilds the entire database asynchronously.
  * @param async the asynchronous database adapter.
- * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * @param params Optional parameters in "key=value,key=value" format.  The parameters work in
  * the same way as with PolyDBM::RebuildAdvanced.
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
@@ -1412,7 +1412,7 @@ TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params);
  * @param async the asynchronous database adapter.
  * @param hard True to do physical synchronization with the hardware or false to do only
  * logical synchronization with the file system.
- * @param params Optional parameters in \"key=value,key=value\" format.  The parameters work in
+ * @param params Optional parameters in "key=value,key=value" format.  The parameters work in
  * the same way as with PolyDBM::OpenAdvanced.
  * @return The future object to monitor the result.  The future object should be released by the
  * tkrzw_future_free function.  The result should be gotten by the tkrzw_future_get function.
@@ -1489,7 +1489,7 @@ TkrzwFuture* tkrzw_async_dbm_search(
  * Opens a file.
  * @param path A path of the file.
  * @param writable If true, the file is writable.  If false, it is read-only.
- * @param params Optional parameters in \"key=value,key=value\" format.
+ * @param params Optional parameters in "key=value,key=value" format.
  * @return The new file object, which should be released by the tkrzw_dbm_close function.
  * NULL is returned on failure.
  * @details The optional parameters can include options for the file opening operation.
