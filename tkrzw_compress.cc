@@ -482,7 +482,7 @@ char* RC4Compressor::Compress(const void* buf, size_t size, size_t* sp) const {
   uint32_t sbox[0x100], kbox[0x100];
   for (int32_t i = 0; i < 0x100; i++) {
     sbox[i] = i;
-    const int32_t vidx = i % vkey_size;
+    const size_t vidx = i % vkey_size;
     if (vidx < key_.size()) {
       kbox[i] = ((uint8_t*)key_.data())[vidx];
     } else {
@@ -526,7 +526,7 @@ char* RC4Compressor::Decompress(const void* buf, size_t size, size_t* sp) const 
   uint32_t sbox[0x100], kbox[0x100];
   for (int32_t i = 0; i < 0x100; i++) {
     sbox[i] = i;
-    const int32_t vidx = i % vkey_size;
+    const size_t vidx = i % vkey_size;
     if (vidx < key_.size()) {
       kbox[i] = ((uint8_t*)key_.data())[vidx];
     } else {
