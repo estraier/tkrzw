@@ -71,8 +71,10 @@ int32_t GetLocalTimeDifference(bool use_cache) {
   static std::atomic_int32_t tz_cache(INT32MIN);
   int32_t tz_value = use_cache ? tz_cache.load() : INT32MIN;
   if (tz_value == INT32MIN) {
-    tzset();
-    tz_cache.store(-timezone);
+    struct timeval tv;
+    struct timezone tz;
+    gettimeofday(&tv, &tz);
+    tz_cache.store(tz.tz_minuteswest * -60);
     tz_value = tz_cache.load();
   }
   return tz_value;

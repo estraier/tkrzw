@@ -72,10 +72,20 @@ TEST(ThreadUtilTest, GetLocalTimeDifference) {
   EXPECT_TRUE(td > -86400 && td < 86400);
   EXPECT_EQ(td, tkrzw::GetLocalTimeDifference(true));
   EXPECT_EQ(td, tkrzw::GetLocalTimeDifference(false));
-  if (td % 3600 == 0) {
-    struct std::tm lts;
-    tkrzw::GetLocalCalendar(0, &lts);
-    EXPECT_EQ(td / 3600, lts.tm_hour);
+  struct std::tm lts;
+  tkrzw::GetLocalCalendar(3600 * 24 - td, &lts);
+  if (lts.tm_mday == 1) {
+    EXPECT_EQ(70, lts.tm_year);
+    EXPECT_EQ(0, lts.tm_mon);
+    EXPECT_EQ(1, lts.tm_mday);
+    EXPECT_EQ(23, lts.tm_hour);
+    EXPECT_EQ(0, lts.tm_min);
+    EXPECT_EQ(0, lts.tm_sec);
+  } else {
+    EXPECT_EQ(70, lts.tm_year);
+    EXPECT_EQ(0, lts.tm_mon);
+    EXPECT_EQ(2, lts.tm_mday);
+    EXPECT_EQ(0, lts.tm_hour);
     EXPECT_EQ(0, lts.tm_min);
     EXPECT_EQ(0, lts.tm_sec);
   }
