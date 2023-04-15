@@ -717,7 +717,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const size_t key_size = std::snprintf(key_buf, sizeof(key_buf), "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       const std::string_view value(
           value_buf + static_cast<uint32_t>(i) * (i + 1U) % value_extra,
@@ -799,7 +799,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const size_t key_size = std::snprintf(key_buf, sizeof(key_buf), "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       const Status status = dbm->Get(key);
       if (status != Status::SUCCESS &&
@@ -866,7 +866,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
         iter = dbm->MakeIterator();
       }
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const size_t key_size = std::snprintf(key_buf, sizeof(key_buf), "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       Status status = iter->Jump(key);
       if (status != Status::SUCCESS &&
@@ -937,7 +937,7 @@ static int32_t ProcessSequence(int32_t argc, const char** args) {
     bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iterations; i++) {
       const int32_t key_num = is_random_key ? key_num_dist(key_mt) : i * num_threads + id;
-      const size_t key_size = std::sprintf(key_buf, "%08d", key_num);
+      const size_t key_size = std::snprintf(key_buf, sizeof(key_buf), "%08d", key_num);
       const std::string_view key(key_buf, key_size);
       const Status status = dbm->Remove(key);
       if (status != Status::SUCCESS && status != Status::NOT_FOUND_ERROR) {

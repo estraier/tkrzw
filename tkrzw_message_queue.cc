@@ -364,7 +364,7 @@ Status MessageQueueImpl::LoadMetadata(
 
 std::string MessageQueueImpl::MakeFilePath(int64_t file_id) {
   char numbuf[32];
-  std::sprintf(numbuf, ".%010lld", (long long)file_id);
+  std::snprintf(numbuf, sizeof(numbuf), ".%010lld", (long long)file_id);
   return StrCat(prefix_, numbuf);
 }
 

@@ -228,6 +228,7 @@ class BaseLogger : public Logger {
    * @param message The message to write.
    */
   virtual void WriteProperties(Level level, std::string_view message) {
+    constexpr size_t meta_size = 32;
     char stack_buf[1024];
     char* wp = stack_buf;
     switch (date_format_) {
@@ -247,10 +248,10 @@ class BaseLogger : public Logger {
         wp += FormatDateRFC1123(wp, INT64MIN, date_td_);
         break;
       case DATE_EPOCH:
-        wp += std::sprintf(wp, "%.0f", GetWallTime());
+        wp += std::snprintf(wp, meta_size, "%.0f", GetWallTime());
         break;
       case DATE_EPOCH_MICRO:
-        wp += std::sprintf(wp, "%.6f", GetWallTime());
+        wp += std::snprintf(wp, meta_size, "%.6f", GetWallTime());
         break;
       default:
         break;
@@ -260,11 +261,11 @@ class BaseLogger : public Logger {
       wp += separator_.size();
     }
     switch (level) {
-      case LEVEL_DEBUG: wp += std::sprintf(wp, "[DEBUG]"); break;
-      case LEVEL_INFO: wp += std::sprintf(wp, "[INFO]"); break;
-      case LEVEL_WARN: wp += std::sprintf(wp, "[WARN]"); break;
-      case LEVEL_ERROR: wp += std::sprintf(wp, "[ERROR]"); break;
-      case LEVEL_FATAL: wp += std::sprintf(wp, "[FATAL]"); break;
+      case LEVEL_DEBUG: wp += std::snprintf(wp, meta_size, "[DEBUG]"); break;
+      case LEVEL_INFO: wp += std::snprintf(wp, meta_size, "[INFO]"); break;
+      case LEVEL_WARN: wp += std::snprintf(wp, meta_size, "[WARN]"); break;
+      case LEVEL_ERROR: wp += std::snprintf(wp, meta_size, "[ERROR]"); break;
+      case LEVEL_FATAL: wp += std::snprintf(wp, meta_size, "[FATAL]"); break;
       default: break;
     }
     std::memcpy(wp, separator_.data(), separator_.size());

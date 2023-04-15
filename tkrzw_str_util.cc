@@ -343,33 +343,33 @@ void VSPrintF(std::string* dest, const char* format, va_list ap) {
         }
         case 'd': {
           char tbuf[NUM_BUFFER_SIZE];
-          size_t tsiz;
+          size_t tsiz = 0;
           if (lnum >= 2) {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, long long));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, long long));
           } else if (lnum >= 1) {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, long));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, long));
           } else {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, int));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, int));
           }
           dest->append(tbuf, tsiz);
           break;
         }
         case 'o': case 'u': case 'x': case 'X': case 'c': {
           char tbuf[NUM_BUFFER_SIZE];
-          size_t tsiz;
+          size_t tsiz = 0;
           if (lnum >= 2) {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, unsigned long long));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, unsigned long long));
           } else if (lnum >= 1) {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, unsigned long));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, unsigned long));
           } else {
-            tsiz = std::sprintf(tbuf, cbuf, va_arg(ap, unsigned int));
+            tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, unsigned int));
           }
           dest->append(tbuf, tsiz);
           break;
         }
         case 'e': case 'E': case 'f': case 'g': case 'G': {
           char tbuf[NUM_BUFFER_SIZE * 2];
-          size_t tsiz;
+          size_t tsiz = 0;
           if (lnum >= 1) {
             tsiz = std::snprintf(tbuf, sizeof(tbuf), cbuf, va_arg(ap, long double));
           } else {
@@ -384,7 +384,7 @@ void VSPrintF(std::string* dest, const char* format, va_list ap) {
         }
         case 'p': {
           char tbuf[NUM_BUFFER_SIZE];
-          size_t tsiz = std::sprintf(tbuf, "%p", va_arg(ap, void*));
+          size_t tsiz = std::snprintf(tbuf, sizeof(tbuf), "%p", va_arg(ap, void*));
           dest->append(tbuf, tsiz);
           break;
         }
@@ -402,7 +402,7 @@ void VSPrintF(std::string* dest, const char* format, va_list ap) {
 
 std::string ToString(double data) {
   char buf[NUM_BUFFER_SIZE];
-  int32_t size = std::sprintf(buf, "%.6f", data);
+  int32_t size = std::snprintf(buf, sizeof(buf), "%.6f", data);
   while (size > 0 && buf[size - 1] == '0') {
     buf[size--] = '\0';
   }

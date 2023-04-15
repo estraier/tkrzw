@@ -114,9 +114,9 @@ size_t FormatDateSimple(char* result, int64_t wtime, int32_t td) {
   GetUniversalCalendar(static_cast<time_t>(wtime + td), &uts);
   uts.tm_year += 1900;
   uts.tm_mon += 1;
-  return std::sprintf(result, "%04d/%02d/%02d %02d:%02d:%02d",
-                      uts.tm_year, uts.tm_mon, uts.tm_mday,
-                      uts.tm_hour, uts.tm_min, uts.tm_sec);
+  return std::snprintf(result, 20, "%04d/%02d/%02d %02d:%02d:%02d",
+                       uts.tm_year, uts.tm_mon, uts.tm_mday,
+                       uts.tm_hour, uts.tm_min, uts.tm_sec);
 }
 
 size_t FormatDateSimpleWithFrac(char* result, double wtime, int32_t td, int32_t frac_cols) {
