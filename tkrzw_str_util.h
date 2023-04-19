@@ -211,7 +211,7 @@ std::string IntToStrBigEndian(uint64_t data, size_t size = sizeof(uint64_t));
  * @return The joined string.
  */
 template <typename T>
-std::string StrJoin(const T& elems, const std::string_view& delim) {
+std::string StrJoin(const T& elems, std::string_view delim) {
   std::string str;
   for (const auto& elem : elems) {
     if (!str.empty()) {
