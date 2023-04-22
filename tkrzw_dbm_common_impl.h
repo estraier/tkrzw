@@ -175,7 +175,7 @@ Status SearchDBMEditDistanceBinary(
  * extracts keys whose edit distance to the UTF-8 pattern is the least.  "editbin" extracts
  * keys whose edit distance to the binary pattern is the least.  "containcase", "containword",
  * and "containcaseword" extract keys considering case and word boundary.  "contain*",
- * "containcase*", "containword*", and "containcaseword*" take a null-code-separatable pattern and
+ * "containcase*", "containword*", and "containcaseword*" take a line-feed-separatable pattern and
  * do batch operations for each element.  Ordered databases support "upper" and "lower" which
  * extract keys whose positions are upper/lower than the pattern.  "upperinc" and "lowerinc" are
  * their inclusive versions.

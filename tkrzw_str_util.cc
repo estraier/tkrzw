@@ -1309,7 +1309,6 @@ int32_t StrWordSearch(std::string_view text, std::string_view pattern) {
       size = text.size() - (rp - text.data());
       continue;
     }
-
     return pv - text.data();
   }
   return -1;
