@@ -432,9 +432,13 @@ inline void WriteFixNum(void* buf, uint64_t num, size_t width) {
 
 inline uint64_t ReadFixNum(const void* buf, size_t width) {
   assert(buf != nullptr && width <= sizeof(int64_t));
-  uint64_t num = 0;
-  std::memcpy(&num, buf, width);
-  return NetToHost64(num) >> ((sizeof(num) - width) * 8);
+  if (width == 0) {
+    return 0;
+  } else {
+    uint64_t num = 0;
+    std::memcpy(&num, buf, width);
+    return NetToHost64(num) >> ((sizeof(num) - width) * 8);
+  }
 }
 
 inline size_t WriteVarNum(void* buf, uint64_t num) {
