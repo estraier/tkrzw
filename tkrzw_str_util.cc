@@ -18,7 +18,17 @@
 
 namespace tkrzw {
 
-#if defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
+#if defined(_SYS_MACOSX_)
+
+inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
+                          const void* needle, size_t needlelen) {
+  if (needlelen == 0) {
+    return const_cast<void*>(haystack);
+  }
+  return memmem(haystack, haystacklen, needle, needlelen);
+}
+
+#elif defined(_SYS_POSIX_) && !defined(_TKRZW_STDONLY)
 
 inline void* tkrzw_memmem(const void* haystack, size_t haystacklen,
                           const void* needle, size_t needlelen) {

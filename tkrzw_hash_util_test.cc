@@ -203,7 +203,8 @@ TEST(LibCommonTest, HashCRC8) {
 
 TEST(LibCommonTest, HashCRC16) {
   EXPECT_EQ(0xC362, tkrzw::HashCRC16("hello"));
-  EXPECT_EQ(0xC362, tkrzw::HashCRC16(std::string_view("12hello" + 2, 5)));
+  EXPECT_EQ(0xC362, tkrzw::HashCRC16(
+      std::string_view(static_cast<const char*>("12hello") + 2, 5)));
   EXPECT_EQ(0x992A, tkrzw::HashCRC16("Hello World"));
   EXPECT_EQ(0xF802, tkrzw::HashCRC16("こんにちは世界"));
   EXPECT_EQ(0x7E55, tkrzw::HashCRC16(MakeCyclicString()));
@@ -223,7 +224,8 @@ TEST(LibCommonTest, HashCRC16) {
 
 TEST(LibCommonTest, HashCRC32) {
   EXPECT_EQ(0x3610A686U, tkrzw::HashCRC32("hello"));
-  EXPECT_EQ(0x3610A686U, tkrzw::HashCRC32(std::string_view("12hello" + 2, 5)));
+  EXPECT_EQ(0x3610A686U, tkrzw::HashCRC32(
+      std::string_view(static_cast<const char*>("12hello") + 2, 5)));
   EXPECT_EQ(0x4A17B156U, tkrzw::HashCRC32("Hello World"));
   EXPECT_EQ(0x75197186U, tkrzw::HashCRC32("こんにちは世界"));
   EXPECT_EQ(0x29058C73U, tkrzw::HashCRC32(MakeCyclicString()));

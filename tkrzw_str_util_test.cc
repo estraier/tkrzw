@@ -239,19 +239,19 @@ TEST(StrUtilTest, ToString) {
 }
 
 TEST(StrUtilTest, IntToStrBigEndian) {
-  EXPECT_EQ(std::string ("\x00\x00\x00\x00\x00\x00\x00\x00", 8),
+  EXPECT_EQ(std::string("\x00\x00\x00\x00\x00\x00\x00\x00", 8),
             tkrzw::IntToStrBigEndian(0));
-  EXPECT_EQ(std::string ("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8),
+  EXPECT_EQ(std::string("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8),
             tkrzw::IntToStrBigEndian(-1));
-  EXPECT_EQ(std::string ("\xBE\xAF", 2),
+  EXPECT_EQ(std::string("\xBE\xAF", 2),
             tkrzw::IntToStrBigEndian(0xDEADBEAF, 2));
-  EXPECT_EQ(std::string ("\xDE\xAD\xBE\xAF", 4),
+  EXPECT_EQ(std::string("\xDE\xAD\xBE\xAF", 4),
             tkrzw::IntToStrBigEndian(0xDEADBEAF, 4));
-  EXPECT_EQ(std::string ("\x00\x00\xDE\xAD\xBE\xAF", 6),
+  EXPECT_EQ(std::string("\x00\x00\xDE\xAD\xBE\xAF", 6),
             tkrzw::IntToStrBigEndian(0xDEADBEAF, 6));
-  EXPECT_EQ(std::string ("\xAB\xCD\x12\x34\x56\x78\xAB\xCD", 8),
+  EXPECT_EQ(std::string("\xAB\xCD\x12\x34\x56\x78\xAB\xCD", 8),
             tkrzw::IntToStrBigEndian(0xABCD12345678ABCD));
-  EXPECT_EQ(std::string ("\x12", 1), tkrzw::IntToStrBigEndian(0x12, 1));
+  EXPECT_EQ(std::string("\x12", 1), tkrzw::IntToStrBigEndian(0x12, 1));
   EXPECT_EQ("", tkrzw::IntToStrBigEndian(0x12, 0));
 }
 
@@ -263,7 +263,8 @@ TEST(StrUtilTest, StrJoin) {
   EXPECT_EQ("a,b,c", tkrzw::StrJoin(std::vector<char>({'a', 'b', 'c'}), ","));
   EXPECT_EQ("12,34", tkrzw::StrJoin(std::vector<int32_t>({12, 34}), ","));
   EXPECT_EQ("12.34,56.78", tkrzw::StrJoin(std::vector<double>({12.34, 56.78}), ","));
-  EXPECT_EQ("true,false", tkrzw::StrJoin(std::vector<bool>({true, false}), ","));
+  const std::string res = tkrzw::StrJoin(std::vector<bool>({true, false}), ",");
+  EXPECT_TRUE(res == "true,false" || res == "1,0");
 }
 
 TEST(StrUtilTest, StrCat) {

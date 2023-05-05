@@ -235,8 +235,8 @@ Status ReadFileStatus(const std::string& path, FileStatus* fstats) {
 #else
   assert(fstats != nullptr);
   struct stat sbuf;
-  if (lstat(path.c_str(), &sbuf) != 0) {
-    return GetErrnoStatus("lstat", errno);
+  if (stat(path.c_str(), &sbuf) != 0) {
+    return GetErrnoStatus("stat", errno);
   }
   fstats->is_file = S_ISREG(sbuf.st_mode);
   fstats->is_directory = S_ISDIR(sbuf.st_mode);
@@ -565,7 +565,7 @@ Status MakeDirectory(const std::string& path, bool recursive) {
     }
     const auto& elems = StrSplit(norm_path, '/');
     for (size_t i = 0; i < elems.size(); i++) {
-      if (i > 0) {
+      if (i > 0 && concat_path != "/") {
         concat_path += "/";
       }
       concat_path += elems[i];
@@ -601,7 +601,7 @@ Status RemoveDirectory(const std::string& path, bool recursive) {
     if (unlink(cur_path.c_str()) == 0) {
       continue;
     }
-    if (errno != EISDIR) {
+    if (errno != EPERM && errno != EISDIR) {
       status |= GetErrnoStatus("unlink", errno);
       continue;
     }

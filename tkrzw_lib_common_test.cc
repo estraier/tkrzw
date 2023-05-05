@@ -153,8 +153,8 @@ TEST(LibCommonTest, GetProcessID) {
 TEST(LibCommonTest, GetSystemInfo) {
   const auto& info = tkrzw::GetSystemInfo();
   EXPECT_TRUE(tkrzw::CheckMap(info, "mem_size"));
-  EXPECT_GT(tkrzw::GetMemoryCapacity(), 0);
-  EXPECT_GT(tkrzw::GetMemoryUsage(), 0);
+  EXPECT_NE(tkrzw::GetMemoryCapacity(), 0);
+  EXPECT_NE(tkrzw::GetMemoryUsage(), 0);
 }
 
 TEST(LibCommonTest, Status) {
@@ -184,8 +184,6 @@ TEST(LibCommonTest, Status) {
   tkrzw::Status s3;
   s3 = s2;
   EXPECT_EQ(s3, s2);
-  s3 = s3 = s3;
-  EXPECT_EQ(s3, s2);
   tkrzw::Status s4(std::move(s3));
   EXPECT_EQ(s4, s2);
   tkrzw::Status s5;
@@ -206,8 +204,6 @@ TEST(LibCommonTest, Status) {
   tkrzw::Status s6(tkrzw::Status::SUCCESS, "s6");
   tkrzw::Status s7(tkrzw::Status::SUCCESS, "s7");
   tkrzw::Status s8(tkrzw::Status::SYSTEM_ERROR, "s8");
-  s6 |= s6;
-  EXPECT_EQ("SUCCESS: s6", std::string(s6));
   s6 |= s7;
   EXPECT_EQ("SUCCESS: s6", std::string(s6));
   s6 |= s8;

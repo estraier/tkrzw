@@ -4,6 +4,9 @@
 	- Library version: 1.71.0
 
 	- StrJoin takes a bare std::string view.
+	- Fix a bug of GetLocalTimeDifference.
+	- Fix compilation warnings.
+	- Fix test failures on Mac OS.
 
 2023-03-09 Mikio Hirabayashi  <hirarin@gmail.com>
 
