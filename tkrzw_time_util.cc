@@ -67,18 +67,6 @@ int64_t MakeUniversalTime(struct std::tm& cal) {
 }
 
 int32_t GetLocalTimeDifference(bool use_cache) {
-#if defined(_SYS_LINUX_) || defined(_SYS_MACOSX_)
-  static std::atomic_int32_t tz_cache(INT32MIN);
-  int32_t tz_value = use_cache ? tz_cache.load() : INT32MIN;
-  if (tz_value == INT32MIN) {
-    struct timeval tv;
-    struct timezone tz;
-    gettimeofday(&tv, &tz);
-    tz_cache.store(tz.tz_minuteswest * -60);
-    tz_value = tz_cache.load();
-  }
-  return tz_value;
-#else
   static std::atomic_int32_t tz_cache(INT32MIN);
   int32_t tz_value = use_cache ? tz_cache.load() : INT32MIN;
   if (tz_value == INT32MIN) {
@@ -91,7 +79,6 @@ int32_t GetLocalTimeDifference(bool use_cache) {
     tz_value = tz_cache.load();
   }
   return tz_value;
-#endif
 }
 
 int32_t GetDayOfWeek(int32_t year, int32_t mon, int32_t day) {
