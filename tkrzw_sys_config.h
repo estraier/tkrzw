@@ -282,14 +282,14 @@ uint64_t NetToHost64(uint64_t num);
  * Writes a number in fixed length format into a buffer.
  * @param buf The desitination buffer.
  * @param num The number.
- * @param width The width of bytes from the LSB.
+ * @param width The width of bytes from the LSB.  It must be larger than 0.
  */
 void WriteFixNum(void* buf, uint64_t num, size_t width);
 
 /**
  * Reads a number in fixed length format from a buffer.
  * @param buf The source buffer.
- * @param width The width of bytes from the LSB.
+ * @param width The width of bytes from the LSB.  It must be larger than 0.
  * @return The read number.
  */
 uint64_t ReadFixNum(const void* buf, size_t width);
@@ -425,13 +425,13 @@ inline uint64_t NetToHost64(uint64_t num) {
 }
 
 inline void WriteFixNum(void* buf, uint64_t num, size_t width) {
-  assert(buf != nullptr && width <= sizeof(int64_t));
+  assert(buf != nullptr && width > 0 && width <= sizeof(int64_t));
   num = HostToNet64(num);
   std::memcpy(buf, (const char*)&num + sizeof(num) - width, width);
 }
 
 inline uint64_t ReadFixNum(const void* buf, size_t width) {
-  assert(buf != nullptr && width <= sizeof(int64_t));
+  assert(buf != nullptr && width > 0 && width <= sizeof(int64_t));
   uint64_t num = 0;
   std::memcpy(&num, buf, width);
   return NetToHost64(num) >> ((sizeof(num) - width) * 8);
