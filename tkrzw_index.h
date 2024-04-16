@@ -27,6 +27,7 @@
 
 #include "tkrzw_dbm.h"
 #include "tkrzw_dbm_baby.h"
+#include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_tree.h"
 #include "tkrzw_key_comparators.h"
 #include "tkrzw_lib_common.h"
@@ -136,8 +137,8 @@ class FileIndex final {
    * @details If the key comparator of the tuning parameter is nullptr, PairLexicalKeyComparator
    * is set implicitly.  Other compatible key comparators are PairLexicalCaseKeyComparator,
    * PairDecimalKeyComparator, PairHexadecimalKeyComparator, and PairRealNumberKeyComparator.
-   * The alignment power and the
-   * maximum page size are also set implicitly to be suitable for random access.
+   * The alignment power and the maximum page size are also set implicitly to be suitable for
+   * random access.
    */
   Status Open(const std::string& path, bool writable,
               int32_t options = File::OPEN_DEFAULT,
@@ -377,6 +378,206 @@ class MemIndex final {
   std::list<Iterator*> iterators_;
   /** The database manager. */
   BabyDBM dbm_;
+};
+
+/**
+ * Polymorphic index manager adapter with PolyDBM.
+ * @details All operations except for Open and Close are thread-safe; Multiple threads can
+ * access the same database concurrently.  Every opened database must be closed explicitly to
+ * avoid data corruption.
+ * @details This class is a wrapper of FileIndex and MemIndex.  The Open method specifies the
+ * actuall class used internally.
+ */
+class PolyIndex final {
+ public:
+  /**
+   * Iterator for each record.
+   */
+  class Iterator {
+    friend class PolyIndex;
+   public:
+    /**
+     * Destructor.
+     */
+    ~Iterator();
+
+    /**
+     * Copy and assignment are disabled.
+     */
+    explicit Iterator(const Iterator& rhs) = delete;
+    Iterator& operator =(const Iterator& rhs) = delete;
+
+    /**
+     * Initializes the iterator to indicate the first record.
+     */
+    void First();
+
+    /**
+     * Initializes the iterator to indicate the first record.
+     */
+    void Last();
+
+    /**
+     * Initializes the iterator to indicate a specific range.
+     * @param key The key of the lower bound.
+     * @param value The value of the lower bound.
+     */
+    void Jump(std::string_view key, std::string_view value = "");
+
+    /**
+     * Gets the key and the value of the current record of the iterator.
+     * @param key The pointer to a string object to contain the record key.  If it is nullptr,
+     * the key data is ignored.
+     * @param value The pointer to a string object to contain the record value.  If it is nullptr,
+     * the value data is ignored.
+     * @return True on success or false on failure.  If theres no record to fetch, false is
+     * returned.
+     */
+    bool Get(std::string* key = nullptr, std::string* value = nullptr);
+
+    /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+   private:
+    /**
+     * Constructor.
+     * @param dbm_impl The database implementation object.
+     */
+    explicit Iterator(std::unique_ptr<DBM::Iterator> it);
+
+    /** Unique pointer to a DBM iterator. */
+    std::unique_ptr<DBM::Iterator> it_;
+  };
+
+  /**
+   * Default constructor.
+   */
+  PolyIndex() : iterators_(), dbm_() {}
+
+  /**
+   * Copy and assignment are disabled.
+   */
+  explicit PolyIndex(const PolyIndex& rhs) = delete;
+  PolyIndex& operator =(const PolyIndex& rhs) = delete;
+
+  /**
+   * Opens an index file.
+   * @param path A path of the file.
+   * @param writable If true, the file is writable.  If false, it is read-only.
+   * @param options Bit-sum options of File::OpenOption enums for opening the file.
+   * @param params Optional parameters.
+   * @return The result status.
+   * @details If the path is empty, BabyDBM is used internally, which is equivalent to using the
+   * MemIndex class.  If the path ends with ".tkt", TreeDBM is used internally, which is
+   * equivalent to using the FileIndex class.  If the key comparator of the tuning parameter is
+   * not set, PairLexicalKeyComparator is set implicitly.  Other compatible key comparators are
+   * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator, and
+   * PairRealNumberKeyComparator.  Other options can be specified as with PolyDBM::OpenAdvanced.
+   */
+  Status Open(const std::string& path, bool writable,
+              int32_t options = File::OPEN_DEFAULT,
+              const std::map<std::string, std::string>& params = {});
+
+  /**
+   * Closes the database file.
+   * @return The result status.
+   * @details Precondition: The database is opened.
+   */
+  Status Close();
+
+  /**
+   * Checks whether a record exists in the index.
+   * @param key The key of the record.
+   * @param value The value of the record.
+   */
+  bool Check(std::string_view key, std::string_view value);
+
+  /**
+   * Gets all values of records of a key.
+   * @param key The key to look for.
+   * @param max The maximum number of values to get.  0 means unlimited.
+   * @return All values of the key.
+   */
+  std::vector<std::string> GetValues(std::string_view key, size_t max = 0);
+
+  /**
+   * Adds a record.
+   * @param key The key of the record.  This can be an arbitrary expression to search the index.
+   * @param value The value of the record.  This should be a primary value of another database.
+   * @return The result status.
+   */
+  Status Add(std::string_view key, std::string_view value);
+
+  /**
+   * Removes a record.
+   * @param key The key of the record.
+   * @param value The value of the record.
+   * @return The result status.
+   */
+  Status Remove(std::string_view key, std::string_view value);
+
+  /**
+   * Gets the number of records.
+   * @return The number of records.
+   */
+  size_t Count();
+
+  /**
+   * Removes all records.
+   * @return The result status.
+   */
+  Status Clear();
+
+  /**
+   * Rebuilds the entire database.
+   * @return The result status.
+   */
+  Status Rebuild();
+
+  /**
+   * Synchronizes the content of the database to the file system.
+   * @param hard True to do physical synchronization with the hardware or false to do only
+   * logical synchronization with the file system.
+   * @return The result status.
+   */
+  Status Synchronize(bool hard);
+
+  /**
+   * Checks whether the database is open.
+   * @return True if the database is open, or false if not.
+   */
+  bool IsOpen() const;
+
+  /**
+   * Checks whether the database is writable.
+   * @return True if the database is writable, or false if not.
+   */
+  bool IsWritable() const;
+
+  /**
+   * Gets the pointer to the internal database object.
+   * @return The pointer to the internal database object, or nullptr on failure.
+   */
+  PolyDBM* GetInternalDBM() const;
+
+  /**
+   * Makes an iterator for each record.
+   * @return The iterator for each record.
+   */
+  std::unique_ptr<Iterator> MakeIterator();
+
+ private:
+  /** The list of the current iterators. */
+  std::list<Iterator*> iterators_;
+  /** The database manager. */
+  PolyDBM dbm_;
 };
 
 /**
@@ -822,6 +1023,141 @@ inline void FileIndex::Iterator::Next() {
 }
 
 inline void FileIndex::Iterator::Previous() {
+  it_->Previous();
+}
+
+inline Status PolyIndex::Open(const std::string& path, bool writable,
+                              int32_t options, const std::map<std::string, std::string>& params) {
+  std::map<std::string, std::string> mod_params = params;
+  if (path.empty()) {
+    mod_params["dbm"] = "BabyDBM";
+  }
+  const std::string base = StrLowerCase(PathToBaseName(path));
+  const std::string ext = PathToExtension(base);
+  const std::string dbm_type = StrLowerCase(SearchMap(mod_params, "dbm", ""));
+  if (ext == "tkt" || ext == "tree" || dbm_type == "tree" || dbm_type == "treedbm") {
+    if (!CheckMap(mod_params, "align_pow")) {
+      mod_params["align_pow"] = "12";
+    }
+    if (!CheckMap(mod_params, "max_page_size")) {
+      mod_params["max_page_size"] = "4080";
+    }
+  }
+  if (!CheckMap(mod_params, "key_comparator")) {
+    mod_params["key_comparator"] = "PairLexicalKeyComparator";
+  }
+  return dbm_.OpenAdvanced(path, writable, options, mod_params);
+}
+
+inline Status PolyIndex::Close() {
+  return dbm_.Close();
+}
+
+inline bool PolyIndex::Check(std::string_view key, std::string_view value) {
+  return dbm_.Get(SerializeStrPair(key, value)) == Status::SUCCESS;
+}
+
+inline std::vector<std::string> PolyIndex::GetValues(std::string_view key, size_t max) {
+  std::vector<std::string> values;
+  auto iter = dbm_.MakeIterator();
+  iter->Jump(SerializeStrPair(key, ""));
+  std::string record;
+  while (true) {
+    if (max > 0 && values.size() >= max) {
+      break;
+    }
+    if (iter->Get(&record) != Status::SUCCESS) {
+      break;
+    }
+    std::string_view rec_key, rec_value;
+    DeserializeStrPair(record, &rec_key, &rec_value);
+    if (rec_key != key) {
+      break;
+    }
+    values.emplace_back(rec_value);
+    iter->Next();
+  }
+  return values;
+}
+
+inline Status PolyIndex::Add(std::string_view key, std::string_view value) {
+  return dbm_.Set(SerializeStrPair(key, value), "");
+}
+
+inline Status PolyIndex::Remove(std::string_view key, std::string_view value) {
+  return dbm_.Remove(SerializeStrPair(key, value));
+}
+
+inline size_t PolyIndex::Count() {
+  return dbm_.CountSimple();
+}
+
+inline Status PolyIndex::Clear() {
+  return dbm_.Clear();
+}
+
+inline Status PolyIndex::Rebuild() {
+  return dbm_.Rebuild();
+}
+
+inline Status PolyIndex::Synchronize(bool hard) {
+  return dbm_.Synchronize(hard);
+}
+
+inline bool PolyIndex::IsOpen() const {
+  return dbm_.IsOpen();
+}
+
+inline bool PolyIndex::IsWritable() const {
+  return dbm_.IsWritable();
+}
+
+inline PolyDBM* PolyIndex::GetInternalDBM() const {
+  return const_cast<PolyDBM*>(&dbm_);
+}
+
+inline std::unique_ptr<PolyIndex::Iterator> PolyIndex::MakeIterator() {
+  std::unique_ptr<Iterator> iter(new Iterator(dbm_.MakeIterator()));
+  return iter;
+}
+
+inline PolyIndex::Iterator::Iterator(std::unique_ptr<DBM::Iterator> it) : it_(std::move(it)) {}
+
+inline PolyIndex::Iterator::~Iterator() {}
+
+inline void PolyIndex::Iterator::First() {
+  it_->First();
+}
+
+inline void PolyIndex::Iterator::Last() {
+  it_->Last();
+}
+
+inline void PolyIndex::Iterator::Jump(std::string_view key, std::string_view value) {
+  it_->Jump(SerializeStrPair(key, value));
+}
+
+inline bool PolyIndex::Iterator::Get(std::string* key, std::string* value) {
+  std::string record;
+  if (it_->Get(&record) != Status::SUCCESS) {
+    return false;
+  }
+  std::string_view rec_key, rec_value;
+  DeserializeStrPair(record, &rec_key, &rec_value);
+  if (key != nullptr) {
+    *key = rec_key;
+  }
+  if (value != nullptr) {
+    *value = rec_value;
+  }
+  return true;
+}
+
+inline void PolyIndex::Iterator::Next() {
+  it_->Next();
+}
+
+inline void PolyIndex::Iterator::Previous() {
   it_->Previous();
 }
 

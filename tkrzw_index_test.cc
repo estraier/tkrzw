@@ -533,8 +533,54 @@ TEST(MemIndexTest, Decimal) {
 }
 
 TEST(MemIndexTest, Thread) {
-  tkrzw::MemIndex index(tkrzw::PairDecimalKeyComparator);
-  CommonIndexDecimalTest<tkrzw::MemIndex>(index);
+  tkrzw::MemIndex index;
+  CommonIndexThreadTest<tkrzw::MemIndex>(index);
+}
+
+TEST(PolyIndexTest, Basic) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath() + ".tkt";
+  tkrzw::PolyIndex index;
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
+  CommonIndexBasicTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open("", true));
+  CommonIndexBasicTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+}
+
+TEST(PolyIndexTest, Decimal) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath() + ".tkt";
+  std::map<std::string, std::string> params = {
+    {"key_comparator", "PairDecimalKeyComparator"},
+  };
+  tkrzw::PolyIndex index;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            index.Open(file_path, true, tkrzw::File::OPEN_DEFAULT, params));
+  CommonIndexDecimalTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open("", true, tkrzw::File::OPEN_DEFAULT, params));
+  CommonIndexDecimalTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+}
+
+TEST(PolyIndexTest, Thread) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath() + ".tkt";
+  std::map<std::string, std::string> params = {
+    {"num_buckets", "100"},
+    {"max_page_size", "1000"},
+    {"max_branches", "4"},
+  };
+  tkrzw::PolyIndex index;
+  EXPECT_EQ(tkrzw::Status::SUCCESS,
+            index.Open(file_path, true, tkrzw::File::OPEN_DEFAULT, params));
+  CommonIndexThreadTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open("", true));
+  CommonIndexThreadTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
 }
 
 TEST(StdIndexTest, GenericIntBasic) {
