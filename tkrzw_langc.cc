@@ -29,6 +29,7 @@
 #include "tkrzw_dbm_shard.h"
 #include "tkrzw_file.h"
 #include "tkrzw_file_poly.h"
+#include "tkrzw_index.h"
 #include "tkrzw_langc.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"

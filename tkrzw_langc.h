@@ -122,6 +122,14 @@ typedef struct {
   void* _dummy_;
 } TkrzwFile;
 
+/**
+ * Index interface, just for type check.
+ */
+typedef struct {
+  /** A dummy member which is never used. */
+  void* _dummy_;
+} TkrzwIndex;
+
 /** The special string_view value to represent any data. */
 extern const char* const TKRZW_ANY_DATA;
 
@@ -1608,6 +1616,12 @@ char* tkrzw_file_get_path(TkrzwFile* file);
 TkrzwStr* tkrzw_file_search(
     TkrzwFile* file, const char* mode, const char* pattern_ptr, int32_t pattern_size,
     int32_t capacity, int32_t* num_matched);
+
+
+
+
+
+
 
 #if defined(__cplusplus)
 }

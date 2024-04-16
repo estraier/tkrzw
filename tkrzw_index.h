@@ -29,6 +29,7 @@
 #include "tkrzw_dbm_baby.h"
 #include "tkrzw_dbm_poly.h"
 #include "tkrzw_dbm_tree.h"
+#include "tkrzw_file_util.h"
 #include "tkrzw_key_comparators.h"
 #include "tkrzw_lib_common.h"
 #include "tkrzw_str_util.h"
