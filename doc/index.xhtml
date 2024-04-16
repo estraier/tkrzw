@@ -19,8 +19,7 @@ p { text-indent: 2ex; }
 pre { margin-left: 1.5ex; padding: 0.4ex 0.6ex; border: solid 1px #dddddd; border-radius: 0.5ex;
   white-space: pre-wrap; word-wrap: break-word; line-height: 1.2; text-indent: 0; font-size: 10pt; }
 code { font-weight: bold; }
-pre[class*="language-"] { font-size: 10pt; line-height: 120%; padding: 0.5ex 0.8ex; background: #f8f8f8;
-  max-height: 70ex; }
+pre[class*="language-"] { font-size: 10pt; line-height: 120%; padding: 0.5ex 0.8ex; background: #f8f8f8; }
 li { margin-left: 0.2ex; }
 dt { margin-left: 2.0ex; }
 dd { margin-left: 5.0ex; }
@@ -2373,7 +2372,7 @@ int main(int argc, char** argv) {
 
 <p>Typically, an index means an inverted structure made from the main database.  The key of the index is composed of two factors: pattern for matching and the primary key of a record in the main database.  Let's say, you build a database for employees.  The primary key is the employee ID so the main database uses the employee ID as the key.  The value is a data structure composed of a personal name, a division ID, a job title, salary etc.  You make an index for division IDs because you want to know who are working for each division quickly without scanning the whole database for each query.  Then, each record of the index should be composed of a division ID and an employee ID.</p>
 
-<p>FileIndex is a class to handle a secondary index on file.  It is implemented with the file tree database.  MemIndex is a class to handle a secondary index on memory.  It is implemented with the on-memory tree database.  And, StdIndex is a template class to realize secondary indices by wrapping std::set&lt;std::pair&lt;x, Y&gt;&gt; composed of arbitrary data types.</p>
+<p>FileIndex is a class to handle a secondary index on file.  It is implemented with the file tree database.  MemIndex is a class to handle a secondary index on memory.  It is implemented with the on-memory tree database.  And, StdIndex is a template class to realize secondary indices by wrapping std::set&lt;std::pair&lt;X, Y&gt;&gt; composed of arbitrary data types.</p>
 
 <p>For the division ID index, the first element can be int64_t for the division ID and the second element can be int64_t for the employee ID.  Therefore, using StdIndex&lt;int64_t, int64_t&gt; is a good idea.  By having the primary key of the main database as the second element, each record becomes unique and you don't have to worry about duplication.  You can also set an arbitrary comparator to adjust the order of records.</p>
 
