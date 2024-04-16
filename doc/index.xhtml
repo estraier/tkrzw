@@ -4717,7 +4717,7 @@ $ tkrzw_dbm_perf sequence --iter 1000000 --threads 10 --random_key --dbm shard -
 
 <h3 id="tips_index_performance2">Performance of Secondary Indices</h3>
 
-<p>If you use secondary indices, choosing suitable classes is important.  FileIndex is relatively slow but the data is perpetuated in a file.  MemIndex is fast and memory efficient.  StdIndex is a template class.  Time efficiency and space efficiency differ by the types of the key and the value.  Let's say, 10 threads set 1 million records in total.  The key and the value of each record are numeric values.  We compare int64_t (from 0 to 999999) and decimal std::string (from "0" to "999999").  In addition, we check MemIndexStr which is a specialized version for memory efficiency of string-to-string use cases.</p>
+<p>If you use secondary indices, choosing suitable classes is important.  FileIndex is relatively slow but the data is perpetuated in a file.  MemIndex is fast and memory efficient.  StdIndex is a template class.  Time efficiency and space efficiency differ by the types of the key and the value.  Let's say, 10 threads set 1 million records in total.  The key and the value of each record are numeric values.  We compare int64_t (from 0 to 999999) and decimal std::string (from "0" to "999999").  In addition, we check StdIndexStr which is a specialized version for memory efficiency of string-to-string use cases.</p>
 
 <table>
 <tr>

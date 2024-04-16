@@ -80,7 +80,7 @@ class ParamDBM : public DBM {
  * access the same database concurrently.  Every opened database must be closed explicitly to
  * avoid data corruption.
  * @details This class is a wrapper of HashDBM, TreeDBM, SkipDBM, TinyDBM, BabyDBM, StdHashDBM,
- * and StdTreeDBM.  The open method specifies the actuall class used internally.
+ * and StdTreeDBM.  The Open method specifies the actuall class used internally.
  */
 class PolyDBM final : public ParamDBM {
  public:
