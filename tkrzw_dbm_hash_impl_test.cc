@@ -350,12 +350,12 @@ TEST(DBMHashImplTest, CallRecordProcess) {
   class Checker : public tkrzw::DBM::RecordProcessor {
    public:
     explicit Checker(std::string_view new_value) : new_value_(new_value) {}
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
+    std::string_view ProcessFull(std::string_view key, std::string_view value) {
       key_ = key;
       value_ = value;
       return new_value_;
     }
-    std::string_view ProcessEmpty(std::string_view key) override {
+    std::string_view ProcessEmpty(std::string_view key) {
       key_ = key;
       value_.clear();
       return new_value_;
