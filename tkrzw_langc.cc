@@ -423,7 +423,7 @@ TkrzwKeyValuePair* tkrzw_future_get_str_pair(TkrzwFuture* future) {
 }
 
 TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems) {
-  assert(future != nullptr);
+  assert(future != nullptr && num_elems != nullptr);
   try {
     StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
     const auto& result = xfuture->GetStringVector();
@@ -446,7 +446,7 @@ TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems) {
 }
 
 TkrzwKeyValuePair* tkrzw_future_get_str_map(TkrzwFuture* future, int32_t* num_elems) {
-  assert(future != nullptr);
+  assert(future != nullptr && num_elems != nullptr);
   try {
     StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
     const auto& result = xfuture->GetStringMap();
@@ -536,7 +536,7 @@ bool tkrzw_dbm_close(TkrzwDBM* dbm) {
   try {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     last_status = xdbm->Close();
-    bool rv = last_status == Status::SUCCESS;
+    const bool rv = last_status == Status::SUCCESS;
     delete xdbm;
     return rv;
   } catch (const std::exception& e) {
@@ -2262,7 +2262,7 @@ bool tkrzw_file_close(TkrzwFile* file) {
   try {
     PolyFile* xfile = reinterpret_cast<PolyFile*>(file);
     last_status = xfile->Close();
-    bool rv = last_status == Status::SUCCESS;
+    const bool rv = last_status == Status::SUCCESS;
     delete xfile;
     return rv;
   } catch (const std::exception& e) {
@@ -2392,6 +2392,127 @@ TkrzwStr* tkrzw_file_search(
   } catch (const std::exception& e) {
     tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
     return nullptr;
+  }
+}
+
+TkrzwIndex* tkrzw_index_open(const char* path, bool writable, const char* params) {
+  assert(path != nullptr && params != nullptr);
+  try {
+    std::map<std::string, std::string> xparams = StrSplitIntoMap(params, ",", "=");
+    int32_t open_options = 0;
+    if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "truncate", "false"))) {
+      open_options |= tkrzw::File::OPEN_TRUNCATE;
+    }
+    if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_create", "false"))) {
+      open_options |= tkrzw::File::OPEN_NO_CREATE;
+    }
+    if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_wait", "false"))) {
+      open_options |= tkrzw::File::OPEN_NO_WAIT;
+    }
+    if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "no_lock", "false"))) {
+      open_options |= tkrzw::File::OPEN_NO_LOCK;
+    }
+    if (tkrzw::StrToBool(tkrzw::SearchMap(xparams, "sync_hard", "false"))) {
+      open_options |= tkrzw::File::OPEN_SYNC_HARD;
+    }
+    xparams.erase("truncate");
+    xparams.erase("no_create");
+    xparams.erase("no_wait");
+    xparams.erase("no_lock");
+    xparams.erase("sync_hard");
+    PolyIndex* index = new tkrzw::PolyIndex();
+    last_status = index->Open(path, writable, open_options, xparams);
+    if (last_status != Status::SUCCESS) {
+      delete index;
+      return nullptr;
+    }
+    return reinterpret_cast<TkrzwIndex*>(index);
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return nullptr;
+  }
+}
+
+bool tkrzw_index_close(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Close();
+    const bool rv = last_status == Status::SUCCESS;
+    delete xindex;
+    return rv;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+bool tkrzw_index_check(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size) {
+  assert(index != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  try {
+    if (key_size < 0) {
+      key_size = std::strlen(key_ptr);
+    }
+    if (value_size < 0) {
+      value_size = std::strlen(value_ptr);
+    }
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    return xindex->Check(std::string_view(key_ptr, key_size),
+                         std::string_view(value_ptr, value_size));
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+TkrzwStr* tkrzw_index_get_values(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size, int32_t max, int32_t* num_elems) {
+  assert(index != nullptr && key_ptr != nullptr && num_elems != nullptr);
+  try {
+    if (key_size < 0) {
+      key_size = std::strlen(key_ptr);
+    }
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    const auto& values = xindex->GetValues(std::string_view(key_ptr, key_size), max);
+    TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(sizeof(TkrzwStr) * values.size() + 1));
+    for (size_t i = 0; i < values.size(); i++) {
+      const auto& xelem = values[i];
+      auto& elem = array[i];
+      char* ptr = static_cast<char*>(xmalloc(xelem.size() + 1));
+      std::memcpy(ptr, xelem.c_str(), xelem.size() + 1);
+      elem.ptr = ptr;
+      elem.size = xelem.size();
+    }
+    *num_elems = values.size();
+    return array;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(1));
+    *num_elems = 0;
+    return array;
+  }
+}
+
+bool tkrzw_index_add(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size) {
+  assert(index != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  try {
+    if (key_size < 0) {
+      key_size = std::strlen(key_ptr);
+    }
+    if (value_size < 0) {
+      value_size = std::strlen(value_ptr);
+    }
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Add(std::string_view(key_ptr, key_size),
+                              std::string_view(value_ptr, value_size));
+    return last_status == Status::SUCCESS;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
   }
 }
 

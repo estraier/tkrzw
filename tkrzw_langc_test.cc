@@ -1139,4 +1139,37 @@ TEST(LangCTest, File) {
   EXPECT_TRUE(tkrzw_file_close(file));
 }
 
+TEST(LangCTest, Index) {
+  tkrzw::TemporaryDirectory tmp_dir(true, "tkrzw-");
+  const std::string file_path = tmp_dir.MakeUniquePath("casket-", ".tkt");
+  TkrzwIndex* index = tkrzw_index_open(file_path.c_str(), true, "truncate=true,num_buckets=10");
+  ASSERT_NE(nullptr, index);
+  EXPECT_FALSE(tkrzw_index_check(index, "single", -1, "1", -1));
+  EXPECT_FALSE(tkrzw_index_check(index, "double", 5, "11", 2));
+  EXPECT_TRUE(tkrzw_index_add(index, "single", -1, "1", -1));
+  EXPECT_TRUE(tkrzw_index_add(index, "double", 5, "11", 2));
+  EXPECT_TRUE(tkrzw_index_check(index, "single", -1, "1", -1));
+  EXPECT_TRUE(tkrzw_index_check(index, "double", 5, "11", 2));
+  EXPECT_TRUE(tkrzw_index_add(index, "single", -1, "2", -1));
+  EXPECT_TRUE(tkrzw_index_add(index, "double", -1, "22", -1));
+  EXPECT_TRUE(tkrzw_index_add(index, "triple", -1, "222", -1));
+  int32_t num_values = 0;
+  TkrzwStr* values = tkrzw_index_get_values(index, "single", -1, 0, &num_values);
+  ASSERT_NE(nullptr, values);
+  ASSERT_EQ(2, num_values);
+  EXPECT_EQ("1", std::string(values[0].ptr, values[0].size));
+  EXPECT_EQ("2", std::string(values[1].ptr, values[1].size));
+  tkrzw_free_str_array(values, num_values);
+  values = tkrzw_index_get_values(index, "triple", -1, 0, &num_values);
+  ASSERT_NE(nullptr, values);
+  ASSERT_EQ(1, num_values);
+  EXPECT_EQ("222", std::string(values[0].ptr, values[0].size));
+  tkrzw_free_str_array(values, num_values);
+  values = tkrzw_index_get_values(index, "foo", -1, 0, &num_values);
+  ASSERT_NE(nullptr, values);
+  ASSERT_EQ(0, num_values);
+  tkrzw_free_str_array(values, num_values);
+  EXPECT_TRUE(tkrzw_index_close(index));
+}
+
 // END OF FILE

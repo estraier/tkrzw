@@ -1617,11 +1617,70 @@ TkrzwStr* tkrzw_file_search(
     TkrzwFile* file, const char* mode, const char* pattern_ptr, int32_t pattern_size,
     int32_t capacity, int32_t* num_matched);
 
+/**
+ * Opens an index file and makes an index object.
+ * @param path A path of the file.
+ * @param writable If true, the file is writable.  If false, it is read-only.
+ * @param params Optional parameters in "key=value,key=value" format.  The options for the file
+ * opening operation are set by "truncate", "no_create", "no_wait", "no_lock", and "sync_hard".
+ * Other options are the same as PolyIndex::Open.
+ * @return The new database object, which should be released by the tkrzw_index_close function.
+ * NULL is returned on failure.
+ * @details If the path is empty, BabyDBM is used internally, which is equivalent to using the
+ * MemIndex class.  If the path ends with ".tkt", TreeDBM is used internally, which is
+ * equivalent to using the FileIndex class.  If the key comparator of the tuning parameter is
+ * not set, PairLexicalKeyComparator is set implicitly.  Other compatible key comparators are
+ * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator, and
+ * PairRealNumberKeyComparator.
+ */
+TkrzwIndex* tkrzw_index_open(const char* path, bool writable, const char* params);
 
+/**
+ * Closes the index file and releases the index object.
+ * @param index The index object.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_index_close(TkrzwIndex* index);
 
+/**
+ * Checks whether a record exists in the index.
+ * @param index The index object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @return True if the record exists, or false if not.
+ */
+bool tkrzw_index_check(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size);
 
+/**
+ * Gets all values of records of a key.
+ * @param index The index object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param max The maximum number of values to get.  0 means unlimited.
+ * @param num_elems The pointer to the variable to store the number of elements of the extra
+ * string array.
+ * @return The pointer to an array of all values of the key, which should be released by the
+ * tkrzw_free_str_array function.  An empty array is returned on failure.
+ */
+TkrzwStr* tkrzw_index_get_values(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size, int32_t max, int32_t* num_elems);
 
-
+/**
+ * Adds a record.
+ * @param index The index object.
+ * @param key_ptr The key pointer.  This can be an arbitrary expression to search the index.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer.  This should be a primary value of another database.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_index_add(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size);
 
 #if defined(__cplusplus)
 }
