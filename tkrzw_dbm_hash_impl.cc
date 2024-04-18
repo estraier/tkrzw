@@ -130,9 +130,13 @@ Status HashRecord::ReadMetadataKey(int64_t offset, int32_t min_read_size) {
   if (record_size < crc_width_) {
     return Status(Status::BROKEN_DATA_ERROR, "invalid CRC value");
   }
-  crc_value_ = ReadFixNum(rp, crc_width_);
-  rp += crc_width_;
-  record_size -= crc_width_;
+  if (crc_width_ > 0) {
+    crc_value_ = ReadFixNum(rp, crc_width_);
+    rp += crc_width_;
+    record_size -= crc_width_;
+  } else {
+    crc_value_ = 0;
+  }
   header_size_ = rp - read_buf;
   whole_size_ = header_size_ + key_size_ + value_size_ + padding_size_ - extra_padding_size;
   key_ptr_ = nullptr;

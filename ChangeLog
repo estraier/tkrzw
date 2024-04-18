@@ -5,6 +5,7 @@
 
 	- PolyIndex is added.
 	- The C interface supports PolyIndex.
+	- Fix an assertion bug of HashRecord.
 
 2023-04-18 Mikio Hirabayashi  <hirarin@gmail.com>
 
