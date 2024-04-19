@@ -67,7 +67,7 @@ class FileIndex final {
     void First();
 
     /**
-     * Initializes the iterator to indicate the first record.
+     * Initializes the iterator to indicate the last record.
      */
     void Last();
 
@@ -270,7 +270,7 @@ class MemIndex final {
     void First();
 
     /**
-     * Initializes the iterator to indicate the first record.
+     * Initializes the iterator to indicate the last record.
      */
     void Last();
 
@@ -414,7 +414,7 @@ class PolyIndex final {
     void First();
 
     /**
-     * Initializes the iterator to indicate the first record.
+     * Initializes the iterator to indicate the last record.
      */
     void Last();
 
@@ -768,7 +768,7 @@ class StdIndexStr final {
     void First();
 
     /**
-     * Initializes the iterator to indicate the first record.
+     * Initializes the iterator to indicate the last record.
      */
     void Last();
 
