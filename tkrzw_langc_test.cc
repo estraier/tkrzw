@@ -1172,9 +1172,10 @@ TEST(LangCTest, Index) {
   EXPECT_TRUE(tkrzw_index_remove(index, "single", -1, "1", -1));
   EXPECT_TRUE(tkrzw_index_remove(index, "double", 5, "11", 2));
   EXPECT_FALSE(tkrzw_index_remove(index, "triple", -1, "x", -1));
-  values = tkrzw_index_get_values(index, "single", -1, 0, &num_values);
+  values = tkrzw_index_get_values(index, "double", -1, 0, &num_values);
   ASSERT_NE(nullptr, values);
   ASSERT_EQ(1, num_values);
+  EXPECT_EQ("22", std::string(values[0].ptr, values[0].size));
   tkrzw_free_str_array(values, num_values);
   EXPECT_EQ(3, tkrzw_index_count(index));
   EXPECT_TRUE(tkrzw_index_synchronize(index, false));
