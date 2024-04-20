@@ -2516,6 +2516,211 @@ bool tkrzw_index_add(
   }
 }
 
+bool tkrzw_index_remove(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size) {
+  assert(index != nullptr && key_ptr != nullptr && value_ptr != nullptr);
+  try {
+    if (key_size < 0) {
+      key_size = std::strlen(key_ptr);
+    }
+    if (value_size < 0) {
+      value_size = std::strlen(value_ptr);
+    }
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Remove(std::string_view(key_ptr, key_size),
+                                 std::string_view(value_ptr, value_size));
+    return last_status == Status::SUCCESS;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+int32_t tkrzw_index_count(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    return xindex->Count();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return 0;
+  }
+}
+
+bool tkrzw_index_clear(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Clear();
+    return last_status == Status::SUCCESS;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+bool tkrzw_index_rebuild(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Rebuild();
+    return last_status == Status::SUCCESS;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+bool tkrzw_index_synchronize(TkrzwIndex* index, bool hard) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    last_status = xindex->Synchronize(hard);
+    return last_status == Status::SUCCESS;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+bool tkrzw_index_is_writable(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    return xindex->IsWritable();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+TkrzwIndexIter* tkrzw_index_make_iterator(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    return reinterpret_cast<TkrzwIndexIter*>(xindex->MakeIterator().release());
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return nullptr;
+  }
+}
+
+void tkrzw_index_iter_free(TkrzwIndexIter* iter) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    delete xiter;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
+void tkrzw_index_iter_first(TkrzwIndexIter* iter) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    xiter->First();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
+void tkrzw_index_iter_last(TkrzwIndexIter* iter) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    xiter->Last();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
+void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size) {
+  assert(iter != nullptr && key_ptr != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    if (key_size < 0) {
+      key_size = std::strlen(key_ptr);
+    }
+    xiter->Jump(std::string_view(key_ptr, key_size));
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
+bool tkrzw_index_iter_get(
+    TkrzwIndexIter* iter, char** key_ptr, int32_t* key_size,
+    char** value_ptr, int32_t* value_size) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    bool rv = false;
+    if (key_ptr == nullptr && value_ptr == nullptr) {
+      rv = xiter->Get();
+    } else if (value_ptr == nullptr) {
+      std::string key;
+      if (xiter->Get(&key)) {
+        *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+        std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+        if (key_size != nullptr) {
+          *key_size = key.size();
+        }
+        rv = true;
+      }
+    } else if (key_ptr == nullptr) {
+      std::string value;
+      if (xiter->Get(nullptr, &value)) {
+        *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+        std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+        if (value_size != nullptr) {
+          *value_size = value.size();
+        }
+        rv = true;
+      }
+    } else {
+      std::string key, value;
+      if (xiter->Get(&key, &value)) {
+        *key_ptr = static_cast<char*>(xmalloc(key.size() + 1));
+        std::memcpy(*key_ptr, key.c_str(), key.size() + 1);
+        if (key_size != nullptr) {
+          *key_size = key.size();
+        }
+        *value_ptr = static_cast<char*>(xmalloc(value.size() + 1));
+        std::memcpy(*value_ptr, value.c_str(), value.size() + 1);
+        if (value_size != nullptr) {
+          *value_size = value.size();
+        }
+        rv = true;
+      }
+    }
+    return rv;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    return false;
+  }
+}
+
+void tkrzw_index_iter_next(TkrzwIndexIter* iter) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    xiter->Next();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
+void tkrzw_index_iter_previous(TkrzwIndexIter* iter) {
+  assert(iter != nullptr);
+  try {
+    PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
+    xiter->Previous();
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+  }
+}
+
 }  // extern "C"
 
 // END OF FILE

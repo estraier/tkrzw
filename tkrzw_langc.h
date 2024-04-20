@@ -130,6 +130,14 @@ typedef struct {
   void* _dummy_;
 } TkrzwIndex;
 
+/**
+ * Index iterator interface, just for type check.
+ */
+typedef struct {
+  /** A dummy member which is never used. */
+  void* _dummy_;
+} TkrzwIndexIter;
+
 /** The special string_view value to represent any data. */
 extern const char* const TKRZW_ANY_DATA;
 
@@ -1050,6 +1058,7 @@ bool tkrzw_dbm_iter_next(TkrzwDBMIter* iter);
 
 /**
  * Moves the iterator to the previous record.
+ * @param iter The iterator object.
  * @return True on success or false on failure.
  * @details If the current record is missing, the operation fails.  Even if there's no previous
  * record, the operation doesn't fail.  This method is suppoerted only by ordered databases.
@@ -1085,6 +1094,8 @@ bool tkrzw_dbm_iter_process(
  * If it is NULL, it is not used.
  * @param value_size The pointer to a variable which stores the size of the region containing
  * the record value.  If it is NULL, it is not used.
+ * @return True on success or false on failure.  If theres no record to fetch, false is
+ * returned.
  */
 bool tkrzw_dbm_iter_get(
     TkrzwDBMIter* iter, char** key_ptr, int32_t* key_size,
@@ -1681,6 +1692,121 @@ TkrzwStr* tkrzw_index_get_values(
 bool tkrzw_index_add(
     TkrzwIndex* index, const char* key_ptr, int32_t key_size,
     const char* value_ptr, int32_t value_size);
+
+/**
+ * Remove a record.
+ * @param index The index object.
+ * @param key_ptr The key pointer.  This can be an arbitrary expression to search the index.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer.  This should be a primary value of another database.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_index_remove(
+    TkrzwIndex* index, const char* key_ptr, int32_t key_size,
+    const char* value_ptr, int32_t value_size);
+
+/**
+ * Gets the number of records.
+ * @param index The index object.
+ * @return The number of records.
+ */
+int32_t tkrzw_index_count(TkrzwIndex* index);
+
+/**
+ * Removes all records.
+ * @param index The index object.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_index_clear(TkrzwIndex* index);
+
+/**
+ * Rebuilds the entire database.
+ * @param index The index object.
+ * @return True on success or false on failure.
+ */
+bool tkrzw_index_rebuild(TkrzwIndex* index);
+
+/**
+ * Synchronizes the content of the database to the file system.
+ * @param index The index object.
+ * @param hard True to do physical synchronization with the hardware or false to do only
+ * logical synchronization with the file system.
+ * @return True on success or false on failure.
+*/
+bool tkrzw_index_synchronize(TkrzwIndex* index, bool hard);
+
+/**
+ * Checks whether the database is writable.
+ * @param index The index object.
+ * @return True if the database is writable, or false if not.
+ */
+bool tkrzw_index_is_writable(TkrzwIndex* index);
+
+/**
+ * Makes an iterator for each record.
+ * @param index The index object.
+ * @return The new iterator object, which should be released by the tkrzw_index_iter_free function.
+ */
+TkrzwIndexIter* tkrzw_index_make_iterator(TkrzwIndex* index);
+
+/**
+ * Releases the iterator object.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_free(TkrzwIndexIter* iter);
+
+/**
+ * Initializes the iterator to indicate the first record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_first(TkrzwIndexIter* iter);
+
+/**
+ * Initializes the iterator to indicate the last record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_last(TkrzwIndexIter* iter);
+
+/**
+ * Initializes the iterator to indicate a specific range.
+ * @param iter The iterator object.
+ * @param key_ptr The key pointer.
+ * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ */
+void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size);
+
+/**
+ * Gets the key and the value of the current record of the iterator.
+ * @param iter The iterator object.
+ * @param key_ptr The pointer to a variable which points to the region containing the record key.
+ * If this function returns true, the region should be released by the free function.  If it is
+ * NULL, it is not used.
+ * @param key_size The pointer to a variable which stores the size of the region containing the
+ * record key.  If it is NULL, it is not used.
+ * @param value_ptr The pointer to a variable which points to the region containing the record
+ * value.  If this function returns true, the region should be released by the free function.
+ * If it is NULL, it is not used.
+ * @param value_size The pointer to a variable which stores the size of the region containing
+ * the record value.  If it is NULL, it is not used.
+ * @return True on success or false on failure.  If theres no record to fetch, false is
+ * returned.
+ */
+bool tkrzw_index_iter_get(
+    TkrzwIndexIter* iter, char** key_ptr, int32_t* key_size,
+    char** value_ptr, int32_t* value_size);
+
+/**
+ * Moves the iterator to the next record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_next(TkrzwIndexIter* iter);
+
+/**
+ * Moves the iterator to the previous record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_previous(TkrzwIndexIter* iter);
 
 #if defined(__cplusplus)
 }
