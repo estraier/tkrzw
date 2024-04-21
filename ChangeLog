@@ -1,16 +1,13 @@
 2024-04-16 Mikio Hirabayashi  <hirarin@gmail.com>
 
-	- Release: 1.0.29
-	- Library version: 1.72.0
+	- Release: 1.0.28
+	- Library version: 1.71.0
 
 	- PolyIndex is added.
 	- The C interface supports PolyIndex.
 	- Fix an assertion bug of HashRecord.
 
 2023-04-18 Mikio Hirabayashi  <hirarin@gmail.com>
-
-	- Release: 1.0.28
-	- Library version: 1.71.0
 
 	- StrJoin takes a bare std::string view.
 	- Fix a bug of GetLocalTimeDifference.
