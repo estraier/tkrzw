@@ -1771,10 +1771,13 @@ void tkrzw_index_iter_last(TkrzwIndexIter* iter);
 /**
  * Initializes the iterator to indicate a specific range.
  * @param iter The iterator object.
- * @param key_ptr The key pointer.
+ * @param key_ptr The key pointer of the lower bound.
  * @param key_size The key size.  If it is negative, strlen(key_ptr) is used.
+ * @param value_ptr The value pointer of the lower bound.
+ * @param value_size The value size.  If it is negative, strlen(value_ptr) is used.
  */
-void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size);
+void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size,
+                           const char* value_ptr, int32_t value_size);
 
 /**
  * Gets the key and the value of the current record of the iterator.

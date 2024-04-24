@@ -1232,7 +1232,7 @@ TEST(LangCTest, Index) {
   free(key_ptr);
   tkrzw_index_iter_previous(iter);
   ASSERT_FALSE(tkrzw_index_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size));
-  tkrzw_index_iter_jump(iter, "second", -1);
+  tkrzw_index_iter_jump(iter, "second", -1, "", -1);
   ASSERT_TRUE(tkrzw_index_iter_get(iter, &key_ptr, &key_size, &value_ptr, &value_size));
   EXPECT_EQ("second", std::string_view(key_ptr, key_size));
   EXPECT_EQ("2", std::string_view(value_ptr, value_size));

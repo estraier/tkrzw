@@ -2636,14 +2636,18 @@ void tkrzw_index_iter_last(TkrzwIndexIter* iter) {
   }
 }
 
-void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size) {
-  assert(iter != nullptr && key_ptr != nullptr);
+void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t key_size,
+                           const char* value_ptr, int32_t value_size) {
+  assert(iter != nullptr && key_ptr != nullptr && value_ptr != nullptr);
   try {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     if (key_size < 0) {
       key_size = std::strlen(key_ptr);
     }
-    xiter->Jump(std::string_view(key_ptr, key_size));
+    if (value_size < 0) {
+      value_size = std::strlen(value_ptr);
+    }
+    xiter->Jump(std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size));
   } catch (const std::exception& e) {
     tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
   }
