@@ -163,7 +163,7 @@ class FileIndex final {
    * Gets all values of records of a key.
    * @param key The key to look for.
    * @param max The maximum number of values to get.  0 means unlimited.
-   * @return All values of the key.
+   * @return All values of the key.  An empty vector is returned on failure.
    */
   std::vector<std::string> GetValues(std::string_view key, size_t max = 0);
 
