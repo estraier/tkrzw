@@ -39,8 +39,8 @@ namespace tkrzw {
 
 /**
  * File secondary index implementation with TreeDBM.
- * @details All operations are thread-safe; Multiple threads can access the same database
- * concurrently.
+ * @details All operations are thread-safe; Multiple threads can access the same index
+ * concurrently.  Every opened index must be closed explicitly to avoid data corruption.
  */
 class FileIndex final {
  public:
@@ -129,7 +129,7 @@ class FileIndex final {
   FileIndex& operator =(const FileIndex& rhs) = delete;
 
   /**
-   * Opens a database file.
+   * Opens an index file.
    * @param path A path of the file.
    * @param writable If true, the file is writable.  If false, it is read-only.
    * @param options Bit-sum options for opening the file.
@@ -146,9 +146,8 @@ class FileIndex final {
               const TreeDBM::TuningParameters& tuning_params = TreeDBM::TuningParameters());
 
   /**
-   * Closes the database file.
+   * Closes the index file.
    * @return The result status.
-   * @details Precondition: The database is opened.
    */
   Status Close();
 
@@ -196,13 +195,13 @@ class FileIndex final {
   Status Clear();
 
   /**
-   * Rebuilds the entire database.
+   * Rebuilds the entire index.
    * @return The result status.
    */
   Status Rebuild();
 
   /**
-   * Synchronizes the content of the database to the file system.
+   * Synchronizes the content of the index to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
    * @return The result status.
@@ -210,14 +209,14 @@ class FileIndex final {
   Status Synchronize(bool hard);
 
   /**
-   * Checks whether the database is open.
-   * @return True if the database is open, or false if not.
+   * Checks whether the index is open.
+   * @return True if the index is open, or false if not.
    */
   bool IsOpen() const;
 
   /**
-   * Checks whether the database is writable.
-   * @return True if the database is writable, or false if not.
+   * Checks whether the index is writable.
+   * @return True if the index is writable, or false if not.
    */
   bool IsWritable() const;
 
@@ -242,7 +241,7 @@ class FileIndex final {
 
 /**
  * On-memory secondary index implementation with BabyDBM.
- * @details All operations are thread-safe; Multiple threads can access the same database
+ * @details All operations are thread-safe; Multiple threads can access the same index
  * concurrently.
  */
 class MemIndex final {
@@ -384,7 +383,7 @@ class MemIndex final {
 /**
  * Polymorphic index manager adapter with PolyDBM.
  * @details All operations except for Open and Close are thread-safe; Multiple threads can
- * access the same database concurrently.  Every opened database must be closed explicitly to
+ * access the same index concurrently.  Every opened index must be closed explicitly to
  * avoid data corruption.
  * @details This class is a wrapper of FileIndex and MemIndex.  The Open method specifies the
  * actuall class used internally.
@@ -487,9 +486,8 @@ class PolyIndex final {
               const std::map<std::string, std::string>& params = {});
 
   /**
-   * Closes the database file.
+   * Closes the index file.
    * @return The result status.
-   * @details Precondition: The database is opened.
    */
   Status Close();
 
@@ -537,13 +535,13 @@ class PolyIndex final {
   Status Clear();
 
   /**
-   * Rebuilds the entire database.
+   * Rebuilds the entire index.
    * @return The result status.
    */
   Status Rebuild();
 
   /**
-   * Synchronizes the content of the database to the file system.
+   * Synchronizes the content of the index to the file system.
    * @param hard True to do physical synchronization with the hardware or false to do only
    * logical synchronization with the file system.
    * @return The result status.
@@ -551,14 +549,14 @@ class PolyIndex final {
   Status Synchronize(bool hard);
 
   /**
-   * Checks whether the database is open.
-   * @return True if the database is open, or false if not.
+   * Checks whether the index is open.
+   * @return True if the index is open, or false if not.
    */
   bool IsOpen() const;
 
   /**
-   * Checks whether the database is writable.
-   * @return True if the database is writable, or false if not.
+   * Checks whether the index is writable.
+   * @return True if the index is writable, or false if not.
    */
   bool IsWritable() const;
 
@@ -586,7 +584,7 @@ class PolyIndex final {
  * @param KEYTYPE the key type.
  * @param VALUETYPE the value type.
  * @param CMPTYPE the comparator type.
- * @details All operations are thread-safe; Multiple threads can access the same database
+ * @details All operations are thread-safe; Multiple threads can access the same index
  * concurrently.
  */
 template <typename KEYTYPE, typename VALUETYPE,
@@ -739,7 +737,7 @@ class StdIndex final {
 
 /**
  * On-memory secondary index implementation with std::map for strings.
- * @details All operations are thread-safe; Multiple threads can access the same database
+ * @details All operations are thread-safe; Multiple threads can access the same index
  * concurrently.
  * @details This is slower than StdIndex<string, string> although space efficiency is better.
  */
