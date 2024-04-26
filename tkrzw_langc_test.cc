@@ -1178,6 +1178,10 @@ TEST(LangCTest, Index) {
   EXPECT_EQ("22", std::string(values[0].ptr, values[0].size));
   tkrzw_free_str_array(values, num_values);
   EXPECT_EQ(3, tkrzw_index_count(index));
+  char* path_ptr = tkrzw_index_get_file_path(index);
+  ASSERT_NE(nullptr, path_ptr);
+  EXPECT_EQ(file_path, path_ptr);
+  free(path_ptr);
   EXPECT_TRUE(tkrzw_index_synchronize(index, false));
   EXPECT_TRUE(tkrzw_index_rebuild(index));
   EXPECT_EQ(3, tkrzw_index_count(index));

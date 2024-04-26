@@ -1709,9 +1709,17 @@ bool tkrzw_index_remove(
 /**
  * Gets the number of records.
  * @param index The index object.
- * @return The number of records.
+ * @return The number of records, or -1 on failure.
  */
 int32_t tkrzw_index_count(TkrzwIndex* index);
+
+/**
+ * Gets the path of the index file.
+ * @param index The index object.
+ * @return The pointer to the path data, which should be released by the free function.  An empty
+ * string is returned on failure.
+ */
+char* tkrzw_index_get_file_path(TkrzwIndex* index);
 
 /**
  * Removes all records.

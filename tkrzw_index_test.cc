@@ -484,6 +484,7 @@ TEST(FileIndexTest, Basic) {
   CommonIndexBasicTest<tkrzw::FileIndex>(index);
   EXPECT_TRUE(index.IsOpen());
   EXPECT_TRUE(index.IsWritable());
+  EXPECT_EQ(file_path, index.GetFilePath());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Rebuild());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Synchronize(false));
   tkrzw::TreeDBM* tree_dbm = index.GetInternalDBM();
@@ -543,9 +544,11 @@ TEST(PolyIndexTest, Basic) {
   tkrzw::PolyIndex index;
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open(file_path, true, tkrzw::File::OPEN_DEFAULT));
   CommonIndexBasicTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ(file_path, index.GetFilePath());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Open("", true));
   CommonIndexBasicTest<tkrzw::PolyIndex>(index);
+  EXPECT_EQ("", index.GetFilePath());
   EXPECT_EQ(tkrzw::Status::SUCCESS, index.Close());
 }
 

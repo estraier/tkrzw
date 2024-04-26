@@ -184,9 +184,15 @@ class FileIndex final {
 
   /**
    * Gets the number of records.
-   * @return The number of records.
+   * @return The number of records, or -1 on failure.
    */
   size_t Count();
+
+  /**
+   * Gets the path of the index file.
+   * @return The file path of the index, or an empty string on failure.
+   */
+  std::string GetFilePath();
 
   /**
    * Removes all records.
@@ -524,9 +530,15 @@ class PolyIndex final {
 
   /**
    * Gets the number of records.
-   * @return The number of records.
+   * @return The number of records, or -1 on failure.
    */
   size_t Count();
+
+  /**
+   * Gets the path of the index file.
+   * @return The file path of the index, or an empty string on failure.
+   */
+  std::string GetFilePath();
 
   /**
    * Removes all records.
@@ -956,6 +968,10 @@ inline size_t FileIndex::Count() {
   return dbm_.CountSimple();
 }
 
+inline std::string FileIndex::GetFilePath() {
+  return dbm_.GetFilePathSimple();
+}
+
 inline Status FileIndex::Clear() {
   return dbm_.Clear();
 }
@@ -1089,6 +1105,10 @@ inline Status PolyIndex::Remove(std::string_view key, std::string_view value) {
 
 inline size_t PolyIndex::Count() {
   return dbm_.CountSimple();
+}
+
+inline std::string PolyIndex::GetFilePath() {
+  return dbm_.GetFilePathSimple();
 }
 
 inline Status PolyIndex::Clear() {

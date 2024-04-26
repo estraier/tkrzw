@@ -2544,7 +2544,23 @@ int32_t tkrzw_index_count(TkrzwIndex* index) {
     return xindex->Count();
   } catch (const std::exception& e) {
     tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
-    return 0;
+    return -1;
+  }
+}
+
+char* tkrzw_index_get_file_path(TkrzwIndex* index) {
+  assert(index != nullptr);
+  try {
+    PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
+    std::string path = xindex->GetFilePath();
+    char* path_ptr = reinterpret_cast<char*>(xmalloc(path.size() + 1));
+    std::memcpy(path_ptr, path.c_str(), path.size() + 1);
+    return path_ptr;
+  } catch (const std::exception& e) {
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    char* path_ptr = reinterpret_cast<char*>(xmalloc(1));
+    *path_ptr = '\0';
+    return path_ptr;
   }
 }
 
