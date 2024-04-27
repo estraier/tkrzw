@@ -79,6 +79,16 @@ class FileIndex final {
     void Jump(std::string_view key, std::string_view value = "");
 
     /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -88,16 +98,6 @@ class FileIndex final {
      * returned.
      */
     bool Get(std::string* key = nullptr, std::string* value = nullptr);
-
-    /**
-     * Moves the iterator to the next record.
-     */
-    void Next();
-
-    /**
-     * Moves the iterator to the previous record.
-     */
-    void Previous();
 
    private:
     /**
@@ -287,6 +287,16 @@ class MemIndex final {
     void Jump(std::string_view key, std::string_view value = "");
 
     /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -296,16 +306,6 @@ class MemIndex final {
      * returned.
      */
     bool Get(std::string* key = nullptr, std::string* value = nullptr);
-
-    /**
-     * Moves the iterator to the next record.
-     */
-    void Next();
-
-    /**
-     * Moves the iterator to the previous record.
-     */
-    void Previous();
 
    private:
     /**
@@ -431,6 +431,16 @@ class PolyIndex final {
     void Jump(std::string_view key, std::string_view value = "");
 
     /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -440,16 +450,6 @@ class PolyIndex final {
      * returned.
      */
     bool Get(std::string* key = nullptr, std::string* value = nullptr);
-
-    /**
-     * Moves the iterator to the next record.
-     */
-    void Next();
-
-    /**
-     * Moves the iterator to the previous record.
-     */
-    void Previous();
 
    private:
     /**
@@ -642,6 +642,16 @@ class StdIndex final {
     void Jump(const KEYTYPE& key, const VALUETYPE& value = VALUETYPE());
 
     /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -651,16 +661,6 @@ class StdIndex final {
      * returned.
      */
     bool Get(KEYTYPE* key = nullptr, VALUETYPE* value = nullptr);
-
-    /**
-     * Moves the iterator to the next record.
-     */
-    void Next();
-
-    /**
-     * Moves the iterator to the previous record.
-     */
-    void Previous();
 
    private:
     /**
@@ -790,6 +790,16 @@ class StdIndexStr final {
     void Jump(std::string_view key, std::string_view value = "");
 
     /**
+     * Moves the iterator to the next record.
+     */
+    void Next();
+
+    /**
+     * Moves the iterator to the previous record.
+     */
+    void Previous();
+
+    /**
      * Gets the key and the value of the current record of the iterator.
      * @param key The pointer to a string object to contain the record key.  If it is nullptr,
      * the key data is ignored.
@@ -799,16 +809,6 @@ class StdIndexStr final {
      * returned.
      */
     bool Get(std::string* key = nullptr, std::string* value = nullptr);
-
-    /**
-     * Moves the iterator to the next record.
-     */
-    void Next();
-
-    /**
-     * Moves the iterator to the previous record.
-     */
-    void Previous();
 
    private:
     /**
@@ -1017,6 +1017,14 @@ inline void FileIndex::Iterator::Jump(std::string_view key, std::string_view val
   it_->Jump(SerializeStrPair(key, value));
 }
 
+inline void FileIndex::Iterator::Next() {
+  it_->Next();
+}
+
+inline void FileIndex::Iterator::Previous() {
+  it_->Previous();
+}
+
 inline bool FileIndex::Iterator::Get(std::string* key, std::string* value) {
   std::string record;
   if (it_->Get(&record) != Status::SUCCESS) {
@@ -1031,14 +1039,6 @@ inline bool FileIndex::Iterator::Get(std::string* key, std::string* value) {
     *value = rec_value;
   }
   return true;
-}
-
-inline void FileIndex::Iterator::Next() {
-  it_->Next();
-}
-
-inline void FileIndex::Iterator::Previous() {
-  it_->Previous();
 }
 
 inline Status PolyIndex::Open(const std::string& path, bool writable,
@@ -1156,6 +1156,14 @@ inline void PolyIndex::Iterator::Jump(std::string_view key, std::string_view val
   it_->Jump(SerializeStrPair(key, value));
 }
 
+inline void PolyIndex::Iterator::Next() {
+  it_->Next();
+}
+
+inline void PolyIndex::Iterator::Previous() {
+  it_->Previous();
+}
+
 inline bool PolyIndex::Iterator::Get(std::string* key, std::string* value) {
   std::string record;
   if (it_->Get(&record) != Status::SUCCESS) {
@@ -1170,14 +1178,6 @@ inline bool PolyIndex::Iterator::Get(std::string* key, std::string* value) {
     *value = rec_value;
   }
   return true;
-}
-
-inline void PolyIndex::Iterator::Next() {
-  it_->Next();
-}
-
-inline void PolyIndex::Iterator::Previous() {
-  it_->Previous();
 }
 
 inline MemIndex::MemIndex(KeyComparator key_comparator) : dbm_(key_comparator) {}
@@ -1246,6 +1246,14 @@ inline void MemIndex::Iterator::Jump(std::string_view key, std::string_view valu
   it_->Jump(SerializeStrPair(key, value));
 }
 
+inline void MemIndex::Iterator::Next() {
+  it_->Next();
+}
+
+inline void MemIndex::Iterator::Previous() {
+  it_->Previous();
+}
+
 inline bool MemIndex::Iterator::Get(std::string* key, std::string* value) {
   std::string record;
   if (it_->Get(&record) != Status::SUCCESS) {
@@ -1260,14 +1268,6 @@ inline bool MemIndex::Iterator::Get(std::string* key, std::string* value) {
     *value = rec_value;
   }
   return true;
-}
-
-inline void MemIndex::Iterator::Next() {
-  it_->Next();
-}
-
-inline void MemIndex::Iterator::Previous() {
-  it_->Previous();
 }
 
 template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
@@ -1392,21 +1392,6 @@ void StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Iterator::Jump(
 }
 
 template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
-bool StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Iterator::Get(KEYTYPE* key, VALUETYPE* value) {
-  std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
-  if (it_ == index_->records_.end()) {
-    return false;
-  }
-  if (key != nullptr) {
-    *key = it_->first;
-  }
-  if (value != nullptr) {
-    *value = it_->second;
-  }
-  return true;
-}
-
-template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
 void StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Iterator::Next() {
   std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
   const auto& const_records = index_->records_;
@@ -1424,6 +1409,21 @@ void StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Iterator::Previous() {
   } else {
     --it_;
   }
+}
+
+template <typename KEYTYPE, typename VALUETYPE, typename CMPTYPE>
+bool StdIndex<KEYTYPE, VALUETYPE, CMPTYPE>::Iterator::Get(KEYTYPE* key, VALUETYPE* value) {
+  std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
+  if (it_ == index_->records_.end()) {
+    return false;
+  }
+  if (key != nullptr) {
+    *key = it_->first;
+  }
+  if (value != nullptr) {
+    *value = it_->second;
+  }
+  return true;
 }
 
 inline StdIndexStr::~StdIndexStr() {
@@ -1530,22 +1530,6 @@ inline void StdIndexStr::Iterator::Jump(std::string_view key, std::string_view v
   it_ = const_records.lower_bound(SerializeStrPair(key, value));
 }
 
-inline bool StdIndexStr::Iterator::Get(std::string* key, std::string* value) {
-  std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
-  if (it_ == index_->records_.end()) {
-    return false;
-  }
-  std::string_view rec_key, rec_value;
-  DeserializeStrPair(*it_, &rec_key, &rec_value);
-  if (key != nullptr) {
-    *key = rec_key;
-  }
-  if (value != nullptr) {
-    *value = rec_value;
-  }
-  return true;
-}
-
 inline void StdIndexStr::Iterator::Next() {
   std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
   if (it_ != index_->records_.end()) {
@@ -1560,6 +1544,22 @@ inline void StdIndexStr::Iterator::Previous() {
   } else {
     --it_;
   }
+}
+
+inline bool StdIndexStr::Iterator::Get(std::string* key, std::string* value) {
+  std::shared_lock<std::shared_timed_mutex> lock(index_->mutex_);
+  if (it_ == index_->records_.end()) {
+    return false;
+  }
+  std::string_view rec_key, rec_value;
+  DeserializeStrPair(*it_, &rec_key, &rec_value);
+  if (key != nullptr) {
+    *key = rec_key;
+  }
+  if (value != nullptr) {
+    *value = rec_value;
+  }
+  return true;
 }
 
 }  // namespace tkrzw
