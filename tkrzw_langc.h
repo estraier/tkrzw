@@ -1788,6 +1788,18 @@ void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t ke
                            const char* value_ptr, int32_t value_size);
 
 /**
+ * Moves the iterator to the next record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_next(TkrzwIndexIter* iter);
+
+/**
+ * Moves the iterator to the previous record.
+ * @param iter The iterator object.
+ */
+void tkrzw_index_iter_previous(TkrzwIndexIter* iter);
+
+/**
  * Gets the key and the value of the current record of the iterator.
  * @param iter The iterator object.
  * @param key_ptr The pointer to a variable which points to the region containing the record key.
@@ -1806,18 +1818,6 @@ void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t ke
 bool tkrzw_index_iter_get(
     TkrzwIndexIter* iter, char** key_ptr, int32_t* key_size,
     char** value_ptr, int32_t* value_size);
-
-/**
- * Moves the iterator to the next record.
- * @param iter The iterator object.
- */
-void tkrzw_index_iter_next(TkrzwIndexIter* iter);
-
-/**
- * Moves the iterator to the previous record.
- * @param iter The iterator object.
- */
-void tkrzw_index_iter_previous(TkrzwIndexIter* iter);
 
 #if defined(__cplusplus)
 }
