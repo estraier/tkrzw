@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   index.Remove("general", "anne").OrDie();
   index.Add("sales", "anne").OrDie();
 
-  // Prints every record by iterator.
+  // Prints all members for each division.
   const std::vector<std::string> divisions = {"general", "sales"};
   for (const auto& division : divisions) {
     std::cout << division << std::endl;
@@ -42,6 +42,15 @@ int main(int argc, char** argv) {
     for (const auto& member : members) {
       std::cout << " -- " + member << std::endl;
     }
+  }
+
+  // Prints every record by iterator.
+  std::unique_ptr<tkrzw::PolyIndex::Iterator> iter = index.MakeIterator();
+  iter->First();
+  std::string key, value;
+  while (iter->Get(&key, &value)) {
+    std::cout << key << ": " << value << std::endl;
+    iter->Next();
   }
 
   // Closes the index
