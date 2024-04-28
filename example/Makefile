@@ -17,9 +17,9 @@ MYBINS = helloworld accesscounter transfer ulogrestore \
   cachedbm_ex1 \
   stdtreedbm_ex1 stdtreedbm_ex2 \
   polydbm_ex1 sharddbm_ex1 asyncdbm_ex1 \
-  fileindex_ex1 memindex_ex1 stdindex_ex1 \
+  fileindex_ex1 memindex_ex1 stdindex_ex1 polyindex_ex1 \
   invindex_ex1 \
-  langc_ex1 langc_ex2
+  langc_ex1 langc_ex2 langc_ex3
 
 # Building binaries
 CC = gcc
@@ -145,6 +145,9 @@ memindex_ex1 : memindex_ex1.o
 stdindex_ex1 : stdindex_ex1.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
+polyindex_ex1 : polyindex_ex1.o
+	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
 invindex_ex1 : invindex_ex1.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
@@ -152,6 +155,9 @@ langc_ex1 : langc_ex1.o
 	$(LDENV) $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 langc_ex2 : langc_ex2.o
+	$(LDENV) $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+langc_ex3 : langc_ex3.o
 	$(LDENV) $(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 # END OF FILE

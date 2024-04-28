@@ -18,9 +18,9 @@ COMMANDFILES = helloworld.exe accesscounter.exe transfer.exe \
   cachedbm_ex1.exe \
   stdtreedbm_ex1.exe stdtreedbm_ex2.exe \
   polydbm_ex1.exe sharddbm_ex1.exe asyncdbm_ex1.exe \
-  fileindex_ex1.exe stdindex_ex1.exe \
+  fileindex_ex1.exe stdindex_ex1.exe polyindex_ex1 \
   invindex_ex1.exe \
-  langc_ex1.exe
+  langc_ex1.exe langc_ex2.exe langc_ex3.exe
 
 CL = cl
 LINK = link
@@ -125,8 +125,17 @@ fileindex_ex1.exe : fileindex_ex1.obj
 stdindex_ex1.exe : stdindex_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ stdindex_ex1.obj tkrzw.lib
 
+polyindex_ex1.exe : polyindex_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ polyindex_ex1.obj tkrzw.lib
+
 invindex_ex1.exe : invindex_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ invindex_ex1.obj tkrzw.lib
 
 langc_ex1.exe : langc_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ langc_ex1.obj tkrzw.lib
+
+langc_ex2.exe : langc_ex2.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ langc_ex2.obj tkrzw.lib
+
+langc_ex3.exe : langc_ex3.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ langc_ex3.obj tkrzw.lib
