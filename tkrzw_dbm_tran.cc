@@ -19,7 +19,7 @@ namespace tkrzw {
 static void PrintUsageAndDie() {
   auto P = EPrintF;
   const char* progname = "tkrzw_dbm_perf";
-  P("%s: Performance checker of DBM implementations of Tkrzw\n", progname);
+  P("%s: Transaction checker of DBM implementations of Tkrzw\n", progname);
   P("\n");
   P("Usage:\n");
   P("  %s build [options] path\n", progname);
