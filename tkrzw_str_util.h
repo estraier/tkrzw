@@ -854,6 +854,82 @@ std::map<std::string_view, std::string_view> MakeStrViewMapFromRecords(
     const std::map<std::string, std::string>& records);
 
 /**
+ * Serializes a value of a basic type into a string.
+ * @param value a value of a serializable basic type, like int32 and double.
+ * @return The result string representing the value.
+ * @details The data is copied as-is in the native format with memcpy.  Thus, the endian of
+ * integer is not normalized.  Although serializing a value of any "struct" is possible, it is not
+ * assured that the data is deserialized properly on another system.
+ */
+template<typename T>
+inline std::string SerializeBasicValue(T value) {
+  std::string serialized = std::string(sizeof(T), 0);
+  char* ptr = serialized.data();
+  std::memcpy(ptr, &value, sizeof(value));
+  return serialized;
+}
+
+/**
+ * Deserializes a string into a value of a basic type.
+ * @param serialized The serialized string.
+ * @return The result data.
+ * @details If the size of the serialized string is not aligned to the size of the data type,
+ * zero-initialized value is returned.
+ */
+template<typename T>
+inline T DeserializeBasicValue(std::string_view serialized) {
+  T value;
+  if (serialized.size() >= sizeof(T)) {
+    std::memcpy(&value, serialized.data(), sizeof(T));
+  } else {
+    std::memset(&value, 0, sizeof(T));
+  }
+  return value;
+}
+
+/**
+ * Serializes a vector of a basic type into a string.
+ * @param values a vector of a serializable basic type, like int32 and double.
+ * @return The result string representing the values.
+ * @details The data is copied as-is in the native format with memcpy.  Thus, the endian of
+ * integer is not normalized.  Although serializing a value of any "struct" is possible, it is not
+ * assured that the data is deserialized properly on another system.
+ */
+template<typename T>
+inline std::string SerializeBasicVector(const std::vector<T>& values) {
+  std::string serialized = std::string(sizeof(T) * values.size(), 0);
+  char* ptr = serialized.data();
+  for (const T value : values) {
+    std::memcpy(ptr, &value, sizeof(value));
+    ptr += sizeof(value);
+  }
+  return serialized;
+}
+
+/**
+ * Deserializes a string into a vector of a basic type.
+ * @param serialized The serialized string.
+ * @return The result data.
+ * @details If the size of the serialized string is not aligned to the size of the data type,
+ * the last element is omitted.
+ */
+template<typename T>
+inline std::vector<T> DeserializeBasicVector(std::string_view serialized) {
+  int64_t num_elems = serialized.size() / sizeof(T);
+  std::vector<T> values;
+  values.reserve(num_elems);
+  const char* ptr = serialized.data();
+  while (num_elems > 0) {
+    T value = 0;
+    std::memcpy(&value, ptr, sizeof(value));
+    values.push_back(value);
+    ptr += sizeof(value);
+    num_elems--;
+  }
+  return values;
+}
+
+/**
  * Wrapper of string_view of allocated memory.
  */
 class ScopedStringView {

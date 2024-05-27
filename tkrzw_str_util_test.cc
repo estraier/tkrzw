@@ -1135,6 +1135,70 @@ TEST(StrUtilTest, MakeStrMapFromViews) {
   EXPECT_EQ("jump", restored["three"]);
 }
 
+TEST(StrUtilTest, SerializeBasicValue) {
+  std::string serialized = tkrzw::SerializeBasicValue<int16_t>(-123);
+  EXPECT_EQ(sizeof(int16_t), serialized.size());
+  EXPECT_EQ(-123, tkrzw::DeserializeBasicValue<int16_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<uint16_t>(tkrzw::UINT16MAX - 3);
+  EXPECT_EQ(sizeof(uint16_t), serialized.size());
+  EXPECT_EQ(tkrzw::UINT16MAX - 3, tkrzw::DeserializeBasicValue<uint16_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<int32_t>(-123);
+  EXPECT_EQ(sizeof(int32_t), serialized.size());
+  EXPECT_EQ(-123, tkrzw::DeserializeBasicValue<int32_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<uint32_t>(tkrzw::UINT32MAX - 3);
+  EXPECT_EQ(sizeof(uint32_t), serialized.size());
+  EXPECT_EQ(tkrzw::UINT32MAX - 3, tkrzw::DeserializeBasicValue<uint32_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<int64_t>(-123);
+  EXPECT_EQ(sizeof(int64_t), serialized.size());
+  EXPECT_EQ(-123, tkrzw::DeserializeBasicValue<int64_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<uint64_t>(tkrzw::UINT64MAX - 3);
+  EXPECT_EQ(sizeof(uint64_t), serialized.size());
+  EXPECT_EQ(tkrzw::UINT64MAX - 3, tkrzw::DeserializeBasicValue<uint64_t>(serialized));
+  serialized = tkrzw::SerializeBasicValue<float>(-123.456f);
+  EXPECT_EQ(sizeof(float), serialized.size());
+  EXPECT_EQ(-123.456f, tkrzw::DeserializeBasicValue<float>(serialized));
+  serialized = tkrzw::SerializeBasicValue<double>(-123.456);
+  EXPECT_EQ(sizeof(double), serialized.size());
+  EXPECT_EQ(-123.456, tkrzw::DeserializeBasicValue<double>(serialized));
+  EXPECT_EQ(0, tkrzw::DeserializeBasicValue<int32_t>("abc"));
+}
+
+TEST(StrUtilTest, SerializeBasicVector) {
+  const std::vector<int16_t> vec_int16 = {tkrzw::INT16MIN + 3, tkrzw::INT16MAX - 3};
+  std::string serialized = tkrzw::SerializeBasicVector(vec_int16);
+  EXPECT_EQ(sizeof(int16_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<int16_t>(serialized), ElementsAreArray(vec_int16));
+  const std::vector<uint16_t> vec_uint16 = {3, tkrzw::UINT16MAX - 3};
+  serialized = tkrzw::SerializeBasicVector(vec_uint16);
+  EXPECT_EQ(sizeof(uint16_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<uint16_t>(serialized), ElementsAreArray(vec_uint16));
+  const std::vector<int32_t> vec_int32 = {tkrzw::INT32MIN + 3, tkrzw::INT32MAX - 3};
+  serialized = tkrzw::SerializeBasicVector(vec_int32);
+  EXPECT_EQ(sizeof(int32_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<int32_t>(serialized), ElementsAreArray(vec_int32));
+  const std::vector<uint32_t> vec_uint32 = {3, tkrzw::UINT32MAX - 3};
+  serialized = tkrzw::SerializeBasicVector(vec_uint32);
+  EXPECT_EQ(sizeof(uint32_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<uint32_t>(serialized), ElementsAreArray(vec_uint32));
+  const std::vector<int64_t> vec_int64 = {tkrzw::INT64MIN + 3, tkrzw::INT64MAX - 3};
+  serialized = tkrzw::SerializeBasicVector(vec_int64);
+  EXPECT_EQ(sizeof(int64_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<int64_t>(serialized), ElementsAreArray(vec_int64));
+  const std::vector<uint64_t> vec_uint64 = {3, tkrzw::UINT64MAX - 3};
+  serialized = tkrzw::SerializeBasicVector(vec_uint64);
+  EXPECT_EQ(sizeof(uint64_t) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<uint64_t>(serialized), ElementsAreArray(vec_uint64));
+  const std::vector<float> vec_float = {123.456f, -123.456f};
+  serialized = tkrzw::SerializeBasicVector(vec_float);
+  EXPECT_EQ(sizeof(float) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<float>(serialized), ElementsAreArray(vec_float));
+  const std::vector<double> vec_double = {123.456, -123.456};
+  serialized = tkrzw::SerializeBasicVector(vec_double);
+  EXPECT_EQ(sizeof(double) * 2, serialized.size());
+  EXPECT_THAT(tkrzw::DeserializeBasicVector<double>(serialized), ElementsAreArray(vec_double));
+  EXPECT_EQ(0, tkrzw::DeserializeBasicVector<int32_t>("abc").size());
+}
+
 TEST(StrUtilTest, ScopedStringView) {
   {
     char* buf = static_cast<char*>(tkrzw::xmalloc(5));

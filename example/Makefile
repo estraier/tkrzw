@@ -17,6 +17,7 @@ MYBINS = helloworld accesscounter transfer ulogrestore \
   cachedbm_ex1 \
   stdtreedbm_ex1 stdtreedbm_ex2 \
   polydbm_ex1 sharddbm_ex1 asyncdbm_ex1 \
+  struct_ex1 \
   fileindex_ex1 memindex_ex1 stdindex_ex1 polyindex_ex1 \
   invindex_ex1 \
   langc_ex1 langc_ex2 langc_ex3
@@ -134,6 +135,9 @@ sharddbm_ex1 : sharddbm_ex1.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 asyncdbm_ex1 : asyncdbm_ex1.o
+	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+struct_ex1 : struct_ex1.o
 	$(LDENV) $(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 fileindex_ex1 : fileindex_ex1.o

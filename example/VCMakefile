@@ -18,6 +18,7 @@ COMMANDFILES = helloworld.exe accesscounter.exe transfer.exe \
   cachedbm_ex1.exe \
   stdtreedbm_ex1.exe stdtreedbm_ex2.exe \
   polydbm_ex1.exe sharddbm_ex1.exe asyncdbm_ex1.exe \
+  struct_ex1.exe \
   fileindex_ex1.exe stdindex_ex1.exe polyindex_ex1 \
   invindex_ex1.exe \
   langc_ex1.exe langc_ex2.exe langc_ex3.exe
@@ -118,6 +119,9 @@ sharddbm_ex1.exe : sharddbm_ex1.obj
 
 asyncdbm_ex1.exe : asyncdbm_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ asyncdbm_ex1.obj tkrzw.lib
+
+struct_ex1.exe : struct_ex1.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ struct_ex1.obj tkrzw.lib
 
 fileindex_ex1.exe : fileindex_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ fileindex_ex1.obj tkrzw.lib
