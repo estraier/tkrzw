@@ -161,7 +161,7 @@ double tkrzw_get_wall_time() {
   try {
     return GetWallTime();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -170,7 +170,7 @@ int64_t tkrzw_get_memory_capacity() {
   try {
     return GetMemoryCapacity();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -179,7 +179,7 @@ int64_t tkrzw_get_memory_usage() {
   try {
     return GetMemoryUsage();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -192,7 +192,7 @@ uint64_t tkrzw_primary_hash(const char* data_ptr, int32_t data_size, uint64_t nu
     }
     return PrimaryHash(std::string_view(data_ptr, data_size), num_buckets);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -205,7 +205,7 @@ uint64_t tkrzw_secondary_hash(const char* data_ptr, int32_t data_size, uint64_t 
     }
     return SecondaryHash(std::string_view(data_ptr, data_size), num_shards);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -218,7 +218,7 @@ void tkrzw_free_str_array(TkrzwStr* array, int32_t size) {
     }
     xfree(array);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -230,7 +230,7 @@ void tkrzw_free_str_map(TkrzwKeyValuePair* array, int32_t size) {
     }
     xfree(array);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -249,7 +249,7 @@ TkrzwKeyValuePair* tkrzw_search_str_map(TkrzwKeyValuePair* array, int32_t size,
     }
     return nullptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -259,7 +259,7 @@ int32_t tkrzw_str_search_regex(const char* text, const char* pattern) {
   try {
     return StrSearchRegex(text, pattern);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -272,7 +272,7 @@ char* tkrzw_str_replace_regex(const char* text, const char* pattern, const char*
     std::memcpy(result, processed.c_str(), processed.size() + 1);
     return result;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -287,7 +287,7 @@ int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf) {
     }
     return EditDistanceLev(std::string_view(a), std::string_view(b));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -306,7 +306,7 @@ char* tkrzw_str_escape_c(const char* ptr, int32_t size, bool esc_nonasc, int32_t
     }
     return res_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -325,7 +325,7 @@ char* tkrzw_str_unescape_c(const char* ptr, int32_t size, int32_t* res_size) {
     }
     return res_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -344,7 +344,7 @@ char* tkrzw_str_append(char* modified, const char* appended) {
     std::memcpy(modified + orig_size, appended, append_size + 1);
     return modified;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -355,7 +355,7 @@ void tkrzw_future_free(TkrzwFuture* future) {
     StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
     delete xfuture;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -365,7 +365,7 @@ bool tkrzw_future_wait(TkrzwFuture* future, double timeout) {
     StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
     return xfuture->Wait(timeout);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -376,7 +376,7 @@ void tkrzw_future_get(TkrzwFuture* future) {
     StatusFuture* xfuture = reinterpret_cast<StatusFuture*>(future);
     last_status = xfuture->Get();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -393,7 +393,7 @@ char* tkrzw_future_get_str(TkrzwFuture* future, int32_t* size) {
     }
     return value_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -417,7 +417,7 @@ TkrzwKeyValuePair* tkrzw_future_get_str_pair(TkrzwFuture* future) {
     elem->value_size = record.second.size();
     return elem;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -440,7 +440,7 @@ TkrzwStr* tkrzw_future_get_str_array(TkrzwFuture* future, int32_t* num_elems) {
     *num_elems = result.second.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -469,7 +469,7 @@ TkrzwKeyValuePair* tkrzw_future_get_str_map(TkrzwFuture* future, int32_t* num_el
     *num_elems = num_recs;
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -482,7 +482,7 @@ int64_t tkrzw_future_get_int(TkrzwFuture* future) {
     last_status = result.first;
     return result.second;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -526,7 +526,7 @@ TkrzwDBM* tkrzw_dbm_open(const char* path, bool writable, const char* params) {
     }
     return reinterpret_cast<TkrzwDBM*>(dbm);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -540,7 +540,7 @@ bool tkrzw_dbm_close(TkrzwDBM* dbm) {
     delete xdbm;
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -560,7 +560,7 @@ bool tkrzw_dbm_process(
     last_status = xdbm->Process(std::string_view(key_ptr, key_size), &xproc, writable);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -575,7 +575,7 @@ bool tkrzw_dbm_check(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
     last_status = xdbm->Get(std::string_view(key_ptr, key_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -599,7 +599,7 @@ char* tkrzw_dbm_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size, int32_
     }
     return value_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -636,7 +636,7 @@ TkrzwKeyValuePair* tkrzw_dbm_get_multi(
     *num_matched = records.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -657,7 +657,7 @@ bool tkrzw_dbm_set(
         std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size), overwrite);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -720,7 +720,7 @@ char* tkrzw_dbm_set_and_get(
     }
     return old_value_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -743,7 +743,7 @@ bool tkrzw_dbm_set_multi(
     last_status = xdbm->SetMulti(xrecords, overwrite);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -758,7 +758,7 @@ bool tkrzw_dbm_remove(TkrzwDBM* dbm, const char* key_ptr, int32_t key_size) {
     last_status = xdbm->Remove(std::string_view(key_ptr, key_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -806,7 +806,7 @@ char* tkrzw_dbm_remove_and_get(TkrzwDBM* dbm, const char* key_ptr, int32_t key_s
     }
     return old_value_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -825,7 +825,7 @@ bool tkrzw_dbm_remove_multi(TkrzwDBM* dbm, const TkrzwStr* keys, int32_t num_key
     last_status = xdbm->RemoveMulti(xkeys);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -851,7 +851,7 @@ bool tkrzw_dbm_append(
         std::string_view(delim_ptr, delim_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -878,7 +878,7 @@ bool tkrzw_dbm_append_multi(
     last_status = xdbm->AppendMulti(xrecords, std::string_view(delim_ptr, delim_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -908,7 +908,7 @@ bool tkrzw_dbm_compare_exchange(
         std::string_view(desired_ptr, desired_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -948,7 +948,7 @@ char* tkrzw_dbm_compare_exchange_and_get(
     }
     return actual_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -970,7 +970,7 @@ int64_t tkrzw_dbm_increment(
     }
     return current;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -996,7 +996,7 @@ bool tkrzw_dbm_process_multi(
     last_status = xdbm->ProcessMulti(xkey_proc_pairs, writable);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1038,7 +1038,7 @@ bool tkrzw_dbm_compare_exchange_multi(
     last_status = xdbm->CompareExchangeMulti(expected_vec, desired_vec);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1059,7 +1059,7 @@ bool tkrzw_dbm_rekey(
                               std::string_view(new_key_ptr, new_key_size), overwrite, copying);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1075,7 +1075,7 @@ bool tkrzw_dbm_process_first(
     last_status = xdbm->ProcessFirst(&xproc, writable);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1130,7 +1130,7 @@ bool tkrzw_dbm_pop_first(TkrzwDBM* dbm, char** key_ptr, int32_t* key_size,
     }
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1145,7 +1145,7 @@ bool tkrzw_dbm_push_last(TkrzwDBM* dbm, const char* value_ptr, int32_t value_siz
     last_status = xdbm->PushLast(std::string_view(value_ptr, value_size), wtime);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1161,7 +1161,7 @@ bool tkrzw_dbm_process_each(
     last_status = xdbm->ProcessEach(&xproc, writable);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1177,7 +1177,7 @@ int64_t tkrzw_dbm_count(TkrzwDBM* dbm) {
     }
     return count;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -1193,7 +1193,7 @@ int64_t tkrzw_dbm_get_file_size(TkrzwDBM* dbm) {
     }
     return file_size;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -1211,7 +1211,7 @@ char* tkrzw_dbm_get_file_path(TkrzwDBM* dbm) {
     std::memcpy(path_ptr, path.c_str(), path.size() + 1);
     return path_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1227,7 +1227,7 @@ double tkrzw_dbm_get_timestamp(TkrzwDBM* dbm) {
     }
     return timestamp;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -1239,7 +1239,7 @@ bool tkrzw_dbm_clear(TkrzwDBM* dbm) {
     last_status = xdbm->Clear();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1252,7 +1252,7 @@ bool tkrzw_dbm_rebuild(TkrzwDBM* dbm, const char* params) {
     last_status = xdbm->RebuildAdvanced(xparams);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1265,7 +1265,7 @@ bool tkrzw_dbm_should_be_rebuilt(TkrzwDBM* dbm) {
     last_status = xdbm->ShouldBeRebuilt(&tobe);
     return last_status == Status::SUCCESS && tobe;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1292,7 +1292,7 @@ bool tkrzw_dbm_synchronize(
     last_status = xdbm->SynchronizeAdvanced(hard, &xproc, xparams);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1304,7 +1304,7 @@ bool tkrzw_dbm_copy_file_data(TkrzwDBM* dbm, const char* dest_path, bool sync_ha
     last_status = xdbm->CopyFileData(dest_path, sync_hard);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1317,7 +1317,7 @@ bool tkrzw_dbm_export(TkrzwDBM* dbm, TkrzwDBM* dest_dbm) {
     last_status = xdbm->Export(dest_xdbm);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1330,7 +1330,7 @@ bool tkrzw_dbm_export_to_flat_records(TkrzwDBM* dbm, TkrzwFile* dest_file) {
     last_status = ExportDBMToFlatRecords(xdbm, xdest_file);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1343,7 +1343,7 @@ bool tkrzw_dbm_import_from_flat_records(TkrzwDBM* dbm, TkrzwFile* src_file) {
     last_status = ImportDBMFromFlatRecords(xdbm, xsrc_file);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1356,7 +1356,7 @@ bool tkrzw_dbm_export_keys_as_lines(TkrzwDBM* dbm, TkrzwFile* dest_file) {
     last_status = ExportDBMKeysAsLines(xdbm, xdest_file);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1384,7 +1384,7 @@ TkrzwKeyValuePair* tkrzw_dbm_inspect(TkrzwDBM* dbm, int32_t* num_records) {
     *num_records = records.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1395,7 +1395,7 @@ bool tkrzw_dbm_is_writable(TkrzwDBM* dbm) {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     return xdbm->IsWritable();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1406,7 +1406,7 @@ bool tkrzw_dbm_is_healthy(TkrzwDBM* dbm) {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     return xdbm->IsHealthy();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1417,7 +1417,7 @@ bool tkrzw_dbm_is_ordered(TkrzwDBM* dbm) {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     return xdbm->IsOrdered();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1450,7 +1450,7 @@ TkrzwStr* tkrzw_dbm_search(
     *num_matched = keys.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1461,7 +1461,7 @@ TkrzwDBMIter* tkrzw_dbm_make_iterator(TkrzwDBM* dbm) {
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     return reinterpret_cast<TkrzwDBMIter*>(xdbm->MakeIterator().release());
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1472,7 +1472,7 @@ void tkrzw_dbm_iter_free(TkrzwDBMIter* iter) {
     DBM::Iterator* xiter = reinterpret_cast<DBM::Iterator*>(iter);
     delete xiter;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -1483,7 +1483,7 @@ bool tkrzw_dbm_iter_first(TkrzwDBMIter* iter) {
     last_status = xiter->First();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1495,7 +1495,7 @@ bool tkrzw_dbm_iter_last(TkrzwDBMIter* iter) {
     last_status = xiter->Last();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1510,7 +1510,7 @@ bool tkrzw_dbm_iter_jump(TkrzwDBMIter* iter, const char* key_ptr, int32_t key_si
     last_status = xiter->Jump(std::string_view(key_ptr, key_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1526,7 +1526,7 @@ bool tkrzw_dbm_iter_jump_lower(TkrzwDBMIter* iter, const char* key_ptr, int32_t 
     last_status = xiter->JumpLower(std::string_view(key_ptr, key_size), inclusive);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1542,7 +1542,7 @@ bool tkrzw_dbm_iter_jump_upper(TkrzwDBMIter* iter, const char* key_ptr, int32_t 
     last_status = xiter->JumpUpper(std::string_view(key_ptr, key_size), inclusive);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1554,7 +1554,7 @@ bool tkrzw_dbm_iter_next(TkrzwDBMIter* iter) {
     last_status = xiter->Next();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1566,7 +1566,7 @@ bool tkrzw_dbm_iter_previous(TkrzwDBMIter* iter) {
     last_status = xiter->Previous();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1582,7 +1582,7 @@ bool tkrzw_dbm_iter_process(
     last_status = xiter->Process(&xproc, writable);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1638,7 +1638,7 @@ bool tkrzw_dbm_iter_get(
     }
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1659,7 +1659,7 @@ char* tkrzw_dbm_iter_get_key(TkrzwDBMIter* iter, int32_t* key_size) {
     }
     return key_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1680,7 +1680,7 @@ char* tkrzw_dbm_iter_get_value(TkrzwDBMIter* iter, int32_t* value_size) {
     }
     return value_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1695,7 +1695,7 @@ bool tkrzw_dbm_iter_set(TkrzwDBMIter* iter, const char* value_ptr, int32_t value
     last_status = xiter->Set(std::string_view(value_ptr, value_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1707,7 +1707,7 @@ bool tkrzw_dbm_iter_remove(TkrzwDBMIter* iter) {
     last_status = xiter->Remove();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1763,7 +1763,7 @@ bool tkrzw_dbm_iter_step(
     }
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1789,7 +1789,7 @@ bool tkrzw_dbm_restore_database(
     }
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -1801,7 +1801,7 @@ TkrzwAsyncDBM* tkrzw_async_dbm_new(TkrzwDBM* dbm, int32_t num_worker_threads) {
     AsyncDBM* xasync = new AsyncDBM(xdbm, num_worker_threads);
     return reinterpret_cast<TkrzwAsyncDBM*>(xasync);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1812,7 +1812,7 @@ void tkrzw_async_dbm_free(TkrzwAsyncDBM* async) {
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     delete xasync;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -1826,7 +1826,7 @@ TkrzwFuture* tkrzw_async_dbm_get(TkrzwAsyncDBM* async, const char* key_ptr, int3
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Get(
         std::string_view(key_ptr, key_size))));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1845,7 +1845,7 @@ TkrzwFuture* tkrzw_async_dbm_get_multi(
     }
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->GetMulti(xkeys)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1865,7 +1865,7 @@ TkrzwFuture* tkrzw_async_dbm_set(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Set(
         std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size), overwrite)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1888,7 +1888,7 @@ TkrzwFuture* tkrzw_async_dbm_set_multi(
     }
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->SetMulti(xrecords, overwrite)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1904,7 +1904,7 @@ TkrzwFuture* tkrzw_async_dbm_remove(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Remove(
         std::string_view(key_ptr, key_size))));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1923,7 +1923,7 @@ TkrzwFuture* tkrzw_async_dbm_remove_multi(
     }
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->RemoveMulti(xkeys)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1948,7 +1948,7 @@ TkrzwFuture* tkrzw_async_dbm_append(
         std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size),
         std::string_view(delim_ptr, delim_size))));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -1975,7 +1975,7 @@ TkrzwFuture* tkrzw_async_dbm_append_multi(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->AppendMulti(
         xrecords, std::string_view(delim_ptr, delim_size))));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2004,7 +2004,7 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange(
         std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
         std::string_view(desired_ptr, desired_size))));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2021,7 +2021,7 @@ TkrzwFuture* tkrzw_async_dbm_increment(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Increment(
         std::string_view(key_ptr, key_size), increment, initial)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2063,7 +2063,7 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->CompareExchangeMulti(expected_vec, desired_vec)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2084,7 +2084,7 @@ TkrzwFuture* tkrzw_async_dbm_rekey(
         std::string_view(old_key_ptr, old_key_size),
         std::string_view(new_key_ptr, new_key_size), overwrite, copying)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2095,7 +2095,7 @@ TkrzwFuture* tkrzw_async_dbm_pop_first(TkrzwAsyncDBM* async) {
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->PopFirst()));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2111,7 +2111,7 @@ TkrzwFuture* tkrzw_async_dbm_push_last(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->PushLast(
         std::string_view(value_ptr, value_size), wtime)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2122,7 +2122,7 @@ TkrzwFuture* tkrzw_async_dbm_clear(TkrzwAsyncDBM* async) {
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Clear()));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2134,7 +2134,7 @@ TkrzwFuture* tkrzw_async_dbm_rebuild(TkrzwAsyncDBM* async, const char* params) {
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Rebuild(xparams)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2148,7 +2148,7 @@ TkrzwFuture* tkrzw_async_dbm_synchronize(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->Synchronize(hard, nullptr, xparams)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2161,7 +2161,7 @@ TkrzwFuture* tkrzw_async_dbm_copy_file_data(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->CopyFileData(dest_path, sync_hard)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2173,7 +2173,7 @@ TkrzwFuture* tkrzw_async_dbm_export(TkrzwAsyncDBM* async, TkrzwDBM* dest_dbm) {
     PolyDBM* xdest_dbm = reinterpret_cast<PolyDBM*>(dest_dbm);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->Export(xdest_dbm)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2187,7 +2187,7 @@ TkrzwFuture* tkrzw_async_dbm_export_to_flat_records(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->ExportToFlatRecords(xdest_file)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2201,7 +2201,7 @@ TkrzwFuture* tkrzw_async_dbm_import_from_flat_records(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->ImportFromFlatRecords(xsrc_file)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2219,7 +2219,7 @@ TkrzwFuture* tkrzw_async_dbm_search(
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
         xasync->SearchModal(mode, std::string_view(pattern_ptr, pattern_size), capacity)));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2252,7 +2252,7 @@ TkrzwFile* tkrzw_file_open(const char* path, bool writable, const char* params) 
     }
     return reinterpret_cast<TkrzwFile*>(file);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2266,7 +2266,7 @@ bool tkrzw_file_close(TkrzwFile* file) {
     delete xfile;
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2278,7 +2278,7 @@ bool tkrzw_file_read(TkrzwFile* file, int64_t off, void* buf, size_t size) {
     last_status = xfile->Read(off, buf, size);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2290,7 +2290,7 @@ bool tkrzw_file_write(TkrzwFile* file, int64_t off, const void* buf, size_t size
     last_status = xfile->Write(off, buf, size);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2302,7 +2302,7 @@ bool tkrzw_file_append(TkrzwFile* file, const void* buf, size_t size, int64_t* o
     last_status = xfile->Append(buf, size, off);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2314,7 +2314,7 @@ bool tkrzw_file_truncate(TkrzwFile* file, int64_t size) {
     last_status = xfile->Truncate(size);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2326,7 +2326,7 @@ bool tkrzw_file_synchronize(TkrzwFile* file, bool hard, int64_t off, int64_t siz
     last_status = xfile->Synchronize(hard, off, size);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2339,7 +2339,7 @@ int64_t tkrzw_file_get_size(TkrzwFile* file) {
     last_status = xfile->GetSize(&size);
     return last_status == Status::SUCCESS ? size : -1;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return 0;
   }
 }
@@ -2357,7 +2357,7 @@ char* tkrzw_file_get_path(TkrzwFile* file) {
     std::memcpy(path_ptr, path.c_str(), path.size() + 1);
     return path_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2390,7 +2390,7 @@ TkrzwStr* tkrzw_file_search(
     *num_matched = lines.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2428,7 +2428,7 @@ TkrzwIndex* tkrzw_index_open(const char* path, bool writable, const char* params
     }
     return reinterpret_cast<TkrzwIndex*>(index);
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2442,7 +2442,7 @@ bool tkrzw_index_close(TkrzwIndex* index) {
     delete xindex;
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2462,7 +2462,7 @@ bool tkrzw_index_check(
     return xindex->Check(std::string_view(key_ptr, key_size),
                          std::string_view(value_ptr, value_size));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2488,7 +2488,7 @@ TkrzwStr* tkrzw_index_get_values(
     *num_elems = values.size();
     return array;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     TkrzwStr* array = static_cast<TkrzwStr*>(xmalloc(1));
     *num_elems = 0;
     return array;
@@ -2511,7 +2511,7 @@ bool tkrzw_index_add(
                               std::string_view(value_ptr, value_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2532,7 +2532,7 @@ bool tkrzw_index_remove(
                                  std::string_view(value_ptr, value_size));
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2543,7 +2543,7 @@ int32_t tkrzw_index_count(TkrzwIndex* index) {
     PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
     return xindex->Count();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return -1;
   }
 }
@@ -2557,7 +2557,7 @@ char* tkrzw_index_get_file_path(TkrzwIndex* index) {
     std::memcpy(path_ptr, path.c_str(), path.size() + 1);
     return path_ptr;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     char* path_ptr = reinterpret_cast<char*>(xmalloc(1));
     *path_ptr = '\0';
     return path_ptr;
@@ -2571,7 +2571,7 @@ bool tkrzw_index_clear(TkrzwIndex* index) {
     last_status = xindex->Clear();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2583,7 +2583,7 @@ bool tkrzw_index_rebuild(TkrzwIndex* index) {
     last_status = xindex->Rebuild();
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2595,7 +2595,7 @@ bool tkrzw_index_synchronize(TkrzwIndex* index, bool hard) {
     last_status = xindex->Synchronize(hard);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2606,7 +2606,7 @@ bool tkrzw_index_is_writable(TkrzwIndex* index) {
     PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
     return xindex->IsWritable();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
@@ -2617,7 +2617,7 @@ TkrzwIndexIter* tkrzw_index_make_iterator(TkrzwIndex* index) {
     PolyIndex* xindex = reinterpret_cast<PolyIndex*>(index);
     return reinterpret_cast<TkrzwIndexIter*>(xindex->MakeIterator().release());
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
   }
 }
@@ -2628,7 +2628,7 @@ void tkrzw_index_iter_free(TkrzwIndexIter* iter) {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     delete xiter;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2638,7 +2638,7 @@ void tkrzw_index_iter_first(TkrzwIndexIter* iter) {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     xiter->First();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2648,7 +2648,7 @@ void tkrzw_index_iter_last(TkrzwIndexIter* iter) {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     xiter->Last();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2665,7 +2665,7 @@ void tkrzw_index_iter_jump(TkrzwIndexIter* iter, const char* key_ptr, int32_t ke
     }
     xiter->Jump(std::string_view(key_ptr, key_size), std::string_view(value_ptr, value_size));
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2675,7 +2675,7 @@ void tkrzw_index_iter_next(TkrzwIndexIter* iter) {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     xiter->Next();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2685,7 +2685,7 @@ void tkrzw_index_iter_previous(TkrzwIndexIter* iter) {
     PolyIndex::Iterator* xiter = reinterpret_cast<PolyIndex::Iterator*>(iter);
     xiter->Previous();
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
   }
 }
 
@@ -2736,7 +2736,7 @@ bool tkrzw_index_iter_get(
     }
     return rv;
   } catch (const std::exception& e) {
-    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, nullptr);
+    tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return false;
   }
 }
