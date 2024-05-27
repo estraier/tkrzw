@@ -25,19 +25,19 @@ int main(int argc, char** argv) {
   HashDBM dbm;
 
   // Opens a new database.
-  dbm.Open("casket.tkh", true);
+  dbm.Open("casket.tkh", true, File::OPEN_TRUNCATE);
 
   // Makes a map representing structured data.
   std::map<std::string, std::string> record;
   record["name"] = "John Doe";
-  record["salary"] = tkrzw::SerializeBasicValue<uint32_t>(98765);
-  record["rating"] = tkrzw::SerializeBasicValue<double>(0.8);
+  record["id"] = SerializeBasicValue<int32_t>(98765);
+  record["rating"] = SerializeBasicValue<double>(0.8);
   std::vector<std::string> medals = {"gold", "silver", "bronze"};
-  record["medals"] = tkrzw::StrJoin(medals, std::string_view("\0", 1));
-  std::vector<int32_t> accounts = {123456, 654321};
-  record["lengths"] = tkrzw::SerializeBasicVector(accounts);
-  std::vector<double> temps = {-15.2, 0.32, 102.4};
-  record["temps"] = tkrzw::SerializeBasicVector(temps);
+  record["medals"] = SerializeStrVector(medals);
+  std::vector<int32_t> rivals = {123456, 654321};
+  record["rivals"] = SerializeBasicVector(rivals);
+  std::vector<double> scores = {48.9, 52.5, 60.3};
+  record["scores"] = SerializeBasicVector(scores);
 
   // Stores the serialized string.
   dbm.Set("john", SerializeStrMap(record));
@@ -50,17 +50,21 @@ int main(int argc, char** argv) {
   }
 
   // Shows the restored content.
-  std::cout << restored["name"] << std::endl;
-  std::cout << tkrzw::DeserializeBasicValue<uint32_t>(restored["salary"]) << std::endl;
-  std::cout << tkrzw::DeserializeBasicValue<double>(restored["rating"]) << std::endl;
-  for (const auto& value : tkrzw::StrSplit(restored["medals"], std::string_view("\0", 1))) {
-    std::cout << value << std::endl;
+  std::cout << "name: " << restored["name"] << std::endl;
+  std::cout << "id: " <<
+      DeserializeBasicValue<int32_t>(restored["id"]) << std::endl;
+  std::cout << "rating: " <<
+      DeserializeBasicValue<double>(restored["rating"]) << std::endl;
+  for (const auto& value : DeserializeStrVector(restored["medals"])) {
+    std::cout << "medals: " << value << std::endl;
   }
-  for (const auto& value : tkrzw::DeserializeBasicVector<int32_t>(restored["accounts"])) {
-    std::cout << value << std::endl;
+  for (const auto& value :
+           DeserializeBasicVector<int32_t>(restored["rivals"])) {
+    std::cout << "rivals: " << value << std::endl;
   }
-  for (const auto& value : tkrzw::DeserializeBasicVector<double>(restored["temps"])) {
-    std::cout << value << std::endl;
+  for (const auto& value :
+           DeserializeBasicVector<double>(restored["scores"])) {
+    std::cout << "scores: " << value << std::endl;
   }
   
   // Closes the database.

@@ -16,12 +16,15 @@
 #include <vector>
 #include "tkrzw_index.h"
 
+// All symbols of Tkrzw are under the namespace "tkrzw".
+using namespace tkrzw;
+
 // Main routine.
 int main(int argc, char** argv) {
   // Opens the database.
-  tkrzw::PolyIndex index;
+  PolyIndex index;
   const std::map<std::string, std::string> open_params = {{"num_buckets", "100"}};
-  index.Open("casket.tkt", true, tkrzw::File::OPEN_TRUNCATE, open_params).OrDie();
+  index.Open("casket.tkt", true, File::OPEN_TRUNCATE, open_params).OrDie();
 
   // Adds records to the index.
   // The key is a division name and the value is person name.
@@ -45,7 +48,7 @@ int main(int argc, char** argv) {
   }
 
   // Prints every record by iterator.
-  std::unique_ptr<tkrzw::PolyIndex::Iterator> iter = index.MakeIterator();
+  std::unique_ptr<PolyIndex::Iterator> iter = index.MakeIterator();
   iter->First();
   std::string key, value;
   while (iter->Get(&key, &value)) {
