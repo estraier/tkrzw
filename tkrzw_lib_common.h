@@ -221,6 +221,15 @@ void* xmallocaligned(size_t alignment, size_t size);
 void xfreealigned(void* ptr);
 
 /**
+ * Copies memory area by normalizing the byte order into the big endian.
+ * @param dest The memory area of the destination.  It must not be overlap with the source area.
+ * @param src The memory area of the source data.
+ * @param width The width of each memory area.
+ * @return the desination area.
+ */
+void* xmemcpybigendian(void* dest, const void* src, size_t width);
+
+/**
  * Checks whether a set has an element.
  * @param set The set to search.
  * @param elem The element to search for.

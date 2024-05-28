@@ -56,15 +56,15 @@ TEST(LibCommonTest, Constants) {
 }
 
 TEST(LibCommonTest, ByteOrder) {
-  const uint32_t num = 0xDEADBEAF;
+  const uint32_t num = 0xDEADBEEF;
   const uint8_t* const bytes = reinterpret_cast<const uint8_t*>(&num);
   if (tkrzw::IS_BIG_ENDIAN) {
     EXPECT_EQ(0xDE, bytes[0]);
     EXPECT_EQ(0xAD, bytes[1]);
     EXPECT_EQ(0xBE, bytes[2]);
-    EXPECT_EQ(0xAF, bytes[3]);
+    EXPECT_EQ(0xEF, bytes[3]);
   } else {
-    EXPECT_EQ(0xAF, bytes[0]);
+    EXPECT_EQ(0xEF, bytes[0]);
     EXPECT_EQ(0xBE, bytes[1]);
     EXPECT_EQ(0xAD, bytes[2]);
     EXPECT_EQ(0xDE, bytes[3]);
@@ -105,6 +105,21 @@ TEST(LibCommonTest, XMalloc) {
     std::memset(ptr, 0, size);
     tkrzw::xfreealigned(ptr);
   }
+}
+
+TEST(LibCommonTest, xmemcpybigendian) {
+  const uint16_t num16 = 0xDEAD;
+  char buf16[2];
+  EXPECT_EQ(buf16, tkrzw::xmemcpybigendian(buf16, &num16, 2));
+  EXPECT_EQ(std::string_view("\xDE\xAD", 2), std::string_view(buf16, 2));
+  const uint32_t num32 = 0xDEADBEEF;
+  char buf32[4];
+  EXPECT_EQ(buf32, tkrzw::xmemcpybigendian(buf32, &num32, 4));
+  EXPECT_EQ(std::string_view("\xDE\xAD\xBE\xEF", 4), std::string_view(buf32, 4));
+  const uint64_t num64 = 0xDEADBEEF01234567;
+  char buf64[8];
+  EXPECT_EQ(buf64, tkrzw::xmemcpybigendian(buf64, &num64, 8));
+  EXPECT_EQ(std::string_view("\xDE\xAD\xBE\xEF\x01\x23\x45\x67", 8), std::string_view(buf64, 8));
 }
 
 TEST(LibCommonTest, CheckSet) {

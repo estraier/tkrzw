@@ -92,6 +92,19 @@ void xfreealigned(void* ptr) {
 #endif
 }
 
+void* xmemcpybigendian(void* dest, const void* src, size_t width) {
+  if (_IS_BIG_ENDIAN) {
+    std::memcpy(dest, src, width);
+  } else {
+    char* wp = reinterpret_cast<char*>(dest);
+    const char* rp = reinterpret_cast<const char*>(src) + width - 1;
+    while (rp >= src) {
+      *(wp++) = *(rp--);
+    }
+  }
+  return dest;
+}
+
 int64_t GetProcessID() {
 #if defined(_SYS_WINDOWS_)
   return GetCurrentProcessId();

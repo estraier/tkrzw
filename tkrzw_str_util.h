@@ -865,7 +865,7 @@ template<typename T>
 inline std::string SerializeBasicValue(T value) {
   std::string serialized = std::string(sizeof(T), 0);
   char* ptr = serialized.data();
-  std::memcpy(ptr, &value, sizeof(value));
+  xmemcpybigendian(ptr, &value, sizeof(value));
   return serialized;
 }
 
@@ -880,7 +880,7 @@ template<typename T>
 inline T DeserializeBasicValue(std::string_view serialized) {
   T value;
   if (serialized.size() >= sizeof(T)) {
-    std::memcpy(&value, serialized.data(), sizeof(T));
+    xmemcpybigendian(&value, serialized.data(), sizeof(T));
   } else {
     std::memset(&value, 0, sizeof(T));
   }
@@ -900,7 +900,7 @@ inline std::string SerializeBasicVector(const std::vector<T>& values) {
   std::string serialized = std::string(sizeof(T) * values.size(), 0);
   char* ptr = serialized.data();
   for (const T value : values) {
-    std::memcpy(ptr, &value, sizeof(value));
+    xmemcpybigendian(ptr, &value, sizeof(value));
     ptr += sizeof(value);
   }
   return serialized;
@@ -921,7 +921,7 @@ inline std::vector<T> DeserializeBasicVector(std::string_view serialized) {
   const char* ptr = serialized.data();
   while (num_elems > 0) {
     T value = 0;
-    std::memcpy(&value, ptr, sizeof(value));
+    xmemcpybigendian(&value, ptr, sizeof(value));
     values.push_back(value);
     ptr += sizeof(value);
     num_elems--;

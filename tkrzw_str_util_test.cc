@@ -1161,6 +1161,8 @@ TEST(StrUtilTest, SerializeBasicValue) {
   EXPECT_EQ(sizeof(double), serialized.size());
   EXPECT_EQ(-123.456, tkrzw::DeserializeBasicValue<double>(serialized));
   EXPECT_EQ(0, tkrzw::DeserializeBasicValue<int32_t>("abc"));
+  EXPECT_EQ(std::string_view("\xDE\xAD\xBE\xEF\x01\x23\x45\x67", 8),
+            tkrzw::SerializeBasicValue<uint64_t>(0xDEADBEEF01234567));
 }
 
 TEST(StrUtilTest, SerializeBasicVector) {
@@ -1197,6 +1199,9 @@ TEST(StrUtilTest, SerializeBasicVector) {
   EXPECT_EQ(sizeof(double) * 2, serialized.size());
   EXPECT_THAT(tkrzw::DeserializeBasicVector<double>(serialized), ElementsAreArray(vec_double));
   EXPECT_EQ(0, tkrzw::DeserializeBasicVector<int32_t>("abc").size());
+  const std::vector<uint64_t> vec_deadbeef = {0xDEADBEEF01234567};
+  EXPECT_EQ(std::string_view("\xDE\xAD\xBE\xEF\x01\x23\x45\x67", 8),
+            tkrzw::SerializeBasicVector(vec_deadbeef));
 }
 
 TEST(StrUtilTest, ScopedStringView) {
