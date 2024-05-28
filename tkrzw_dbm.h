@@ -1518,7 +1518,8 @@ class DBM {
    */
   virtual Status PushLast(std::string_view value, double wtime = -1, std::string* key = nullptr) {
     for (uint64_t seq = 0; true; seq++) {
-      const uint64_t timestamp = int64_t((wtime < 0 ? GetWallTime() : wtime) * 100000000 + seq);
+      const uint64_t timestamp =
+          static_cast<int64_t>((wtime < 0 ? GetWallTime() : wtime) * 100000000 + seq);
       const std::string& time_key = IntToStrBigEndian(timestamp);
       const Status status = Set(time_key, value, false);
       if (status != Status::DUPLICATION_ERROR) {

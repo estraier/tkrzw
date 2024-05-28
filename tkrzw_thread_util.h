@@ -1496,7 +1496,7 @@ inline void TaskQueue::Start(int32_t num_worker_threads) {
               } else {
                 task = queue_.front();
                 queue_.pop();
-                num_tasks_.store(int32_t(queue_.size()));
+                num_tasks_.store(static_cast<int32_t>(queue_.size()));
               }
             }
             if (task != nullptr) {
@@ -1533,7 +1533,7 @@ inline void TaskQueue::Add(std::unique_ptr<Task> task) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     queue_.push(std::move(task));
-    num_tasks_.store(int32_t(queue_.size()));
+    num_tasks_.store(static_cast<int32_t>(queue_.size()));
   }
   cond_.notify_one();
 }
