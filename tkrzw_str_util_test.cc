@@ -1160,6 +1160,9 @@ TEST(StrUtilTest, SerializeBasicValue) {
   serialized = tkrzw::SerializeBasicValue<double>(-123.456);
   EXPECT_EQ(sizeof(double), serialized.size());
   EXPECT_EQ(-123.456, tkrzw::DeserializeBasicValue<double>(serialized));
+  serialized = tkrzw::SerializeBasicValue<long double>(-123.456);
+  EXPECT_EQ(sizeof(long double), serialized.size());
+  EXPECT_EQ(-123.456, tkrzw::DeserializeBasicValue<long double>(serialized));
   EXPECT_EQ(0, tkrzw::DeserializeBasicValue<int32_t>("abc"));
   EXPECT_EQ(std::string_view("\xDE\xAD\xBE\xEF\x01\x23\x45\x67", 8),
             tkrzw::SerializeBasicValue<uint64_t>(0xDEADBEEF01234567));
