@@ -112,6 +112,21 @@ TEST(StrUtilTest, StrToIntHex) {
   EXPECT_EQ(0xFF, tkrzw::StrToIntHex(std::string("hoge"), 0xFF));
 }
 
+TEST(StrUtilTest, StrToDouble) {
+  EXPECT_DOUBLE_EQ(0.0, tkrzw::StrToDouble(""));
+  EXPECT_DOUBLE_EQ(1.0, tkrzw::StrToDouble("1"));
+  EXPECT_DOUBLE_EQ(23.4, tkrzw::StrToDouble("23.4"));
+  EXPECT_DOUBLE_EQ(-56.7, tkrzw::StrToDouble("-56.7"));
+  EXPECT_DOUBLE_EQ(-0.125, tkrzw::StrToDouble(" - .125 "));
+  EXPECT_TRUE(std::isinf(tkrzw::StrToDouble("inf")));
+  EXPECT_TRUE(std::isnan(tkrzw::StrToDouble("nan")));
+  EXPECT_DOUBLE_EQ(500.0, tkrzw::StrToDouble("5e2"));
+  EXPECT_DOUBLE_EQ(0.05, tkrzw::StrToDouble("5e-2"));
+  EXPECT_DOUBLE_EQ(-123.0, tkrzw::StrToDouble("hoge", -123.0));
+  EXPECT_DOUBLE_EQ(1.25, tkrzw::StrToDouble(std::string("1.25")));
+  EXPECT_DOUBLE_EQ(-123.0, tkrzw::StrToDouble(std::string("hoge"), -123.0));
+}
+
 TEST(StrUtilTest, StrToIntBigEndian) {
   EXPECT_EQ(0x0, tkrzw::StrToIntBigEndian(std::string_view("", 0)));
   EXPECT_EQ(0x00, tkrzw::StrToIntBigEndian(std::string_view("\x00", 1)));
@@ -127,19 +142,20 @@ TEST(StrUtilTest, StrToIntBigEndian) {
       std::string_view("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8)));
 }
 
-TEST(StrUtilTest, StrToDouble) {
-  EXPECT_DOUBLE_EQ(0.0, tkrzw::StrToDouble(""));
-  EXPECT_DOUBLE_EQ(1.0, tkrzw::StrToDouble("1"));
-  EXPECT_DOUBLE_EQ(23.4, tkrzw::StrToDouble("23.4"));
-  EXPECT_DOUBLE_EQ(-56.7, tkrzw::StrToDouble("-56.7"));
-  EXPECT_DOUBLE_EQ(-0.125, tkrzw::StrToDouble(" - .125 "));
-  EXPECT_TRUE(std::isinf(tkrzw::StrToDouble("inf")));
-  EXPECT_TRUE(std::isnan(tkrzw::StrToDouble("nan")));
-  EXPECT_DOUBLE_EQ(500.0, tkrzw::StrToDouble("5e2"));
-  EXPECT_DOUBLE_EQ(0.05, tkrzw::StrToDouble("5e-2"));
-  EXPECT_DOUBLE_EQ(-123.0, tkrzw::StrToDouble("hoge", -123.0));
-  EXPECT_DOUBLE_EQ(1.25, tkrzw::StrToDouble(std::string("1.25")));
-  EXPECT_DOUBLE_EQ(-123.0, tkrzw::StrToDouble(std::string("hoge"), -123.0));
+TEST(StrUtilTest, StrToFloatBigEndian) {
+  EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(std::string_view("", 0)));
+  EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(
+      std::string_view("\x00\x00\x00\x00", 4)));
+  EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(
+      std::string_view("\x00\x00\x00\x00\x00\x00\x00\x00", 8)));
+  EXPECT_EQ(1, tkrzw::StrToFloatBigEndian(
+      std::string_view("\x3F\x80\x00\x00", 4)));
+  EXPECT_EQ(1, tkrzw::StrToFloatBigEndian(
+      std::string_view("\x3F\xF0\x00\x00\x00\x00\x00\x00", 8)));
+  EXPECT_EQ(tkrzw::INT16MIN * 0.75f, tkrzw::StrToFloatBigEndian(
+      std::string_view("\xC6\xC0\x00\x00", 4)));
+  EXPECT_EQ(tkrzw::INT32MIN * 0.75, tkrzw::StrToFloatBigEndian(
+      std::string_view("\xC1\xD8\x00\x00\x00\x00\x00\x00", 8)));
 }
 
 TEST(StrUtilTest, StrToBool) {
@@ -253,6 +269,25 @@ TEST(StrUtilTest, IntToStrBigEndian) {
             tkrzw::IntToStrBigEndian(0xABCD12345678ABCD));
   EXPECT_EQ(std::string("\x12", 1), tkrzw::IntToStrBigEndian(0x12, 1));
   EXPECT_EQ("", tkrzw::IntToStrBigEndian(0x12, 0));
+}
+
+TEST(StrUtilTest, FloatToStrBigEndian) {
+  EXPECT_EQ(std::string(sizeof(double), 0),
+            tkrzw::FloatToStrBigEndian(0));
+  EXPECT_EQ(std::string(sizeof(float), 0),
+            tkrzw::FloatToStrBigEndian(0, sizeof(float)));
+  EXPECT_EQ(std::string(sizeof(double), 0),
+            tkrzw::FloatToStrBigEndian(0, sizeof(double)));
+  EXPECT_EQ(sizeof(long double),
+            tkrzw::FloatToStrBigEndian(0, sizeof(long double)).size());
+  EXPECT_EQ(std::string("\x3F\x80\x00\x00", 4),
+            tkrzw::FloatToStrBigEndian(1, 4));
+  EXPECT_EQ(std::string("\x3F\xF0\x00\x00\x00\x00\x00\x00", 8),
+            tkrzw::FloatToStrBigEndian(1, 8));
+  EXPECT_EQ(std::string("\xC6\xC0\x00\x00", 4),
+            tkrzw::FloatToStrBigEndian(tkrzw::INT16MIN * 0.75f, 4));
+  EXPECT_EQ(std::string("\xC1\xD8\x00\x00\x00\x00\x00\x00", 8),
+            tkrzw::FloatToStrBigEndian(tkrzw::INT32MIN * 0.75, 8));
 }
 
 TEST(StrUtilTest, StrJoin) {

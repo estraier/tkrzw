@@ -59,19 +59,27 @@ uint64_t StrToIntOct(std::string_view str, uint64_t defval = 0);
 uint64_t StrToIntHex(std::string_view str, uint64_t defval = 0);
 
 /**
- * Converts a big-endian binary string to an integer.
- * @param str The big endian binary string.
- * @return The converted integer.
- */
-uint64_t StrToIntBigEndian(std::string_view str);
-
-/**
  * Converts a decimal string to a real number.
  * @param str The decimal string.
  * @param defval The default value to be returned on failure.
  * @return The converted real number.
  */
 double StrToDouble(std::string_view str, double defval = 0.0);
+
+/**
+ * Converts a big-endian binary string to an integer.
+ * @param str The big endian binary string of up to 8-byte.
+ * @return The converted integer.
+ */
+uint64_t StrToIntBigEndian(std::string_view str);
+
+/**
+ * Converts a big-endian binary string to a real number.
+ * @param str The big endian binary string of 4-byte (float), 8-byte (double), or larger
+ * (long double).
+ * @return The converted real number.
+ */
+long double StrToFloatBigEndian(std::string_view str);
 
 /**
  * Converts a boolean string to a boolean value.
@@ -203,6 +211,14 @@ inline std::string ToString(const std::string& data) {
  * @return The converted string.
  */
 std::string IntToStrBigEndian(uint64_t data, size_t size = sizeof(uint64_t));
+
+/**
+ * Converts a floating-point number into a big-endian binary string.
+ * @param data The floating-point number to convert.
+ * @param size The size of the converted string.
+ * @return The converted string.
+ */
+std::string FloatToStrBigEndian(long double data, size_t size = sizeof(double));
 
 /**
  * Converts each record of a container into strings and join them.

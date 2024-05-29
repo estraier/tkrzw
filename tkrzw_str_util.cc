@@ -248,14 +248,6 @@ uint64_t StrToIntHex(std::string_view str, uint64_t defval) {
   return num;
 }
 
-uint64_t StrToIntBigEndian(std::string_view str) {
-  if (str.empty()) {
-    return 0;
-  }
-  const size_t size = std::min(str.size(), sizeof(uint64_t));
-  return ReadFixNum(str.data(), size);
-}
-
 double StrToDouble(std::string_view str, double defval) {
   const unsigned char* rp = reinterpret_cast<const unsigned char*>(str.data());
   const unsigned char* ep = rp + str.size();
@@ -317,6 +309,33 @@ double StrToDouble(std::string_view str, double defval) {
     num *= std::pow((long double)10, (long double)StrToInt(pow_expr));
   }
   return num * sign;
+}
+
+uint64_t StrToIntBigEndian(std::string_view str) {
+  if (str.empty()) {
+    return 0;
+  }
+  const size_t size = std::min(str.size(), sizeof(uint64_t));
+  return ReadFixNum(str.data(), size);
+}
+
+long double StrToFloatBigEndian(std::string_view str) {
+  if (str.size() >= sizeof(long double)) {
+    long double num = 0;
+    xmemcpybigendian(&num, str.data(), sizeof(num));
+    return num;
+  }
+  if (str.size() >= sizeof(double)) {
+    double num = 0;
+    xmemcpybigendian(&num, str.data(), sizeof(num));
+    return num;
+  }
+  if (str.size() >= sizeof(float)) {
+    float num = 0;
+    xmemcpybigendian(&num, str.data(), sizeof(num));
+    return num;
+  }
+  return 0;
 }
 
 void VSPrintF(std::string* dest, const char* format, va_list ap) {
@@ -470,6 +489,28 @@ std::string IntToStrBigEndian(uint64_t data, size_t size) {
   std::string str(size, 0);
   WriteFixNum(const_cast<char*>(str.data()), data, size);
   return str;
+}
+
+std::string FloatToStrBigEndian(long double data, size_t size) {
+  if (size >= sizeof(long double)) {
+    std::string str(size, 0);
+    long double num = static_cast<double>(data);
+    xmemcpybigendian(const_cast<char*>(str.data()), &data, sizeof(num));
+    return str;
+  }
+  if (size >= sizeof(double)) {
+    std::string str(size, 0);
+    double num = static_cast<double>(data);
+    xmemcpybigendian(const_cast<char*>(str.data()), &num, sizeof(num));
+    return str;
+  }
+  if (size >= sizeof(float)) {
+    std::string str(size, 0);
+    float num = static_cast<float>(data);
+    xmemcpybigendian(const_cast<char*>(str.data()), &num, sizeof(num));
+    return str;
+  }
+  return 0;
 }
 
 std::vector<std::string> StrSplit(std::string_view str, char delim, bool skip_empty) {
