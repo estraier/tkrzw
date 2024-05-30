@@ -3390,7 +3390,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <h3 id="tips_treedbm_comparators">Comparators of TreeDBM</h3>
 
-<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing a number as a big-endian binary is a good idea because the default comparator sorts them properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
+<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  The following built-in comparator can be specified via the tuning parameters.</p>
 
 <ul>
 <li><code>LexicalKeyComparator</code> : Compares keys as strings in lexicographical order.</li>
@@ -3401,9 +3401,61 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <li><code>FloatBigEndianKeyComparator</code> : Compares keys as big-endian binaries of floating-point numbers.</li>
 </ul>
 
-<p>You can implement your own comparator.  In that case, you must specify it every time when you open the database.</p>
+<p>You can implement your own comparator whose signature is "int32_t (*)(std::string_view, std::string_view)" aka. KeyComparator.  In that case, you must specify it as "param.key_comparator" every time when you open the database.</p>
 
-<p>To convert an integer into a big-endian binary, use IntToStrBigEndian.  To restore a big-endian binary into an integer, use StrToIntBigEndian.  To convert a floating-point number into a big-endian binary, use FloatToStrBigEndian.  To restore a big-endian binary into a floating-point number, use StrToFloatBigEndian.</p>
+<p>If you use integers as keys, the most covenient way is to set DecimalKeyComparator as the comparator and convert keys into decimal integer strings by SPrintF or ToString.  To restore an integer from a decimal string, use StrToInt or std::atoi.</p>
+
+<pre><code class="language-cpp"><![CDATA[TreeDBM::TuningParameters params;
+params.key_comparator = DecimalKeyComparator;
+dbm.OpenAdvanced(..., params);
+dbm.Set(ToString(123), "foobarbaz");
+cout << dbm.GetSimple(ToString(123)) << endl;
+...
+if (iter.Get(&key).IsOK()) {
+  cout << StrToInt(key) << endl;
+}
+]]></code></pre>
+
+<p>If keys of integers are large numbers and you pursue space efficiency, representing keys as big-endian binary is a good idea.  The default comparator sorts them properly.  To convert keys, use IntToStrBigEndian.  When you restore a big-endian binary into an integer, use StrToIntBigEndian.</p>
+
+<pre><code class="language-cpp"><![CDATA[dbm.Open(...);
+dbm.Set(IntToStrBigEndian(123), "foobarbaz");
+cout << dbm.GetSimple(IntToStrBigEndian(123)) << endl;
+...
+if (iter.Get(&key).IsOK()) {
+  cout << StrToIntBigEndian(key) << endl;
+}
+]]></code></pre>
+
+<p>If you use real numbers as keys, the most covenient way is to set RealNumberKeyComparator as the comparator and convert keys into decimal real number strings by SPrintF or ToString.  To restore a real number from a decimal string, use StrToDouble or std::atof.</p>
+
+<pre><code class="language-cpp"><![CDATA[TreeDBM::TuningParameters params;
+params.key_comparator = RealNumberKeyComparator;
+dbm.OpenAdvanced(..., params);
+...
+dbm.Set(SPrintF("%.3f", 123.456), "foobarbaz");
+cout << dbm.GetSimple(SPrintF("%.3f", 123.456)) << endl;
+...
+if (iter.Get(&key).IsOK()) {
+  cout << StrToDouble(key) << endl;
+}
+]]></code></pre>
+
+<p>If keys of real numbers are large numbers or has long fractional parts and you pursue space efficiency, representing keys as big-endian binary is a good idea.  Set FloatBigEndianKeyComparator as the comparator and use FloatToStrBigEndian to conver keys.  When you restore a big-endian binary into an integer, use StrToFloatBigEndian.</p>
+
+<pre><code class="language-cpp"><![CDATA[
+
+TreeDBM::TuningParameters params;
+params.key_comparator = FloatBigEndianKeyComparatorKeyComparator;
+dbm.OpenAdvanced(..., params);
+...
+dbm.Set(FloatToStrBigEndian(123.456), "foobarbaz");
+cout << dbm.GetSimple(FloatToStrBigEndian(123.456)) << endl;
+...
+if (iter.Get(&key).IsOK()) {
+  cout << StrToFloatBigEndian(key) << endl;
+}
+]]></code></pre>
 
 <p>By the way, databases other than the file skip database don't support duplicated keys.  That's because duplicated keys deteriorate time and space efficiency.  If you have to handle duplicated keys, build a skip database first and merge duplicated records.  Then, you can convert it to another type of database.</p>
 
