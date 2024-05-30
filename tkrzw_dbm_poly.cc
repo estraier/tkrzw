@@ -107,6 +107,9 @@ static KeyComparator GetKeyComparatorByName(const std::string& comp_name) {
   if (lower_name == "realnumberkeycomparator" || lower_name == "realnumber") {
     return RealNumberKeyComparator;
   }
+  if (lower_name == "floatbigendiankeycomparator" || lower_name == "floatbigendian") {
+    return FloatBigEndianKeyComparator;
+  }
   if (lower_name == "pairlexicalkeycomparator" || lower_name == "pairlexical") {
     return PairLexicalKeyComparator;
   }
@@ -121,6 +124,9 @@ static KeyComparator GetKeyComparatorByName(const std::string& comp_name) {
   }
   if (lower_name == "pairrealnumberkeycomparator" || lower_name == "pairrealnumber") {
     return PairRealNumberKeyComparator;
+  }
+  if (lower_name == "pairfloatbigendiankeycomparator" || lower_name == "pairfloatbigendian") {
+    return PairFloatBigEndianKeyComparator;
   }
   return nullptr;
 }

@@ -143,7 +143,7 @@ TEST(StrUtilTest, StrToIntBigEndian) {
 }
 
 TEST(StrUtilTest, StrToFloatBigEndian) {
-  EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(std::string_view("", 0)));
+  EXPECT_TRUE(std::isnan(tkrzw::StrToFloatBigEndian(std::string_view("", 0))));
   EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(
       std::string_view("\x00\x00\x00\x00", 4)));
   EXPECT_EQ(0x0, tkrzw::StrToFloatBigEndian(

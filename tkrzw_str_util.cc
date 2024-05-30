@@ -335,7 +335,7 @@ long double StrToFloatBigEndian(std::string_view str) {
     xmemcpybigendian(&num, str.data(), sizeof(num));
     return num;
   }
-  return 0;
+  return DOUBLENAN;
 }
 
 void VSPrintF(std::string* dest, const char* format, va_list ap) {

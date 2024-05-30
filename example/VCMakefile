@@ -11,7 +11,7 @@ TKRZWLIBPATH = C:\Program Files\tkrzw\lib
 
 COMMANDFILES = helloworld.exe accesscounter.exe transfer.exe \
   hashdbm_ex1.exe hashdbm_ex2.exe hashdbm_ex3.exe \
-  treedbm_ex1.exe treedbm_ex2.exe treedbm_ex3.exe \
+  treedbm_ex1.exe treedbm_ex2.exe treedbm_ex3.exe treedbm_ex4.exe \
   skipdbm_ex1.exe skipdbm_ex2.exe skipdbm_ex3.exe \
   tinydbm_ex1.exe tinydbm_ex2.exe \
   babydbm_ex1.exe babydbm_ex2.exe \
@@ -80,6 +80,9 @@ treedbm_ex2.exe : treedbm_ex2.obj
 
 treedbm_ex3.exe : treedbm_ex3.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ treedbm_ex3.obj tkrzw.lib
+
+treedbm_ex4.exe : treedbm_ex4.obj
+	$(LINK) $(LINKFLAGS) /OUT:$@ treedbm_ex4.obj tkrzw.lib
 
 skipdbm_ex1.exe : skipdbm_ex1.obj
 	$(LINK) $(LINKFLAGS) /OUT:$@ skipdbm_ex1.obj tkrzw.lib

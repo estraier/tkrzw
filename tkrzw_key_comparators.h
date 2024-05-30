@@ -55,7 +55,7 @@ inline int32_t LexicalCaseKeyComparator(std::string_view a, std::string_view b) 
 }
 
 /**
- * Key comparator in the order of the decimal integer numeric expressions.
+ * Key comparator in the order of decimal integer numeric expressions.
  * @param a One key.
  * @param b The other key.
  * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
@@ -67,7 +67,7 @@ inline int32_t DecimalKeyComparator(std::string_view a, std::string_view b) {
 }
 
 /**
- * Key comparator in the order of the hexadecimal integer numeric expressions.
+ * Key comparator in the order of hexadecimal integer numeric expressions.
  * @param a One key.
  * @param b The other key.
  * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
@@ -79,7 +79,7 @@ inline int32_t HexadecimalKeyComparator(std::string_view a, std::string_view b) 
 }
 
 /**
- * Key comparator in the order of the decimal real number expressions.
+ * Key comparator in the order of decimal real number expressions.
  * @param a One key.
  * @param b The other key.
  * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
@@ -87,6 +87,20 @@ inline int32_t HexadecimalKeyComparator(std::string_view a, std::string_view b) 
 inline int32_t RealNumberKeyComparator(std::string_view a, std::string_view b) {
   const double a_num = StrToDouble(a);
   const double b_num = StrToDouble(b);
+  return a_num < b_num ? -1 : (a_num > b_num ? 1 : 0);
+}
+
+/**
+ * Key comparator in the order of big-endian binaries of floating-point numbers.
+ * @param a One key.
+ * @param b The other key.
+ * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
+ */
+inline int32_t FloatBigEndianKeyComparator(std::string_view a, std::string_view b) {
+  const long double a_num = StrToFloatBigEndian(a);
+  const long double b_num = StrToFloatBigEndian(b);
+  if (std::isnan(a_num)) return std::isnan(b_num) ? 0 : -1;
+  if (std::isnan(b_num)) return 1;
   return a_num < b_num ? -1 : (a_num > b_num ? 1 : 0);
 }
 
@@ -169,6 +183,23 @@ inline int32_t PairRealNumberKeyComparator(std::string_view a, std::string_view 
   DeserializeStrPair(a, &a_key, &a_value);
   DeserializeStrPair(b, &b_key, &b_value);
   const int32_t key_cmp = RealNumberKeyComparator(a_key, b_key);
+  if (key_cmp != 0) {
+    return key_cmp;
+  }
+  return LexicalKeyComparator(a_value, b_value);
+}
+
+/**
+ * Key comparator for serialized pair strings in the big-endian binary floating-point number order.
+ * @param a One key.
+ * @param b The other key.
+ * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
+ */
+inline int32_t PairFloatBigEndianKeyComparator(std::string_view a, std::string_view b) {
+  std::string_view a_key, a_value, b_key, b_value;
+  DeserializeStrPair(a, &a_key, &a_value);
+  DeserializeStrPair(b, &b_key, &b_value);
+  const int32_t key_cmp = FloatBigEndianKeyComparator(a_key, b_key);
   if (key_cmp != 0) {
     return key_cmp;
   }

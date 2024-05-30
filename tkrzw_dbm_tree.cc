@@ -988,6 +988,8 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
       comp_name = "HexadecimalKeyComparator";
     } else if (key_comparator_ == RealNumberKeyComparator) {
       comp_name = "RealNumberKeyComparator";
+    } else if (key_comparator_ == FloatBigEndianKeyComparator) {
+      comp_name = "FloatBigEndianKeyComparator";
     } else if (key_comparator_ == PairLexicalKeyComparator) {
       comp_name = "PairLexicalKeyComparator";
     } else if (key_comparator_ == PairLexicalCaseKeyComparator) {
@@ -998,6 +1000,8 @@ std::vector<std::pair<std::string, std::string>> TreeDBMImpl::Inspect() {
       comp_name = "PairHexadecimalKeyComparator";
     } else if (key_comparator_ == PairRealNumberKeyComparator) {
       comp_name = "PairRealNumberKeyComparator";
+    } else if (key_comparator_ == PairFloatBigEndianKeyComparator) {
+      comp_name = "PairFloatBigEndianKeyComparator";
     } else {
       comp_name = "custom";
     }
@@ -1157,6 +1161,8 @@ Status TreeDBMImpl::SaveMetadata() {
     key_comp_type = 4;
   } else if (key_comparator_ == RealNumberKeyComparator) {
     key_comp_type = 5;
+  } else if (key_comparator_ == FloatBigEndianKeyComparator) {
+    key_comp_type = 6;
   } else if (key_comparator_ == PairLexicalKeyComparator) {
     key_comp_type = 101;
   } else if (key_comparator_ == PairLexicalCaseKeyComparator) {
@@ -1167,6 +1173,8 @@ Status TreeDBMImpl::SaveMetadata() {
     key_comp_type = 104;
   } else if (key_comparator_ == PairRealNumberKeyComparator) {
     key_comp_type = 105;
+  } else if (key_comparator_ == PairFloatBigEndianKeyComparator) {
+    key_comp_type = 106;
   } else {
     key_comp_type = 255;
   }
@@ -1229,11 +1237,13 @@ Status TreeDBMImpl::LoadMetadata() {
     case 3: key_comparator_ = DecimalKeyComparator; break;
     case 4: key_comparator_ = HexadecimalKeyComparator; break;
     case 5: key_comparator_ = RealNumberKeyComparator; break;
+    case 6: key_comparator_ = FloatBigEndianKeyComparator; break;
     case 101: key_comparator_ = PairLexicalKeyComparator; break;
     case 102: key_comparator_ = PairLexicalCaseKeyComparator; break;
     case 103: key_comparator_ = PairDecimalKeyComparator; break;
     case 104: key_comparator_ = PairHexadecimalKeyComparator; break;
     case 105: key_comparator_ = PairRealNumberKeyComparator; break;
+    case 106: key_comparator_ = PairFloatBigEndianKeyComparator; break;
     case 255:
       if (key_comparator_ == nullptr) {
         return Status(Status::BROKEN_DATA_ERROR, "invalid_key_comparator");

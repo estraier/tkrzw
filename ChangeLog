@@ -1,3 +1,17 @@
+2024-05-30 Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.30
+	- Library version: 1.73.0
+
+	- Add FloatBigEndianKeyComparator.
+	- Add StrToFloatBigEndian and FloatToStrBigEndian.
+
+	- Compatibility of the language interfaces
+	- tkrzw-java: 0.1.31
+	- tkrzw-python: 0.1.31
+	- tkrzw-ruby: 0.1.31
+	- tkrzw-go: 0.1.31
+
 2024-04-25 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.29

@@ -1405,7 +1405,7 @@ int main(int argc, char** argv) {
 
 <p>There are two kinds of nodes of B+ tree: leaf nodes and inner nodes.  Leaf nodes contain records of key-value pairs.  Inner nodes contain keys and links to other nodes.  The root ID indicates the ID of the root node of B+ tree.  The root node is used as the entry point of search.  The first ID indicates the ID of the first leaf node of B+ tree.  Leaf nodes are linked in a double linked list and the first leaf node is the entry point of sequential access.  The level of the tree indicates how many layers exist in the tree.  If there's no inner tree, the level is 1.</p>
 
-<p>The key comparator type indicates a function used to compare keys of records.  The default LexicalKeyComparator is 1.  LexicalCaseKeyComparator which ignores case is 2.  DecimalKeyComparator which compares keys as numeric decimal integer expressions is 3.  HexadecimalKeyComparator which compares keys as numeric hexadecimal integer expressions is 4.  RealNumberKeyComparator which compares keys as decimal real number expressions is 5.  Their counterparts for pair strings are 101, 102, 103, and 104.  255 means that another custom comparator is set.  In that case, the comparator must be specified every time when the database is opened.</p>
+<p>The key comparator type indicates a function used to compare keys of records.  The default LexicalKeyComparator is 1.  LexicalCaseKeyComparator which ignores case is 2.  DecimalKeyComparator which compares keys as numeric decimal integer expressions is 3.  HexadecimalKeyComparator which compares keys as numeric hexadecimal integer expressions is 4.  RealNumberKeyComparator which compares keys as decimal real number expressions is 5.  FloatBigEndianKeyComparator which compares keys as big-endian binary floating-point number expressions is 6.  Their counterparts for pair strings are from 101 to 106.  255 means that another custom comparator is set.  In that case, the comparator must be specified every time when the database is opened.</p>
 
 <p>A leaf nodes has a key which is a 6-byte big-endian integer of its ID.  The ID is a unique number not less than 1.  Its value is serialized in the following format.  Records are sorted in ascending order of the key.</p>
 
@@ -3390,7 +3390,7 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 
 <h3 id="tips_treedbm_comparators">Comparators of TreeDBM</h3>
 
-<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing a number as a big-endian binary is a good idea because the default comparator sorts it properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
+<p>By default, the file tree database uses a lexical comparator which compares keys in lexicographical order.  This is suitable for many use cases.  If you want to use numeric values, representing a number as a big-endian binary is a good idea because the default comparator sorts them properly.  However, if you want, the following built-in comparator can be specified via the tuning parameters.</p>
 
 <ul>
 <li><code>LexicalKeyComparator</code> : Compares keys as strings in lexicographical order.</li>
@@ -3398,9 +3398,12 @@ dbm.OpenAdvanced("casket.tkt", true, File::OPEN_DEFAULT, tuning_params);
 <li><code>DecimalKeyComparator</code> : Compares keys as decimal integers like "1" and "99".</li>
 <li><code>HexadecimalKeyComparator</code> : Compares keys as hexadecimal integers like "8A" and "FF3C".</li>
 <li><code>RealNumberKeyComparator</code> : Compares keys as decimal real numbers like "2.1" and "-5.82".</li>
+<li><code>FloatBigEndianKeyComparator</code> : Compares keys as big-endian binaries of floating-point numbers.</li>
 </ul>
 
 <p>You can implement your own comparator.  In that case, you must specify it every time when you open the database.</p>
+
+<p>To convert an integer into a big-endian binary, use IntToStrBigEndian.  To restore a big-endian binary into an integer, use StrToIntBigEndian.  To convert a floating-point number into a big-endian binary, use FloatToStrBigEndian.  To restore a big-endian binary into a floating-point number, use StrToFloatBigEndian.</p>
 
 <p>By the way, databases other than the file skip database don't support duplicated keys.  That's because duplicated keys deteriorate time and space efficiency.  If you have to handle duplicated keys, build a skip database first and merge duplicated records.  Then, you can convert it to another type of database.</p>
 
