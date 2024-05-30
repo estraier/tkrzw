@@ -1641,8 +1641,8 @@ TkrzwStr* tkrzw_file_search(
  * MemIndex class.  If the path ends with ".tkt", TreeDBM is used internally, which is
  * equivalent to using the FileIndex class.  If the key comparator of the tuning parameter is
  * not set, PairLexicalKeyComparator is set implicitly.  Other compatible key comparators are
- * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator, and
- * PairRealNumberKeyComparator.
+ * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator,
+ * PairRealNumberKeyComparator, and PairFloatBigEndianKeyComparator.
  */
 TkrzwIndex* tkrzw_index_open(const char* path, bool writable, const char* params);
 

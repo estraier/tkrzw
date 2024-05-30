@@ -137,7 +137,8 @@ class FileIndex final {
    * @return The result status.
    * @details If the key comparator of the tuning parameter is nullptr, PairLexicalKeyComparator
    * is set implicitly.  Other compatible key comparators are PairLexicalCaseKeyComparator,
-   * PairDecimalKeyComparator, PairHexadecimalKeyComparator, and PairRealNumberKeyComparator.
+   * PairDecimalKeyComparator, PairHexadecimalKeyComparator, PairRealNumberKeyComparator,
+   * and PairFloatBigEndianKeyComparator.
    * The alignment power and the maximum page size are also set implicitly to be suitable for
    * random access.
    */
@@ -323,7 +324,7 @@ class MemIndex final {
    * @param key_comparator The comparator of record keys.
    * @details Compatible key comparators are PairLexicalKeyComparator,
    * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator,
-   * and PairRealNumberKeyComparator.
+   * PairRealNumberKeyComparator, and PairFloatBigEndianKeyComparator.
    */
   explicit MemIndex(KeyComparator key_comparator = PairLexicalKeyComparator);
 
@@ -484,8 +485,9 @@ class PolyIndex final {
    * MemIndex class.  If the path ends with ".tkt", TreeDBM is used internally, which is
    * equivalent to using the FileIndex class.  If the key comparator of the tuning parameter is
    * not set, PairLexicalKeyComparator is set implicitly.  Other compatible key comparators are
-   * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator, and
-   * PairRealNumberKeyComparator.  Other options can be specified as with PolyDBM::OpenAdvanced.
+   * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator,
+   * PairRealNumberKeyComparator, and PairFloatBigEndianKeyComparator.  Other options can be
+   * specified as with PolyDBM::OpenAdvanced.
    */
   Status Open(const std::string& path, bool writable,
               int32_t options = File::OPEN_DEFAULT,

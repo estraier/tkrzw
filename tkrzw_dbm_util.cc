@@ -145,7 +145,7 @@ static void PrintUsageAndDie() {
   P("  --max_branches num : Sets the maximum number of branches of inner nodes."
     " (default: %d or -1)\n", TreeDBM::DEFAULT_MAX_BRANCHES);
   P("  --comparator func : Sets the key comparator:"
-    " lex, lexcase, dec, hex. (default: lex)\n");
+    " lex, lexcase, dec, hex, real, float. (default: lex)\n");
   P("\n");
   P("Tuning options for SkipDBM:\n");
   P("  --offset_width num : The width to represent the offset of records. (default: %d)\n",
@@ -243,6 +243,20 @@ KeyComparator GetKeyComparatorOrDie(const std::string& cmp_name) {
     comp = HexadecimalKeyComparator;
   } else if (cmp_name == "real") {
     comp = RealNumberKeyComparator;
+  } else if (cmp_name == "float") {
+    comp = FloatBigEndianKeyComparator;
+  } else if (cmp_name == "pairlex") {
+    comp = PairLexicalKeyComparator;
+  } else if (cmp_name == "pairlexcase") {
+    comp = PairLexicalCaseKeyComparator;
+  } else if (cmp_name == "pairdec") {
+    comp = PairDecimalKeyComparator;
+  } else if (cmp_name == "pairhex") {
+    comp = PairHexadecimalKeyComparator;
+  } else if (cmp_name == "pairreal") {
+    comp = PairRealNumberKeyComparator;
+  } else if (cmp_name == "pairfloat") {
+    comp = PairFloatBigEndianKeyComparator;
   } else {
     Die("Unknown KeyComparator implementation: ", cmp_name);
   }

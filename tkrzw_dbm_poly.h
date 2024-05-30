@@ -320,9 +320,10 @@ class PolyDBM final : public ParamDBM {
    *     to do no operation or "PAGE_UPDATE_WRITE" is to write immediately.
    *   - key_comparator (string): The comparator of record keys: "LexicalKeyComparator" for the
    *     lexical order, "LexicalCaseKeyComparator" for the lexical order ignoring case,
-   *     "DecimalKeyComparator" for the order of the decimal integer numeric expressions,
-   *     "HexadecimalKeyComparator" for the order of the hexadecimal integer numeric expressions,
-   *     "RealNumberKeyComparator" for the order of the decimal real number expressions.
+   *     "DecimalKeyComparator" for the order of decimal integer numeric expressions,
+   *     "HexadecimalKeyComparator" for the order of hexadecimal integer numeric expressions,
+   *     "RealNumberKeyComparator" for the order of decimal real number expressions,
+   *     "FloatBigEndianKeyComparator" for the order of binary float-number expressions.
    * @details For SkipDBM, these optional parameters are supported.
    *   - offset_width (int): The width to represent the offset of records.
    *   - step_unit (int): The step unit of the skip list.
