@@ -322,7 +322,7 @@ class PolyDBM final : public ParamDBM {
    *     lexical order, "LexicalCaseKeyComparator" for the lexical order ignoring case,
    *     "DecimalKeyComparator" for the order of decimal integer numeric expressions,
    *     "HexadecimalKeyComparator" for the order of hexadecimal integer numeric expressions,
-   *     "RealNumberKeyComparator" for the order of decimal real number expressions,
+   *     "RealNumberKeyComparator" for the order of decimal real number expressions, and
    *     "FloatBigEndianKeyComparator" for the order of binary float-number expressions.
    * @details For SkipDBM, these optional parameters are supported.
    *   - offset_width (int): The width to represent the offset of records.
