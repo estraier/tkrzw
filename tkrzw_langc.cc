@@ -297,7 +297,7 @@ uint64_t tkrzw_str_to_int_be(const void* ptr, size_t size) {
   return StrToIntBigEndian(std::string_view(static_cast<const char*>(ptr), size));
 }
 
-double tkrzw_str_to_float_be(const void* ptr, size_t size) {
+long double tkrzw_str_to_float_be(const void* ptr, size_t size) {
   assert(ptr != nullptr);
   return StrToFloatBigEndian(std::string_view(static_cast<const char*>(ptr), size));
 }

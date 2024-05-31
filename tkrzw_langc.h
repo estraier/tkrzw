@@ -343,7 +343,7 @@ uint64_t tkrzw_str_to_int_be(const void* ptr, size_t size);
  * @param size The size of the string to convert.
  * @return The converted floating-point number.
  */
-double tkrzw_str_to_float_be(const void* ptr, size_t size);
+long double tkrzw_str_to_float_be(const void* ptr, size_t size);
 
 /**
  * Converts an integer into a big-endian binary string.
