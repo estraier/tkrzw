@@ -492,25 +492,17 @@ std::string IntToStrBigEndian(uint64_t data, size_t size) {
 }
 
 std::string FloatToStrBigEndian(long double data, size_t size) {
+  std::string str(size, 0);
   if (size >= sizeof(long double)) {
-    std::string str(size, 0);
-    long double num = static_cast<double>(data);
-    xmemcpybigendian(const_cast<char*>(str.data()), &data, sizeof(num));
-    return str;
-  }
-  if (size >= sizeof(double)) {
-    std::string str(size, 0);
-    double num = static_cast<double>(data);
+    xmemcpybigendian(const_cast<char*>(str.data()), &data, sizeof(data));
+  } else if (size >= sizeof(double)) {
+    const double num = static_cast<double>(data);
     xmemcpybigendian(const_cast<char*>(str.data()), &num, sizeof(num));
-    return str;
-  }
-  if (size >= sizeof(float)) {
-    std::string str(size, 0);
-    float num = static_cast<float>(data);
+  } else if (size >= sizeof(float)) {
+    const float num = static_cast<float>(data);
     xmemcpybigendian(const_cast<char*>(str.data()), &num, sizeof(num));
-    return str;
   }
-  return 0;
+  return str;
 }
 
 std::vector<std::string> StrSplit(std::string_view str, char delim, bool skip_empty) {

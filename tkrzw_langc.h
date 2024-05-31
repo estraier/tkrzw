@@ -329,6 +329,39 @@ char* tkrzw_str_replace_regex(const char* text, const char* pattern, const char*
 int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf);
 
 /**
+ * Converts a big-endian binary string to an integer.
+ * @param ptr The pointer to the string to convert.
+ * @param size The size of the string to convert.
+ * @return The converted integer.  As the return type is unsigned, type cast is necessary to
+ * handle negative values.
+ */
+uint64_t tkrzw_str_to_int_be(const void* ptr, size_t size);
+
+/**
+ * Converts a big-endian binary string to a floating-point number.
+ * @param ptr The pointer to the string to convert.
+ * @param size The size of the string to convert.
+ * @return The converted floating-point number.
+ */
+double tkrzw_str_to_float_be(const void* ptr, size_t size);
+
+/**
+ * Converts an integer into a big-endian binary string.
+ * @param data The integer to convert.
+ * @param size The size of the converted string.
+ * @return The pointer to the result binary string, which should be released by the free function.
+ */
+char* tkrzw_int_to_str_be(uint64_t data, size_t size);
+
+/**
+ * Converts a floating-point number into a big-endian binary string.
+ * @param data The floating-point number to convert.
+ * @param size The size of the converted string.
+ * @return The pointer to the result binary string, which should be released by the free function.
+ */
+char* tkrzw_float_to_str_be(long double data, size_t size);
+
+/**
  * Escapes C-style meta characters in a string.
  * @param ptr The pointer to the string to convert.
  * @param size The size of the string to convert.  If it is negative, strlen(ptr) is used.

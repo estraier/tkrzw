@@ -89,6 +89,30 @@ TEST(LangCTest, Utils) {
   EXPECT_EQ(1, tkrzw_str_edit_distance_lev("あいう", "あう", true));
   EXPECT_EQ(2, tkrzw_str_edit_distance_lev("ABC", "B", false));
   EXPECT_EQ(3, tkrzw_str_edit_distance_lev("あいう", "あう", false));
+  EXPECT_EQ(1, tkrzw_str_to_int_be("\x00\x00\x00\x01", 4));
+  EXPECT_EQ(1, tkrzw_str_to_int_be("\x00\x00\x00\x00\x00\x00\x00\x01", 8));
+  EXPECT_EQ(1, tkrzw_str_to_float_be("\x3F\x80\x00\x00", 4));
+  EXPECT_EQ(1, tkrzw_str_to_float_be("\x3F\xF0\x00\x00\x00\x00\x00\x00", 8));
+  for (int32_t num : {-123, 0, 123, 2047}) {
+    char* buf = tkrzw_int_to_str_be(num, sizeof(int16_t));
+    EXPECT_EQ(num, static_cast<int16_t>(tkrzw_str_to_int_be(buf, sizeof(int16_t))));
+    free(buf);
+    buf = tkrzw_int_to_str_be(num, sizeof(int32_t));
+    EXPECT_EQ(num, static_cast<int32_t>(tkrzw_str_to_int_be(buf, sizeof(int32_t))));
+    free(buf);
+    buf = tkrzw_int_to_str_be(num, sizeof(int64_t));
+    EXPECT_EQ(num, static_cast<int64_t>(tkrzw_str_to_int_be(buf, sizeof(int64_t))));
+    free(buf);
+    buf = tkrzw_float_to_str_be(num, sizeof(float));
+    EXPECT_EQ(num, tkrzw_str_to_float_be(buf, sizeof(float)));
+    free(buf);
+    buf = tkrzw_float_to_str_be(num, sizeof(double));
+    EXPECT_EQ(num, tkrzw_str_to_float_be(buf, sizeof(double)));
+    free(buf);
+    buf = tkrzw_float_to_str_be(num, sizeof(long double));
+    EXPECT_EQ(num, tkrzw_str_to_float_be(buf, sizeof(long double)));
+    free(buf);
+  }
   int32_t esc_size = 0;
   char* esc_ptr = tkrzw_str_escape_c("a\tb\n", 4, false, &esc_size);
   EXPECT_STREQ("a\\tb\\n", esc_ptr);

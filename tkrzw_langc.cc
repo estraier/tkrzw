@@ -292,6 +292,46 @@ int32_t tkrzw_str_edit_distance_lev(const char* a, const char* b, bool utf) {
   }
 }
 
+uint64_t tkrzw_str_to_int_be(const void* ptr, size_t size) {
+  assert(ptr != nullptr);
+  return StrToIntBigEndian(std::string_view(static_cast<const char*>(ptr), size));
+}
+
+double tkrzw_str_to_float_be(const void* ptr, size_t size) {
+  assert(ptr != nullptr);
+  return StrToFloatBigEndian(std::string_view(static_cast<const char*>(ptr), size));
+}
+
+char* tkrzw_int_to_str_be(uint64_t data, size_t size) {
+  if (size < 1) {
+    return static_cast<char*>(xmalloc(1));
+  }
+  size = std::min(size, sizeof(data));
+  char* res_ptr = static_cast<char*>(xmalloc(size));
+  std::memset(res_ptr, 0, size);
+  WriteFixNum(res_ptr, data, size);
+  return res_ptr;
+}
+
+char* tkrzw_float_to_str_be(long double data, size_t size) {
+  if (size < 1) {
+    return static_cast<char*>(xmalloc(1));
+  }
+  size = std::min(size, sizeof(data));
+  char* res_ptr = static_cast<char*>(xmalloc(size));
+  std::memset(res_ptr, 0, size);
+  if (size >= sizeof(long double)) {
+    xmemcpybigendian(res_ptr, &data, sizeof(data));
+  } else if (size >= sizeof(double)) {
+    const double num = static_cast<double>(data);
+    xmemcpybigendian(res_ptr, &num, sizeof(num));
+  } else if (size >= sizeof(float)) {
+    const float num = static_cast<float>(data);
+    xmemcpybigendian(res_ptr, &num, sizeof(num));
+  }
+  return res_ptr;
+}
+
 char* tkrzw_str_escape_c(const char* ptr, int32_t size, bool esc_nonasc, int32_t* res_size) {
   assert(ptr != nullptr);
   try {

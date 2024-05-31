@@ -69,7 +69,8 @@ double StrToDouble(std::string_view str, double defval = 0.0);
 /**
  * Converts a big-endian binary string to an integer.
  * @param str The big endian binary string of up to 8-byte.
- * @return The converted integer.
+ * @return The converted integer.  As the return type is unsigned, type cast is necessary to
+ * handle negative values.
  */
 uint64_t StrToIntBigEndian(std::string_view str);
 

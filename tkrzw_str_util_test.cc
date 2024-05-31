@@ -268,7 +268,15 @@ TEST(StrUtilTest, IntToStrBigEndian) {
   EXPECT_EQ(std::string("\xAB\xCD\x12\x34\x56\x78\xAB\xCD", 8),
             tkrzw::IntToStrBigEndian(0xABCD12345678ABCD));
   EXPECT_EQ(std::string("\x12", 1), tkrzw::IntToStrBigEndian(0x12, 1));
-  EXPECT_EQ("", tkrzw::IntToStrBigEndian(0x12, 0));
+  EXPECT_EQ("", tkrzw::IntToStrBigEndian(123, 0));
+  EXPECT_EQ(static_cast<uint16_t>(tkrzw::INT8MIN + 123), tkrzw::StrToIntBigEndian(
+      tkrzw::IntToStrBigEndian(static_cast<uint16_t>(tkrzw::INT8MIN + 123), sizeof(int16_t))));
+  EXPECT_EQ(static_cast<uint32_t>(tkrzw::INT16MIN + 123), tkrzw::StrToIntBigEndian(
+      tkrzw::IntToStrBigEndian(static_cast<uint32_t>(tkrzw::INT16MIN + 123), sizeof(int32_t))));
+  EXPECT_EQ(static_cast<uint64_t>(tkrzw::INT32MIN + 123), tkrzw::StrToIntBigEndian(
+      tkrzw::IntToStrBigEndian(static_cast<uint64_t>(tkrzw::INT32MIN + 123), sizeof(int64_t))));
+  EXPECT_EQ(static_cast<uint64_t>(tkrzw::INT64MIN + 123), tkrzw::StrToIntBigEndian(
+      tkrzw::IntToStrBigEndian(static_cast<uint64_t>(tkrzw::INT64MIN + 123), sizeof(int64_t))));
 }
 
 TEST(StrUtilTest, FloatToStrBigEndian) {
@@ -288,6 +296,13 @@ TEST(StrUtilTest, FloatToStrBigEndian) {
             tkrzw::FloatToStrBigEndian(tkrzw::INT16MIN * 0.75f, 4));
   EXPECT_EQ(std::string("\xC1\xD8\x00\x00\x00\x00\x00\x00", 8),
             tkrzw::FloatToStrBigEndian(tkrzw::INT32MIN * 0.75, 8));
+  EXPECT_EQ("", tkrzw::FloatToStrBigEndian(123, 0));
+  EXPECT_EQ(tkrzw::INT16MIN * 0.75f, tkrzw::StrToFloatBigEndian(
+      tkrzw::FloatToStrBigEndian(tkrzw::INT16MIN * 0.75f, sizeof(float))));
+  EXPECT_EQ(tkrzw::INT32MIN * 0.75f, tkrzw::StrToFloatBigEndian(
+      tkrzw::FloatToStrBigEndian(tkrzw::INT32MIN * 0.75f, sizeof(double))));
+  EXPECT_EQ(tkrzw::INT32MIN * 0.75f, tkrzw::StrToFloatBigEndian(
+      tkrzw::FloatToStrBigEndian(tkrzw::INT32MIN * 0.75f, sizeof(long double))));
 }
 
 TEST(StrUtilTest, StrJoin) {
