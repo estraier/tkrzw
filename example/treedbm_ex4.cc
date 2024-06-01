@@ -29,13 +29,13 @@ int main(int argc, char** argv) {
   // Sets records with the key being a big-endian binary of an integer.
   // e.g: "\x00\x00\x00\x00\x00\x00\x00\x31" -> "hop"
   dbm.Set(IntToStrBigEndian(1), "hop").OrDie();
-  dbm.Set(IntToStrBigEndian(11), "step").OrDie();
-  dbm.Set(IntToStrBigEndian(111), "jump").OrDie();
+  dbm.Set(IntToStrBigEndian(256), "step").OrDie();
+  dbm.Set(IntToStrBigEndian(32), "jump").OrDie();
 
   // Gets records with the key being a big-endian binary of an integer.
   std::cout << dbm.GetSimple(IntToStrBigEndian(1)) << std::endl;
-  std::cout << dbm.GetSimple(IntToStrBigEndian(11)) << std::endl;
-  std::cout << dbm.GetSimple(IntToStrBigEndian(111)) << std::endl;
+  std::cout << dbm.GetSimple(IntToStrBigEndian(256)) << std::endl;
+  std::cout << dbm.GetSimple(IntToStrBigEndian(32)) << std::endl;
 
   // Lists up all records, restoring keys into integers.
   std::unique_ptr<DBM::Iterator> iter = dbm.MakeIterator();
@@ -57,13 +57,13 @@ int main(int argc, char** argv) {
   // Sets records with the key being a decimal string of an integer.
   // e.g: "1" -> "hop"
   dbm.Set(ToString(1), "hop").OrDie();
-  dbm.Set(ToString(11), "step").OrDie();
-  dbm.Set(ToString(111), "jump").OrDie();
+  dbm.Set(ToString(256), "step").OrDie();
+  dbm.Set(ToString(32), "jump").OrDie();
 
   // Gets records with the key being a decimal string of an integer.
   std::cout << dbm.GetSimple(ToString(1)) << std::endl;
-  std::cout << dbm.GetSimple(ToString(11)) << std::endl;
-  std::cout << dbm.GetSimple(ToString(111)) << std::endl;
+  std::cout << dbm.GetSimple(ToString(256)) << std::endl;
+  std::cout << dbm.GetSimple(ToString(32)) << std::endl;
 
   // Lists up all records, restoring keys into integers.
   iter = dbm.MakeIterator();
@@ -83,13 +83,13 @@ int main(int argc, char** argv) {
   // Sets records with the key being a decimal string of a real number.
   // e.g: "1.5" -> "hop"
   dbm.Set(ToString(1.5), "hop").OrDie();
-  dbm.Set(ToString(11.5), "step").OrDie();
-  dbm.Set(ToString(111.5), "jump").OrDie();
+  dbm.Set(ToString(256.5), "step").OrDie();
+  dbm.Set(ToString(32.5), "jump").OrDie();
 
   // Gets records with the key being a decimal string of a real number.
   std::cout << dbm.GetSimple(ToString(1.5)) << std::endl;
-  std::cout << dbm.GetSimple(ToString(11.5)) << std::endl;
-  std::cout << dbm.GetSimple(ToString(111.5)) << std::endl;
+  std::cout << dbm.GetSimple(ToString(256.5)) << std::endl;
+  std::cout << dbm.GetSimple(ToString(32.5)) << std::endl;
 
   // Lists up all records, restoring keys into floating-point numbers.
   iter = dbm.MakeIterator();
@@ -109,13 +109,13 @@ int main(int argc, char** argv) {
   // Sets records with the key being a big-endian binary of a floating-point number.
   // e.g: "\x3F\xF8\x00\x00\x00\x00\x00\x00" -> "hop"
   dbm.Set(FloatToStrBigEndian(1.5), "hop").OrDie();
-  dbm.Set(FloatToStrBigEndian(11.5), "step").OrDie();
-  dbm.Set(FloatToStrBigEndian(111.5), "jump").OrDie();
+  dbm.Set(FloatToStrBigEndian(256.5), "step").OrDie();
+  dbm.Set(FloatToStrBigEndian(32.5), "jump").OrDie();
 
   // Gets records with the key being a big-endian binary of a floating-point number.
   std::cout << dbm.GetSimple(FloatToStrBigEndian(1.5)) << std::endl;
-  std::cout << dbm.GetSimple(FloatToStrBigEndian(11.5)) << std::endl;
-  std::cout << dbm.GetSimple(FloatToStrBigEndian(111.5)) << std::endl;
+  std::cout << dbm.GetSimple(FloatToStrBigEndian(256.5)) << std::endl;
+  std::cout << dbm.GetSimple(FloatToStrBigEndian(32.5)) << std::endl;
 
   // Lists up all records, restoring keys into floating-point numbers.
   iter = dbm.MakeIterator();
