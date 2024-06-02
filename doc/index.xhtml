@@ -3195,7 +3195,19 @@ int main(int argc, char** argv) {
 }
 ]]></code></pre>
 
-<p>Whereas storing native values as-is is best in terms of space efficiency, interoperability the stord data is not assured.  For example, a stored integer in the little endian is not restored into the same value on another system of the big endian.  If you share the same database file among such systems of variety, you should use a standardized serialization format like JSON and Protocol Buffers.</p>
+<p>Whereas interoperability of the database file itself is assured by the library, interoperability of the content of records is a responsibility of the application.  If you store binary data in records, taking care of the byte order is necessary.  As long as you use the utility functions in the above example, interoperability is assured by the library.  You can also use a standardized serialization format like JSON and Protocol Buffers.</p>
+
+<p>When you store numeric values in the record, using SerializeBasicValue and SerializeBasicVector is a straightforward way.  The two functions serialize an integer into a fixed-length byte sequence.  For example, int32_t and float take 4 bytes respectively, and int64_t and double take 8 bytes respecitively.  Meanwhile, if the value is an integer and its value is typically small, using IntToStrDelta and SerializeIntVectorDelta is a good idea.  The two functions serialize an integer into a variable-length byte sequence.</p>
+
+<pre><code class="language-cpp"><![CDATA[int64_t num = 123;
+std::string num_str = IntToStrDelta(num, true);
+int64_t restored_num = StrToIntDelta(num_str);
+
+std::vector<int64_t> numvec = {-123, 0, 123};
+std::string numvec_str = SerializeIntVectorDelta(numvec, true);
+std::vector<int64_t> restored_numvec = DeserializeIntVectorDelta(numvec_str, true);
+]]></code></pre>
+
 
 <h3 id="tips_hashdbm_tune">Tuning HashDBM</h3>
 
