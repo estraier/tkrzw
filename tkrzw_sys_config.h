@@ -514,7 +514,7 @@ inline size_t ReadVarNum(const void* buf, size_t size, uint64_t* np) {
   const unsigned char* rp = (const unsigned char*)buf;
   const unsigned char* ep = rp + size;
   uint64_t num = 0;
-  uint32_t c;
+  uint32_t c = 0;
   do {
     if (rp >= ep) {
       *np = 0;
@@ -532,7 +532,7 @@ inline size_t ReadVarNum(const void* buf, uint64_t* np) {
   assert(buf != nullptr && np != nullptr);
   const unsigned char* rp = (const unsigned char*)buf;
   uint64_t num = 0;
-  uint32_t c;
+  uint32_t c = 0;
   do {
     c = *rp;
     num = (num << 7) + (c & 0x7f);

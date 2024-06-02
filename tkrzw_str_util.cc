@@ -338,6 +338,19 @@ long double StrToFloatBigEndian(std::string_view str) {
   return DOUBLENAN;
 }
 
+uint64_t StrToIntDelta(std::string_view str, bool zigzag) {
+  uint64_t num = 0;
+  ReadVarNum(str.data(), str.size(), &num);
+  if (zigzag) {
+    if (num & 0x1) {
+      num = static_cast<int64_t>((num - 1) / 2) * -1 - 1;
+    } else {
+      num = num / 2;
+    }
+  }
+  return num;
+}
+
 void VSPrintF(std::string* dest, const char* format, va_list ap) {
   assert(dest != nullptr && format != nullptr);
   while (*format != '\0') {
@@ -503,6 +516,19 @@ std::string FloatToStrBigEndian(long double data, size_t size) {
     xmemcpybigendian(const_cast<char*>(str.data()), &num, sizeof(num));
   }
   return str;
+}
+
+std::string IntToStrDelta(uint64_t data, bool zigzag) {
+  char buf[12];
+  if (zigzag) {
+    if (data > INT64MAX) {
+      data = (data + 1) * -2 + 1;
+    } else {
+      data = data * 2;
+    }
+  }
+  const size_t size = WriteVarNum(buf, data);
+  return std::string(buf, size);
 }
 
 std::vector<std::string> StrSplit(std::string_view str, char delim, bool skip_empty) {

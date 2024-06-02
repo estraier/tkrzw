@@ -83,6 +83,15 @@ uint64_t StrToIntBigEndian(std::string_view str);
 long double StrToFloatBigEndian(std::string_view str);
 
 /**
+ * Converts a byte-delta-encoded string into an integer.
+ * @param str The big endian binary string of up to 8-byte.
+ * @param zigzag If true, negative values are also supported by applying zigzag encoding.
+ * @return The converted integer.  As the return type is unsigned, type cast is necessary to
+ * handle negative values.
+ */
+uint64_t StrToIntDelta(std::string_view str, bool zigzag);
+
+/**
  * Converts a boolean string to a boolean value.
  * @param str The decimal string.
  * @param defval The default value to be returned on failure.
@@ -220,6 +229,14 @@ std::string IntToStrBigEndian(uint64_t data, size_t size = sizeof(uint64_t));
  * @return The converted string.
  */
 std::string FloatToStrBigEndian(long double data, size_t size = sizeof(double));
+
+/**
+ * Converts an integer into a string in byte delta encoding.
+ * @param data The integer to convert.
+ * @param zigzag If true, negative values are also supported by applying zigzag encoding.
+ * @return The result string representing the values.
+ */
+std::string IntToStrDelta(uint64_t data, bool zigzag);
 
 /**
  * Converts each record of a container into strings and join them.
@@ -874,9 +891,9 @@ std::map<std::string_view, std::string_view> MakeStrViewMapFromRecords(
  * Serializes a value of a basic type into a string.
  * @param value a value of a serializable basic type, like int32 and double.
  * @return The result string representing the value.
- * @details The data is copied as-is in the native format with memcpy.  Thus, the endian of
- * integer is not normalized.  Although serializing a value of any "struct" is possible, it is not
- * assured that the data is deserialized properly on another system.
+ * @details The byte order is normalized to the big-endian.  Although serializing a value of
+ * any trivially-copyable struct is also possible, it is not assured that the data is deserialized
+ * properly on another system.
  */
 template<typename T>
 inline std::string SerializeBasicValue(T value) {
@@ -908,9 +925,9 @@ inline T DeserializeBasicValue(std::string_view serialized) {
  * Serializes a vector of a basic type into a string.
  * @param values a vector of a serializable basic type, like int32 and double.
  * @return The result string representing the values.
- * @details The data is copied as-is in the native format with memcpy.  Thus, the endian of
- * integer is not normalized.  Although serializing a value of any "struct" is possible, it is not
- * assured that the data is deserialized properly on another system.
+ * @details The byte order is normalized to the big-endian.  Although serializing a value of
+ * any trivially-copyable struct is also possible, it is not assured that the data is deserialized
+ * properly on another system.
  */
 template<typename T>
 inline std::string SerializeBasicVector(const std::vector<T>& values) {
@@ -942,6 +959,136 @@ inline std::vector<T> DeserializeBasicVector(std::string_view serialized) {
     values.push_back(value);
     ptr += sizeof(value);
     num_elems--;
+  }
+  return values;
+}
+
+/**
+ * Serializes a vector of an integer type into a string in byte delta encoding.
+ * @param values a vector of an integer type, like uint16 and int64.
+ * @param zigzag If true, negative values are also supported by applying zigzag encoding.
+ * @return The result string representing the values.
+ */
+template<typename T>
+inline std::string SerializeIntVectorDelta(const std::vector<T>& values, bool zigzag) {
+  std::string serialized;
+  serialized.reserve((values.size() + 1) * (std::max<size_t>(sizeof(T) / 2, 1)));
+  unsigned char buf[12];
+  for (const T value : values) {
+    uint64_t num = 0;
+    if (zigzag) {
+      if (static_cast<uint64_t>(value) > INT64MAX) {
+        num = static_cast<uint64_t>((value + 1) * -2) + 1;
+      } else {
+        num = value * 2;
+      }
+    } else {
+      num = static_cast<uint64_t>(value);
+    }
+    unsigned char* wp = buf;
+    if (num < (1ULL << 7)) {
+      *(wp++) = num;
+    } else if (num < (1ULL << 14)) {
+      *(wp++) = (num >> 7) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 21)) {
+      *(wp++) = (num >> 14) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 28)) {
+      *(wp++) = (num >> 21) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 35)) {
+      *(wp++) = (num >> 28) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 42)) {
+      *(wp++) = (num >> 35) | 0x80;
+      *(wp++) = ((num >> 28) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 49)) {
+      *(wp++) = (num >> 42) | 0x80;
+      *(wp++) = ((num >> 35) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 28) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 56)) {
+      *(wp++) = (num >> 49) | 0x80;
+      *(wp++) = ((num >> 42) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 35) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 28) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else if (num < (1ULL << 63)) {
+      *(wp++) = (num >> 56) | 0x80;
+      *(wp++) = ((num >> 49) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 42) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 35) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 28) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    } else {
+      *(wp++) = (num >> 63) | 0x80;
+      *(wp++) = ((num >> 56) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 49) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 42) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 35) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 28) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 21) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 14) & 0x7f) | 0x80;
+      *(wp++) = ((num >> 7) & 0x7f) | 0x80;
+      *(wp++) = num & 0x7f;
+    }
+    serialized.append(reinterpret_cast<const char*>(buf), wp - buf);
+  }
+  return serialized;
+}
+
+/**
+ * Deserializes a byte-delta-encoded string into a vector of an integer type.
+ * @param serialized The serialized string in byte delta encoding.
+ * @param zigzag If true, negative values are also supported by applying zigzag encoding.
+ * @return The result data.
+ */
+template<typename T>
+inline std::vector<T> DeserializeIntVectorDelta(std::string_view serialized, bool zigzag) {
+  std::vector<T> values;
+  values.reserve((serialized.size() + 1) / std::max<size_t>(sizeof(T) / 2, 1));
+  const char* rp = serialized.data();
+  const char* ep = rp + serialized.size();
+  while (rp < ep) {
+    uint64_t num = 0;
+    uint32_t c = 0;
+    do {
+      if (rp >= ep) {
+        break;
+      }
+      c = *rp;
+      num = (num << 7) + (c & 0x7f);
+      rp++;
+    } while (c >= 0x80);
+    if (zigzag) {
+      if (num & 0x1) {
+        values.push_back(static_cast<T>((num - 1) / 2) * -1 - 1);
+      } else {
+        values.push_back(static_cast<T>(num / 2));
+      }
+    } else {
+      values.push_back(static_cast<T>(num));
+    }
   }
   return values;
 }
