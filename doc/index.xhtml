@@ -3197,15 +3197,23 @@ int main(int argc, char** argv) {
 
 <p>Whereas interoperability of the database file itself is assured by the library, interoperability of the content of records is a responsibility of the application.  If you store binary data in records, taking care of the byte order is necessary.  As long as you use the utility functions in the above example, interoperability is assured by the library.  You can also use a standardized serialization format like JSON and Protocol Buffers.</p>
 
-<p>When you store numeric values in the record, using SerializeBasicValue and SerializeBasicVector is a straightforward way.  The two functions serialize an integer into a fixed-length byte sequence.  For example, int32_t and float take 4 bytes respectively, and int64_t and double take 8 bytes respecitively.  Meanwhile, if the value is an integer and its value is typically small, using IntToStrDelta and SerializeIntVectorDelta is a good idea.  The two functions serialize an integer into a variable-length byte sequence.</p>
+<p>When you store numeric values in the record, using SerializeBasicValue and SerializeBasicVector is a straightforward way.  The two functions serialize an integer into a fixed-length byte sequence.  For example, int32_t and float take 4 bytes respectively, and int64_t and double take 8 bytes respecitively.  Meanwhile, if the value is an integer and its value is typically small, using IntToStrDelta and SerializeIntVectorDelta is a good idea.  The two functions serialize an integer into a variable-length byte sequence.  The second parameter specifies whether the zigzag encoding is applied to support negative values.  Deserialization is done by StrToIntDelta and DeserializeIntVectorDelta respecitively.</p>
 
 <pre><code class="language-cpp"><![CDATA[int64_t num = 123;
 std::string num_str = IntToStrDelta(num, true);
-int64_t restored_num = StrToIntDelta(num_str);
+int64_t restored_num = StrToIntDelta(num_str, true);
+
+uint64_t unum = 123;
+std::string unum_str = IntToStrDelta(unum, false);
+uint64_t restored_unum = StrToIntDelta(unum_str, false);
 
 std::vector<int64_t> numvec = {-123, 0, 123};
 std::string numvec_str = SerializeIntVectorDelta(numvec, true);
-std::vector<int64_t> restored_numvec = DeserializeIntVectorDelta(numvec_str, true);
+std::vector<int64_t> restored_numvec = DeserializeIntVectorDelta<int64_t>(numvec_str, true);
+
+std::vector<uint64_t> unumvec = {0, 123, 18235};
+std::string unumvec_str = SerializeIntVectorDelta(unumvec, false);
+std::vector<uint64_t> restored_unumvec = DeserializeIntVectorDelta<uint64_t>(unumvec_str, false);
 ]]></code></pre>
 
 
