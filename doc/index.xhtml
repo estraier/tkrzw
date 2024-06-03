@@ -3462,7 +3462,7 @@ if (iter.Get(&key).IsOK()) {
 }
 ]]></code></pre>
 
-<p>If keys of signed integers are large numbers, representing keys as big-endian binary is a good idea.  Set SignedBigEndianKeyComparator as the comparator and use IntToStrBigEndian to convert keys.  When you restore a big-endian binary into an integer, use StrToIntBigEndian and cast the return value into int64_t.
+<p>If keys of signed integers are large numbers, representing keys as big-endian binary is a good idea.  Set SignedBigEndianKeyComparator as the comparator and use IntToStrBigEndian to convert keys.  When you restore a big-endian binary into an integer, use StrToIntBigEndian and cast the return value into int64_t.</p>
 
 <pre><code class="language-cpp"><![CDATA[TreeDBM::TuningParameters params;
 params.key_comparator = SignedBigEndianKeyComparator;
