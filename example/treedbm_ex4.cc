@@ -102,6 +102,32 @@ int main(int argc, char** argv) {
   // Closes the database.
   dbm.Close().OrDie();
 
+  // Opens a new database with the big-endian signed integers comparator.
+  params.key_comparator = SignedBigEndianKeyComparator;
+  dbm.OpenAdvanced("casket.tkt", true, File::OPEN_TRUNCATE, params).OrDie();
+
+  // Sets records with the key being a big-endian binary of a floating-point number.
+  // e.g: "\x00\x00\x00\x00\x00\x00\x00\x31" -> "hop"
+  dbm.Set(IntToStrBigEndian(-1), "hop").OrDie();
+  dbm.Set(IntToStrBigEndian(-256), "step").OrDie();
+  dbm.Set(IntToStrBigEndian(-32), "jump").OrDie();
+
+  // Gets records with the key being a big-endian binary of a floating-point number.
+  std::cout << dbm.GetSimple(IntToStrBigEndian(-1)) << std::endl;
+  std::cout << dbm.GetSimple(IntToStrBigEndian(-256)) << std::endl;
+  std::cout << dbm.GetSimple(IntToStrBigEndian(-32)) << std::endl;
+
+  // Lists up all records, restoring keys into floating-point numbers.
+  iter = dbm.MakeIterator();
+  iter->First();
+  while (iter->Get(&key, &value) == Status::SUCCESS) {
+    std::cout << static_cast<int64_t>(StrToIntBigEndian(key)) << ":" << value << std::endl;
+    iter->Next();
+  }
+
+  // Closes the database.
+  dbm.Close().OrDie();
+
   // Opens a new database with the big-endian floating-point numbers comparator.
   params.key_comparator = FloatBigEndianKeyComparator;
   dbm.OpenAdvanced("casket.tkt", true, File::OPEN_TRUNCATE, params).OrDie();

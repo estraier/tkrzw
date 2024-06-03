@@ -91,6 +91,33 @@ inline int32_t RealNumberKeyComparator(std::string_view a, std::string_view b) {
 }
 
 /**
+ * Key comparator in the order of big-endian binaries of signed integer numbers.
+ * @param a One key.
+ * @param b The other key.
+ * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
+ */
+inline int32_t SignedBigEndianKeyComparator(std::string_view a, std::string_view b) {
+  auto cast = [](std::string_view str) -> int64_t {
+    uint64_t num = StrToIntBigEndian(str);
+    switch(str.size()) {
+      case sizeof(int8_t):
+        num = static_cast<int8_t>(num);
+        break;
+      case sizeof(int16_t):
+        num = static_cast<int16_t>(num);
+        break;
+      case sizeof(int32_t):
+        num = static_cast<int32_t>(num);
+        break;
+    }
+    return static_cast<int64_t>(num);
+  };
+  const int64_t a_num = cast(a);
+  const int64_t b_num = cast(b);
+  return a_num < b_num ? -1 : (a_num > b_num ? 1 : 0);
+}
+
+/**
  * Key comparator in the order of big-endian binaries of floating-point numbers.
  * @param a One key.
  * @param b The other key.
@@ -183,6 +210,23 @@ inline int32_t PairRealNumberKeyComparator(std::string_view a, std::string_view 
   DeserializeStrPair(a, &a_key, &a_value);
   DeserializeStrPair(b, &b_key, &b_value);
   const int32_t key_cmp = RealNumberKeyComparator(a_key, b_key);
+  if (key_cmp != 0) {
+    return key_cmp;
+  }
+  return LexicalKeyComparator(a_value, b_value);
+}
+
+/**
+ * Key comparator for serialized pair strings in the big-endian binary signed integer order.
+ * @param a One key.
+ * @param b The other key.
+ * @return -1 if "a" is less, 1 if "a" is greater, and 0 if both are equivalent.
+ */
+inline int32_t PairSignedBigEndianKeyComparator(std::string_view a, std::string_view b) {
+  std::string_view a_key, a_value, b_key, b_value;
+  DeserializeStrPair(a, &a_key, &a_value);
+  DeserializeStrPair(b, &b_key, &b_value);
+  const int32_t key_cmp = SignedBigEndianKeyComparator(a_key, b_key);
   if (key_cmp != 0) {
     return key_cmp;
   }

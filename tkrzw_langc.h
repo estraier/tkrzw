@@ -1675,7 +1675,8 @@ TkrzwStr* tkrzw_file_search(
  * equivalent to using the FileIndex class.  If the key comparator of the tuning parameter is
  * not set, PairLexicalKeyComparator is set implicitly.  Other compatible key comparators are
  * PairLexicalCaseKeyComparator, PairDecimalKeyComparator, PairHexadecimalKeyComparator,
- * PairRealNumberKeyComparator, and PairFloatBigEndianKeyComparator.
+ * PairRealNumberKeyComparator, PairSignedBigEndianKeyComparator, and
+ * PairFloatBigEndianKeyComparator.
  */
 TkrzwIndex* tkrzw_index_open(const char* path, bool writable, const char* params);
 

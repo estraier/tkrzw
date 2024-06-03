@@ -138,7 +138,7 @@ class FileIndex final {
    * @details If the key comparator of the tuning parameter is nullptr, PairLexicalKeyComparator
    * is set implicitly.  Other compatible key comparators are PairLexicalCaseKeyComparator,
    * PairDecimalKeyComparator, PairHexadecimalKeyComparator, PairRealNumberKeyComparator,
-   * and PairFloatBigEndianKeyComparator.
+   * PairSignedBigEndianKeyComparator, and PairFloatBigEndianKeyComparator.
    * The alignment power and the maximum page size are also set implicitly to be suitable for
    * random access.
    */
