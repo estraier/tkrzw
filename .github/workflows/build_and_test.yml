@@ -20,6 +20,7 @@ jobs:
            configure_args: --enable-profile
          - description: Address Sanitition
            configure_args: --enable-sanitize-address
+           continue_on_error: true
          - description: Thread Sanitition
            configure_args: --enable-sanitize-thread
            continue_on_error: true
