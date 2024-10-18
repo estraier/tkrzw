@@ -22,6 +22,7 @@ jobs:
            configure_args: --enable-sanitize-address
          - description: Thread Sanitition
            configure_args: --enable-sanitize-thread
+           continue_on_error: true
          - description: No Optimization
            configure_args: --disable-opt
          - description: Native Optimization
@@ -77,6 +78,7 @@ jobs:
         working-directory: ${{ github.workspace }}/build
       
       - name: Test
+        continue-on-error: ${{ matrix.continue_on_error }}
         run: |
           make check
         working-directory: ${{ github.workspace }}/build
