@@ -28,8 +28,6 @@ jobs:
            configure_args: --disable-opt
          - description: Native Optimization
            configure_args: --enable-opt-native
-         - description: Native Optimization
-           configure_args: --enable-opt-native
          - description: Static Library
            configure_args: --enable-static
          - description: zlib
