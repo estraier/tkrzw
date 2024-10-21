@@ -1372,6 +1372,12 @@ TEST(StrUtilTest, StringView) {
   std::string_view sv = s6.Get();
   EXPECT_STREQ(s6.data(), sv.data());
   EXPECT_EQ(s6.size(), sv.size());
+  s1.Set(cstr, strlen(cstr));
+  EXPECT_EQ(cstr, s1.data());
+  EXPECT_EQ(std::strlen(cstr), s1.size());
+  s1.Set(sv);
+  EXPECT_EQ(sv.data(), s1.data());
+  EXPECT_EQ(sv.size(), s1.size());
 }
 
 TEST(StrUtilTest, ScopedStringView) {

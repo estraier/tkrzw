@@ -1124,24 +1124,40 @@ class StringView {
   explicit StringView(const std::string_view& str) : data_(str.data()), size_(str.size()) {}
 
   /**
-   * Get the pointer to the data region.
+   * Gets the pointer to the data region.
    */
   const char* data() const {
     return data_;
   }
 
   /**
-   * Get the size of the region.
+   * Gets the size of the region.
    */
   size_t size() const {
     return size_;
   }
 
   /**
-   * Get the string_view object.
+   * Gets the string_view object.
    */
   std::string_view Get() const {
     return std::string_view(data_, size_);
+  }
+
+  /**
+   * Sets the data.
+   */
+  void Set(const char* data, size_t size) {
+    data_ = data;
+    size_ = size;
+  }
+
+  /**
+   * Sets the data by a string view.
+   */
+  void Set(std::string_view str) {
+    data_ = str.data();
+    size_ = str.size();
   }
 
  private:
