@@ -438,7 +438,6 @@ inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
  * @return The value returned from the record processor.  If it is a normal value, compression is
  * done implicitly.
  */
-
 std::string_view CallRecordProcessFull(
     DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
     std::string_view* new_value_orig,

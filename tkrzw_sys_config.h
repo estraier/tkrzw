@@ -555,51 +555,6 @@ inline size_t SizeVarNum(uint64_t num) {
   return 10;
 }
 
-/**
- * Simplified string view, which can convey nullptr and can be modified.
- */
-struct StringView {
-  /** The pointer to the data region. */
-  const char* data;
-  /** The size of the region. */
-  size_t size;
-
-  /**
-   * Constructor for an undefined region.
-   */
-  StringView();
-
-  /**
-   * Constructor for a C-string.
-   */
-  explicit StringView(const char* str);
-
-  /**
-   * Constructor for a specific region.
-   */
-  StringView(const char* data, size_t size);
-
-  /**
-   * Constructor for a string object.
-   */
-  explicit StringView(const std::string& str);
-
-  /**
-   * Constructor for a string view object.
-   */
-  explicit StringView(const std::string_view& str);
-};
-
-inline StringView::StringView() : data(nullptr), size(0) {}
-
-inline StringView::StringView(const char* str) : data(str), size(strlen(str)) {}
-
-inline StringView::StringView(const char* data, size_t size) : data(data), size(size) {}
-
-inline StringView::StringView(const std::string& str) : data(str.data()), size(str.size()) {}
-
-inline StringView::StringView(const std::string_view& str) : data(str.data()), size(str.size()) {}
-
 }  // namespace tkrzw
 
 #endif  // _TKRZW_SYS_CONFIG_H
