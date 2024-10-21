@@ -222,4 +222,27 @@ TEST(SysConfigTest, VarNumRandom) {
   }
 }
 
+TEST(SysConfigTest, StringView) {
+  tkrzw::StringView s1;
+  EXPECT_EQ(nullptr, s1.data);
+  EXPECT_EQ(0, s1.size);
+  const char* const cstr = "foobar";
+  tkrzw::StringView s2(cstr);
+  EXPECT_EQ(cstr, s2.data);
+  EXPECT_EQ(std::strlen(cstr), s2.size);
+  tkrzw::StringView s3(str, 3);
+  EXPECT_EQ(str, s3.data);
+  EXPECT_EQ(3, s3.size);
+  tkrzw::StringView s4(nullptr, 12345);
+  EXPECT_EQ(nullptr, s4.data);
+  EXPECT_EQ(12345, s4.size);
+  const std::string xstr("1234");
+  tkrzw::StringView s5(xstr);
+  EXPECT_STREQ(xstr.data(), s5.data);
+  EXPECT_EQ(xstr.size(), s5.size);
+  tkrzw::StringView s6(std::string_view("abcde"));
+  EXPECT_STREQ("abcde", s6.data);
+  EXPECT_EQ(5, s6.size);
+}
+
 // END OF FILE
