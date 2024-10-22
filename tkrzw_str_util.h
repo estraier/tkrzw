@@ -1096,32 +1096,32 @@ inline std::vector<T> DeserializeIntVectorDelta(std::string_view serialized, boo
 /**
  * Simplified string_view to convey nullptr and be modifiable.
  */
-class StringView {
+class NullableStringView {
  public:
   /**
    * Constructor for an undefined region.
    */
-  StringView() : data_(nullptr), size_(0) {}
+  NullableStringView() : data_(nullptr), size_(0) {}
 
   /**
    * Constructor for a C-string.
    */
-  explicit StringView(const char* str) : data_(str), size_(strlen(str)) {}
+  explicit NullableStringView(const char* str) : data_(str), size_(strlen(str)) {}
 
   /**
    * Constructor for a specific region.
    */
-  StringView(const char* data, size_t size) : data_(data), size_(size) {}
+  NullableStringView(const char* data, size_t size) : data_(data), size_(size) {}
 
   /**
    * Constructor for a string object.
    */
-  explicit StringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
+  explicit NullableStringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
 
   /**
    * Constructor for a string view object.
    */
-  explicit StringView(const std::string_view& str) : data_(str.data()), size_(str.size()) {}
+  explicit NullableStringView(const std::string_view& str) : data_(str.data()), size_(str.size()) {}
 
   /**
    * Gets the pointer to the data region.
