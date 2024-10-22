@@ -498,15 +498,15 @@ static int32_t ProcessCompress(int32_t argc, const char** args) {
   if (rc4.IsSupported()) {
     test_sets.emplace_back(std::make_pair(&rc4, "rc4"));
   }
-  tkrzw::AESCompressor aes_128(std::string("a", 16), 1);
+  tkrzw::AESCompressor aes_128(std::string(16, 'a'), 1);
   if (rc4.IsSupported()) {
     test_sets.emplace_back(std::make_pair(&aes_128, "aes-128"));
   }
-  tkrzw::AESCompressor aes_192(std::string("a", 24), 1);
+  tkrzw::AESCompressor aes_192(std::string(24, 'a'), 1);
   if (rc4.IsSupported()) {
     test_sets.emplace_back(std::make_pair(&aes_192, "aes-192"));
   }
-  tkrzw::AESCompressor aes_256(std::string("a", 32), 1);
+  tkrzw::AESCompressor aes_256(std::string(32, 'a'), 1);
   if (rc4.IsSupported()) {
     test_sets.emplace_back(std::make_pair(&aes_256, "aes-256"));
   }
