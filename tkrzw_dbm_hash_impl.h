@@ -91,7 +91,7 @@ class HashRecord final {
    * Gets the value data.
    * @return The value data.  The data might be nullptr if the body hasn't been read.
    */
-  std::string_view GetValue() const;
+  NullableStringView GetValue() const;
 
   /**
    * Gets the offset of the child record.
@@ -439,7 +439,7 @@ inline uint32_t MagicChecksum(const char* key_buf, size_t key_size,
  * done implicitly.
  */
 std::string_view CallRecordProcessFull(
-    DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    DBM::RecordProcessor* proc, std::string_view key, NullableStringView old_value,
     std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder);
 

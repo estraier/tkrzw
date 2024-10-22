@@ -88,7 +88,7 @@ class SkipRecord final {
    * Gets the value data.
    * @return The value data.  The data might be nullptr if the body hasn't been read.
    */
-  std::string_view GetValue() const;
+  NullableStringView GetValue() const;
 
   /**
    * Gets the offsets of the records to skip to.

@@ -75,7 +75,7 @@ TEST(DBMSkipImplTest, SkipRecord) {
         while (offset < end_offset) {
           EXPECT_EQ(tkrzw::Status::SUCCESS, rec.ReadMetadataKey(offset, index));
           EXPECT_EQ(tkrzw::SPrintF("%08d", index * 2), rec.GetKey());
-          std::string_view value = rec.GetValue();
+          tkrzw::NullableStringView value = rec.GetValue();
           if (value.data() == nullptr) {
             EXPECT_EQ(tkrzw::Status::SUCCESS, rec.ReadBody());
             value = rec.GetValue();
@@ -172,12 +172,12 @@ TEST(DBMSkipImplTest, SkipRecordMulti) {
             const std::string& value = tkrzw::SPrintF("%08d", vi);
             EXPECT_EQ(tkrzw::Status::SUCCESS, rec.ReadMetadataKey(offset, index));
             EXPECT_EQ(key, rec.GetKey());
-            std::string_view rec_value = rec.GetValue();
+            tkrzw::NullableStringView rec_value = rec.GetValue();
             if (rec_value.data() == nullptr) {
               EXPECT_EQ(tkrzw::Status::SUCCESS, rec.ReadBody());
               rec_value = rec.GetValue();
             }
-            EXPECT_EQ(value, rec_value);
+            EXPECT_EQ(value, rec_value.Get());
             offset += rec.GetWholeSize();
             EXPECT_EQ(tkrzw::Status::SUCCESS, rec.SearchByIndex(record_base, &cache, index));
             EXPECT_EQ(key, rec.GetKey());
@@ -186,7 +186,7 @@ TEST(DBMSkipImplTest, SkipRecordMulti) {
               EXPECT_EQ(tkrzw::Status::SUCCESS, rec.ReadBody());
               rec_value = rec.GetValue();
             }
-            EXPECT_EQ(value, rec_value);
+            EXPECT_EQ(value, rec_value.Get());
             index++;
           }
         }

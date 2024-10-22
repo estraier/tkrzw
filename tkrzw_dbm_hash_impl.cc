@@ -38,8 +38,8 @@ std::string_view HashRecord::GetKey() const {
   return std::string_view(key_ptr_, key_size_);
 }
 
-std::string_view HashRecord::GetValue() const {
-  return std::string_view(value_ptr_, value_size_);
+NullableStringView HashRecord::GetValue() const {
+  return NullableStringView (value_ptr_, value_size_);
 }
 
 int64_t HashRecord::GetChildOffset() const {
@@ -386,7 +386,7 @@ Status HashRecord::ReplayOperations(
     switch (rec.GetOperationType()) {
       case OP_SET:
       case OP_ADD: {
-        std::string_view value = rec.GetValue();
+        NullableStringView value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
@@ -410,9 +410,9 @@ Status HashRecord::ReplayOperations(
             }
           }
           comp_data_placeholder.Set(decomp_buf, decomp_size);
-          value = comp_data_placeholder.Get();
+          value = NullableStringView(comp_data_placeholder.Get());
         }
-        res = proc->ProcessFull(key, value);
+        res = proc->ProcessFull(key, value.Get());
         break;
       }
       case OP_REMOVE: {
@@ -614,11 +614,11 @@ void FreeBlockPool::Deserialize(std::string_view str, int32_t offset_width, int3
 }
 
 std::string_view CallRecordProcessFull(
-    DBM::RecordProcessor* proc, std::string_view key, std::string_view old_value,
+    DBM::RecordProcessor* proc, std::string_view key, NullableStringView old_value,
     std::string_view* new_value_orig,
     Compressor* compressor, ScopedStringView* comp_data_placeholder) {
   if (old_value.data() == nullptr) {
-    old_value = std::string_view("", 0);
+    old_value = NullableStringView("", 0);
   } else if (compressor != nullptr) {
     size_t decomp_size = 0;
     char* decomp_buf =
@@ -627,9 +627,9 @@ std::string_view CallRecordProcessFull(
       return std::string_view();
     }
     comp_data_placeholder->Set(decomp_buf, decomp_size);
-    old_value = comp_data_placeholder->Get();
+    old_value = NullableStringView(comp_data_placeholder->Get());
   }
-  std::string_view new_value = proc->ProcessFull(key, old_value);
+  std::string_view new_value = proc->ProcessFull(key, old_value.Get());
   *new_value_orig = new_value;
   if (compressor != nullptr && new_value.data() != DBM::RecordProcessor::NOOP.data() &&
       new_value.data() != DBM::RecordProcessor::REMOVE.data()) {

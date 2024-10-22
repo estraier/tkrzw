@@ -530,7 +530,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
       const std::string_view key = rec.GetKey();
       if (rec.GetOperationType() == HashRecord::OP_SET ||
           rec.GetOperationType() == HashRecord::OP_ADD) {
-        std::string_view value = rec.GetValue();
+        NullableStringView value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
@@ -578,7 +578,7 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         case HashRecord::OP_SET:
         case HashRecord::OP_ADD:
           if (!writable) {
-            std::string_view value = rec.GetValue();
+            NullableStringView value = rec.GetValue();
             if (value.data() == nullptr) {
               status = rec.ReadBody();
               if (status != Status::SUCCESS) {
@@ -588,7 +588,8 @@ Status HashDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
             }
             std::string_view new_value_orig;
             const std::string_view new_value = CallRecordProcessFull(
-                proc, key, value, &new_value_orig, compressor_.get(), &comp_data_placeholder);
+                proc, key, value, &new_value_orig, compressor_.get(),
+                &comp_data_placeholder);
             if (new_value.data() == nullptr) {
               return Status(Status::BROKEN_DATA_ERROR, "record processing failed");
             }
@@ -1447,7 +1448,7 @@ Status HashDBMImpl::ProcessImpl(
       std::string_view new_value, new_value_orig;
       const bool old_is_set = rec.GetOperationType() == HashRecord::OP_SET ||
           rec.GetOperationType() == HashRecord::OP_ADD;
-      std::string_view old_value = rec.GetValue();
+      NullableStringView old_value = rec.GetValue();
       if (old_is_set) {
         if (readable) {
           if (old_value.data() == nullptr) {
@@ -1458,10 +1459,11 @@ Status HashDBMImpl::ProcessImpl(
             old_value = rec.GetValue();
           }
         } else {
-          old_value = std::string_view(nullptr, old_value.size());
+          old_value = NullableStringView(nullptr, old_value.size());
         }
         new_value = CallRecordProcessFull(
-            proc, key, old_value, &new_value_orig, compressor_.get(), &comp_data_placeholder);
+            proc, key, old_value, &new_value_orig, compressor_.get(),
+            &comp_data_placeholder);
       } else {
         new_value = CallRecordProcessEmpty(
             proc, key, &new_value_orig, compressor_.get(), &comp_data_placeholder);
@@ -2020,7 +2022,7 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
     switch (rec.GetOperationType()) {
       case HashRecord::OP_SET:
       case HashRecord::OP_ADD: {
-        std::string_view value = rec.GetValue();
+        NullableStringView value = rec.GetValue();
         if (value.data() == nullptr) {
           status = rec.ReadBody();
           if (status != Status::SUCCESS) {
@@ -2052,10 +2054,10 @@ Status HashDBMImpl::ImportFromFileBackwardImpl(
               }
             }
             comp_data_placeholder.Set(decomp_buf, decomp_size);
-            value = comp_data_placeholder.Get();
+            value = NullableStringView(comp_data_placeholder.Get());
           }
           Status set_status(Status::SUCCESS);
-          DBM::RecordProcessorSet setter(&set_status, value, false, nullptr);
+          DBM::RecordProcessorSet setter(&set_status, value.Get(), false, nullptr);
           status = Process(key, &setter, false, true);
           if (status != Status::SUCCESS) {
             CleanUp();

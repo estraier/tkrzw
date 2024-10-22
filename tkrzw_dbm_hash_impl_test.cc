@@ -76,12 +76,12 @@ TEST(DBMHashImplTest, HashRecord) {
               EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
               EXPECT_EQ(r1.GetWholeSize(), r2.GetWholeSize());
             }
-            std::string_view r2_value = r2.GetValue();
+            tkrzw::NullableStringView r2_value = r2.GetValue();
             if (r2_value.data() == nullptr) {
               EXPECT_EQ(tkrzw::Status::SUCCESS, r2.ReadBody());
               r2_value = r2.GetValue();
             }
-            EXPECT_EQ(r1.GetValue(), r2_value);
+            EXPECT_EQ(r1.GetValue().Get(), r2_value.Get());
             EXPECT_EQ(r1.GetWholeSize(), r2.GetWholeSize());
             off += r2.GetWholeSize();
             EXPECT_EQ(file.GetSizeSimple(), off);
@@ -380,7 +380,7 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
     std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", "barbar", &new_value_orig, nullptr, &placeholder);
+        &proc, "foo", tkrzw::NullableStringView("barbar"), &new_value_orig, nullptr, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
@@ -396,7 +396,7 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     char* comp_data = compressor->Compress("barbar", 6, &comp_size);
     std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", std::string(comp_data, comp_size), &new_value_orig,
+        &proc, "foo", tkrzw::NullableStringView(comp_data, comp_size), &new_value_orig,
         compressor, &placeholder);
     EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
@@ -414,7 +414,7 @@ TEST(DBMHashImplTest, CallRecordProcess) {
     char* comp_data = compressor->Compress("barbar", 6, &comp_size);
     std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
-        &proc, "foo", std::string(comp_data, comp_size), &new_value_orig,
+        &proc, "foo", tkrzw::NullableStringView(comp_data, comp_size), &new_value_orig,
         compressor, &placeholder);
     EXPECT_NE(nullptr, new_value.data());
     {

@@ -170,8 +170,8 @@ std::string_view SkipRecord::GetKey() const {
   return std::string_view(key_ptr_, key_size_);
 }
 
-std::string_view SkipRecord::GetValue() const {
-  return std::string_view(value_ptr_, value_size_);
+NullableStringView SkipRecord::GetValue() const {
+  return NullableStringView(value_ptr_, value_size_);
 }
 
 const std::vector<int64_t>& SkipRecord::GetStepOffsets() const {
@@ -597,7 +597,7 @@ Status RecordSorter::Finish() {
       return status;
     }
     const std::string_view key = rec->GetKey();
-    std::string_view value = rec->GetValue();
+    NullableStringView value = rec->GetValue();
     if (value.data() == nullptr) {
       const Status status = rec->ReadBody();
       if (status != Status::SUCCESS) {
@@ -608,7 +608,7 @@ Status RecordSorter::Finish() {
     SortSlot slot;
     slot.id = slots_.size();
     slot.key = key;
-    slot.value = value;
+    slot.value = value.Get();
     slot.file = nullptr;
     slot.flat_reader = nullptr;
     slot.skip_record = rec;
@@ -676,7 +676,7 @@ Status RecordSorter::Get(std::string* key, std::string* value) {
         return status;
       }
       const std::string_view rec_key = rec->GetKey();
-      std::string_view rec_value = rec->GetValue();
+      NullableStringView rec_value = rec->GetValue();
       if (rec_value.data() == nullptr) {
         const Status status = rec->ReadBody();
         if (status != Status::SUCCESS) {
@@ -685,7 +685,7 @@ Status RecordSorter::Get(std::string* key, std::string* value) {
         rec_value = rec->GetValue();
       }
       slot->key = rec_key;
-      slot->value = rec_value;
+      slot->value = rec_value.Get();
       slot->offset += rec->GetWholeSize();
       std::push_heap(heap_.begin(), heap_.end(), SortSlotComparator());
       has_record = true;

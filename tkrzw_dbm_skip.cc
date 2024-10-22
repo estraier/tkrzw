@@ -457,7 +457,7 @@ Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* val
     *key = rec.GetKey();
   }
   if (value != nullptr) {
-    std::string_view rec_value = rec.GetValue();
+    NullableStringView rec_value = rec.GetValue();
     if (rec_value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -465,7 +465,7 @@ Status SkipDBMImpl::GetByIndex(int64_t index, std::string* key, std::string* val
       }
       rec_value = rec.GetValue();
     }
-    *value = rec_value;
+    *value = rec_value.Get();
   }
   return Status(Status::SUCCESS);
 }
@@ -526,7 +526,7 @@ Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
       return status;
     }
     const std::string_view key = rec.GetKey();
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -534,7 +534,7 @@ Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
       }
       value = rec.GetValue();
     }
-    const std::string_view new_value = proc->ProcessFull(key, value);
+    const std::string_view new_value = proc->ProcessFull(key, value.Get());
     return UpdateRecord(key, new_value);
   }
   std::shared_lock<SpinSharedMutex> lock(mutex_);
@@ -550,7 +550,7 @@ Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
     return status;
   }
   const std::string_view key = rec.GetKey();
-  std::string_view value = rec.GetValue();
+  NullableStringView value = rec.GetValue();
   if (value.data() == nullptr) {
     status = rec.ReadBody();
     if (status != Status::SUCCESS) {
@@ -558,7 +558,7 @@ Status SkipDBMImpl::ProcessFirst(DBM::RecordProcessor* proc, bool writable) {
     }
     value = rec.GetValue();
   }
-  proc->ProcessFull(key, value);
+  proc->ProcessFull(key, value.Get());
   return Status(Status::SUCCESS);
 }
 
@@ -585,7 +585,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         return status;
       }
       const std::string_view key = rec.GetKey();
-      std::string_view value = rec.GetValue();
+      NullableStringView value = rec.GetValue();
       if (value.data() == nullptr) {
         status = rec.ReadBody();
         if (status != Status::SUCCESS) {
@@ -593,7 +593,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         }
         value = rec.GetValue();
       }
-      std::string_view new_value = proc->ProcessFull(key, value);
+      std::string_view new_value = proc->ProcessFull(key, value.Get());
       status = UpdateRecord(key, new_value);
       if (status != Status::SUCCESS) {
         return status;
@@ -618,7 +618,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         return status;
       }
       const std::string_view key = rec.GetKey();
-      std::string_view value = rec.GetValue();
+      NullableStringView value = rec.GetValue();
       if (value.data() == nullptr) {
         status = rec.ReadBody();
         if (status != Status::SUCCESS) {
@@ -626,7 +626,7 @@ Status SkipDBMImpl::ProcessEach(DBM::RecordProcessor* proc, bool writable) {
         }
         value = rec.GetValue();
       }
-      proc->ProcessFull(key, value);
+      proc->ProcessFull(key, value.Get());
       offset += rec.GetWholeSize();
       index++;
     }
@@ -781,7 +781,7 @@ Status SkipDBMImpl::Rebuild(
       return status;
     }
     const std::string_view key = rec.GetKey();
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -790,7 +790,7 @@ Status SkipDBMImpl::Rebuild(
       }
       value = rec.GetValue();
     }
-    status = tmp_dbm.Set(key, value);
+    status = tmp_dbm.Set(key, value.Get());
     if (status != Status::SUCCESS) {
       CleanUp();
       return status;
@@ -1087,7 +1087,7 @@ Status SkipDBMImpl::ValidateRecords() {
       return status;
     }
     const std::string_view key = rec.GetKey();
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -1451,7 +1451,7 @@ Status SkipDBMImpl::ProcessImpl(std::string_view key, DBM::RecordProcessor* proc
   Status status = rec.Search(METADATA_SIZE, cache_.get(), key, false);
   std::string_view new_value;
   if (status == Status::SUCCESS) {
-    std::string_view rec_value = rec.GetValue();
+    NullableStringView rec_value = rec.GetValue();
     if (rec_value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -1459,7 +1459,7 @@ Status SkipDBMImpl::ProcessImpl(std::string_view key, DBM::RecordProcessor* proc
       }
       rec_value = rec.GetValue();
     }
-    new_value = proc->ProcessFull(key, rec_value);
+    new_value = proc->ProcessFull(key, rec_value.Get());
   } else if (status == Status::NOT_FOUND_ERROR) {
     new_value = proc->ProcessEmpty(key);
   } else {
@@ -1680,7 +1680,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
       return status;
     }
     const std::string_view key = rec.GetKey();
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -1689,7 +1689,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
       value = rec.GetValue();
     }
     record_size_ = rec.GetWholeSize();
-    std::string_view new_value = proc->ProcessFull(key, value);
+    std::string_view new_value = proc->ProcessFull(key, value.Get());
     status = dbm_->UpdateRecord(key, new_value);
     if (status != Status::SUCCESS) {
       return status;
@@ -1710,7 +1710,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
       return status;
     }
     const std::string_view key = rec.GetKey();
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -1719,7 +1719,7 @@ Status SkipDBMIteratorImpl::Process(DBM::RecordProcessor* proc, bool writable) {
       value = rec.GetValue();
     }
     record_size_ = rec.GetWholeSize();
-    proc->ProcessFull(key, value);
+    proc->ProcessFull(key, value.Get());
   }
   return Status(Status::SUCCESS);
 }
@@ -1738,7 +1738,7 @@ Status SkipDBMIteratorImpl::Get(std::string* key, std::string* value) {
     *key = rec.GetKey();
   }
   if (value != nullptr) {
-    std::string_view rec_value = rec.GetValue();
+    NullableStringView rec_value = rec.GetValue();
     if (rec_value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -1746,7 +1746,7 @@ Status SkipDBMIteratorImpl::Get(std::string* key, std::string* value) {
       }
       rec_value = rec.GetValue();
     }
-    *value = rec_value;
+    *value = rec_value.Get();
   }
   record_size_ = rec.GetWholeSize();
   return Status(Status::SUCCESS);
@@ -2172,7 +2172,7 @@ Status SkipDBM::RestoreDatabase(
     if (status != Status::SUCCESS) {
       break;
     }
-    std::string_view value = rec.GetValue();
+    NullableStringView value = rec.GetValue();
     if (value.data() == nullptr) {
       status = rec.ReadBody();
       if (status != Status::SUCCESS) {
@@ -2180,7 +2180,7 @@ Status SkipDBM::RestoreDatabase(
       }
       value = rec.GetValue();
     }
-    status = new_dbm.Set(rec.GetKey(), value);
+    status = new_dbm.Set(rec.GetKey(), value.Get());
     if (status != Status::SUCCESS) {
       break;
     }
