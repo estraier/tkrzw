@@ -1,0 +1,114 @@
+name: Build and Test
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  autotools:
+    strategy:
+      matrix:
+        include:
+         - description: Default
+         - description: LLVM
+           cc: clang
+           cxx: clang++
+         - description: Debug
+           configure_args: --enable-debug
+         - description: Profiling
+           configure_args: --enable-profile
+         - description: Address Sanitition
+           configure_args: --enable-sanitize-address
+         - description: Thread Sanitition
+           configure_args: --enable-sanitize-thread
+           continue_on_error: true
+         - description: No Optimization
+           configure_args: --disable-opt
+         - description: Native Optimization
+           configure_args: --enable-opt-native
+         - description: Static Library
+           configure_args: --enable-static
+         - description: zlib
+           configure_args: --enable-zlib
+           apt_install: zlib1g-dev
+         - description: zstd
+           configure_args: --enable-zstd
+           apt_install: libzstd-dev
+         - description: lz4
+           configure_args: --enable-lz4
+           apt_install: liblz4-dev 
+         - description: lzma
+           configure_args: --enable-lzma
+           apt_install: liblzma-dev
+         - description: most features
+           configure_args: --enable-most-features
+           apt_install: zlib1g-dev libzstd-dev liblz4-dev liblzma-dev
+
+    name: autoconf workflow using ${{ matrix.description }}
+    
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: "Install additional packages using apt"
+        if: ${{ matrix.apt_install }}
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ matrix.apt_install }}
+      
+      - name: "Clone Repository"
+        uses: actions/checkout@v4
+      
+      - name: Create build directory
+        run: |
+          mkdir ${GITHUB_WORKSPACE}/build
+      
+      - name: Build
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          ${GITHUB_WORKSPACE}/configure ${{ matrix.configure_args }} --prefix ${RUNNER_TEMP}/install-here
+          make
+        working-directory: ${{ github.workspace }}/build
+      
+      - name: Test
+        continue-on-error: ${{ matrix.continue_on_error }}
+        run: |
+          make check
+        working-directory: ${{ github.workspace }}/build
+        
+      - name: Install
+        run: |
+          make install
+          find ${RUNNER_TEMP}/install-here
+        working-directory: ${{ github.workspace }}/build
+
+  nmake:
+    name: "nmake workflow"
+    
+    runs-on: windows-latest
+    
+    permissions:
+      contents: read
+
+    steps:
+      - name: "Clone Repository"
+        uses: actions/checkout@v4
+
+      - name: "Enter-VsDevShell"
+        uses: ilammy/msvc-dev-cmd@v1
+          
+      - name: Build
+        run: |
+          $vcpath=(Get-Item (& "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -requires "Microsoft.VisualStudio.Component.VC.Tools.x86.x64" -find VC\Tools\MSVC\*\lib\x64\libcpmt.lib)[0]).Directory.Parent.Parent.FullName
+          nmake -f ${env:GITHUB_WORKSPACE}/VCMakefile "VCPATH=${vcpath}"
+        working-directory: ${{ github.workspace }}
+          
+      - name: Test
+        run: |
+          nmake -f ${env:GITHUB_WORKSPACE}/VCMakefile check
+        working-directory: ${{ github.workspace }}
