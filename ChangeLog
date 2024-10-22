@@ -1,3 +1,11 @@
+2024-10-22 Mikio Hirabayashi  <hirarin@gmail.com>
+
+	- Release: 1.0.32
+	- Library version: 1.75.0
+
+	- Add NullableStringView.
+	- Fix bugs of crash by assertion to avoid std::string_view(nullptr, x).
+
 2024-06-02 Mikio Hirabayashi  <hirarin@gmail.com>
 
 	- Release: 1.0.31

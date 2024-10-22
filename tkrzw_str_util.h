@@ -1121,7 +1121,8 @@ class NullableStringView {
   /**
    * Constructor for a string view object.
    */
-  explicit NullableStringView(const std::string_view& str) : data_(str.data()), size_(str.size()) {}
+  explicit NullableStringView(const std::string_view& str)
+      : data_(str.data()), size_(str.size()) {}
 
   /**
    * Gets the pointer to the data region.
