@@ -932,20 +932,26 @@ bool tkrzw_dbm_compare_exchange(
     if (key_size < 0) {
       key_size = std::strlen(key_ptr);
     }
-    if (expected_ptr == TKRZW_ANY_DATA) {
-      expected_ptr = DBM::ANY_DATA.data();
-    } else if (expected_ptr != nullptr && expected_size < 0) {
-      expected_size = std::strlen(expected_ptr);
+    std::string_view expected;
+    if (expected_ptr != nullptr) {
+      if (expected_ptr == TKRZW_ANY_DATA) {
+        expected_ptr = DBM::ANY_DATA.data();
+      } else if (expected_size < 0) {
+        expected_size = std::strlen(expected_ptr);
+      }
+      expected = std::string_view(expected_ptr, expected_size);
     }
-    if (desired_ptr == TKRZW_ANY_DATA) {
-      desired_ptr = DBM::ANY_DATA.data();
-    } else if (desired_ptr != nullptr && desired_size < 0) {
-      desired_size = std::strlen(desired_ptr);
+    std::string_view desired;
+    if (desired_ptr != nullptr) {
+      if (desired_ptr == TKRZW_ANY_DATA) {
+        desired_ptr = DBM::ANY_DATA.data();
+      } else if (desired_size < 0) {
+        desired_size = std::strlen(desired_ptr);
+      }
+      desired = std::string_view(desired_ptr, desired_size);
     }
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
-    last_status = xdbm->CompareExchange(
-        std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
-        std::string_view(desired_ptr, desired_size));
+    last_status = xdbm->CompareExchange(std::string_view(key_ptr, key_size), expected, desired);
     return last_status == Status::SUCCESS;
   } catch (const std::exception& e) {
     tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
@@ -962,22 +968,29 @@ char* tkrzw_dbm_compare_exchange_and_get(
     if (key_size < 0) {
       key_size = std::strlen(key_ptr);
     }
-    if (expected_ptr == TKRZW_ANY_DATA) {
-      expected_ptr = DBM::ANY_DATA.data();
-    } else if (expected_ptr != nullptr && expected_size < 0) {
-      expected_size = std::strlen(expected_ptr);
+    std::string_view expected;
+    if (expected_ptr != nullptr) {
+      if (expected_ptr == TKRZW_ANY_DATA) {
+        expected_ptr = DBM::ANY_DATA.data();
+      } else if (expected_size < 0) {
+        expected_size = std::strlen(expected_ptr);
+      }
+      expected = std::string_view(expected_ptr, expected_size);
     }
-    if (desired_ptr == TKRZW_ANY_DATA) {
-      desired_ptr = DBM::ANY_DATA.data();
-    } else if (desired_ptr != nullptr && desired_size < 0) {
-      desired_size = std::strlen(desired_ptr);
+    std::string_view desired;
+    if (desired_ptr != nullptr) {
+      if (desired_ptr == TKRZW_ANY_DATA) {
+        desired_ptr = DBM::ANY_DATA.data();
+      } else if (desired_size < 0) {
+        desired_size = std::strlen(desired_ptr);
+      }
+      desired = std::string_view(desired_ptr, desired_size);
     }
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     std::string actual;
     bool found = false;
     last_status = xdbm->CompareExchange(
-        std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
-        std::string_view(desired_ptr, desired_size), &actual, &found);
+        std::string_view(key_ptr, key_size), expected, desired, &actual, &found);
     char* actual_ptr = nullptr;
     if (found) {
       actual_ptr = static_cast<char*>(xmalloc(actual.size() + 1));
@@ -1054,13 +1067,17 @@ bool tkrzw_dbm_compare_exchange_multi(
           key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
       xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
       const char* value_ptr = key_value_pair.value_ptr;
-      int32_t value_size = key_value_pair.value_size;
-      if (value_ptr == TKRZW_ANY_DATA) {
-        value_ptr = DBM::ANY_DATA.data();
-      } else if (value_ptr != nullptr && value_size < 0) {
-        value_size = strlen(value_ptr);
+      if (value_ptr == nullptr) {
+        xpair.second = std::string_view();
+      } else {
+        int32_t value_size = key_value_pair.value_size;
+        if (value_ptr == TKRZW_ANY_DATA) {
+          value_ptr = DBM::ANY_DATA.data();
+        } else if (value_size < 0) {
+          value_size = strlen(value_ptr);
+        }
+        xpair.second = std::string_view(value_ptr, value_size);
       }
-      xpair.second = std::string_view(value_ptr, value_size);
     }
     std::vector<std::pair<std::string_view, std::string_view>> desired_vec(num_desired);
     for (int32_t i = 0; i < num_desired; i++) {
@@ -1069,10 +1086,14 @@ bool tkrzw_dbm_compare_exchange_multi(
       const int32_t key_size =
           key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
       xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
-      const int32_t value_size =
-          key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
-          strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
-      xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+      const char* value_ptr = key_value_pair.value_ptr;
+      if (value_ptr == nullptr) {
+        xpair.second = std::string_view();
+      } else {
+        const int32_t value_size = key_value_pair.value_size < 0 ?
+            strlen(value_ptr) : key_value_pair.value_size;
+        xpair.second = std::string_view(value_ptr, value_size);
+      }
     }
     ParamDBM* xdbm = reinterpret_cast<ParamDBM*>(dbm);
     last_status = xdbm->CompareExchangeMulti(expected_vec, desired_vec);
@@ -2029,20 +2050,27 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange(
     if (key_size < 0) {
       key_size = std::strlen(key_ptr);
     }
-    if (expected_ptr == TKRZW_ANY_DATA) {
-      expected_ptr = DBM::ANY_DATA.data();
-    } else if (expected_ptr != nullptr && expected_size < 0) {
-      expected_size = std::strlen(expected_ptr);
+    std::string_view expected;
+    if (expected_ptr != nullptr) {
+      if (expected_ptr == TKRZW_ANY_DATA) {
+        expected_ptr = DBM::ANY_DATA.data();
+      } else if (expected_size < 0) {
+        expected_size = std::strlen(expected_ptr);
+      }
+      expected = std::string_view(expected_ptr, expected_size);
     }
-    if (desired_ptr == TKRZW_ANY_DATA) {
-      desired_ptr = DBM::ANY_DATA.data();
-    } else if (desired_ptr != nullptr && desired_size < 0) {
-      desired_size = std::strlen(desired_ptr);
+    std::string_view desired;
+    if (desired_ptr != nullptr) {
+      if (desired_ptr == TKRZW_ANY_DATA) {
+        desired_ptr = DBM::ANY_DATA.data();
+      } else if (desired_size < 0) {
+        desired_size = std::strlen(desired_ptr);
+      }
+      desired = std::string_view(desired_ptr, desired_size);
     }
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(xasync->CompareExchange(
-        std::string_view(key_ptr, key_size), std::string_view(expected_ptr, expected_size),
-        std::string_view(desired_ptr, desired_size))));
+        std::string_view(key_ptr, key_size), expected, desired)));
   } catch (const std::exception& e) {
     tkrzw_set_last_status(TKRZW_STATUS_SYSTEM_ERROR, e.what());
     return nullptr;
@@ -2080,12 +2108,16 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
       xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
       const char* value_ptr = key_value_pair.value_ptr;
       int32_t value_size = key_value_pair.value_size;
-      if (value_ptr == TKRZW_ANY_DATA) {
-        value_ptr = DBM::ANY_DATA.data();
-      } else if (value_ptr != nullptr && value_size < 0) {
-        value_size = strlen(value_ptr);
+      if (value_ptr == nullptr) {
+        xpair.second = std::string_view();
+      } else {
+        if (value_ptr == TKRZW_ANY_DATA) {
+          value_ptr = DBM::ANY_DATA.data();
+        } else if (value_size < 0) {
+          value_size = strlen(value_ptr);
+        }
+        xpair.second = std::string_view(value_ptr, value_size);
       }
-      xpair.second = std::string_view(value_ptr, value_size);
     }
     std::vector<std::pair<std::string_view, std::string_view>> desired_vec(num_desired);
     for (int32_t i = 0; i < num_desired; i++) {
@@ -2094,10 +2126,14 @@ TkrzwFuture* tkrzw_async_dbm_compare_exchange_multi(
       const int32_t key_size =
           key_value_pair.key_size < 0 ? strlen(key_value_pair.key_ptr) : key_value_pair.key_size;
       xpair.first = std::string_view(key_value_pair.key_ptr, key_size);
-      const int32_t value_size =
-          key_value_pair.value_ptr != nullptr && key_value_pair.value_size < 0 ?
-          strlen(key_value_pair.value_ptr) : key_value_pair.value_size;
-      xpair.second = std::string_view(key_value_pair.value_ptr, value_size);
+      const char* value_ptr = key_value_pair.value_ptr;
+      if (value_ptr == nullptr) {
+        xpair.second = std::string_view();
+      } else {
+        const int32_t value_size = key_value_pair.value_size < 0 ?
+            strlen(value_ptr) : key_value_pair.value_size;
+        xpair.second = std::string_view(value_ptr, value_size);
+      }
     }
     AsyncDBM* xasync = reinterpret_cast<AsyncDBM*>(async);
     return reinterpret_cast<TkrzwFuture*>(new StatusFuture(
