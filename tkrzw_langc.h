@@ -216,13 +216,13 @@ void tkrzw_set_last_status(int32_t code, const char* message);
  * @details The region of the message string is available until the this function or
  * tkrzw_get_last_status_message function is called next time.
  */
-TkrzwStatus tkrzw_get_last_status();
+TkrzwStatus tkrzw_get_last_status(void);
 
 /**
  * Gets the status code of the last system operation.
  * @return The status code of the last system operation.
  */
-int32_t tkrzw_get_last_status_code();
+int32_t tkrzw_get_last_status_code(void);
 
 /**
  * Gets the status message of the last system operation.
@@ -230,7 +230,7 @@ int32_t tkrzw_get_last_status_code();
  * @details The region of the message string is available until the this function or
  * tkrzw_get_last_status function is called next time.
  */
-const char* tkrzw_get_last_status_message();
+const char* tkrzw_get_last_status_message(void);
 
 /**
  * Gets the string name of a status code.
@@ -243,19 +243,19 @@ const char* tkrzw_status_code_name(int32_t code);
  * Gets the number of seconds since the UNIX epoch.
  * @return The number of seconds since the UNIX epoch with microsecond precision.
  */
-double tkrzw_get_wall_time();
+double tkrzw_get_wall_time(void);
 
 /**
  * Gets the memory capacity of the platform.
  * @return The memory capacity of the platform in bytes, or -1 on failure.
  */
-int64_t tkrzw_get_memory_capacity();
+int64_t tkrzw_get_memory_capacity(void);
 
 /**
  * Gets the current memory usage of the process.
  * @return The current memory usage of the process in bytes, or -1 on failure.
  */
-int64_t tkrzw_get_memory_usage();
+int64_t tkrzw_get_memory_usage(void);
 
 /**
  * Primary hash function for the hash database.

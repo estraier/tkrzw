@@ -19,7 +19,7 @@
 
 #include "tkrzw_langc.h"
 
-void print_usage() {
+void print_usage(void) {
   fprintf(stderr, "usage: tkrzw_lang_check [path [params [iters]]]\n");
 }
 

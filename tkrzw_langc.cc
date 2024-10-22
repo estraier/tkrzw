@@ -129,7 +129,7 @@ void tkrzw_set_last_status(int32_t code, const char* message) {
   }
 }
 
-TkrzwStatus tkrzw_get_last_status() {
+TkrzwStatus tkrzw_get_last_status(void) {
   TkrzwStatus status;
   status.code = last_status.GetCode();
   if (last_status.HasMessage()) {
@@ -141,11 +141,11 @@ TkrzwStatus tkrzw_get_last_status() {
   return status;
 }
 
-int32_t tkrzw_get_last_status_code() {
+int32_t tkrzw_get_last_status_code(void) {
   return last_status.GetCode();
 }
 
-const char* tkrzw_get_last_status_message() {
+const char* tkrzw_get_last_status_message(void) {
   if (last_status.HasMessage()) {
     last_message = last_status.GetMessage();
     return last_message.c_str();
@@ -157,7 +157,7 @@ const char* tkrzw_status_code_name(int32_t code) {
   return Status::CodeName(static_cast<Status::Code>(code));
 }
 
-double tkrzw_get_wall_time() {
+double tkrzw_get_wall_time(void) {
   try {
     return GetWallTime();
   } catch (const std::exception& e) {
@@ -166,7 +166,7 @@ double tkrzw_get_wall_time() {
   }
 }
 
-int64_t tkrzw_get_memory_capacity() {
+int64_t tkrzw_get_memory_capacity(void) {
   try {
     return GetMemoryCapacity();
   } catch (const std::exception& e) {
@@ -175,7 +175,7 @@ int64_t tkrzw_get_memory_capacity() {
   }
 }
 
-int64_t tkrzw_get_memory_usage() {
+int64_t tkrzw_get_memory_usage(void) {
   try {
     return GetMemoryUsage();
   } catch (const std::exception& e) {
