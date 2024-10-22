@@ -53,7 +53,7 @@ jobs:
       contents: read
 
     steps:
-      - name: "Install additional packages using pkg"
+      - name: "Install additional packages using apt"
         if: ${{ matrix.apt_install }}
         run: |
           sudo apt update
