@@ -5,6 +5,7 @@
 
 	- Add NullableStringView.
 	- Fix bugs of crash by assertion to avoid std::string_view(nullptr, x).
+	- Fix a memory bug in tkrzw_dbm_perf.
 
 2024-06-02 Mikio Hirabayashi  <hirarin@gmail.com>
 
