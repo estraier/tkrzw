@@ -1698,7 +1698,7 @@ std::string StrDecodeBase64(std::string_view str) {
       case 0: {
         decoded.push_back((bits >> 16) & 0xff);
         decoded.push_back((bits >> 8) & 0xff);
-        decoded.push_back(bits & 0xff);;
+        decoded.push_back(bits & 0xff);
         break;
       }
       case 1: {

@@ -116,7 +116,7 @@ constexpr double DOUBLEMAX = std::numeric_limits<double>::max();
 constexpr double DOUBLENAN = std::numeric_limits<double>::quiet_NaN();
 
 /** The positive infinity value of double. */
-constexpr double DOUBLEINF = std::numeric_limits<double>::infinity();;
+constexpr double DOUBLEINF = std::numeric_limits<double>::infinity();
 
 /** The buffer size for a numeric string expression. */
 constexpr int32_t NUM_BUFFER_SIZE = 32;

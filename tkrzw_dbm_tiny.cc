@@ -621,7 +621,7 @@ Status TinyDBMImpl::ExportRecords() {
   status |= file_->Close();
   status |= RenameFile(export_path, path_);
   RemoveFile(export_path);
-  status |= file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);;
+  status |= file_->Open(path_, true, open_options_ & ~File::OPEN_TRUNCATE);
   return status;
 }
 

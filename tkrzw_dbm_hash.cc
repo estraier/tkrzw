@@ -1367,7 +1367,7 @@ Status HashDBMImpl::CheckFileBeforeOpen(File* file, const std::string& path, boo
       return Status(Status::INFEASIBLE_ERROR, "The file size not aligned to the block size");
     }
   }
-  return Status(Status::SUCCESS);;
+  return Status(Status::SUCCESS);
 }
 
 Status HashDBMImpl::TuneFileAfterOpen() {

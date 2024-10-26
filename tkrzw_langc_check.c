@@ -55,7 +55,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("Setting records: path=%s params=%s num_iterations=%d\n",
            path, params, num_iters);
     const double start_time = tkrzw_get_wall_time();
-    bool midline = false;;
+    bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iters; i++) {
       const size_t buf_size = sprintf(buf, "%08d", i);
       if (!tkrzw_dbm_set(dbm, buf, buf_size, buf, buf_size, true)) {
@@ -93,7 +93,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("Getting records: path=%s params=%s num_iterations=%d\n",
            path, params, num_iters);
     const double start_time = tkrzw_get_wall_time();
-    bool midline = false;;
+    bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iters; i++) {
       const size_t key_size = sprintf(key_buf, "%08d", i);
       int32_t value_size = 0;
@@ -126,7 +126,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("Iterating records: path=%s params=%s num_iterations=%d\n",
            path, params, num_iters);
     const double start_time = tkrzw_get_wall_time();
-    bool midline = false;;
+    bool midline = false;
     TkrzwDBMIter* iter = tkrzw_dbm_make_iterator(dbm);
     if (!tkrzw_dbm_iter_first(iter)) {
       print_error("iter_first");
@@ -174,7 +174,7 @@ int32_t process(const char* path, const char* params, int32_t num_iters) {
     printf("Removing records: path=%s params=%s num_iterations=%d\n",
            path, params, num_iters);
     const double start_time = tkrzw_get_wall_time();
-    bool midline = false;;
+    bool midline = false;
     for (int32_t i = 0; !has_error && i < num_iters; i++) {
       const size_t buf_size = sprintf(buf, "%08d", i);
       if (!tkrzw_dbm_remove(dbm, buf, buf_size)) {

@@ -160,7 +160,7 @@ std::unique_ptr<File> MakeFileOrDie(
 void SetAccessStrategyOrDie(File* file, int64_t block_size,
                             bool is_direct_io, bool is_sync_io, bool is_padding,
                             bool is_pagecache) {
-  auto* pos_file = dynamic_cast<PositionalFile*>(file);;
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
   if (pos_file != nullptr) {
     int32_t options = PositionalFile::ACCESS_DEFAULT;
     if (is_direct_io) {
@@ -180,7 +180,7 @@ void SetAccessStrategyOrDie(File* file, int64_t block_size,
 }
 
 void SetHeadBufferOfFileOrDie(File* file, int64_t size) {
-  auto* pos_file = dynamic_cast<PositionalFile*>(file);;
+  auto* pos_file = dynamic_cast<PositionalFile*>(file);
   if (pos_file != nullptr) {
     pos_file->SetHeadBuffer(size).OrDie();
   }

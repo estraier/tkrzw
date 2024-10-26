@@ -102,7 +102,7 @@ inline Status TruncateFileInternally(HANDLE file_handle, int64_t length) {
  * @return The result status.
  */
 inline Status TruncateFileExternally(const std::string& path, int64_t length) {
-  const DWORD amode = GENERIC_WRITE;;
+  const DWORD amode = GENERIC_WRITE;
   const DWORD smode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   const DWORD cmode = OPEN_EXISTING;
   const DWORD flags = FILE_FLAG_RANDOM_ACCESS;

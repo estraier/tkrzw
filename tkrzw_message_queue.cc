@@ -670,7 +670,7 @@ Status MessageQueue::RemoveOldFiles(
     int64_t file_id = 0;
     int64_t timestamp = 0;
     int64_t file_size = 0;
-    status = ReadFileMetadata(path, &file_id, &timestamp, &file_size);;
+    status = ReadFileMetadata(path, &file_id, &timestamp, &file_size);
     if (status != Status::SUCCESS) {
       return status;
     }
