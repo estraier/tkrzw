@@ -212,7 +212,7 @@ TkrzwRunCheckFilePerf(INDEX  32 OPTIONS wicked --file pos-atom --iter 50000 --th
 TkrzwRunCheckFilePerf(INDEX  33 OPTIONS wicked --file pos-atom --iter 50000 --threads 5 --size 128 --block_size 128 --pagecache --head_buffer 8192)
 
 function(TkrzwRunCheckHashDBMPerf)
-    #add_test(NAME check-file-perf:1  COMMAND tkrzw_dbm_perf sequence --dbm hash --file mmap-para --iter 20000 --threads 5 --size 8 --buckets 100000 --path casket-somename.db)
+    #add_test(NAME check-file-perf:1  COMMAND tkrzw_dbm_perf sequence --dbm hash --file mmap-para --iter 20000 --threads 5 --size 8 --buckets 100000 --path casket-somename.tkh)
     #              |- hardcoded -| ^          |--hardcoded-| |------------------------------------- OPTIONS ---------------------------------------|       |- generated name -| 
     #                              |                         
     #                            INDEX                       
@@ -221,7 +221,7 @@ function(TkrzwRunCheckHashDBMPerf)
         NAME
             check-hashdbm-perf:${params_INDEX}
         COMMAND
-            tkrzw_dbm_perf ${params_OPTIONS} --path casket-check-hashdbm-perf.${params_INDEX}.db
+            tkrzw_dbm_perf ${params_OPTIONS} --path casket-check-hashdbm-perf.${params_INDEX}.tkh
     )
 endfunction()
 
