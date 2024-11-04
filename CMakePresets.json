@@ -11,7 +11,8 @@
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_VERBOSE_MAKEFILE": "ON"
+        "CMAKE_VERBOSE_MAKEFILE": "ON",
+        "WITH_TOOLS": "ON"
       }
     },
     {
@@ -135,7 +136,15 @@
         },
         {
           "type": "build",
+          "name": "msvc-debug"
+        },
+        {
+          "type": "build",
           "name": "msvc-release"
+        },
+        {
+          "type": "test",
+          "name": "msvc-debug"
         },
         {
           "type": "test",
