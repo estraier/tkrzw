@@ -50,6 +50,7 @@ set_target_properties(tkrzw
     PROPERTIES
         MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>$<IF:$<STREQUAL:$<TARGET_PROPERTY:tkrzw,TYPE>,SHARED_LIBRARY>,DLL,>
         DEBUG_POSTFIX "d"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 
