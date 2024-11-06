@@ -20,8 +20,8 @@ include(CPack)
 include(GNUInstallDirs)
 include(CMakeDependentOption)
 
-option(WITH_TOOLS "Build cli frontends" OFF)
-cmake_dependent_option(WITH_TESTS "Generate a test target" OFF "WITH_TOOLS" OFF)
+option(TKRZW_TOOLS "Build cli frontends" OFF)
+cmake_dependent_option(TKRZW_TESTS "Generate a test target" OFF "TKRZW_TOOLS" OFF)
 
 
 find_package(Threads)
@@ -129,7 +129,7 @@ target_sources(tkrzw PRIVATE
 )
 
 set(TOOL_TARGETS)
-if (WITH_TOOLS)
+if (TKRZW_TOOLS)
     function(TkrzwAddCommandLineTool)
         cmake_parse_arguments(params "" "NAME" "SOURCES" ${ARGN})
         add_executable(${params_NAME})
@@ -147,7 +147,7 @@ if (WITH_TOOLS)
     TkrzwAddCommandLineTool(NAME tkrzw_dbm_tran SOURCES tkrzw_dbm_tran.cc)
     TkrzwAddCommandLineTool(NAME tkrzw_ulog_util SOURCES tkrzw_ulog_util.cc)
     TkrzwAddCommandLineTool(NAME tkrzw_langc_check SOURCES tkrzw_langc_check.c)
-endif (WITH_TOOLS)
+endif (TKRZW_TOOLS)
 
 install(
     TARGETS tkrzw ${TOOL_TARGETS}
@@ -181,7 +181,7 @@ install(
 
 
 
-if (WITH_TESTS)
+if (TKRZW_TESTS)
     enable_testing()
     add_test(NAME check-build-util:1 COMMAND tkrzw_build_util version)
     add_test(NAME check-build-util:2 COMMAND tkrzw_build_util config)
@@ -339,4 +339,4 @@ if (WITH_TESTS)
         set_tests_properties(check-hashdbm-util:${index} PROPERTIES DEPENDS check-hashdbm-util:${previous_index})
     endforeach()
 
-endif (WITH_TESTS)
+endif (TKRZW_TESTS)
