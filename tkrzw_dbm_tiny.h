@@ -73,9 +73,7 @@ class TinyDBM final : public DBM {
      * @return The result status.
      * @details This method is not supported.
      */
-    Status Last() override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status Last() override;
 
     /**
      * Initializes the iterator to indicate a specific record.
@@ -93,9 +91,7 @@ class TinyDBM final : public DBM {
      * @return The result status.
      * @details This method is not supported.
      */
-    Status JumpLower(std::string_view key, bool inclusive = false) override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status JumpLower(std::string_view key, bool inclusive = false) override;
 
     /**
      * Initializes the iterator to indicate the first record whose key is upper than a given key.
@@ -104,9 +100,7 @@ class TinyDBM final : public DBM {
      * @return The result status.
      * @details This method is not supported.
      */
-    Status JumpUpper(std::string_view key, bool inclusive = false) override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status JumpUpper(std::string_view key, bool inclusive = false) override;
 
     /**
      * Moves the iterator to the next record.
@@ -121,9 +115,7 @@ class TinyDBM final : public DBM {
      * @return The result status.
      * @details This method is not suppoerted.
      */
-    Status Previous() override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status Previous() override;
 
     /**
      * Processes the current record with a processor.
@@ -291,9 +283,7 @@ class TinyDBM final : public DBM {
    * @return The result status.
    * @details The number of buckets is calculated implicitly.
    */
-  Status Rebuild() override {
-    return RebuildAdvanced(-1);
-  }
+  Status Rebuild() override;
 
   /**
    * Rebuilds the entire database, in an advanced way.
@@ -343,17 +333,13 @@ class TinyDBM final : public DBM {
    * Checks whether the database condition is healthy.
    * @return Always true.  On-memory databases never cause system errors.
    */
-  bool IsHealthy() const override {
-    return true;
-  }
+  bool IsHealthy() const override;
 
   /**
    * Checks whether ordered operations are supported.
    * @return Always false.  Ordered operations are not supported.
    */
-  bool IsOrdered() const override {
-    return false;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

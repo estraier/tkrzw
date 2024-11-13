@@ -803,6 +803,42 @@ Status PolyDBM::SynchronizeAdvanced(
   return dbm_->Synchronize(hard, proc);
 }
 
+Status PolyDBM::Iterator::First() {
+  return iter_->First();
+}
+
+Status PolyDBM::Iterator::Last() {
+  return iter_->Last();
+}
+
+Status PolyDBM::Iterator::Jump(std::string_view key) {
+  return iter_->Jump(key);
+}
+
+Status PolyDBM::Iterator::JumpLower(std::string_view key, bool inclusive) {
+  return iter_->JumpLower(key, inclusive);
+}
+
+Status PolyDBM::Iterator::JumpUpper(std::string_view key, bool inclusive = false) {
+  return iter_->JumpUpper(key, inclusive);
+}
+
+Status PolyDBM::Iterator::Next() {
+  return iter_->Next();
+}
+
+Status PolyDBM::Iterator::Previous() {
+  return iter_->Previous();
+}
+
+Status PolyDBM::Iterator::Process(RecordProcessor* proc, bool writable) {
+  return iter_->Process(proc, writable);
+}
+
+Status PolyDBM::Iterator::Get(std::string* key, std::string* value) {
+  return iter_->Get(key, value);
+}
+
 std::vector<std::pair<std::string, std::string>> PolyDBM::Inspect() {
   if (dbm_ == nullptr) {
     return std::vector<std::pair<std::string, std::string>>();

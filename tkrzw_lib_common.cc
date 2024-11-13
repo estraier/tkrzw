@@ -39,6 +39,42 @@ const bool IS_BIG_ENDIAN = _IS_BIG_ENDIAN;
 
 #endif
 
+void* xmalloc(size_t size) {
+  void* ptr = std::malloc(size);
+  if (ptr == nullptr) {
+    throw std::bad_alloc();
+  }
+  return ptr;
+}
+
+void* xcalloc(size_t nmemb, size_t size) {
+  void* ptr = std::calloc(nmemb, size);
+  if (ptr == nullptr) {
+    throw std::bad_alloc();
+  }
+  return ptr;
+}
+
+void* xrealloc(void* ptr, size_t size) {
+  ptr = std::realloc(ptr, size);
+  if (ptr == nullptr) {
+    throw std::bad_alloc();
+  }
+  return ptr;
+}
+
+void xfree(void* ptr) {
+  std::free(ptr);
+}
+
+void* xreallocappend(void* ptr, size_t size) {
+  size_t aligned_size = 8;
+  while (aligned_size < size) {
+    aligned_size += aligned_size >> 1;
+  }
+  return xrealloc(ptr, aligned_size);
+}
+
 void* xmallocaligned(size_t alignment, size_t size) {
 #if defined(_SYS_LINUX_)
   assert(alignment >= sizeof(void*));
@@ -237,12 +273,216 @@ int64_t GetMemoryUsage() {
   return StrToInt(tkrzw::SearchMap(records, "mem_rss", "-1"));
 }
 
+Status::Status()
+   : code_(Code::SUCCESS), message_(nullptr) {}
+
+Status::Status(Code code) : code_(code), message_(nullptr) {}
+
+Status::Status(Code code, std::string_view message) : code_(code), message_(nullptr) {
+  message_ = static_cast<char*>(xmalloc(message.size() + 1));
+  std::memcpy(message_, message.data(), message.size());
+  message_[message.size()] = '\0';
+}
+
+Status::Status(const Status& rhs) : code_(rhs.code_), message_(nullptr) {
+  if (rhs.message_ != nullptr) {
+    const size_t message_size = std::strlen(rhs.message_);
+    message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
+    std::memcpy(message_, rhs.message_, message_size);
+    message_[message_size] = '\0';
+  }
+}
+
+Status::Status(Status&& rhs) : code_(rhs.code_), message_(rhs.message_) {
+  rhs.message_ = nullptr;
+}
+
+Status::~Status() {
+  xfree(message_);
+}
+
+Status& Status::operator =(const Status& rhs) {
+  if (this != &rhs) {
+    code_ = rhs.code_;
+    if (rhs.message_ == nullptr) {
+      xfree(message_);
+      message_ = nullptr;
+    } else {
+      const size_t message_size = std::strlen(rhs.message_);
+      message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
+      std::memcpy(message_, rhs.message_, message_size);
+      message_[message_size] = '\0';
+    }
+  }
+  return *this;
+}
+
+Status& Status::operator =(Status&& rhs) {
+  if (this != &rhs) {
+    code_ = rhs.code_;
+    xfree(message_);
+    message_ = rhs.message_;
+    rhs.message_ = nullptr;
+  }
+  return *this;
+}
+
+Status& Status::operator |=(const Status& rhs) {
+  if (this != &rhs && code_ == SUCCESS && rhs.code_ != SUCCESS) {
+    code_ = rhs.code_;
+    if (rhs.message_ == nullptr) {
+      xfree(message_);
+      message_ = nullptr;
+    } else {
+      const size_t message_size = std::strlen(rhs.message_);
+      message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
+      std::memcpy(message_, rhs.message_, message_size);
+      message_[message_size] = '\0';
+    }
+  }
+  return *this;
+}
+
+Status& Status::operator |=(Status&& rhs) {
+  if (this != &rhs && code_ == SUCCESS && rhs.code_ != SUCCESS) {
+    code_ = rhs.code_;
+    xfree(message_);
+    message_ = rhs.message_;
+    rhs.message_ = nullptr;
+  }
+  return *this;
+}
+
+Status::Code Status::GetCode() const {
+  return code_;
+}
+
+std::string Status::GetMessage() const {
+  return message_ == nullptr ? "" : message_;
+}
+
+bool Status::HasMessage() const {
+  return message_ != nullptr && *message_ != '\0';
+}
+
+char* Status::MakeMessageC() const {
+  if (message_ == nullptr) {
+    char* str = static_cast<char*>(xmalloc(1));
+    *str = '\0';
+    return str;
+  }
+  const size_t size = std::strlen(message_);
+  char* str = static_cast<char*>(xmalloc(size + 1));
+  std::memcpy(str, message_, size + 1);
+  return str;
+}
+
+void Status::Set(Code code) {
+  code_ = code;
+  xfree(message_);
+  message_ = nullptr;
+}
+
+void Status::Set(Code code, std::string_view message) {
+  code_ = code;
+  message_ = static_cast<char*>(xrealloc(message_, message.size() + 1));
+  std::memcpy(message_, message.data(), message.size());
+  message_[message.size()] = '\0';
+}
+
+bool Status::operator ==(const Status& rhs) const {
+  return code_ == rhs.code_;
+}
+
+bool Status::operator !=(const Status& rhs) const {
+  return code_ != rhs.code_;
+}
+
+bool Status::operator ==(const Code& code) const {
+  return code_ == code;
+}
+
+bool Status::operator !=(const Code& code) const {
+  return code_ != code;
+}
+
+bool Status::operator <(const Status& rhs) const {
+  if (code_ != rhs.code_) {
+    return code_ < rhs.code_;
+  }
+  return std::strcmp(message_ != nullptr ? message_ : "",
+                     rhs.message_ != nullptr ? rhs.message_ : "");
+}
+
+Status::operator std::string() const {
+  std::string expr(CodeName(code_));
+  if (message_ != nullptr) {
+    expr += ": ";
+    expr += message_;
+  }
+  return expr;
+}
+
+bool Status::IsOK() const {
+  return code_ == SUCCESS;
+}
+
 const Status& Status::OrDie() const {
   if (code_ != SUCCESS) {
     throw StatusException(*this);
   }
   return *this;
 }
+
+const char* Status::CodeName(Code code) {
+  switch (code) {
+    case SUCCESS: return "SUCCESS";
+    case UNKNOWN_ERROR: return "UNKNOWN_ERROR";
+    case SYSTEM_ERROR: return "SYSTEM_ERROR";
+    case NOT_IMPLEMENTED_ERROR: return "NOT_IMPLEMENTED_ERROR";
+    case PRECONDITION_ERROR: return "PRECONDITION_ERROR";
+    case INVALID_ARGUMENT_ERROR: return "INVALID_ARGUMENT_ERROR";
+    case CANCELED_ERROR : return "CANCELED_ERROR";
+    case NOT_FOUND_ERROR: return "NOT_FOUND_ERROR";
+    case PERMISSION_ERROR: return "PERMISSION_ERROR";
+    case INFEASIBLE_ERROR: return "INFEASIBLE_ERROR";
+    case DUPLICATION_ERROR: return "DUPLICATION_ERROR";
+    case BROKEN_DATA_ERROR: return "BROKEN_DATA_ERROR";
+    case NETWORK_ERROR: return "NETWORK_ERROR";
+    case APPLICATION_ERROR: return "APPLICATION_ERROR";
+  }
+  return "unnamed error";
+}
+
+bool operator ==(const Status::Code& lhs, const Status& rhs) {
+  return lhs == rhs.GetCode();
+}
+
+bool operator !=(const Status::Code& lhs, const Status& rhs) {
+  return lhs != rhs.GetCode();
+}
+
+std::string ToString(const Status& status) {
+  return std::string(status);
+}
+
+std::ostream& operator<<(std::ostream& os, const Status& status) {
+  return os << std::string(status);
+}
+
+
+
+StatusException::StatusException(const Status& status)
+    : std::runtime_error(ToString(status)), status_(status) {}
+
+Status StatusException::GetStatus() const {
+  return status_;
+}
+
+StatusException::operator std::string() const {
+  return std::string(status_);
+}
+
 
 Status GetErrnoStatus(const char* call_name, int32_t sys_err_num) {
   auto msg = [&](const char* message) {
