@@ -1534,6 +1534,15 @@ Status BabyDBM::Clear() {
   return impl_->Clear();
 }
 
+Status BabyDBM::Rebuild() {
+  return Status(Status::SUCCESS);
+}
+
+Status BabyDBM::ShouldBeRebuilt(bool* tobe) {
+  *tobe = false;
+  return Status(Status::SUCCESS);
+}
+
 Status BabyDBM::Synchronize(bool hard, FileProcessor* proc) {
   return impl_->Synchronize(hard, proc);
 }
@@ -1548,6 +1557,14 @@ bool BabyDBM::IsOpen() const {
 
 bool BabyDBM::IsWritable() const {
   return impl_->IsWritable();
+}
+
+bool BabyDBM::IsHealthy() const {
+  return true;
+}
+
+bool BabyDBM::IsOrdered() const {
+  return true;
 }
 
 std::unique_ptr<DBM::Iterator> BabyDBM::MakeIterator() {
