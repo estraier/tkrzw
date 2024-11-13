@@ -819,7 +819,7 @@ Status PolyDBM::Iterator::JumpLower(std::string_view key, bool inclusive) {
   return iter_->JumpLower(key, inclusive);
 }
 
-Status PolyDBM::Iterator::JumpUpper(std::string_view key, bool inclusive = false) {
+Status PolyDBM::Iterator::JumpUpper(std::string_view key, bool inclusive) {
   return iter_->JumpUpper(key, inclusive);
 }
 
