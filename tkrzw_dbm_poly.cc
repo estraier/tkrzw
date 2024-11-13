@@ -46,10 +46,10 @@ class NoopIterator final : public DBM::Iterator {
   Status Jump(std::string_view key) override {
     return Status(Status::PRECONDITION_ERROR);
   }
-  Status JumpLower(std::string_view key, bool inclusive = false) override {
+  Status JumpLower(std::string_view key, bool inclusive) override {
     return Status(Status::PRECONDITION_ERROR);
   }
-  Status JumpUpper(std::string_view key, bool inclusive = false) override {
+  Status JumpUpper(std::string_view key, bool inclusive) override {
     return Status(Status::PRECONDITION_ERROR);
   }
   Status Next() override {
