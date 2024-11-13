@@ -930,6 +930,10 @@ Status TinyDBM::Clear() {
   return impl_->Clear();
 }
 
+Status TinyDBM::Rebuild() {
+  return RebuildAdvanced(-1);
+}
+
 Status TinyDBM::RebuildAdvanced(int64_t num_buckets) {
   return impl_->Rebuild(num_buckets);
 }
@@ -953,6 +957,14 @@ bool TinyDBM::IsOpen() const {
 
 bool TinyDBM::IsWritable() const {
   return impl_->IsWritable();
+}
+
+bool TinyDBM::IsHealthy() const {
+  return true;
+}
+
+bool TinyDBM::IsOrdered() const {
+  return false;
 }
 
 std::unique_ptr<DBM::Iterator> TinyDBM::MakeIterator() {
@@ -988,12 +1000,28 @@ Status TinyDBM::Iterator::First() {
   return impl_->First();
 }
 
+Status TinyDBM::Iterator::Last() {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status TinyDBM::Iterator::Jump(std::string_view key) {
   return impl_->Jump(key);
 }
 
+Status TinyDBM::Iterator::JumpLower(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
+Status TinyDBM::Iterator::JumpUpper(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status TinyDBM::Iterator::Next() {
   return impl_->Next();
+}
+
+Status TinyDBM::Iterator::Previous() {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
 }
 
 Status TinyDBM::Iterator::Process(RecordProcessor* proc, bool writable) {

@@ -222,7 +222,7 @@ class TreeDBM final : public DBM {
     /**
      * Constructor
      */
-    TuningParameters() {}
+    TuningParameters();
   };
 
   /**
@@ -257,9 +257,7 @@ class TreeDBM final : public DBM {
    * @details Precondition: The database is not opened.
    */
   Status Open(const std::string& path, bool writable,
-              int32_t options = File::OPEN_DEFAULT) override {
-    return OpenAdvanced(path, writable, options);
-  }
+              int32_t options = File::OPEN_DEFAULT) override;
 
   /**
    * Opens a database file, in an advanced way.
@@ -382,9 +380,7 @@ class TreeDBM final : public DBM {
    * @details Rebuilding a database is useful to reduce the size of the file by solving
    * fragmentation.  All tuning parameters are succeeded or calculated implicitly.
    */
-  Status Rebuild() override {
-    return RebuildAdvanced();
-  }
+  Status Rebuild() override;
 
   /**
    * Rebuilds the entire database, in an advanced way.
@@ -460,9 +456,7 @@ class TreeDBM final : public DBM {
    * Checks whether ordered operations are supported.
    * @return Always true.  Ordered operations are supported.
    */
-  bool IsOrdered() const override {
-    return true;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

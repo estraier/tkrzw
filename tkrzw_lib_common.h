@@ -147,13 +147,7 @@ extern const bool IS_BIG_ENDIAN;
  * @param size The size of the region.
  * @return The pointer to the allocated region.
  */
-inline void* xmalloc(size_t size) {
-  void* ptr = std::malloc(size);
-  if (ptr == nullptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
-}
+void* xmalloc(size_t size);
 
 /**
  * Allocates a nullified region on memory.
@@ -161,13 +155,7 @@ inline void* xmalloc(size_t size) {
  * @param size The size of each element.
  * @return The pointer to the allocated region.
  */
-inline void* xcalloc(size_t nmemb, size_t size) {
-  void* ptr = std::calloc(nmemb, size);
-  if (ptr == nullptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
-}
+void* xcalloc(size_t nmemb, size_t size);
 
 /**
  * Re-allocates a region on memory.
@@ -175,13 +163,7 @@ inline void* xcalloc(size_t nmemb, size_t size) {
  * @param size The size of the region.
  * @return The pointer to the re-allocated region.
  */
-inline void* xrealloc(void* ptr, size_t size) {
-  ptr = std::realloc(ptr, size);
-  if (ptr == nullptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
-}
+void* xrealloc(void* ptr, size_t size);
 
 /**
  * Re-allocates a region on memory for appending operations.
@@ -189,21 +171,13 @@ inline void* xrealloc(void* ptr, size_t size) {
  * @param size The size of the region.
  * @return The pointer to the re-allocated region.
  */
-inline void* xreallocappend(void* ptr, size_t size) {
-  size_t aligned_size = 8;
-  while (aligned_size < size) {
-    aligned_size += aligned_size >> 1;
-  }
-  return xrealloc(ptr, aligned_size);
-}
+void* xreallocappend(void* ptr, size_t size);
 
 /**
  * Frees a region on memory.
  * @param ptr The pointer to the region.
  */
-inline void xfree(void* ptr) {
-  std::free(ptr);
-}
+void xfree(void* ptr);
 
 /**
  * Allocates an aligned region on memory.
@@ -332,252 +306,145 @@ class Status final {
   /**
    * Default constructor representing the success code.
    */
-  Status() : code_(Code::SUCCESS), message_(nullptr) {}
+  Status();
 
   /**
    * Constructor representing a specific status.
    * @param code The status code.
    */
-  explicit Status(Code code) : code_(code), message_(nullptr) {}
+  explicit Status(Code code);
 
   /**
    * Constructor representing a specific status with a message.
    * @param code The status code.
    * @param message An arbitrary status message.
    */
-  Status(Code code, std::string_view message) : code_(code), message_(nullptr) {
-    message_ = static_cast<char*>(xmalloc(message.size() + 1));
-    std::memcpy(message_, message.data(), message.size());
-    message_[message.size()] = '\0';
-  }
+  Status(Code code, std::string_view message);
 
   /**
    * Copy constructor.
    * @param rhs The right-hand-side object.
    */
-  Status(const Status& rhs) : code_(rhs.code_), message_(nullptr) {
-    if (rhs.message_ != nullptr) {
-      const size_t message_size = std::strlen(rhs.message_);
-      message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
-      std::memcpy(message_, rhs.message_, message_size);
-      message_[message_size] = '\0';
-    }
-  }
+  Status(const Status& rhs);
 
   /**
    * Move constructor.
    * @param rhs The right-hand-side object.
    */
-  Status(Status&& rhs) : code_(rhs.code_), message_(rhs.message_) {
-    rhs.message_ = nullptr;
-  }
+  Status(Status&& rhs);
 
   /**
    * Destructor.
    */
-  ~Status() {
-    xfree(message_);
-  }
+  ~Status();
 
   /**
    * Assigns the internal state from another status object.
    * @param rhs The status object.
    */
-  Status& operator =(const Status& rhs) {
-    if (this != &rhs) {
-      code_ = rhs.code_;
-      if (rhs.message_ == nullptr) {
-        xfree(message_);
-        message_ = nullptr;
-      } else {
-        const size_t message_size = std::strlen(rhs.message_);
-        message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
-        std::memcpy(message_, rhs.message_, message_size);
-        message_[message_size] = '\0';
-      }
-    }
-    return *this;
-  }
+  Status& operator =(const Status& rhs);
 
   /**
    * Assigns the internal state from another moved status object.
    * @param rhs The status object.
    */
-  Status& operator =(Status&& rhs) {
-    if (this != &rhs) {
-      code_ = rhs.code_;
-      xfree(message_);
-      message_ = rhs.message_;
-      rhs.message_ = nullptr;
-    }
-    return *this;
-  }
+  Status& operator =(Status&& rhs);
 
   /**
    * Assigns the internal state from another status object only if the current state is success.
    * @param rhs The status object.
    */
-  Status& operator |=(const Status& rhs) {
-    if (this != &rhs && code_ == SUCCESS && rhs.code_ != SUCCESS) {
-      code_ = rhs.code_;
-      if (rhs.message_ == nullptr) {
-        xfree(message_);
-        message_ = nullptr;
-      } else {
-        const size_t message_size = std::strlen(rhs.message_);
-        message_ = static_cast<char*>(xrealloc(message_, message_size + 1));
-        std::memcpy(message_, rhs.message_, message_size);
-        message_[message_size] = '\0';
-      }
-    }
-    return *this;
-  }
+  Status& operator |=(const Status& rhs);
 
   /**
    * Assigns the internal state from another status object only if the current state is success.
    * @param rhs The status object.
    */
-  Status& operator |=(Status&& rhs) {
-    if (this != &rhs && code_ == SUCCESS && rhs.code_ != SUCCESS) {
-      code_ = rhs.code_;
-      xfree(message_);
-      message_ = rhs.message_;
-      rhs.message_ = nullptr;
-    }
-    return *this;
-  }
+  Status& operator |=(Status&& rhs);
 
   /**
    * Gets the status code.
    * @return The status code.
    */
-  Code GetCode() const {
-    return code_;
-  }
+  Code GetCode() const;
 
   /**
    * Gets the status message.
    * @return The status message.
    */
-  std::string GetMessage() const {
-    return message_ == nullptr ? "" : message_;
-  }
+  std::string GetMessage() const;
 
   /**
    * Checks whether the status has a non-empty message.
    * @return True if the status has a non-empty message.
    */
-  bool HasMessage() const {
-    return message_ != nullptr && *message_ != '\0';
-  }
+  bool HasMessage() const;
 
   /**
    * Makes a C string of the message.
    * @return The C message string, which should be released by the free function.
    */
-  char* MakeMessageC() const {
-    if (message_ == nullptr) {
-      char* str = static_cast<char*>(xmalloc(1));
-      *str = '\0';
-      return str;
-    }
-    const size_t size = std::strlen(message_);
-    char* str = static_cast<char*>(xmalloc(size + 1));
-    std::memcpy(str, message_, size + 1);
-    return str;
-  }
+  char* MakeMessageC() const;
 
   /**
    * Sets the code and an empty message.
    * @param code The status code.
    */
-  void Set(Code code) {
-    code_ = code;
-    xfree(message_);
-    message_ = nullptr;
-  }
+  void Set(Code code);
 
   /**
    * Sets the code and the message.
    * @param code The status code.
    * @param message An arbitrary status message.
    */
-  void Set(Code code, std::string_view message) {
-    code_ = code;
-    message_ = static_cast<char*>(xrealloc(message_, message.size() + 1));
-    std::memcpy(message_, message.data(), message.size());
-    message_[message.size()] = '\0';
-  }
+  void Set(Code code, std::string_view message);
 
   /**
    * Checks whether the internal status code is equal to a given status.
    * @param rhs The status to compare.
    * @return True if the internal status code is equal to the given status.
    */
-  bool operator ==(const Status& rhs) const {
-    return code_ == rhs.code_;
-  }
+  bool operator ==(const Status& rhs) const;
 
   /**
    * Checks whether the internal status code is not equal to a given status.
    * @param rhs The status to compare.
    * @return True if the internal status code is not equal to the given status.
    */
-  bool operator !=(const Status& rhs) const {
-    return code_ != rhs.code_;
-  }
+  bool operator !=(const Status& rhs) const;
 
   /**
    * Checks whether the internal status code is equal to a given code.
    * @param code The code to compare.
    * @return True if the internal status code is equal to the given code.
    */
-  bool operator ==(const Code& code) const {
-    return code_ == code;
-  }
+  bool operator ==(const Code& code) const;
 
   /**
    * Checks whether the internal status code is not equal to a given code.
    * @param code The code to compare.
    * @return True if the internal status code is not equal to the given code.
    */
-  bool operator !=(const Code& code) const {
-    return code_ != code;
-  }
+  bool operator !=(const Code& code) const;
 
   /**
    * Compares this object with another status object.
    * @param rhs The status to compare.
    * @return True if this object is considered less than the given object.
    */
-  bool operator <(const Status& rhs) const {
-    if (code_ != rhs.code_) {
-      return code_ < rhs.code_;
-    }
-    return std::strcmp(message_ != nullptr ? message_ : "",
-                       rhs.message_ != nullptr ? rhs.message_ : "");
-  }
+  bool operator <(const Status& rhs) const;
 
   /**
    * Gets a string expression of the status.
    * @return The string expression
    */
-  operator std::string() const {
-    std::string expr(CodeName(code_));
-    if (message_ != nullptr) {
-      expr += ": ";
-      expr += message_;
-    }
-    return expr;
-  }
+  operator std::string() const;
 
   /**
    * Returns true if the status is success.
    * @return True if the status is success, or false on failure.
    */
-  bool IsOK() const {
-    return code_ == SUCCESS;
-  }
+  bool IsOK() const;
 
   /**
    * Throws an exception if the status is not success.
@@ -590,25 +457,7 @@ class Status final {
    * @param code The status code.
    * @return The name of the status code.
    */
-  static const char* CodeName(Code code) {
-    switch (code) {
-      case SUCCESS: return "SUCCESS";
-      case UNKNOWN_ERROR: return "UNKNOWN_ERROR";
-      case SYSTEM_ERROR: return "SYSTEM_ERROR";
-      case NOT_IMPLEMENTED_ERROR: return "NOT_IMPLEMENTED_ERROR";
-      case PRECONDITION_ERROR: return "PRECONDITION_ERROR";
-      case INVALID_ARGUMENT_ERROR: return "INVALID_ARGUMENT_ERROR";
-      case CANCELED_ERROR : return "CANCELED_ERROR";
-      case NOT_FOUND_ERROR: return "NOT_FOUND_ERROR";
-      case PERMISSION_ERROR: return "PERMISSION_ERROR";
-      case INFEASIBLE_ERROR: return "INFEASIBLE_ERROR";
-      case DUPLICATION_ERROR: return "DUPLICATION_ERROR";
-      case BROKEN_DATA_ERROR: return "BROKEN_DATA_ERROR";
-      case NETWORK_ERROR: return "NETWORK_ERROR";
-      case APPLICATION_ERROR: return "APPLICATION_ERROR";
-    }
-    return "unnamed error";
-  }
+  static const char* CodeName(Code code);
 
  private:
   /** Status code. */
@@ -623,9 +472,7 @@ class Status final {
  * @param rhs The status object to compare.
  * @return True if The status code is equal to the status object.
  */
-inline bool operator ==(const Status::Code& lhs, const Status& rhs) {
-  return lhs == rhs.GetCode();
-}
+bool operator ==(const Status::Code& lhs, const Status& rhs);
 
 /**
  * Checks whether a status code is not equal to another status object.
@@ -633,18 +480,14 @@ inline bool operator ==(const Status::Code& lhs, const Status& rhs) {
  * @param rhs The status object to compare.
  * @return True if The status code is equal to the status object.
  */
-inline bool operator !=(const Status::Code& lhs, const Status& rhs) {
-  return lhs != rhs.GetCode();
-}
+bool operator !=(const Status::Code& lhs, const Status& rhs);
 
 /**
  * Converts a status into a string.
  * @param status The status object.
  * @return The converted string.
  */
-inline std::string ToString(const Status& status) {
-  return std::string(status);
-}
+std::string ToString(const Status& status);
 
 /**
  * Outputs a status string into an output stream.
@@ -652,9 +495,7 @@ inline std::string ToString(const Status& status) {
  * @param status The status.
  * @return The output stream.
  */
-inline std::ostream& operator<<(std::ostream& os, const Status& status) {
-  return os << std::string(status);
-}
+std::ostream& operator<<(std::ostream& os, const Status& status);
 
 /**
  * Exception to convey the status of operations.
@@ -665,24 +506,19 @@ class StatusException final : public std::runtime_error {
    * Constructor.
    * @param status The status to convey.
    */
-  explicit StatusException(const Status& status)
-      : std::runtime_error(ToString(status)), status_(status) {}
+  explicit StatusException(const Status& status);
 
   /**
    * Gets the status object.
    * @return The status object.
    */
-  Status GetStatus() const {
-    return status_;
-  }
+  Status GetStatus() const;
 
   /**
    * Gets a string expression of the status.
    * @return The string expression
    */
-  operator std::string() const {
-    return std::string(status_);
-  }
+  operator std::string() const;
 
  private:
   /** The status object. */
