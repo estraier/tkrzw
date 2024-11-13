@@ -11,6 +11,7 @@
  * and limitations under the License.
  *************************************************************************************************/
 
+#include <cmath>
 #include "tkrzw_key_comparators.h"
 
 namespace tkrzw {
