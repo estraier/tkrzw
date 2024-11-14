@@ -10,6 +10,7 @@
       "name": "base",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
         "TKRZW_TOOLS": "ON",
