@@ -102,6 +102,8 @@ target_sources(tkrzw PRIVATE
     tkrzw_hash_util.cc
     tkrzw_time_util.cc
     tkrzw_compress.cc
+    tkrzw_key_comparators.cc
+    tkrzw_file.cc
     tkrzw_file_util.cc
     tkrzw_file_std.cc
     tkrzw_file_mmap.cc
@@ -340,3 +342,4 @@ if (TKRZW_TESTS)
     endforeach()
 
 endif (TKRZW_TESTS)
+
