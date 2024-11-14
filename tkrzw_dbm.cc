@@ -26,6 +26,18 @@ const std::string_view DBM::RecordProcessor::NOOP("\x00\xBE\xEF\x02\x11", 5);
 
 const std::string_view DBM::RecordProcessor::REMOVE("\x00\xDE\xAD\x02\x11", 5);
 
+std::string_view DBM::AnyData() {
+  return ANY_DATA;
+}
+
+std::string_view DBM::RecordProcessor::NoOp() {
+  return NOOP;
+}
+
+std::string_view DBM::RecordProcessor::Remove() {
+  return REMOVE;
+}
+
 std::string_view DBM::RecordProcessor::ProcessFull(std::string_view key, std::string_view value) {
   return NOOP;
 }

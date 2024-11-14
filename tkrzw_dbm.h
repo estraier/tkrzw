@@ -38,9 +38,17 @@ namespace tkrzw {
  */
 class DBM {
  public:
-  /** The special string_view value to represent any data. */
+  /**
+   * The special string_view value to represent any data.
+   * @see AnyData()
+   */
   static const std::string_view ANY_DATA;
-
+  /**
+   * The special string_view value to represent any data.
+   * @see ANY_DATA
+   */
+  static std::string_view AnyData();
+  
   /**
    * Interface of processor for a record.
    */
@@ -50,14 +58,30 @@ class DBM {
      * The special string indicating no operation.
      * The uniqueness comes from the address of the data region.  So, checking should be done
      * like your_value.data() == NOOP.data().
+     * @see NoOp()
      */
     static const std::string_view NOOP;
+    /**
+     * The special string indicating no operation.
+     * The uniqueness comes from the address of the data region.  So, checking should be done
+     * like your_value.data() == NOOP.data().
+     * @see NOOP
+     */
+    static std::string_view NoOp();
     /**
      * The special string indicating removing operation.
      * The uniqueness comes from the address of the data region.  So, checking should be done
      * like your_value.data() == REMOVE.data().
+     * @see Remove()
      */
     static const std::string_view REMOVE;
+    /**
+     * The special string indicating removing operation.
+     * The uniqueness comes from the address of the data region.  So, checking should be done
+     * like your_value.data() == REMOVE.data().
+     * @see REMOVE
+     */
+    static std::string_view Remove();
 
     /**
      * Destructor.
