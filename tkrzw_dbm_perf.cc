@@ -1154,12 +1154,12 @@ static int32_t ProcessParallel(int32_t argc, const char** args) {
         std::string_view expected;
         switch (op_dist(mt) % 3) {
           case 0: expected = ""; break;
-          case 1: expected = tkrzw::DBM::AnyData(); break;
+          case 1: expected = tkrzw::DBM::GetMagicAnyDataId(); break;
         }
         std::string_view desired;
         switch (op_dist(mt) % 3) {
           case 0: desired = ""; break;
-          case 1: desired = tkrzw::DBM::AnyData(); break;
+          case 1: desired = tkrzw::DBM::GetMagicAnyDataId(); break;
         }
         std::string actual;
         bool found = false;

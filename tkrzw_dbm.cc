@@ -26,15 +26,15 @@ const std::string_view DBM::RecordProcessor::NOOP("\x00\xBE\xEF\x02\x11", 5);
 
 const std::string_view DBM::RecordProcessor::REMOVE("\x00\xDE\xAD\x02\x11", 5);
 
-std::string_view DBM::AnyData() {
+std::string_view DBM::GetMagicAnyDataId() {
   return ANY_DATA;
 }
 
-std::string_view DBM::RecordProcessor::NoOp() {
+std::string_view DBM::RecordProcessor::GetMagicNoOpId() {
   return NOOP;
 }
 
-std::string_view DBM::RecordProcessor::Remove() {
+std::string_view DBM::RecordProcessor::GetMagicRemoveId() {
   return REMOVE;
 }
 
