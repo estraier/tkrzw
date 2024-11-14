@@ -50,7 +50,7 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
     PrintUsageAndDie();
   }
   if (CheckMap(cmd_args, "-v")) {
-    PrintF("%s\n", PACKAGE_VERSION);
+    PrintF("%s\n", GetPackageVersion());
   } else if (CheckMap(cmd_args, "-i")) {
     PrintF("%s\n", _TKRZW_APPINC);
   } else if (CheckMap(cmd_args, "-l")) {
@@ -58,11 +58,11 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
   } else if (CheckMap(cmd_args, "-p")) {
     PrintF("%s\n", _TKRZW_BINDIR);
   } else {
-    PrintF("PACKAGE_VERSION: %s\n", PACKAGE_VERSION);
-    PrintF("LIBRARY_VERSION: %s\n", LIBRARY_VERSION);
-    PrintF("OS_NAME: %s\n", OS_NAME);
-    PrintF("IS_BIG_ENDIAN: %d\n", IS_BIG_ENDIAN);
-    PrintF("PAGE_SIZE: %d\n", PAGE_SIZE);
+    PrintF("PACKAGE_VERSION: %s\n", GetPackageVersion());
+    PrintF("LIBRARY_VERSION: %s\n", GetLibraryVersion());
+    PrintF("OS_NAME: %s\n", GetOsName());
+    PrintF("IS_BIG_ENDIAN: %d\n", GetIsBigEndian());
+    PrintF("PAGE_SIZE: %d\n", GetPageSize());
     PrintF("TYPES: void*=%d short=%d int=%d long=%d long_long=%d size_t=%d"
            " float=%d double=%d long_double=%d\n",
            (int)sizeof(void*), (int)sizeof(short), (int)sizeof(int), (int)sizeof(long),
@@ -121,9 +121,9 @@ static int32_t ProcessConfig(int32_t argc, const char** args) {
 // Prints the version information.
 void PrintVersion() {
   PrintF("Tkrzw %s (library %s) on %s (%s) (%s endian)\n",
-         PACKAGE_VERSION, LIBRARY_VERSION, OS_NAME,
-         IS_POSIX ? "POSIX" : "non-POSIX",
-         IS_BIG_ENDIAN ? "big" : "little");
+         GetPackageVersion(), GetLibraryVersion(), GetOsName(),
+         GetIsPosix() ? "POSIX" : "non-POSIX",
+         GetIsBigEndian() ? "big" : "little");
 }
 
 }  // namespace tkrzw
