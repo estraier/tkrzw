@@ -52,6 +52,8 @@ class SkipDBM final : public DBM {
   static constexpr int32_t OPAQUE_METADATA_SIZE = 64;
   /** The special removing value. */
   static const std::string REMOVING_VALUE;
+  /** The special removing value. */
+  static std::string GetMagicRemovingValue();
 
   /**
    * Iterator for each record.

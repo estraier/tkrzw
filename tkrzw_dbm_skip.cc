@@ -1760,6 +1760,11 @@ void SkipDBMIteratorImpl::ClearPosition() {
 
 const std::string SkipDBM::REMOVING_VALUE("\xDE\xAD\x00\x19\x78\x02\x11", 7);
 
+std::string SkipDBM::GetMagicRemovingValue()
+{
+  return REMOVING_VALUE;
+}
+
 SkipDBM::TuningParameters::TuningParameters() {}
 
 SkipDBM::SkipDBM() {
