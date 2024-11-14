@@ -12,7 +12,8 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
-        "WITH_TOOLS": "ON"
+        "TKRZW_TOOLS": "ON",
+        "TKRZW_TESTS": "ON"
       }
     },
     {
