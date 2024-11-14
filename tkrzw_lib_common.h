@@ -142,6 +142,24 @@ extern const bool IS_POSIX;
 /** True if the byte order is big endian. */
 extern const bool IS_BIG_ENDIAN;
 
+/** The size of a memory page on the OS. */
+int32_t GetPageSize();
+
+/** The string expression of the package version. */
+const char* const GetPackageVersion();
+
+/** The string expression of the library version. */
+const char* const GetLibraryVersion();
+
+/** The recognized OS name. */
+const char* const GetOsName();
+
+/** True if the OS is conforming to POSIX. */
+bool GetIsPosix();
+
+/** True if the byte order is big endian. */
+bool GetIsBigEndian();
+
 /**
  * Allocates a region on memory.
  * @param size The size of the region.

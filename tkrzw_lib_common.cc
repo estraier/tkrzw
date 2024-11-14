@@ -18,6 +18,40 @@
 
 namespace tkrzw {
 
+int32_t GetPageSize()
+{
+  #if defined(_SYS_WINDOWS_)
+  return 4096;
+  #else
+  return sysconf(_SC_PAGESIZE);
+  #endif
+}
+
+const char* const GetPackageVersion()
+{
+  return _TKRZW_PKG_VERSION;
+}
+
+const char* const GetLibraryVersion()
+{
+  return _TKRZW_LIB_VERSION;
+}
+
+const char* const GetOsName()
+{
+  return _TKRZW_OSNAME;
+}
+
+bool GetIsPosix()
+{
+  return _IS_POSIX;
+}
+
+bool GetIsBigEndian()
+{
+  return _IS_BIG_ENDIAN;
+}
+
 #if defined(_SYS_WINDOWS_)
 
 const int32_t PAGE_SIZE = 4096;
