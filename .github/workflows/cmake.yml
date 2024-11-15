@@ -6,7 +6,7 @@ on:
     branches: [ master ]
 
 jobs:
-  autotools:
+  cmake:
     strategy:
       fail-fast: false
       matrix:
