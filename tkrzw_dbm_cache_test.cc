@@ -120,9 +120,9 @@ TEST_F(CacheDBMTest, LRURemove) {
     const std::string key = tkrzw::ToString(i);
     const std::string value = tkrzw::ToString(i * i);
     EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, value, false));
-    const int32_t small = i % 256;
-    const std::string small_key = tkrzw::ToString(small);
-    EXPECT_EQ(tkrzw::ToString(small * small), dbm.GetSimple(small_key));
+    const int32_t least_significant_byte = i % 256;
+    const std::string least_significant_byte_key = tkrzw::ToString(least_significant_byte);
+    EXPECT_EQ(tkrzw::ToString(least_significant_byte * least_significant_byte), dbm.GetSimple(least_significant_byte_key));
   }
   for (int32_t i = 0; i < 4096; i++) {
     const std::string key = tkrzw::ToString(i);

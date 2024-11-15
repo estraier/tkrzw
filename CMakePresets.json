@@ -1,0 +1,167 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_VERBOSE_MAKEFILE": "ON",
+        "TKRZW_TOOLS": "ON",
+        "TKRZW_TESTS": "ON"
+      }
+    },
+    {
+      "name": "ninja",
+      "inherits": ["base"],
+      "generator": "Ninja Multi-Config"
+    },
+    {
+      "name": "msvc",
+      "inherits": ["base"],
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-debug",
+      "inherits": ["ninja-release"],
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "msvc-debug",
+      "inherits": ["msvc-release"],
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "execution": {
+        "timeout": 10
+      },
+      "output": {
+        "verbosity": "extra"
+      },
+      "hidden": true
+    },
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja",
+      "configuration": "Release",
+      "inherits": ["test-base"]
+    },
+    {
+      "name": "ninja-debug",
+      "inherits": ["ninja-release"],
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc",
+      "configuration": "Release",
+      "inherits": ["test-base"]
+    },
+    {
+      "name": "msvc-debug",
+      "inherits": ["msvc-release"],
+      "configuration": "Debug"
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "ninja",
+      "configurations": ["Debug", "Release"],
+      "configurePreset": "ninja"
+    },
+    {
+      "name": "msvc",
+      "configurations": ["Debug", "Release"],
+      "configurePreset": "msvc",
+      "generators": ["ZIP"]
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ninja",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "ninja"
+        },
+        {
+          "type": "build",
+          "name": "ninja-debug"
+        },
+        {
+          "type": "build",
+          "name": "ninja-release"
+        },
+        {
+          "type": "test",
+          "name": "ninja-debug"
+        },
+        {
+          "type": "test",
+          "name": "ninja-release"
+        },
+        {
+          "type": "package",
+          "name": "ninja"
+        }
+      ]
+    },
+    {
+      "name": "msvc",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "msvc"
+        },
+        {
+          "type": "build",
+          "name": "msvc-debug"
+        },
+        {
+          "type": "build",
+          "name": "msvc-release"
+        },
+        {
+          "type": "test",
+          "name": "msvc-debug"
+        },
+        {
+          "type": "test",
+          "name": "msvc-release"
+        },
+        {
+          "type": "package",
+          "name": "msvc"
+        }
+      ]
+    }
+  ]
+}

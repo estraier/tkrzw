@@ -892,6 +892,14 @@ bool StdHashDBM::IsWritable() const {
   return impl_->IsWritable();
 }
 
+bool StdHashDBM::IsHealthy() const {
+  return true;
+}
+
+bool StdHashDBM::IsOrdered() const {
+  return false;
+}
+
 std::unique_ptr<DBM::Iterator> StdHashDBM::MakeIterator() {
   std::unique_ptr<StdHashDBM::Iterator> iter(new StdHashDBM::Iterator(impl_));
   return iter;
@@ -1056,6 +1064,14 @@ bool StdTreeDBM::IsOpen() const {
 
 bool StdTreeDBM::IsWritable() const {
   return impl_->IsWritable();
+}
+
+bool StdTreeDBM::IsHealthy() const {
+  return true;
+}
+
+bool StdTreeDBM::IsOrdered() const {
+  return true;
 }
 
 std::unique_ptr<DBM::Iterator> StdTreeDBM::MakeIterator() {

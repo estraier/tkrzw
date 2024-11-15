@@ -58,7 +58,7 @@ TEST(SysConfigTest, AlignNumberPowTwo) {
 }
 
 TEST(SysConfigTest, ByteOrders) {
-  if (tkrzw::IS_BIG_ENDIAN) {
+  if (tkrzw::GetIsBigEndian()) {
     EXPECT_EQ(0x1122, tkrzw::HostToNet16(0x1122));
     EXPECT_EQ(0x1122, tkrzw::NetToHost16(0x1122));
     EXPECT_EQ(0x11223344, tkrzw::HostToNet32(0x11223344));
