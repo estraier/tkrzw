@@ -123,7 +123,6 @@ TEST_F(CacheDBMTest, LRURemove) {
     const int32_t least_significant_byte = i % 256;
     const std::string least_significant_byte_key = tkrzw::ToString(least_significant_byte);
     EXPECT_EQ(tkrzw::ToString(least_significant_byte * least_significant_byte), dbm.GetSimple(least_significant_byte_key));
-    small;
   }
   for (int32_t i = 0; i < 4096; i++) {
     const std::string key = tkrzw::ToString(i);
