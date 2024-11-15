@@ -18,6 +18,14 @@
 
 namespace tkrzw {
 
+int32_t GetMaxNumberBufferSize() {
+  return NUM_BUFFER_SIZE;
+}
+
+int64_t GetMaxMemorySize() {
+  return MAX_MEMORY_SIZE;
+}
+
 int32_t GetPageSize()
 {
   #if defined(_SYS_WINDOWS_)

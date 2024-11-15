@@ -142,6 +142,12 @@ extern const bool IS_POSIX;
 /** True if the byte order is big endian. */
 extern const bool IS_BIG_ENDIAN;
 
+/** The buffer size for a numeric string expression. */
+int32_t GetMaxNumberBufferSize();
+
+/** The maximum memory size. */
+int64_t GetMaxMemorySize();
+
 /** The size of a memory page on the OS. */
 int32_t GetPageSize();
 
