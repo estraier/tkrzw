@@ -36,10 +36,16 @@ jobs:
 
       - name: "Setup Ninja"
         uses: seanmiddleditch/gha-setup-ninja@master
-        
+
+      - name: "Clone vcpkg"
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          path: vcpkg
+
       - name: Build
         run: |
-          cmake --preset ${{ matrix.cmake-preset }}
+          cmake --preset ${{ matrix.cmake-preset }} -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake"
           cmake --build --preset ${{ matrix.cmake-preset }}-release
         working-directory: ${{ github.workspace }}
       

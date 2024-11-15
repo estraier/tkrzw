@@ -21,7 +21,8 @@ include(GNUInstallDirs)
 include(CMakeDependentOption)
 
 option(TKRZW_TOOLS "Build cli frontends" OFF)
-cmake_dependent_option(TKRZW_TESTS "Generate a test target" OFF "TKRZW_TOOLS" OFF)
+option(TKRZW_TESTS "Build unit tests (requires gtest)" OFF)
+cmake_dependent_option(TKRZW_RUN_TOOLS "Generate a test target" OFF "TKRZW_TOOLS" OFF)
 
 
 find_package(Threads)
@@ -130,17 +131,21 @@ target_sources(tkrzw PRIVATE
     tkrzw_langc.cc
 )
 
+function(TkrzwAddExecutable)
+    cmake_parse_arguments(params "" "NAME" "SOURCES;LIBRARIES" ${ARGN})
+    add_executable(${params_NAME})
+    target_sources(${params_NAME} PRIVATE ${params_SOURCES})
+    target_link_libraries(${params_NAME} PRIVATE tkrzw ${params_LIBRARIES})
+    set_target_properties(${params_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>$<IF:$<STREQUAL:$<TARGET_PROPERTY:tkrzw,TYPE>,SHARED_LIBRARY>,DLL,>)
+endfunction()
+
+function(TkrzwAddCommandLineTool)
+    TkrzwAddExecutable(${ARGV})
+    set(TOOL_TARGETS ${TOOL_TARGETS} ${params_NAME} PARENT_SCOPE)
+endfunction()
+
 set(TOOL_TARGETS)
 if (TKRZW_TOOLS)
-    function(TkrzwAddCommandLineTool)
-        cmake_parse_arguments(params "" "NAME" "SOURCES" ${ARGN})
-        add_executable(${params_NAME})
-        target_sources(${params_NAME} PRIVATE ${params_SOURCES})
-        target_link_libraries(${params_NAME} PRIVATE tkrzw)
-        set_target_properties(${params_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>$<IF:$<STREQUAL:$<TARGET_PROPERTY:tkrzw,TYPE>,SHARED_LIBRARY>,DLL,>)
-        set(TOOL_TARGETS ${TOOL_TARGETS} ${params_NAME} PARENT_SCOPE)
-    endfunction()
-
     TkrzwAddCommandLineTool(NAME tkrzw_build_util SOURCES tkrzw_build_util.cc)
     TkrzwAddCommandLineTool(NAME tkrzw_str_perf SOURCES tkrzw_str_perf.cc)
     TkrzwAddCommandLineTool(NAME tkrzw_file_perf SOURCES tkrzw_file_perf.cc)
@@ -180,10 +185,21 @@ install(
     share/cmake/${CMAKE_PROJECT_NAME}
 )
 
-
-
-
 if (TKRZW_TESTS)
+    enable_testing()
+    find_package(GTest CONFIG REQUIRED)
+    
+    # tkrzw_langc_test loads lots of variables from tkrzw.dll, which isn't implemented yet.
+    set(TEST_NAMES tkrzw_sys_config_test tkrzw_lib_common_test tkrzw_str_util_test tkrzw_hash_util_test tkrzw_time_util_test tkrzw_thread_util_test tkrzw_logger_test tkrzw_compress_test tkrzw_containers_test tkrzw_key_comparators_test tkrzw_file_util_test tkrzw_file_std_test tkrzw_file_mmap_test tkrzw_file_pos_test tkrzw_file_poly_test tkrzw_message_queue_test tkrzw_dbm_common_impl_test tkrzw_dbm_ulog_test tkrzw_dbm_hash_impl_test tkrzw_dbm_tree_impl_test tkrzw_dbm_tree_test tkrzw_dbm_hash_test tkrzw_dbm_skip_impl_test tkrzw_dbm_skip_test tkrzw_dbm_tiny_test tkrzw_dbm_baby_test tkrzw_dbm_cache_test tkrzw_dbm_std_test tkrzw_dbm_poly_test tkrzw_dbm_shard_test tkrzw_dbm_async_test tkrzw_index_test tkrzw_cmd_util_test)
+    foreach(text_name IN LISTS TEST_NAMES)
+        TkrzwAddExecutable(NAME ${text_name} SOURCES ${text_name}.cc LIBRARIES GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
+        add_test(NAME ${text_name} COMMAND ${text_name})
+    endforeach()
+endif (TKRZW_TESTS)
+
+
+
+if (TKRZW_RUN_TOOLS)
     enable_testing()
     add_test(NAME check-build-util:1 COMMAND tkrzw_build_util version)
     add_test(NAME check-build-util:2 COMMAND tkrzw_build_util config)
@@ -341,5 +357,5 @@ if (TKRZW_TESTS)
         set_tests_properties(check-hashdbm-util:${index} PROPERTIES DEPENDS check-hashdbm-util:${previous_index})
     endforeach()
 
-endif (TKRZW_TESTS)
+endif (TKRZW_RUN_TOOLS)
 

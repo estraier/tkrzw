@@ -10,7 +10,6 @@
       "name": "base",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "BUILD_SHARED_LIBS": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
         "TKRZW_TOOLS": "ON",
@@ -60,12 +59,20 @@
   ],
   "testPresets": [
     {
+      "name": "test-base",
+      "execution": {
+        "timeout": 10
+      },
+      "output": {
+        "verbosity": "extra"
+      },
+      "hidden": true
+    },
+    {
       "name": "ninja-release",
       "configurePreset": "ninja",
       "configuration": "Release",
-      "output": {
-        "verbosity": "extra"
-      }
+      "inherits": ["test-base"]
     },
     {
       "name": "ninja-debug",
@@ -76,9 +83,7 @@
       "name": "msvc-release",
       "configurePreset": "msvc",
       "configuration": "Release",
-      "output": {
-        "verbosity": "extra"
-      }
+      "inherits": ["test-base"]
     },
     {
       "name": "msvc-debug",
