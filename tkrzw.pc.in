@@ -10,5 +10,6 @@ datadir=@datadir@
 Name: Tkrzw
 Description: an implementation of DBM
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -ltkrzw @LIBS@
+Libs: -L${libdir} -ltkrzw
+Libs.private: @LIBS@
 Cflags: -I${includedir}
