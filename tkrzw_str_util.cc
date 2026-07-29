@@ -190,8 +190,8 @@ int64_t StrToIntMetric(std::string_view str, int64_t defval) {
       }
     }
   }
-  if (num > INT64MAX) return INT64MAX;
-  if (num < INT64MIN) return INT64MIN;
+  if (num > static_cast<long double>(INT64MAX)) return INT64MAX;
+  if (num < static_cast<long double>(INT64MIN)) return INT64MIN;
   return static_cast<int64_t>(num);
 }
 
