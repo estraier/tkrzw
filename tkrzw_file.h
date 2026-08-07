@@ -89,13 +89,7 @@ class File {
    * @param size The size of the data to be read.
    * @return A string of the read data.  It is empty on failure.
    */
-  virtual std::string ReadSimple(int64_t off, size_t size) {
-    std::string data(size, 0);
-    if (Read(off, const_cast<char*>(data.data()), size) != Status::SUCCESS) {
-      data.clear();
-    }
-    return data;
-  }
+  virtual std::string ReadSimple(int64_t off, size_t size);
 
   /**
    * Writes data.
@@ -112,9 +106,7 @@ class File {
    * @param data The data to be written.
    * @return True on success or false on failure.
    */
-  virtual bool WriteSimple(int64_t off, std::string_view data) {
-    return Write(off, data.data(), data.size()) == Status::SUCCESS;
-  }
+  virtual bool WriteSimple(int64_t off, std::string_view data);
 
   /**
    * Appends data at the end of the file.
@@ -131,10 +123,7 @@ class File {
    * @param data The data to be written.
    * @return The offset at which the data has been put, or -1 on failure.
    */
-  virtual int64_t AppendSimple(const std::string& data) {
-    int64_t off = 0;
-    return Append(data.data(), data.size(), &off) == Status::SUCCESS ? off : -1;
-  }
+  virtual int64_t AppendSimple(const std::string& data);
 
   /**
    * Expands the file size without writing data.
@@ -150,10 +139,7 @@ class File {
    * @param inc_size The size to increment the file size by.
    * @return The old size of the file, or -1 on failure.
    */
-  virtual int64_t ExpandSimple(size_t inc_size) {
-    int64_t old_size = 0;
-    return Expand(inc_size, &old_size) == Status::SUCCESS ? old_size : -1;
-  }
+  virtual int64_t ExpandSimple(size_t inc_size);
 
   /**
    * Truncates the file.
@@ -200,10 +186,7 @@ class File {
    * Gets the size of the file, in a simple way.
    * @return The size of the on success, or -1 on failure.
    */
-  virtual int64_t GetSizeSimple() {
-    int64_t size = 0;
-    return GetSize(&size) == Status::SUCCESS ? size : -1;
-  }
+  virtual int64_t GetSizeSimple();
 
   /**
    * Sets allocation strategy.
@@ -233,10 +216,7 @@ class File {
    * Gets the path of the file, in a simple way.
    * @return The path of the file on success, or an empty string on failure.
    */
-  virtual std::string GetPathSimple() {
-    std::string path;
-    return GetPath(&path) == Status::SUCCESS ? path : "";
-  }
+  virtual std::string GetPathSimple();
 
   /**
    * Renames the file.
@@ -281,10 +261,7 @@ class File {
    * Gets the type information of the actual class.
    * @return The type information of the actual class.
    */
-  const std::type_info& GetType() const {
-    const auto& entity = *this;
-    return typeid(entity);
-  }
+  const std::type_info& GetType() const;
 };
 
 }  // namespace tkrzw

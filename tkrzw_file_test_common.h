@@ -90,7 +90,7 @@ void CommonFileTest::SmallFileTest(tkrzw::File* file) {
     }
     total_data += data;
     if (file->IsMemoryMapping()) {
-      EXPECT_EQ(tkrzw::AlignNumber(total_data.size(), tkrzw::PAGE_SIZE),
+      EXPECT_EQ(tkrzw::AlignNumber(total_data.size(), tkrzw::GetPageSize()),
                 tkrzw::GetFileSize(file_path));
     } else {
       EXPECT_EQ(total_data.size(), tkrzw::GetFileSize(file_path));
@@ -108,7 +108,7 @@ void CommonFileTest::SmallFileTest(tkrzw::File* file) {
   EXPECT_EQ(total_data, std::string_view(buf, total_data.size()));
   EXPECT_EQ(tkrzw::Status::SUCCESS, file->Truncate(5));
   if (file->IsMemoryMapping()) {
-    EXPECT_EQ(tkrzw::PAGE_SIZE, tkrzw::GetFileSize(file_path));
+    EXPECT_EQ(tkrzw::GetPageSize(), tkrzw::GetFileSize(file_path));
   } else {
     EXPECT_EQ(5, tkrzw::GetFileSize(file_path));
   }

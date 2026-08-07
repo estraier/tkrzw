@@ -45,6 +45,12 @@ extern "C" {
 
 namespace tkrzw {
 
+const std::type_info& Compressor::GetType() const {
+  const auto& entity = *this;
+  return typeid(entity);
+}
+
+
 DummyCompressor::DummyCompressor(bool checksum) : checksum_(checksum) {}
 
 DummyCompressor::~DummyCompressor() {}

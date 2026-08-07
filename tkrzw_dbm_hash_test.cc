@@ -928,12 +928,12 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       if (tkrzw::StrToInt(key) % 2 == 0) {
-        return REMOVE;
+        return GetMagicRemoveId();
       }
       return "";
     }
     std::string_view ProcessEmpty(std::string_view key) override {
-      return NOOP;
+      return GetMagicNoOpId();
     }
    private:
     std::string new_value_;
@@ -972,7 +972,7 @@ void HashDBMTest::HashDBMUpdateAppendingTest(tkrzw::HashDBM* dbm) {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       EXPECT_EQ("*", value);
-      return NOOP;
+      return GetMagicNoOpId();
     }
   } check_proc;
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->ProcessEach(&check_proc, false));

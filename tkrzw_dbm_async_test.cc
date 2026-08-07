@@ -148,18 +148,18 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(tkrzw::Status::SUCCESS,
               async.CompareExchange("a", "4567", std::string_view()).get());
     EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR,
-              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, "abc").get());
+              async.CompareExchange("a", tkrzw::DBM::GetMagicAnyDataId(), "abc").get());
     EXPECT_EQ(tkrzw::Status::SUCCESS,
               async.CompareExchange("a", std::string_view(), "abc").get());
     EXPECT_EQ("abc", dbm.GetSimple("a"));
     EXPECT_EQ(tkrzw::Status::SUCCESS,
-              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, "def").get());
+              async.CompareExchange("a", tkrzw::DBM::GetMagicAnyDataId(), "def").get());
     EXPECT_EQ("def", dbm.GetSimple("a"));
     EXPECT_EQ(tkrzw::Status::SUCCESS,
-              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA).get());
+              async.CompareExchange("a", tkrzw::DBM::GetMagicAnyDataId(), tkrzw::DBM::GetMagicAnyDataId()).get());
     EXPECT_EQ("def", dbm.GetSimple("a"));
     EXPECT_EQ(tkrzw::Status::SUCCESS,
-              async.CompareExchange("a", tkrzw::DBM::ANY_DATA, std::string_view()).get());
+              async.CompareExchange("a", tkrzw::DBM::GetMagicAnyDataId(), std::string_view()).get());
     EXPECT_EQ("", dbm.GetSimple("a"));
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.Increment("b", 2, 100).get().first);
     EXPECT_EQ(105, async.Increment("b", 3, 100).get().second);
@@ -197,15 +197,15 @@ TEST(AsyncDBMTest, Basic) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
         kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})).get());
     EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, async.CompareExchangeMulti(
-        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", "abc"}})).get());
+        kv_list({{"xyz", tkrzw::DBM::GetMagicAnyDataId()}}), kv_list({{"xyz", "abc"}})).get());
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
         kv_list({{"xyz", std::string_view()}}), kv_list({{"xyz", "abc"}})).get());
     EXPECT_EQ("abc", async.Get("xyz").get().second);
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
-        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", "def"}})).get());
+        kv_list({{"xyz", tkrzw::DBM::GetMagicAnyDataId()}}), kv_list({{"xyz", "def"}})).get());
     EXPECT_EQ("def", async.Get("xyz").get().second);
     EXPECT_EQ(tkrzw::Status::SUCCESS, async.CompareExchangeMulti(
-        kv_list({{"xyz", tkrzw::DBM::ANY_DATA}}), kv_list({{"xyz", std::string_view()}})).get());
+        kv_list({{"xyz", tkrzw::DBM::GetMagicAnyDataId()}}), kv_list({{"xyz", std::string_view()}})).get());
     EXPECT_EQ("", async.Get("xyz").get().second);
   }
   {
@@ -272,7 +272,7 @@ TEST(AsyncDBMTest, Process) {
     EXPECT_EQ("one", r2.second->GetOldValue());
     std::string old_value;
     auto r3 = async.Process("b", [&](std::string_view key, std::string_view value) {
-                                   if (value.data() != tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                                   if (value.data() != tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
                                      old_value = value;
                                    }
                                    return "uno";
@@ -280,7 +280,7 @@ TEST(AsyncDBMTest, Process) {
     EXPECT_EQ(tkrzw::Status::SUCCESS, r3);
     EXPECT_EQ("", old_value);
     auto r4 = async.Process("b", [&](std::string_view key, std::string_view value) {
-                                   if (value.data() != tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                                   if (value.data() != tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
                                      old_value = value;
                                    }
                                    return "dos";
@@ -291,8 +291,8 @@ TEST(AsyncDBMTest, Process) {
      public:
       Bracketter() {}
       std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-        if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
-          return tkrzw::DBM::RecordProcessor::NOOP;
+        if (value.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
+          return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
         }
         new_value_ = tkrzw::StrCat("[", value, "]");
         return new_value_;
@@ -305,8 +305,8 @@ TEST(AsyncDBMTest, Process) {
     std::string new_value;
     auto r6 = async.ProcessEach([&](
         std::string_view key, std::string_view value) -> std::string_view {
-                                  if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
-                                    return tkrzw::DBM::RecordProcessor::NOOP;
+                                  if (value.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
+                                    return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
                                   }
                                   new_value = tkrzw::StrCat("(", value, ")");
                                   return new_value;
@@ -340,7 +340,7 @@ TEST(AsyncDBMTest, Process) {
         std::string_view key, std::string_view value) -> std::string_view {
                                   first_key = key;
                                   first_value = value;
-                                  return tkrzw::DBM::RecordProcessor::NOOP;
+                                  return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
                                 }, true).get();
     EXPECT_EQ(tkrzw::Status::SUCCESS, r9);
     EXPECT_EQ("!!", first_key);

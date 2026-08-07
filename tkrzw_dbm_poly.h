@@ -109,9 +109,7 @@ class PolyDBM final : public ParamDBM {
      * @return The result status.
      * @details Even if there's no record, the operation doesn't fail.
      */
-    Status First() override {
-      return iter_->First();
-    }
+    Status First() override;
 
     /**
      * Initializes the iterator to indicate the last record.
@@ -119,9 +117,7 @@ class PolyDBM final : public ParamDBM {
      * @details Even if there's no record, the operation doesn't fail.  This method is suppoerted
      * only by ordered databases.
      */
-    Status Last() override {
-      return iter_->Last();
-    }
+    Status Last() override;
 
     /**
      * Initializes the iterator to indicate a specific record.
@@ -131,9 +127,7 @@ class PolyDBM final : public ParamDBM {
      * same key, the iterator refers to the first record whose key is greater than the given key.
      * The operation fails with unordered databases if there's no record with the same key.
      */
-    Status Jump(std::string_view key) override {
-      return iter_->Jump(key);
-    }
+    Status Jump(std::string_view key) override;
 
     /**
      * Initializes the iterator to indicate the last record whose key is lower than a given key.
@@ -143,9 +137,7 @@ class PolyDBM final : public ParamDBM {
      * @details Even if there's no matching record, the operation doesn't fail.  This method is
      * suppoerted only by ordered databases.
      */
-    Status JumpLower(std::string_view key, bool inclusive = false) override {
-      return iter_->JumpLower(key, inclusive);
-    }
+    Status JumpLower(std::string_view key, bool inclusive = false) override;
 
     /**
      * Initializes the iterator to indicate the first record whose key is upper than a given key.
@@ -155,9 +147,7 @@ class PolyDBM final : public ParamDBM {
      * @details Even if there's no matching record, the operation doesn't fail.  This method is
      * suppoerted only by ordered databases.
      */
-    Status JumpUpper(std::string_view key, bool inclusive = false) override {
-      return iter_->JumpUpper(key, inclusive);
-    }
+    Status JumpUpper(std::string_view key, bool inclusive = false) override;
 
     /**
      * Moves the iterator to the next record.
@@ -165,9 +155,7 @@ class PolyDBM final : public ParamDBM {
      * @details If the current record is missing, the operation fails.  Even if there's no next
      * record, the operation doesn't fail.
      */
-    Status Next() override {
-      return iter_->Next();
-    }
+    Status Next() override;
 
     /**
      * Moves the iterator to the previous record.
@@ -175,9 +163,7 @@ class PolyDBM final : public ParamDBM {
      * @details If the current record is missing, the operation fails.  Even if there's no previous
      * record, the operation doesn't fail.  This method is suppoerted only by ordered databases.
      */
-    Status Previous() override {
-      return iter_->Previous();
-    }
+    Status Previous() override;
 
     /**
      * Processes the current record with a processor.
@@ -188,9 +174,7 @@ class PolyDBM final : public ParamDBM {
      * Otherwise, this method fails and no method of the processor is called.  If the current
      * record is removed, the iterator is moved to the next record.
      */
-    Status Process(RecordProcessor* proc, bool writable) override {
-      return iter_->Process(proc, writable);
-    }
+    Status Process(RecordProcessor* proc, bool writable) override;
 
     /**
      * Gets the key and the value of the current record of the iterator.
@@ -200,9 +184,7 @@ class PolyDBM final : public ParamDBM {
      * the value data is ignored.
      * @return The result status.
      */
-    Status Get(std::string* key = nullptr, std::string* value = nullptr) override {
-      return iter_->Get(key, value);
-    }
+    Status Get(std::string* key = nullptr, std::string* value = nullptr) override;
 
     /**
      * Sets the value of the current record.

@@ -106,9 +106,7 @@ class HashDBM final : public DBM {
      * @return The result status.
      * @details This method is not supported.
      */
-    Status JumpLower(std::string_view key, bool inclusive = false) override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status JumpLower(std::string_view key, bool inclusive = false) override;
 
     /**
      * Initializes the iterator to indicate the first record whose key is upper than a given key.
@@ -117,9 +115,7 @@ class HashDBM final : public DBM {
      * @return The result status.
      * @details This method is not supported.
      */
-    Status JumpUpper(std::string_view key, bool inclusive = false) override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status JumpUpper(std::string_view key, bool inclusive = false) override;
 
     /**
      * Moves the iterator to the next record.
@@ -135,9 +131,7 @@ class HashDBM final : public DBM {
      * @return The result status.
      * @details This method is not suppoerted.
      */
-    Status Previous() override {
-      return Status(Status::NOT_IMPLEMENTED_ERROR);
-    }
+    Status Previous() override;
 
     /**
      * Processes the current record with a processor.
@@ -319,7 +313,7 @@ class HashDBM final : public DBM {
     /**
      * Constructor
      */
-    TuningParameters() {}
+    TuningParameters();
   };
 
   /**
@@ -354,9 +348,7 @@ class HashDBM final : public DBM {
    * @details Precondition: The database is not opened.
    */
   Status Open(const std::string& path, bool writable,
-              int32_t options = File::OPEN_DEFAULT) override {
-    return OpenAdvanced(path, writable, options);
-  }
+              int32_t options = File::OPEN_DEFAULT) override;
 
   /**
    * Opens a database file, in an advanced way.
@@ -514,9 +506,7 @@ class HashDBM final : public DBM {
    * @details Rebuilding a database is useful to reduce the size of the file by solving
    * fragmentation.  All tuning parameters are succeeded or calculated implicitly.
    */
-  Status Rebuild() override {
-    return RebuildAdvanced();
-  }
+  Status Rebuild() override;
 
   /**
    * Rebuilds the entire database, in an advanced way.
@@ -590,9 +580,7 @@ class HashDBM final : public DBM {
    * Checks whether ordered operations are supported.
    * @return Always false.  Ordered operations are not supported.
    */
-  bool IsOrdered() const override {
-    return false;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

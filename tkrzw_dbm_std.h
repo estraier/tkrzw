@@ -313,17 +313,13 @@ class StdHashDBM final : public DBM {
    * Checks whether the database condition is healthy.
    * @return Always true.  On-memory databases never cause system errors.
    */
-  bool IsHealthy() const override {
-    return true;
-  }
+  bool IsHealthy() const override;
 
   /**
    * Checks whether ordered operations are supported.
    * @return Always false.  Ordered operations are not supported.
    */
-  bool IsOrdered() const override {
-    return false;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.
@@ -644,17 +640,13 @@ class StdTreeDBM final : public DBM {
    * Checks whether the database condition is healthy.
    * @return Always true.  On-memory databases never cause system errors.
    */
-  bool IsHealthy() const override {
-    return true;
-  }
+  bool IsHealthy() const override;
 
   /**
    * Checks whether ordered operations are supported.
    * @return Always true.  Ordered operations are supported.
    */
-  bool IsOrdered() const override {
-    return true;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

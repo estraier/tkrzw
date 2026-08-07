@@ -515,15 +515,15 @@ void SkipDBMTest::SkipDBMAdvancedTest(tkrzw::SkipDBM* dbm) {
 TEST_F(SkipDBMTest, Reducer) {
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {"a", "b", "c"}), ElementsAre("a", "b", "c"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {
-        tkrzw::SkipDBM::REMOVING_VALUE}), ElementsAre());
+        tkrzw::SkipDBM::GetMagicRemovingValue()}), ElementsAre());
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {
-        tkrzw::SkipDBM::REMOVING_VALUE, "a"}), ElementsAre("a"));
+        tkrzw::SkipDBM::GetMagicRemovingValue(), "a"}), ElementsAre("a"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {
-        "a", tkrzw::SkipDBM::REMOVING_VALUE, "b"}), ElementsAre("b"));
+        "a", tkrzw::SkipDBM::GetMagicRemovingValue(), "b"}), ElementsAre("b"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {
-        "a", "b", tkrzw::SkipDBM::REMOVING_VALUE}), ElementsAre());
+        "a", "b", tkrzw::SkipDBM::GetMagicRemovingValue()}), ElementsAre());
   EXPECT_THAT(tkrzw::SkipDBM::ReduceRemove("", {
-        "a", "b", tkrzw::SkipDBM::REMOVING_VALUE, "c", "d"}), ElementsAre("c", "d"));
+        "a", "b", tkrzw::SkipDBM::GetMagicRemovingValue(), "c", "d"}), ElementsAre("c", "d"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceToFirst("", {"a", "b", "c"}), ElementsAre("a"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceToSecond("", {"a"}), ElementsAre("a"));
   EXPECT_THAT(tkrzw::SkipDBM::ReduceToSecond("", {"a", "b", "c"}), ElementsAre("b"));
@@ -598,11 +598,11 @@ void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       count_full_++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       count_empty_++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     int64_t CountFull() {
       return count_full_;
@@ -669,11 +669,11 @@ void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
         : records_(records), num_empty_calls_(num_empty_calls) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       records_->emplace(key, value);
-      return REMOVE;
+      return GetMagicRemoveId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       (*num_empty_calls_)++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
    private:
     std::map<std::string, std::string>* records_;
@@ -685,7 +685,7 @@ void SkipDBMTest::SkipDBMProcessTest(tkrzw::SkipDBM* dbm) {
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       last_key_ = key;
       last_value_ = value;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     std::string LastKey() const {
       return last_key_;

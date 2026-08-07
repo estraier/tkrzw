@@ -2551,6 +2551,10 @@ Status TreeDBMIteratorImpl::ProcessImpl(
   return Status(Status::SUCCESS);
 }
 
+
+TreeDBM::TuningParameters::TuningParameters() {}
+
+
 TreeDBM::TreeDBM() {
   impl_ = new TreeDBMImpl(std::make_unique<MemoryMapParallelFile>());
 }
@@ -2561,6 +2565,10 @@ TreeDBM::TreeDBM(std::unique_ptr<File> file) {
 
 TreeDBM::~TreeDBM() {
   delete impl_;
+}
+
+Status TreeDBM::Open(const std::string& path, bool writable, int32_t options) {
+  return OpenAdvanced(path, writable, options);
 }
 
 Status TreeDBM::OpenAdvanced(const std::string& path, bool writable,
@@ -2617,6 +2625,10 @@ Status TreeDBM::Clear() {
   return impl_->Clear();
 }
 
+Status TreeDBM::Rebuild() {
+  return RebuildAdvanced();
+}
+
 Status TreeDBM::RebuildAdvanced(
     const TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   return impl_->Rebuild(tuning_params, skip_broken_records, sync_hard);
@@ -2649,6 +2661,10 @@ bool TreeDBM::IsHealthy() const {
 
 bool TreeDBM::IsAutoRestored() const {
   return impl_->IsAutoRestored();
+}
+
+bool TreeDBM::IsOrdered() const {
+  return true;
 }
 
 std::unique_ptr<DBM::Iterator> TreeDBM::MakeIterator() {

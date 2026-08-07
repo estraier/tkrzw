@@ -920,7 +920,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
   const bool is_multi = CheckMap(cmd_args, "--multi");
   const bool with_no_overwrite = CheckMap(cmd_args, "--no_overwrite");
   const std::string append_delim =
-      GetStringArgument(cmd_args, "--append", 0, SkipDBM::REMOVING_VALUE);
+      GetStringArgument(cmd_args, "--append", 0, SkipDBM::GetMagicRemovingValue());
   const int64_t incr_init = GetIntegerArgument(cmd_args, "--incr", 0, INT64MIN);
   const std::string reducer_name = GetStringArgument(cmd_args, "--reducer", 0, "none");
   const std::string poly_params = GetStringArgument(cmd_args, "--params", 0, "");
@@ -951,7 +951,7 @@ static int32_t ProcessSet(int32_t argc, const char** args) {
     } else {
       EPrintL("Increment failed: ", status);
     }
-  } else if (append_delim != SkipDBM::REMOVING_VALUE) {
+  } else if (append_delim != SkipDBM::GetMagicRemovingValue()) {
     if (is_multi) {
       std::map<std::string_view, std::string_view> records;
       const auto& rec_args = cmd_args[""];
@@ -1205,7 +1205,7 @@ static int32_t ProcessList(int32_t argc, const char** args) {
         const std::string& esc_key = escape_ ? StrEscapeC(key) : StrTrimForTSV(key);
         const std::string& esc_value = escape_ ? StrEscapeC(value) : StrTrimForTSV(value, true);
         PrintL(esc_key, "\t", esc_value);
-        return NOOP;
+        return GetMagicNoOpId();
       }
      private:
       bool escape_;
@@ -1826,10 +1826,10 @@ static int32_t ProcessExport(int32_t argc, const char** args) {
     DBMUpdateLoggerMQ ulog(&mq, ulog_server_id, ulog_dbm_index, timestamp);
     auto writer =
         [&](std::string_view key, std::string_view value) -> std::string_view {
-          if (key.data() != DBM::RecordProcessor::NOOP.data()) {
+          if (key.data() != DBM::RecordProcessor::GetMagicNoOpId().data()) {
             ulog.WriteSet(key, value);
           }
-          return DBM::RecordProcessor::NOOP;
+          return DBM::RecordProcessor::GetMagicNoOpId();
         };
     status = dbm->ProcessEach(writer, false);
     status = mq.Close();
@@ -1995,7 +1995,7 @@ int main(int argc, char** argv) {
   int32_t rv = 0;
   try {
     if (std::strcmp(args[1], "--version") == 0) {
-      tkrzw::PrintL("Tkrzw utilities ", tkrzw::PACKAGE_VERSION);
+      tkrzw::PrintL("Tkrzw utilities ", tkrzw::GetPackageVersion());
     } else if (std::strcmp(args[1], "create") == 0) {
       rv = tkrzw::ProcessCreate(argc - 1, args + 1);
     } else if (std::strcmp(args[1], "inspect") == 0) {

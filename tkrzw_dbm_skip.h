@@ -52,6 +52,8 @@ class SkipDBM final : public DBM {
   static constexpr int32_t OPAQUE_METADATA_SIZE = 64;
   /** The special removing value. */
   static const std::string REMOVING_VALUE;
+  /** The special removing value. */
+  static std::string GetMagicRemovingValue();
 
   /**
    * Iterator for each record.
@@ -258,7 +260,7 @@ class SkipDBM final : public DBM {
     /**
      * Constructor
      */
-    TuningParameters() {}
+    TuningParameters();
   };
 
   /**
@@ -293,9 +295,7 @@ class SkipDBM final : public DBM {
    * @details Precondition: The database is not opened.
    */
   Status Open(const std::string& path, bool writable,
-              int32_t options = File::OPEN_DEFAULT) override {
-    return OpenAdvanced(path, writable, options);
-  }
+              int32_t options = File::OPEN_DEFAULT) override;
 
   /**
    * Opens a database file, in an advanced way.
@@ -460,9 +460,7 @@ class SkipDBM final : public DBM {
    * @details Rebuilding a database is useful to optimize the size of the file.
    * All tuning parameters are succeeded or calculated implicitly.
    */
-  Status Rebuild() override {
-    return RebuildAdvanced();
-  }
+  Status Rebuild() override;
 
   /**
    * Rebuilds the entire database, in an advanced way.
@@ -501,9 +499,7 @@ class SkipDBM final : public DBM {
    * records.  No reducer is applied to records so that all records with duplicated keys are
    * kept intact.
    */
-  Status Synchronize(bool hard, FileProcessor* proc = nullptr) override {
-    return SynchronizeAdvanced(hard, proc, nullptr);
-  }
+  Status Synchronize(bool hard, FileProcessor* proc = nullptr) override;
 
   /**
    * Synchronizes the content of the database to the file system.
@@ -562,9 +558,7 @@ class SkipDBM final : public DBM {
    * Checks whether ordered operations are supported.
    * @return Always true.  Ordered operations are supported.
    */
-  bool IsOrdered() const override {
-    return true;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

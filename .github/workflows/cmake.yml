@@ -1,0 +1,61 @@
+name: CMake Build and Test
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  cmake:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+         - description: "Ninja on Ubuntu"
+           cmake-preset: ninja
+           runs-on: ubuntu-latest
+         - description: "Ninja on OSX"
+           cmake-preset: ninja
+           runs-on: macos-13
+         - description: "Ninja on Windows"
+           cmake-preset: ninja
+           runs-on: windows-latest
+         - description: "MSVC on Windows"
+           cmake-preset: msvc
+           runs-on: windows-latest
+
+    name: cmake workflow using ${{ matrix.description }}
+    
+    runs-on: ${{ matrix.runs-on }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: "Clone Repository"
+        uses: actions/checkout@v4
+
+      - name: "Setup Ninja"
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: "Clone vcpkg"
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          path: vcpkg
+
+      - name: Build
+        run: |
+          cmake --preset ${{ matrix.cmake-preset }} -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          cmake --build --preset ${{ matrix.cmake-preset }}-release
+        working-directory: ${{ github.workspace }}
+      
+      - name: Test
+        run: |
+          ctest --preset ${{ matrix.cmake-preset }}-release
+        working-directory: ${{ github.workspace }}
+        
+      - name: Install
+        run: |
+          echo make install
+        working-directory: ${{ github.workspace }}

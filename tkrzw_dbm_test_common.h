@@ -558,7 +558,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
     SizeProc() : size_(-1) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       size_ = value.size();
-      return NOOP;
+      return GetMagicNoOpId();
     }
     int32_t Size() {
       return size_;
@@ -599,10 +599,10 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   class RemoveProc : public tkrzw::DBM::RecordProcessor {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      return REMOVE;
+      return GetMagicRemoveId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
-      return REMOVE;
+      return GetMagicRemoveId();
     }
   };
   {
@@ -628,7 +628,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   while (true) {
     std::string key, value;
     tkrzw::DBM::RecordProcessorIterator get_proc(
-        tkrzw::DBM::RecordProcessor::NOOP, &key, &value);
+        tkrzw::DBM::RecordProcessor::GetMagicNoOpId(), &key, &value);
     tkrzw::Status status = iter->Process(&get_proc, false);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
@@ -646,7 +646,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   while (true) {
     std::string key, value;
     tkrzw::DBM::RecordProcessorIterator get_proc(
-        tkrzw::DBM::RecordProcessor::NOOP, &key, &value);
+        tkrzw::DBM::RecordProcessor::GetMagicNoOpId(), &key, &value);
     tkrzw::Status status = iter->Process(&get_proc, false);
     if (status == tkrzw::Status::SUCCESS) {
       EXPECT_EQ(key, value);
@@ -655,7 +655,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
     }
     tkrzw::DBM::RecordProcessorIterator remove_proc(
-        tkrzw::DBM::RecordProcessor::REMOVE, nullptr, nullptr);
+        tkrzw::DBM::RecordProcessor::GetMagicRemoveId(), nullptr, nullptr);
     status = iter->Process(&remove_proc, true);
     if (status != tkrzw::Status::SUCCESS) {
       EXPECT_EQ(tkrzw::Status::NOT_FOUND_ERROR, status);
@@ -707,11 +707,11 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   EXPECT_EQ("zzz", actual);
   EXPECT_TRUE(found);
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchange(
-      "y", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual, &found));
+      "y", tkrzw::DBM::GetMagicAnyDataId(), tkrzw::DBM::GetMagicAnyDataId(), &actual, &found));
   EXPECT_EQ("", actual);
   EXPECT_FALSE(found);
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchange(
-      "z", tkrzw::DBM::ANY_DATA, tkrzw::DBM::ANY_DATA, &actual, &found));
+      "z", tkrzw::DBM::GetMagicAnyDataId(), tkrzw::DBM::GetMagicAnyDataId(), &actual, &found));
   EXPECT_EQ("zzz", actual);
   EXPECT_TRUE(found);
   EXPECT_EQ("zzz", dbm->GetSimple("z"));
@@ -733,7 +733,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
                         [=](std::string_view key,
                             std::string_view value) -> std::string_view {
                           EXPECT_EQ("japan", key);
-                          EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP, value);
+                          EXPECT_EQ(tkrzw::DBM::RecordProcessor::GetMagicNoOpId(), value);
                           return expected;
                         }, true);
   EXPECT_EQ(tkrzw::Status::SUCCESS, status);
@@ -742,7 +742,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
                             std::string_view value) -> std::string_view {
                           EXPECT_EQ("japan", key);
                           EXPECT_EQ(expected, value);
-                          return tkrzw::DBM::RecordProcessor::NOOP;
+                          return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
                         }, false);
   status = dbm->Process("japan",
                         [&](std::string_view key,
@@ -750,7 +750,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
                           EXPECT_EQ("japan", key);
                           EXPECT_EQ(expected, value);
                           actual = expected;
-                          return tkrzw::DBM::RecordProcessor::REMOVE;
+                          return tkrzw::DBM::RecordProcessor::GetMagicRemoveId();
                         }, true);
   EXPECT_EQ(tkrzw::Status::SUCCESS, status);
   EXPECT_EQ(expected, actual);
@@ -781,9 +781,9 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
   std::string new_value;
   status = dbm->ProcessEach([&](std::string_view key,
                                 std::string_view value) -> std::string_view {
-                              if (key.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+                              if (key.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
                                 empty_count++;
-                                return tkrzw::DBM::RecordProcessor::NOOP;
+                                return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
                               }
                               recs[std::string(key)] = std::string(value);
                               new_value = tkrzw::StrCat(value, ":", value);
@@ -807,11 +807,11 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
         : records_(records), num_empty_calls_(num_empty_calls) {}
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       records_->emplace(key, value);
-      return REMOVE;
+      return GetMagicRemoveId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       (*num_empty_calls_)++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
    private:
     std::map<std::string, std::string>* records_;
@@ -823,7 +823,7 @@ inline void CommonDBMTest::ProcessTest(tkrzw::DBM* dbm) {
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       last_key_ = key;
       last_value_ = value;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     std::string LastKey() const {
       return last_key_;
@@ -886,12 +886,12 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
       kv_list({{"4", "hello"}}), kv_list({{"4", std::string_view()}})));
   EXPECT_EQ(0, dbm->CountSimple());
   EXPECT_EQ(tkrzw::Status::INFEASIBLE_ERROR, dbm->CompareExchangeMulti(
-      kv_list({{"abc", tkrzw::DBM::ANY_DATA}}), kv_list({{"abc", "def"}})));
+      kv_list({{"abc", tkrzw::DBM::GetMagicAnyDataId()}}), kv_list({{"abc", "def"}})));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
       kv_list({{"abc", std::string_view()}}), kv_list({{"abc", "def"}})));
   EXPECT_EQ("def", dbm->GetSimple("abc"));
   EXPECT_EQ(tkrzw::Status::SUCCESS, dbm->CompareExchangeMulti(
-      kv_list({{"abc", tkrzw::DBM::ANY_DATA}}),
+      kv_list({{"abc", tkrzw::DBM::GetMagicAnyDataId()}}),
       kv_list({{"abc", std::string_view()}})));
   EXPECT_EQ(0, dbm->CountSimple());
   constexpr int32_t num_threads = 5;
@@ -913,24 +913,24 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
       std::string current_money_value;
       auto checker =
           [&](std::string_view key, std::string_view value) -> std::string_view {
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+            if (value.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
               tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
             }
-            return tkrzw::DBM::RecordProcessor::NOOP;
+            return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
           };
       auto withdrawer =
           [&](std::string_view key, std::string_view value) -> std::string_view {
             if (tran_status != tkrzw::Status::SUCCESS) {
-              return tkrzw::DBM::RecordProcessor::NOOP;
+              return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
             }
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+            if (value.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
               tran_status.Set(tkrzw::Status::NOT_FOUND_ERROR, "no such account");
-              return tkrzw::DBM::RecordProcessor::NOOP;
+              return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
             }
             int64_t current_money = tkrzw::StrToInt(value);
             if (current_money < transfer_money) {
               tran_status.Set(tkrzw::Status::INFEASIBLE_ERROR, "no sufficient money");
-              return tkrzw::DBM::RecordProcessor::NOOP;
+              return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
             }
             current_money -= transfer_money;
             current_money_value = tkrzw::ToString(current_money);
@@ -939,11 +939,11 @@ inline void CommonDBMTest::ProcessMultiTest(tkrzw::DBM* dbm) {
       auto depositer =
           [&](std::string_view key, std::string_view value) -> std::string_view {
             if (tran_status != tkrzw::Status::SUCCESS) {
-              return tkrzw::DBM::RecordProcessor::NOOP;
+              return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
             }
-            if (value.data() == tkrzw::DBM::RecordProcessor::NOOP.data()) {
+            if (value.data() == tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data()) {
               tran_status.Set(tkrzw::Status::APPLICATION_ERROR, "invalid logic");
-              return tkrzw::DBM::RecordProcessor::NOOP;
+              return tkrzw::DBM::RecordProcessor::GetMagicNoOpId();
             }
             int64_t current_money = tkrzw::StrToInt(value);
             current_money += transfer_money;
@@ -1017,13 +1017,13 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       full_count_++;
       if (tkrzw::StrToInt(key) % 2 == 0) {
-        return REMOVE;
+        return GetMagicRemoveId();
       }
-      return NOOP;
+      return GetMagicNoOpId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     int32_t GetFullCount() const {
       return full_count_;
@@ -1052,7 +1052,7 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     int32_t GetFullCount() const {
       return full_count_;
@@ -1078,11 +1078,11 @@ inline void CommonDBMTest::ProcessEachTest(tkrzw::DBM* dbm) {
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
       full_count_++;
       EXPECT_EQ(tkrzw::ToString(tkrzw::StrToInt(key) + 1), value);
-      return NOOP;
+      return GetMagicNoOpId();
     }
     std::string_view ProcessEmpty(std::string_view key) override {
       empty_count_++;
-      return NOOP;
+      return GetMagicNoOpId();
     }
     int32_t GetFullCount() const {
       return full_count_;
@@ -1718,7 +1718,7 @@ inline void CommonDBMTest::UpdateLoggerTest(tkrzw::DBM* dbm) {
   class RemoveProc : public tkrzw::DBM::RecordProcessor {
    public:
     std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      return REMOVE;
+      return GetMagicRemoveId();
     }
   };
   RemoveProc remove_proc;

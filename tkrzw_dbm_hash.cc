@@ -2398,6 +2398,8 @@ Status HashDBMIteratorImpl::ReadKeys() {
   return Status(Status::SUCCESS);
 }
 
+HashDBM::TuningParameters::TuningParameters() {}
+
 HashDBM::HashDBM() {
   impl_ = new HashDBMImpl(std::make_unique<MemoryMapParallelFile>());
 }
@@ -2408,6 +2410,10 @@ HashDBM::HashDBM(std::unique_ptr<File> file) {
 
 HashDBM::~HashDBM() {
   delete impl_;
+}
+
+Status HashDBM::Open(const std::string& path, bool writable, int32_t options) {
+  return OpenAdvanced(path, writable, options);
 }
 
 Status HashDBM::OpenAdvanced(const std::string& path, bool writable,
@@ -2495,6 +2501,10 @@ Status HashDBM::Clear() {
   return impl_->Clear();
 }
 
+Status HashDBM::Rebuild() {
+  return RebuildAdvanced();
+}
+
 Status HashDBM::RebuildAdvanced(
     const TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   return impl_->Rebuild(tuning_params, skip_broken_records, sync_hard);
@@ -2527,6 +2537,10 @@ bool HashDBM::IsHealthy() const {
 
 bool HashDBM::IsAutoRestored() const {
   return impl_->IsAutoRestored();
+}
+
+bool HashDBM::IsOrdered() const {
+  return false;
 }
 
 std::unique_ptr<DBM::Iterator> HashDBM::MakeIterator() {
@@ -2632,8 +2646,20 @@ Status HashDBM::Iterator::Jump(std::string_view key) {
   return impl_->Jump(key);
 }
 
+Status HashDBM::Iterator::JumpLower(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
+Status HashDBM::Iterator::JumpUpper(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status HashDBM::Iterator::Next() {
   return impl_->Next();
+}
+
+Status HashDBM::Iterator::Previous() {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
 }
 
 Status HashDBM::Iterator::Process(RecordProcessor* proc, bool writable) {

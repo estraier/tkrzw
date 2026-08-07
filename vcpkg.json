@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "tkrzw",
+  "version-string": "1.0.32",
+  "dependencies": [
+    "gtest"
+  ]
+}

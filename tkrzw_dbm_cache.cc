@@ -1178,8 +1178,17 @@ Status CacheDBM::Clear() {
   return impl_->Clear();
 }
 
+Status CacheDBM::Rebuild() {
+  return RebuildAdvanced(-1);
+}
+
 Status CacheDBM::RebuildAdvanced(int64_t cap_rec_num, int64_t cap_mem_size) {
   return impl_->Rebuild(cap_rec_num, cap_mem_size);
+}
+
+Status CacheDBM::ShouldBeRebuilt(bool* tobe) {
+  *tobe = false;
+  return Status(Status::SUCCESS);
 }
 
 Status CacheDBM::Synchronize(bool hard, FileProcessor* proc) {
@@ -1196,6 +1205,14 @@ bool CacheDBM::IsOpen() const {
 
 bool CacheDBM::IsWritable() const {
   return impl_->IsWritable();
+}
+
+bool CacheDBM::IsHealthy() const {
+  return true;
+}
+
+bool CacheDBM::IsOrdered() const {
+  return false;
 }
 
 std::unique_ptr<DBM::Iterator> CacheDBM::MakeIterator() {
@@ -1239,12 +1256,28 @@ Status CacheDBM::Iterator::First() {
   return impl_->First();
 }
 
+Status CacheDBM::Iterator::Last() {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status CacheDBM::Iterator::Jump(std::string_view key) {
   return impl_->Jump(key);
 }
 
+Status CacheDBM::Iterator::JumpLower(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
+Status CacheDBM::Iterator::JumpUpper(std::string_view key, bool inclusive) {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
+}
+
 Status CacheDBM::Iterator::Next() {
   return impl_->Next();
+}
+
+Status CacheDBM::Iterator::Previous() {
+  return Status(Status::NOT_IMPLEMENTED_ERROR);
 }
 
 Status CacheDBM::Iterator::Process(RecordProcessor* proc, bool writable) {

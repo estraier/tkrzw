@@ -135,11 +135,11 @@ TEST(DBMHashImplTest, HashRecord) {
          public:
           std::string_view ProcessFull(std::string_view key, std::string_view value) override {
             count_++;
-            return NOOP;
+            return GetMagicNoOpId();
           }
           std::string_view ProcessEmpty(std::string_view key) override {
             count_++;
-            return NOOP;
+            return GetMagicNoOpId();
           }
           int32_t GetCount() const {
             return count_;
@@ -377,33 +377,33 @@ TEST(DBMHashImplTest, CallRecordProcess) {
       static_cast<tkrzw::Compressor*>(&dummy_compressor);
   tkrzw::ScopedStringView placeholder;
   {
-    Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
+    Checker proc(tkrzw::DBM::RecordProcessor::GetMagicNoOpId());
     std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
         &proc, "foo", tkrzw::NullableStringView("barbar"), &new_value_orig, nullptr, &placeholder);
-    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
     new_value = tkrzw::CallRecordProcessEmpty(
         &proc, "boo", &new_value_orig, nullptr, &placeholder);
-    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data(), new_value.data());
     EXPECT_EQ("boo", proc.GetKey());
     EXPECT_EQ("", proc.GetValue());
   }
   {
-    Checker proc(tkrzw::DBM::RecordProcessor::NOOP);
+    Checker proc(tkrzw::DBM::RecordProcessor::GetMagicNoOpId());
     size_t comp_size = 0;
     char* comp_data = compressor->Compress("barbar", 6, &comp_size);
     std::string_view new_value_orig;
     std::string_view new_value = tkrzw::CallRecordProcessFull(
         &proc, "foo", tkrzw::NullableStringView(comp_data, comp_size), &new_value_orig,
         compressor, &placeholder);
-    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data(), new_value.data());
     EXPECT_EQ("foo", proc.GetKey());
     EXPECT_EQ("barbar", proc.GetValue());
     new_value = tkrzw::CallRecordProcessEmpty(
         &proc, "boo", &new_value_orig, compressor, &placeholder);
-    EXPECT_EQ(tkrzw::DBM::RecordProcessor::NOOP.data(), new_value.data());
+    EXPECT_EQ(tkrzw::DBM::RecordProcessor::GetMagicNoOpId().data(), new_value.data());
     EXPECT_EQ("boo", proc.GetKey());
     EXPECT_EQ("", proc.GetValue());
     tkrzw::xfree(comp_data);

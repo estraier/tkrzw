@@ -47,18 +47,18 @@ TEST(LibCommonTest, Constants) {
   EXPECT_GT(tkrzw::DOUBLEMAX, tkrzw::INT64MAX);
   EXPECT_TRUE(std::isnan(tkrzw::DOUBLENAN));
   EXPECT_TRUE(std::isinf(tkrzw::DOUBLEINF));
-  EXPECT_GE(tkrzw::NUM_BUFFER_SIZE, 22);
-  EXPECT_GE(tkrzw::MAX_MEMORY_SIZE, 1LL << 32);
-  EXPECT_GE(tkrzw::PAGE_SIZE, 256);
-  EXPECT_GT(std::strlen(tkrzw::PACKAGE_VERSION), 0);
-  EXPECT_GT(std::strlen(tkrzw::LIBRARY_VERSION), 0);
-  EXPECT_GT(std::strlen(tkrzw::OS_NAME), 0);
+  EXPECT_GE(tkrzw::GetMaxNumberBufferSize(), 22);
+  EXPECT_GE(tkrzw::GetMaxMemorySize(), 1LL << 32);
+  EXPECT_GE(tkrzw::GetPageSize(), 256);
+  EXPECT_GT(std::strlen(tkrzw::GetPackageVersion()), 0);
+  EXPECT_GT(std::strlen(tkrzw::GetLibraryVersion()), 0);
+  EXPECT_GT(std::strlen(tkrzw::GetOsName()), 0);
 }
 
 TEST(LibCommonTest, ByteOrder) {
   const uint32_t num = 0xDEADBEEF;
   const uint8_t* const bytes = reinterpret_cast<const uint8_t*>(&num);
-  if (tkrzw::IS_BIG_ENDIAN) {
+  if (tkrzw::GetIsBigEndian()) {
     EXPECT_EQ(0xDE, bytes[0]);
     EXPECT_EQ(0xAD, bytes[1]);
     EXPECT_EQ(0xBE, bytes[2]);
