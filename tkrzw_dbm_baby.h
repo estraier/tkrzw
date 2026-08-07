@@ -285,9 +285,7 @@ class BabyDBM final : public DBM {
    * @return The result status.
    * @details This method does nothing.
    */
-  Status Rebuild() override {
-    return Status(Status::SUCCESS);
-  }
+  Status Rebuild() override;
 
   /**
    * Checks whether the database should be rebuilt.
@@ -295,10 +293,7 @@ class BabyDBM final : public DBM {
    * @return The result status.
    * @details There's no need for the database to be rebuilt.
    */
-  Status ShouldBeRebuilt(bool* tobe) override {
-    *tobe = false;
-    return Status(Status::SUCCESS);
-  }
+  Status ShouldBeRebuilt(bool* tobe) override;
 
   /**
    * Synchronizes the content of the database to the file system.
@@ -333,17 +328,13 @@ class BabyDBM final : public DBM {
    * Checks whether the database condition is healthy.
    * @return Always true.  On-memory databases never cause system errors.
    */
-  bool IsHealthy() const override {
-    return true;
-  }
+  bool IsHealthy() const override;
 
   /**
    * Checks whether ordered operations are supported.
    * @return Always true.  Ordered operations are supported.
    */
-  bool IsOrdered() const override {
-    return true;
-  }
+  bool IsOrdered() const override;
 
   /**
    * Makes an iterator for each record.

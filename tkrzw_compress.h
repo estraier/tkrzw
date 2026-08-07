@@ -75,10 +75,7 @@ class Compressor {
    * Gets the type information of the actual class.
    * @return The type information of the actual class.
    */
-  const std::type_info& GetType() const {
-    const auto& entity = *this;
-    return typeid(entity);
-  }
+  const std::type_info& GetType() const;
 };
 
 /**

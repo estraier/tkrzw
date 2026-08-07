@@ -72,9 +72,7 @@ class DBM {
      * @details The memory referred to by the return value must be alive until the end of
      * the life-span of this object or until this function is called next time.
      */
-    virtual std::string_view ProcessFull(std::string_view key, std::string_view value) {
-      return NOOP;
-    }
+    virtual std::string_view ProcessFull(std::string_view key, std::string_view value);
 
     /**
      * Processes an empty record space.
@@ -83,9 +81,7 @@ class DBM {
      * @details The memory referred to by the return value must be alive until the end of
      * the life-span of this object or until this function is called next time.
      */
-    virtual std::string_view ProcessEmpty(std::string_view key) {
-      return NOOP;
-    }
+    virtual std::string_view ProcessEmpty(std::string_view key);
   };
 
   /**
@@ -105,21 +101,17 @@ class DBM {
      * Constructor.
      * @param proc_lambda A lambda function to process a record.
      */
-    explicit RecordProcessorLambda(RecordLambdaType proc_lambda) : proc_lambda_(proc_lambda) {}
+    explicit RecordProcessorLambda(RecordLambdaType proc_lambda);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      return proc_lambda_(key, value);
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      return proc_lambda_(key, NOOP);
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     // Lambda function to process a record.
@@ -136,25 +128,17 @@ class DBM {
      * @param status The pointer to a status object to contain the result status.
      * @param value The pointer to a string object to contain the result value.
      */
-    RecordProcessorGet(Status* status, std::string* value) : status_(status), value_(value) {}
+    RecordProcessorGet(Status* status, std::string* value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (value_ != nullptr) {
-        *value_ = value;
-      }
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      status_->Set(Status::NOT_FOUND_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Status to report. */
@@ -176,29 +160,17 @@ class DBM {
      * @param old_value The pointer to a string object to contain the existing value.
      */
     RecordProcessorSet(Status* status, std::string_view value, bool overwrite,
-                       std::string* old_value)
-        : status_(status), value_(value), overwrite_(overwrite), old_value_(old_value) {}
+                       std::string* old_value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (old_value_ != nullptr) {
-        *old_value_ = value;
-      }
-      if (overwrite_) {
-        return value_;
-      }
-      status_->Set(Status::DUPLICATION_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      return value_;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Status to report. */
@@ -221,26 +193,17 @@ class DBM {
      * @param status The pointer to a status object to contain the result status.
      * @param old_value The pointer to a string object to contain the existing value.
      */
-    explicit RecordProcessorRemove(Status* status, std::string* old_value)
-        : status_(status), old_value_(old_value) {}
+    explicit RecordProcessorRemove(Status* status, std::string* old_value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (old_value_ != nullptr) {
-        *old_value_ = value;
-      }
-      return REMOVE;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      status_->Set(Status::NOT_FOUND_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Status to report. */
@@ -259,32 +222,17 @@ class DBM {
      * @param value A string of the value to set.
      * @param delim A string of the delimiter.
      */
-    RecordProcessorAppend(std::string_view value, std::string_view delim)
-        : value_(value), delim_(delim) {}
+    RecordProcessorAppend(std::string_view value, std::string_view delim);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (delim_.empty()) {
-        new_value_.reserve(value.size() + value_.size());
-        new_value_.append(value);
-        new_value_.append(value_);
-      } else {
-        new_value_.reserve(value.size() + delim_.size() + value_.size());
-        new_value_.append(value);
-        new_value_.append(delim_);
-        new_value_.append(value_);
-      }
-      return new_value_;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      return value_;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Value to store. */
@@ -311,46 +259,17 @@ class DBM {
      * it is nullptr, it is ignored.
      */
     RecordProcessorCompareExchange(Status* status, std::string_view expected,
-                                   std::string_view desired, std::string* actual, bool* found)
-        : status_(status), expected_(expected), desired_(desired),
-          actual_(actual), found_(found) {}
+                                   std::string_view desired, std::string* actual, bool* found);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (actual_ != nullptr) {
-        *actual_ = value;
-      }
-      if (found_ != nullptr) {
-        *found_ = true;
-      }
-      if (expected_.data() != nullptr &&
-          (expected_.data() == ANY_DATA.data() || expected_ == value)) {
-        return desired_.data() == nullptr ? REMOVE :
-            desired_.data() == ANY_DATA.data() ? NOOP : desired_;
-      }
-      status_->Set(Status::INFEASIBLE_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      if (actual_ != nullptr) {
-        *actual_ = "";
-      }
-      if (found_ != nullptr) {
-        *found_ = false;
-      }
-      if (expected_.data() == nullptr) {
-        return desired_.data() == nullptr || desired_.data() == ANY_DATA.data() ?
-            NOOP : desired_;
-      }
-      status_->Set(Status::INFEASIBLE_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Status to report. */
@@ -376,44 +295,17 @@ class DBM {
      * @param current The pointer to a string object to contain the current value.
      * @param initial The initial value.
      */
-    RecordProcessorIncrement(int64_t increment, int64_t* current, int64_t initial)
-        : increment_(increment), current_(current), initial_(initial) {}
+    RecordProcessorIncrement(int64_t increment, int64_t* current, int64_t initial);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (increment_ == INT64MIN) {
-        if (current_ != nullptr) {
-          *current_ = StrToIntBigEndian(value);
-        }
-        return NOOP;
-      }
-      const int64_t num = StrToIntBigEndian(value) + increment_;
-      if (current_ != nullptr) {
-        *current_ = num;
-      }
-      value_ = IntToStrBigEndian(num);
-      return value_;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      if (increment_ == INT64MIN) {
-        if (current_ != nullptr) {
-          *current_ = initial_;
-        }
-        return NOOP;
-      }
-      const int64_t num = initial_ + increment_;
-      if (current_ != nullptr) {
-        *current_ = num;
-      }
-      value_ =  IntToStrBigEndian(num);
-      return value_;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** The incrementing value. */
@@ -436,29 +328,17 @@ class DBM {
      * @param noop Whether to do no operation.
      * @param expected A string of the expected value.
      */
-    RecordCheckerCompareExchangeMulti(bool* noop, std::string_view expected)
-        : noop_(noop), expected_(expected) {}
+    RecordCheckerCompareExchangeMulti(bool* noop, std::string_view expected);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (expected_.data() == nullptr ||
-          (expected_.data() != ANY_DATA.data() && expected_ != value)) {
-        *noop_ = true;
-      }
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      if (expected_.data() != nullptr) {
-        *noop_ = true;
-      }
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Whether to do no operation. */
@@ -477,28 +357,17 @@ class DBM {
      * @param noop True to do no operation.
      * @param desired A string of the expected value.
      */
-    RecordSetterCompareExchangeMulti(bool* noop, std::string_view desired)
-        : noop_(noop), desired_(desired) {}
+    RecordSetterCompareExchangeMulti(bool* noop, std::string_view desired);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (*noop_) {
-        return NOOP;
-      }
-      return desired_.data() == nullptr ? REMOVE : desired_;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      if (*noop_) {
-        return NOOP;
-      }
-      return desired_.data() == nullptr ? NOOP : desired_;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** Whether to do no operation. */
@@ -516,22 +385,17 @@ class DBM {
      * Constructor.
      * @param status The pointer to a status object.
      */
-    RecordCheckerRekey(Status* status) : status_(status) {}
+    RecordCheckerRekey(Status* status);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      status_->Set(Status::DUPLICATION_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** The pointer to a status object. */
@@ -549,27 +413,17 @@ class DBM {
      * @param old_value The pointer to a string object to store the old value.
      * @param copying Whether to retain the record of the old key.
      */
-    RecordRemoverRekey(Status* status, std::string* old_value, bool copying)
-        : status_(status), old_value_(old_value), copying_(copying) {}
+    RecordRemoverRekey(Status* status, std::string* old_value, bool copying);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (*status_ != Status::SUCCESS) {
-        return NOOP;
-      }
-      *old_value_ = value;
-      return copying_ ? NOOP : REMOVE;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      status_->Set(Status::NOT_FOUND_ERROR);
-      return NOOP;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** The pointer to a status object. */
@@ -590,28 +444,17 @@ class DBM {
      * @param status The pointer to a status object.
      * @param new_value The pointer to a string object to store the old value.
      */
-    RecordSetterRekey(Status* status, const std::string* new_value)
-        : status_(status), new_value_(new_value) {}
+    RecordSetterRekey(Status* status, const std::string* new_value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (*status_ != Status::SUCCESS) {
-        return NOOP;
-      }
-      return *new_value_;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
     /**
      * Processes an empty record space.
      */
-    std::string_view ProcessEmpty(std::string_view key) override {
-      if (*status_ != Status::SUCCESS) {
-        return NOOP;
-      }
-      return *new_value_;
-    }
+    std::string_view ProcessEmpty(std::string_view key) override;
 
    private:
     /** The pointer to a status object. */
@@ -630,21 +473,12 @@ class DBM {
      * @param key The pointer to a string object to contain the existing value.
      * @param value The pointer to a string object to contain the existing value.
      */
-    explicit RecordProcessorPopFirst(std::string* key, std::string* value)
-        : key_(key), value_(value) {}
+    explicit RecordProcessorPopFirst(std::string* key, std::string* value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (key_ != nullptr) {
-        *key_ = key;
-      }
-      if (value_ != nullptr) {
-        *value_ = value;
-      }
-      return REMOVE;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
    private:
     /** String to store the key. */
@@ -661,15 +495,12 @@ class DBM {
     /**
      * Constructor.
      */
-    RecordProcessorExport(Status* status, DBM* dbm) : status_(status), dbm_(dbm) {}
+    RecordProcessorExport(Status* status, DBM* dbm);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      *status_ |= dbm_->Set(key, value);
-      return NOOP;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
    private:
     /** Status to report. */
@@ -690,21 +521,12 @@ class DBM {
      * @param cur_value The pointer to a string object to contain the current value.
      */
     RecordProcessorIterator(
-        std::string_view new_value, std::string* cur_key, std::string* cur_value)
-        : new_value_(new_value), cur_key_(cur_key), cur_value_(cur_value) {}
+        std::string_view new_value, std::string* cur_key, std::string* cur_value);
 
     /**
      * Processes an existing record.
      */
-    std::string_view ProcessFull(std::string_view key, std::string_view value) override {
-      if (cur_key_ != nullptr) {
-        *cur_key_ = key;
-      }
-      if (cur_value_ != nullptr) {
-        *cur_value_ = value;
-      }
-      return new_value_;
-    }
+    std::string_view ProcessFull(std::string_view key, std::string_view value) override;
 
    private:
     /** The new value returned to the database. */
@@ -806,10 +628,7 @@ class DBM {
      * @param writable True if the processor can edit the record.
      * @return The result status.
      */
-    virtual Status Process(RecordLambdaType rec_lambda, bool writable) {
-      RecordProcessorLambda proc(rec_lambda);
-      return Process(&proc, writable);
-    }
+    virtual Status Process(RecordLambdaType rec_lambda, bool writable);
 
     /**
      * Gets the key and the value of the current record of the iterator.
@@ -819,30 +638,21 @@ class DBM {
      * the value data is ignored.
      * @return The result status.
      */
-    virtual Status Get(std::string* key = nullptr, std::string* value = nullptr) {
-      RecordProcessorIterator proc(RecordProcessor::NOOP, key, value);
-      return Process(&proc, false);
-    }
+    virtual Status Get(std::string* key = nullptr, std::string* value = nullptr);
 
     /**
      * Gets the key of the current record, in a simple way.
      * @param default_value The value to be returned on failure.
      * @return The key of the current record on success, or the default value on failure.
      */
-    virtual std::string GetKey(std::string_view default_value = "") {
-      std::string key;
-      return Get(&key, nullptr) == Status::SUCCESS ? key : std::string(default_value);
-    }
+    virtual std::string GetKey(std::string_view default_value = "");
 
     /**
      * Gets the value of the current record, in a simple way.
      * @param default_value The value to be returned on failure.
      * @return The value of the current record on success, or the default value on failure.
      */
-    virtual std::string GetValue(std::string_view default_value = "") {
-      std::string value;
-      return Get(nullptr, &value) == Status::SUCCESS ? value : std::string(default_value);
-    }
+    virtual std::string GetValue(std::string_view default_value = "");
 
     /**
      * Sets the value of the current record.
@@ -854,10 +664,7 @@ class DBM {
      * @return The result status.
      */
     virtual Status Set(std::string_view value, std::string* old_key = nullptr,
-                       std::string* old_value = nullptr) {
-      RecordProcessorIterator proc(value, old_key, old_value);
-      return Process(&proc, true);
-    }
+                       std::string* old_value = nullptr);
 
     /**
      * Removes the current record.
@@ -868,10 +675,7 @@ class DBM {
      * @return The result status.
      * @details If possible, the iterator moves to the next record.
      */
-    virtual Status Remove(std::string* old_key = nullptr, std::string* old_value = nullptr) {
-      RecordProcessorIterator proc(RecordProcessor::REMOVE, old_key, old_value);
-      return Process(&proc, true);
-    }
+    virtual Status Remove(std::string* old_key = nullptr, std::string* old_value = nullptr);
 
     /**
      * Gets the current record and moves the iterator to the next record.
@@ -881,17 +685,7 @@ class DBM {
      * the value data is ignored.
      * @return The result status.
      */
-    virtual Status Step(std::string* key = nullptr, std::string* value = nullptr) {
-      Status status = Get(key, value);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-      status = Next();
-      if (status == Status::NOT_FOUND_ERROR) {
-        status.Set(Status::SUCCESS);
-      }
-      return status;
-    }
+    virtual Status Step(std::string* key = nullptr, std::string* value = nullptr);
   };
 
   /**
@@ -908,7 +702,7 @@ class DBM {
      * Process a file.
      * @param path The path of the file.
      */
-    virtual void Process(const std::string& path) {}
+    virtual void Process(const std::string& path);
   };
 
   /**
@@ -976,9 +770,7 @@ class DBM {
      * @return The result status.
      * @details This is called by the Synchronize method.
      */
-    virtual Status Synchronize(bool hard) {
-      return Status(Status::SUCCESS);
-    }
+    virtual Status Synchronize(bool hard);
   };
 
   /**
@@ -1023,10 +815,7 @@ class DBM {
    * @param writable True if the processor can edit the record.
    * @return The result status.
    */
-  virtual Status Process(std::string_view key, RecordLambdaType rec_lambda, bool writable) {
-    RecordProcessorLambda proc(rec_lambda);
-    return Process(key, &proc, writable);
-  }
+  virtual Status Process(std::string_view key, RecordLambdaType rec_lambda, bool writable);
 
   /**
    * Gets the value of a record of a key.
@@ -1035,15 +824,7 @@ class DBM {
    * the value data is ignored.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
-  virtual Status Get(std::string_view key, std::string* value = nullptr) {
-    Status impl_status(Status::SUCCESS);
-    RecordProcessorGet proc(&impl_status, value);
-    const Status status = Process(key, &proc, false);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return impl_status;
-  }
+  virtual Status Get(std::string_view key, std::string* value = nullptr);
 
   /**
    * Gets the value of a record of a key, in a simple way.
@@ -1051,10 +832,7 @@ class DBM {
    * @param default_value The value to be returned on failure.
    * @return The value of the matching record on success, or the default value on failure.
    */
-  virtual std::string GetSimple(std::string_view key, std::string_view default_value = "") {
-    std::string value;
-    return Get(key, &value) == Status::SUCCESS ? value : std::string(default_value);
-  }
+  virtual std::string GetSimple(std::string_view key, std::string_view default_value = "");
 
   /**
    * Gets the values of multiple records of keys, with a string view vector.
@@ -1066,19 +844,7 @@ class DBM {
    * code, the result map can have elements.
    */
   virtual Status GetMulti(
-      const std::vector<std::string_view>& keys, std::map<std::string, std::string>* records) {
-    Status status(Status::SUCCESS);
-    for (const auto& key : keys) {
-      std::string value;
-      const Status tmp_status = Get(key, &value);
-      if (tmp_status == Status::SUCCESS) {
-        records->emplace(key, std::move(value));
-      } else {
-        status |= tmp_status;
-      }
-    }
-    return status;
-  }
+      const std::vector<std::string_view>& keys, std::map<std::string, std::string>* records);
 
   /**
    * Gets the values of multiple records of keys, with an initializer list.
@@ -1090,10 +856,7 @@ class DBM {
    * code, the result map can have elements.
    */
   virtual Status GetMulti(const std::initializer_list<std::string_view>& keys,
-                          std::map<std::string, std::string>* records) {
-    std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
-    return GetMulti(vector_keys, records);
-  }
+                          std::map<std::string, std::string>* records);
 
   /**
    * Gets the values of multiple records of keys, with a string vector.
@@ -1105,9 +868,7 @@ class DBM {
    * code, the result map can have elements.
    */
   virtual Status GetMulti(
-      const std::vector<std::string>& keys, std::map<std::string, std::string>* records) {
-    return GetMulti(MakeStrViewVectorFromValues(keys), records);
-  }
+      const std::vector<std::string>& keys, std::map<std::string, std::string>* records);
 
   /**
    * Sets a record of a key and a value.
@@ -1121,15 +882,7 @@ class DBM {
    * @return The result status.  If overwriting is abandoned, DUPLICATION_ERROR is returned.
    */
   virtual Status Set(std::string_view key, std::string_view value, bool overwrite = true,
-                     std::string* old_value = nullptr) {
-    Status impl_status(Status::SUCCESS);
-    RecordProcessorSet proc(&impl_status, value, overwrite, old_value);
-    const Status status = Process(key, &proc, true);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return impl_status;
-  }
+                     std::string* old_value = nullptr);
 
   /**
    * Sets multiple records, with a map of string views.
@@ -1141,16 +894,7 @@ class DBM {
    * is returned.
    */
   virtual Status SetMulti(
-      const std::map<std::string_view, std::string_view>& records, bool overwrite = true) {
-    Status status(Status::SUCCESS);
-    for (const auto& record : records) {
-      status |= Set(record.first, record.second, overwrite);
-      if (status != Status::SUCCESS && status != Status::DUPLICATION_ERROR) {
-        break;
-      }
-    }
-    return status;
-  }
+      const std::map<std::string_view, std::string_view>& records, bool overwrite = true);
 
   /**
    * Sets multiple records, with an initializer list.
@@ -1163,14 +907,7 @@ class DBM {
    */
   virtual Status SetMulti(
       const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
-      bool overwrite = true) {
-    std::map<std::string_view, std::string_view> map_records;
-    for (const auto& record : records) {
-      map_records.emplace(std::pair(
-          std::string_view(record.first), std::string_view(record.second)));
-    }
-    return SetMulti(map_records, overwrite);
-  }
+      bool overwrite = true);
 
   /**
    * Sets multiple records, with a map of strings.
@@ -1182,9 +919,7 @@ class DBM {
    * is returned.
    */
   virtual Status SetMulti(
-      const std::map<std::string, std::string>& records, bool overwrite = true) {
-    return SetMulti(MakeStrViewMapFromRecords(records), overwrite);
-  }
+      const std::map<std::string, std::string>& records, bool overwrite = true);
 
   /**
    * Removes a record of a key.
@@ -1193,50 +928,28 @@ class DBM {
    * it is ignored.
    * @return The result status.  If there's no matching record, NOT_FOUND_ERROR is returned.
    */
-  virtual Status Remove(std::string_view key, std::string* old_value = nullptr) {
-    Status impl_status(Status::SUCCESS);
-    RecordProcessorRemove proc(&impl_status, old_value);
-    const Status status = Process(key, &proc, true);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return impl_status;
-  }
+  virtual Status Remove(std::string_view key, std::string* old_value = nullptr);
 
   /**
    * Removes records of keys, with a string view vector.
    * @param keys The keys of records to remove.
    * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
-  virtual Status RemoveMulti(const std::vector<std::string_view>& keys) {
-    Status status(Status::SUCCESS);
-    for (const auto& key : keys) {
-      status |= Remove(key);
-      if (status != Status::Status::SUCCESS && status != Status::Status::NOT_FOUND_ERROR) {
-        break;
-      }
-    }
-    return status;
-  }
+  virtual Status RemoveMulti(const std::vector<std::string_view>& keys);
 
   /**
    * Removes records of keys, with an initializer list.
    * @param keys The keys of records to remove.
    * @return The result status.
    */
-  virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys) {
-    std::vector<std::string_view> vector_keys(keys.begin(), keys.end());
-    return RemoveMulti(vector_keys);
-  }
+  virtual Status RemoveMulti(const std::initializer_list<std::string_view>& keys);
 
   /**
    * Removes records of keys, with a string vector.
    * @param keys The keys of records to remove.
    * @return The result status.  If there are missing records, NOT_FOUND_ERROR is returned.
    */
-  virtual Status RemoveMulti(const std::vector<std::string>& keys) {
-    return RemoveMulti(MakeStrViewVectorFromValues(keys));
-  }
+  virtual Status RemoveMulti(const std::vector<std::string>& keys);
 
   /**
    * Appends data at the end of a record of a key.
@@ -1247,10 +960,7 @@ class DBM {
    * @details If there's no existing record, the value is set without the delimiter.
    */
   virtual Status Append(
-      std::string_view key, std::string_view value, std::string_view delim = "") {
-    RecordProcessorAppend proc(value, delim);
-    return Process(key, &proc, true);
-  }
+      std::string_view key, std::string_view value, std::string_view delim = "");
 
   /**
    * Appends data to multiple records, with a map of string views.
@@ -1260,16 +970,7 @@ class DBM {
    * @details If there's no existing record, the value is set without the delimiter.
    */
   virtual Status AppendMulti(
-      const std::map<std::string_view, std::string_view>& records, std::string_view delim = "") {
-    Status status(Status::SUCCESS);
-    for (const auto& record : records) {
-      status |= Append(record.first, record.second, delim);
-      if (status != Status::SUCCESS) {
-        break;
-      }
-    }
-    return status;
-  }
+      const std::map<std::string_view, std::string_view>& records, std::string_view delim = "");
 
   /**
    * Appends data to multiple records, with an initializer list.
@@ -1280,14 +981,7 @@ class DBM {
    */
   virtual Status AppendMulti(
       const std::initializer_list<std::pair<std::string_view, std::string_view>>& records,
-      std::string_view delim = "") {
-    std::map<std::string_view, std::string_view> map_records;
-    for (const auto& record : records) {
-      map_records.emplace(std::pair(
-          std::string_view(record.first), std::string_view(record.second)));
-    }
-    return AppendMulti(map_records, delim);
-  }
+      std::string_view delim = "");
 
   /**
    * Appends data to multiple records, with a map of strings.
@@ -1297,9 +991,7 @@ class DBM {
    * @details If there's no existing record, the value is set without the delimiter.
    */
   virtual Status AppendMulti(
-      const std::map<std::string, std::string>& records, std::string_view delim = "") {
-    return AppendMulti(MakeStrViewMapFromRecords(records), delim);
-  }
+      const std::map<std::string, std::string>& records, std::string_view delim = "");
 
   /**
    * Compares the value of a record and exchanges if the condition meets.
@@ -1316,15 +1008,7 @@ class DBM {
    */
   virtual Status CompareExchange(std::string_view key, std::string_view expected,
                                  std::string_view desired, std::string* actual = nullptr,
-                                 bool* found = nullptr) {
-    Status impl_status(Status::SUCCESS);
-    RecordProcessorCompareExchange proc(&impl_status, expected, desired, actual, found);
-    const Status status = Process(key, &proc, desired.data() != ANY_DATA.data());
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return impl_status;
-  }
+                                 bool* found = nullptr);
 
   /**
    * Increments the numeric value of a record.
@@ -1339,10 +1023,7 @@ class DBM {
    * supported.
    */
   virtual Status Increment(std::string_view key, int64_t increment = 1,
-                           int64_t* current = nullptr, int64_t initial = 0) {
-    RecordProcessorIncrement proc(increment, current, initial);
-    return Process(key, &proc, increment != INT64MIN);
-  }
+                           int64_t* current = nullptr, int64_t initial = 0);
 
   /**
    * Increments the numeric value of a record, in a simple way.
@@ -1353,10 +1034,7 @@ class DBM {
    * @details The record value is treated as a decimal integer.  Negative is also supported.
    */
   virtual int64_t IncrementSimple(
-      std::string_view key, int64_t increment = 1, int64_t initial = 0) {
-    int64_t current = 0;
-    return Increment(key, increment, &current, initial) == Status::SUCCESS ? current : INT64MIN;
-  }
+      std::string_view key, int64_t increment = 1, int64_t initial = 0);
 
   /**
    * Processes multiple records with processors.
@@ -1381,17 +1059,7 @@ class DBM {
    */
   virtual Status ProcessMulti(
       const std::vector<std::pair<std::string_view, RecordLambdaType>>& key_lambda_pairs,
-      bool writable) {
-    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
-    key_proc_pairs.reserve(key_lambda_pairs.size());
-    std::vector<RecordProcessorLambda> procs;
-    procs.reserve(key_lambda_pairs.size());
-    for (const auto& key_lambda : key_lambda_pairs) {
-      procs.emplace_back(key_lambda.second);
-      key_proc_pairs.emplace_back(std::make_pair(key_lambda.first, &procs.back()));
-    }
-    return ProcessMulti(key_proc_pairs, writable);
-  }
+      bool writable);
 
   /**
    * Compares the values of records and exchanges if the condition meets.
@@ -1404,28 +1072,7 @@ class DBM {
    */
   virtual Status CompareExchangeMulti(
       const std::vector<std::pair<std::string_view, std::string_view>>& expected,
-      const std::vector<std::pair<std::string_view, std::string_view>>& desired) {
-    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
-    key_proc_pairs.reserve(expected.size() + desired.size());
-    bool noop = false;
-    std::vector<RecordCheckerCompareExchangeMulti> checkers;
-    checkers.reserve(expected.size());
-    for (const auto& key_value : expected) {
-      checkers.emplace_back(RecordCheckerCompareExchangeMulti(&noop, key_value.second));
-      key_proc_pairs.emplace_back(std::pair(key_value.first, &checkers.back()));
-    }
-    std::vector<RecordSetterCompareExchangeMulti> setters;
-    setters.reserve(desired.size());
-    for (const auto& key_value : desired) {
-      setters.emplace_back(RecordSetterCompareExchangeMulti(&noop, key_value.second));
-      key_proc_pairs.emplace_back(std::pair(key_value.first, &setters.back()));
-    }
-    const Status status = ProcessMulti(key_proc_pairs, true);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return noop ? Status(Status::INFEASIBLE_ERROR) : Status(Status::SUCCESS);
-  }
+      const std::vector<std::pair<std::string_view, std::string_view>>& desired);
 
   /**
    * Changes the key of a record.
@@ -1443,28 +1090,7 @@ class DBM {
    */
   virtual Status Rekey(std::string_view old_key, std::string_view new_key,
                        bool overwrite = true, bool copying = false,
-                       std::string* value = nullptr) {
-    std::vector<std::pair<std::string_view, RecordProcessor*>> key_proc_pairs;
-    key_proc_pairs.reserve(3);
-    Status proc_status(Status::SUCCESS);
-    RecordCheckerRekey checker(&proc_status);
-    if (!overwrite) {
-      key_proc_pairs.emplace_back(std::pair(new_key, &checker));
-    }
-    std::string rec_value;
-    RecordRemoverRekey remover(&proc_status, &rec_value, copying);
-    key_proc_pairs.emplace_back(std::pair(old_key, &remover));
-    RecordSetterRekey setter(&proc_status, &rec_value);
-    key_proc_pairs.emplace_back(std::pair(new_key, &setter));
-    const Status status = ProcessMulti(key_proc_pairs, true);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    if (proc_status == Status::SUCCESS && value != nullptr) {
-      *value = std::move(rec_value);
-    }
-    return proc_status;
-  }
+                       std::string* value = nullptr);
 
   /**
    * Processes the first record with a processor.
@@ -1486,10 +1112,7 @@ class DBM {
    * @param writable True if the processor can edit the record.
    * @return The result status.
    */
-  virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable) {
-    RecordProcessorLambda proc(rec_lambda);
-    return ProcessFirst(&proc, writable);
-  }
+  virtual Status ProcessFirst(RecordLambdaType rec_lambda, bool writable);
 
   /**
    * Gets the first record and removes it.
@@ -1499,10 +1122,7 @@ class DBM {
    * it is nullptr, it is ignored.
    * @return The result status.
    */
-  virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr) {
-    RecordProcessorPopFirst proc(key, value);
-    return ProcessFirst(&proc, true);
-  }
+  virtual Status PopFirst(std::string* key = nullptr, std::string* value = nullptr);
 
   /**
    * Adds a record with a key of the current timestamp.
@@ -1516,21 +1136,7 @@ class DBM {
    * there is an existing record matching the generated key, the key is regenerated and the
    * attempt is repeated until it succeeds.
    */
-  virtual Status PushLast(std::string_view value, double wtime = -1, std::string* key = nullptr) {
-    for (uint64_t seq = 0; true; seq++) {
-      const uint64_t timestamp =
-          static_cast<int64_t>((wtime < 0 ? GetWallTime() : wtime) * 100000000 + seq);
-      const std::string& time_key = IntToStrBigEndian(timestamp);
-      const Status status = Set(time_key, value, false);
-      if (status != Status::DUPLICATION_ERROR) {
-        if (key != nullptr) {
-          *key = time_key;
-        }
-        return status;
-      }
-    }
-    return Status(Status::UNKNOWN_ERROR);
-  }
+  virtual Status PushLast(std::string_view value, double wtime = -1, std::string* key = nullptr);
 
   /**
    * Processes each and every record in the database with a processor.
@@ -1555,10 +1161,7 @@ class DBM {
    * before the iteration and once after the iteration with both the key and the value being
    * RecordProcessor::NOOP.
    */
-  virtual Status ProcessEach(RecordLambdaType rec_lambda, bool writable) {
-    RecordProcessorLambda proc(rec_lambda);
-    return ProcessEach(&proc, writable);
-  }
+  virtual Status ProcessEach(RecordLambdaType rec_lambda, bool writable);
 
   /**
    * Gets the number of records.
@@ -1571,10 +1174,7 @@ class DBM {
    * Gets the number of records, in a simple way.
    * @return The number of records on success, or -1 on failure.
    */
-  virtual int64_t CountSimple() {
-    int64_t count = 0;
-    return Count(&count) == Status::SUCCESS ? count : -1;
-  }
+  virtual int64_t CountSimple();
 
   /**
    * Gets the current file size of the database.
@@ -1587,10 +1187,7 @@ class DBM {
    * Gets the current file size of the database, in a simple way.
    * @return The current file size of the database, or -1 on failure.
    */
-  virtual int64_t GetFileSizeSimple() {
-    int64_t size = 0;
-    return GetFileSize(&size) == Status::SUCCESS ? size : -1;
-  }
+  virtual int64_t GetFileSizeSimple();
 
   /**
    * Gets the path of the database file.
@@ -1603,10 +1200,7 @@ class DBM {
    * Gets the path of the database file, in a simple way.
    * @return The file path of the database, or an empty string on failure.
    */
-  virtual std::string GetFilePathSimple() {
-    std::string path;
-    return GetFilePath(&path) == Status::SUCCESS ? path : std::string("");
-  }
+  virtual std::string GetFilePathSimple();
 
   /**
    * Gets the timestamp in seconds of the last modified time.
@@ -1621,10 +1215,7 @@ class DBM {
    * Gets the timestamp of the last modified time, in a simple way.
    * @return The timestamp of the last modified time, or NaN on failure.
    */
-  virtual double GetTimestampSimple() {
-    double timestamp = 0;
-    return GetTimestamp(&timestamp) == Status::SUCCESS ? timestamp : DOUBLENAN;
-  }
+  virtual double GetTimestampSimple();
 
   /**
    * Removes all records.
@@ -1649,10 +1240,7 @@ class DBM {
    * Checks whether the database should be rebuilt, in a simple way.
    * @return True if the database should be rebuilt or false if not or on failure.
    */
-  virtual bool ShouldBeRebuiltSimple() {
-    bool tobe = false;
-    return ShouldBeRebuilt(&tobe) == Status::SUCCESS ? tobe : false;
-  }
+  virtual bool ShouldBeRebuiltSimple();
 
   /**
    * Synchronizes the content of the database to the file system.
@@ -1672,39 +1260,14 @@ class DBM {
    * @details Copying is done while the content is synchronized and stable.  So, this method is
    * suitable for making a backup file while running a database service.
    */
-  virtual Status CopyFileData(const std::string& dest_path, bool sync_hard = false) {
-    Status impl_status(Status::SUCCESS);
-    FileProcessorCopyFileData proc(&impl_status, dest_path);
-    if (IsWritable()) {
-      const Status status = Synchronize(sync_hard, &proc);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-    } else {
-      std::string path;
-      const Status status = GetFilePath(&path);
-      if (status != Status::SUCCESS) {
-        return status;
-      }
-      proc.Process(path);
-    }
-    return impl_status;
-  }
+  virtual Status CopyFileData(const std::string& dest_path, bool sync_hard = false);
 
   /**
    * Exports all records to another database.
    * @param dest_dbm The pointer to the destination database.
    * @return The result status.
    */
-  virtual Status Export(DBM* dest_dbm) {
-    Status impl_status(Status::SUCCESS);
-    RecordProcessorExport proc(&impl_status, dest_dbm);
-    const Status status = ProcessEach(&proc, false);
-    if (status != Status::SUCCESS) {
-      return status;
-    }
-    return impl_status;
-  }
+  virtual Status Export(DBM* dest_dbm);
 
   /**
    * Inspects the database.
@@ -1765,10 +1328,7 @@ class DBM {
    * Gets the type information of the actual class.
    * @return The type information of the actual class.
    */
-  const std::type_info& GetType() const {
-    const auto& entity = *this;
-    return typeid(entity);
-  }
+  const std::type_info& GetType() const;
 };
 
 }  // namespace tkrzw

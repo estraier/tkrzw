@@ -1760,6 +1760,8 @@ void SkipDBMIteratorImpl::ClearPosition() {
 
 const std::string SkipDBM::REMOVING_VALUE("\xDE\xAD\x00\x19\x78\x02\x11", 7);
 
+SkipDBM::TuningParameters::TuningParameters() {}
+
 SkipDBM::SkipDBM() {
   impl_ = new SkipDBMImpl(std::make_unique<MemoryMapParallelFile>());
 }
@@ -1770,6 +1772,10 @@ SkipDBM::SkipDBM(std::unique_ptr<File> file) {
 
 SkipDBM::~SkipDBM() {
   delete impl_;
+}
+
+Status SkipDBM::Open(const std::string& path, bool writable, int32_t options) {
+  return OpenAdvanced(path, writable, options);
 }
 
 Status SkipDBM::OpenAdvanced(const std::string& path, bool writable,
@@ -1846,6 +1852,10 @@ Status SkipDBM::Clear() {
   return impl_->Clear();
 }
 
+Status SkipDBM::Rebuild() {
+  return RebuildAdvanced();
+}
+
 Status SkipDBM::RebuildAdvanced(
     const TuningParameters& tuning_params, bool skip_broken_records, bool sync_hard) {
   return impl_->Rebuild(tuning_params, skip_broken_records, sync_hard);
@@ -1854,6 +1864,10 @@ Status SkipDBM::RebuildAdvanced(
 Status SkipDBM::ShouldBeRebuilt(bool* tobe) {
   assert(tobe != nullptr);
   return impl_->ShouldBeRebuilt(tobe);
+}
+
+Status SkipDBM::Synchronize(bool hard, FileProcessor* proc) {
+  return SynchronizeAdvanced(hard, proc, nullptr);
 }
 
 Status SkipDBM::SynchronizeAdvanced(
@@ -1879,6 +1893,10 @@ bool SkipDBM::IsHealthy() const {
 
 bool SkipDBM::IsAutoRestored() const {
   return impl_->IsAutoRestored();
+}
+
+bool SkipDBM::IsOrdered() const {
+  return true;
 }
 
 std::unique_ptr<DBM::Iterator> SkipDBM::MakeIterator() {
