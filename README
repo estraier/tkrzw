@@ -39,6 +39,13 @@ commands.  The files are installed under "C:\Program Files\tkrzw".
   nmake -f VCMakefile check
   nmake -f VCMakefile install    (run this as Administrator)
 
+You can build a docker container with the following command.
+Other tkrzw project's containers can build themselves containers based on this.
+
+```
+$ docker build -t tkrzw .
+```
+
 Thanks.
 
 == END OF FILE ==
