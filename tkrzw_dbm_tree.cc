@@ -2326,8 +2326,12 @@ Status TreeDBMIteratorImpl::SetPositionLast(int64_t leaf_id) {
 }
 
 void TreeDBMIteratorImpl::SetPositionWithKey(int64_t leaf_id, std::string_view key) {
-  key_ptr_ = key.size() > sizeof(stack_) ? new char[key.size()] : stack_;
-  std::memcpy(key_ptr_, key.data(), key.size());
+  char* new_key_ptr = key.size() > sizeof(stack_) ? new char[key.size()] : stack_;
+  std::memcpy(new_key_ptr, key.data(), key.size());
+  if (key_ptr_ != stack_) {
+    delete[] key_ptr_;
+  }
+  key_ptr_ = new_key_ptr;
   key_size_ = key.size();
   leaf_id_ = leaf_id;
 }

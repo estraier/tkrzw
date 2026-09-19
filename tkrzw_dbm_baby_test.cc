@@ -209,6 +209,34 @@ TEST_F(BabyDBMTest, Iterator) {
   }
 }
 
+TEST_F(BabyDBMTest, LongKeyIterator) {
+  tkrzw::BabyDBM dbm;
+  constexpr int32_t num_records = 100;
+  constexpr size_t key_size = 256;
+  for (int32_t i = 0; i < num_records; i++) {
+    const std::string key = tkrzw::SPrintF("%08d", i) + std::string(key_size - 8, 'x');
+    EXPECT_EQ(tkrzw::Status::SUCCESS, dbm.Set(key, tkrzw::ToString(i)));
+  }
+  auto iter = dbm.MakeIterator();
+  EXPECT_EQ(tkrzw::Status::SUCCESS, iter->First());
+  for (int32_t i = 0; i < num_records; i++) {
+    const std::string expected_key =
+        tkrzw::SPrintF("%08d", i) + std::string(key_size - 8, 'x');
+    std::string key, value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Get(&key, &value));
+    EXPECT_EQ(expected_key, key);
+    EXPECT_EQ(tkrzw::ToString(i), value);
+    if (i + 1 < num_records) {
+      EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Next());
+    }
+  }
+  for (int32_t i = 0; i < num_records; i++) {
+    std::string key, value;
+    EXPECT_EQ(tkrzw::Status::SUCCESS, iter->Get(&key, &value));
+    EXPECT_EQ(key_size, key.size());
+  }
+}
+
 TEST_F(BabyDBMTest, Comparator) {
   {
     tkrzw::BabyDBM dbm(tkrzw::LexicalCaseKeyComparator);
