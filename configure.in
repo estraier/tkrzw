@@ -277,7 +277,11 @@ test -n "$CPPFLAGS" && MYCPPFLAGS="$CPPFLAGS $MYCPPFLAGS"
 test -n "$LDFLAGS" && MYLDFLAGS="$LDFLAGS $MYLDFLAGS"
 
 # Byte order
-AC_C_BIGENDIAN(MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_BIGEND")
+AC_C_BIGENDIAN(
+  [MYCPPFLAGS="$MYCPPFLAGS -D_TKRZW_BIGEND"],
+  [],
+  [AC_MSG_ERROR([unable to determine byte order])],
+  [AC_MSG_ERROR([universal binaries with mixed endianness are not supported])])
 
 # Underlying libraries
 AC_CHECK_LIB(c, main)
