@@ -1,5 +1,12 @@
 2026-09-20 Mikio Hirabayashi  <hirarin@gmail.com>
 
+	- Release: 1.0.34
+	- Library version: 1.77.0
+
+	- Fix bugs of address instability of NOOP and REMOVE.
+
+2026-09-20 Mikio Hirabayashi  <hirarin@gmail.com>
+
 	- Release: 1.0.33
 	- Library version: 1.76.0
 

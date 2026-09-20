@@ -20,11 +20,21 @@
 
 namespace tkrzw {
 
-const std::string_view DBM::ANY_DATA("\x00\xBA\xBE\x02\x11", 5);
+namespace {
 
-const std::string_view DBM::RecordProcessor::NOOP("\x00\xBE\xEF\x02\x11", 5);
+const char DBM_ANY_DATA[] = "\x00\xBA\xBE\x02\x11";
+const char DBM_RECORD_PROCESSOR_NOOP[] = "\x00\xBE\xEF\x02\x11";
+const char DBM_RECORD_PROCESSOR_REMOVE[] = "\x00\xDE\xAD\x02\x11";
 
-const std::string_view DBM::RecordProcessor::REMOVE("\x00\xDE\xAD\x02\x11", 5);
+}  // namespace
+
+const std::string_view DBM::ANY_DATA(DBM_ANY_DATA, sizeof(DBM_ANY_DATA) - 1);
+
+const std::string_view DBM::RecordProcessor::NOOP(
+    DBM_RECORD_PROCESSOR_NOOP, sizeof(DBM_RECORD_PROCESSOR_NOOP) - 1);
+
+const std::string_view DBM::RecordProcessor::REMOVE(
+    DBM_RECORD_PROCESSOR_REMOVE, sizeof(DBM_RECORD_PROCESSOR_REMOVE) - 1);
 
 DBM::FileProcessorCopyFileData::FileProcessorCopyFileData(
     Status* status, const std::string dest_path)
